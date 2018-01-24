@@ -374,6 +374,8 @@ sspInitGlobals()
     ssp[jj].gtc.ft.esum_delay = 0;
     ssp[jj].gtc.ft.cluster_delay = 0;
     ssp[jj].gtc.ft.esum_intwidth = 0;
+    ssp[jj].gtc.fanout_en_ctofhtcc = 1;
+    ssp[jj].gtc.fanout_en_cnd = 0;
     ssp[jj].gtc.gtpif_latency = 0;
   }  
 }
@@ -1045,7 +1047,17 @@ sspReadConfigFile(char *filename_in)
         {        
           sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.gtpif_latency = i1;
-        }        
+        }
+        else if(!strcmp(keyword,"SSP_GTC_FANOUT_ENABLE_CTOFHTCC"))
+        {
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.fanout_en_ctofhtcc = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GTC_FANOUT_ENABLE_CND"))
+        {
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.fanout_en_cnd = i1;
+        }
         else if(!strcmp(keyword,"SSP_GTC_FT_ESUM_DELAY"))
         {        
           sscanf (str_tmp, "%*s %d", &i1);
@@ -1759,7 +1771,7 @@ sspDownloadAll()
 {
   int slot, ii, jj, kk, ch;
   int connectedfibers;
-  int fiber, asic;
+  int fiber, asic, mask;
 
   printf("\n\nsspDownloadAll reached, nssp=%d\n",nssp);
   for(ii=0; ii<nssp; ii++)
@@ -1873,6 +1885,11 @@ sspDownloadAll()
       sspGtc_SetFt_EsumDelay(slot, ssp[slot].gtc.ft.esum_delay);
       sspGtc_SetFt_ClusterDelay(slot, ssp[slot].gtc.ft.cluster_delay);
       sspGtc_SetFt_EsumIntegrationWidth(slot, ssp[slot].gtc.ft.esum_intwidth);
+
+      mask = 0;
+      if(ssp[slot].gtc.fanout_en_ctofhtcc) mask |= GTC_CTRIGFANOUT_HTCCCTOF_EN;
+      if(ssp[slot].gtc.fanout_en_cnd)      mask |= GTC_CTRIGFANOUT_CND_EN; 
+      sspGtc_SetFanout_EnableMask(slot, mask);
 
       for(jj=0; jj<4; jj++)
       {
@@ -2066,7 +2083,7 @@ sspDownloadAll()
 int
 sspUploadAll(char *string, int length)
 {
-  int slot, i, j, jj, kk, len1, len2, ch, src;
+  int slot, i, j, jj, kk, len1, len2, ch, src, mask;
   int fiber, asic;
   char *str, sss[1024];
   unsigned int tmp, connectedfibers;
@@ -2179,10 +2196,13 @@ sspUploadAll(char *string, int length)
       ssp[slot].gtc.ft.cluster_delay = sspGtc_GetFt_ClusterDelay(slot);
       ssp[slot].gtc.ft.esum_intwidth = sspGtc_GetFt_EsumIntegrationWidth(slot);
 
+      mask = sspGtc_GetFanout_EnableMask(slot);
+      ssp[slot].gtc.fanout_en_ctofhtcc = (mask & GTC_CTRIGFANOUT_HTCCCTOF_EN) ? 1 : 0;
+      ssp[slot].gtc.fanout_en_cnd      = (mask & GTC_CTRIGFANOUT_CND_EN)      ? 1 : 0;
+
       for(i=0; i<4; i++)
       {
         ival = sspGtc_GetTrigger_Enable(slot, i);
-printf("sspGtc_GetTrigger_Enable(%d,%d)=0x%08X\n", slot, i, ival);
         ssp[slot].gtc.ctrg[i].en            = (ival & 0x001) ? 1 : 0;
         ssp[slot].gtc.ctrg[i].ft_cluster_en = (ival & 0x002) ? 1 : 0;
         ssp[slot].gtc.ctrg[i].ft_esum_en    = (ival & 0x004) ? 1 : 0;
@@ -2471,10 +2491,13 @@ printf("sspGtc_GetTrigger_Enable(%d,%d)=0x%08X\n", slot, i, ival);
         sprintf(sss,"SSP_GTC_FT_ESUM_DELAY %d\n",                ssp[slot].gtc.ft.esum_delay);    ADD_TO_STRING;
         sprintf(sss,"SSP_GTC_FT_CLUSTER_DELAY %d\n",             ssp[slot].gtc.ft.cluster_delay); ADD_TO_STRING;
         sprintf(sss,"SSP_GTC_FT_ESUM_INTWIDTH %d\n",             ssp[slot].gtc.ft.esum_intwidth); ADD_TO_STRING;
+        sprintf(sss,"SSP_GTC_FANOUT_ENABLE_CTOFHTCC %d\n",     ssp[slot].gtc.fanout_en_ctofhtcc);
+        sprintf(sss,"SSP_GTC_FANOUT_ENABLE_CND %d\n",          ssp[slot].gtc.fanout_en_cnd);
 
         for(i=0; i<4; i++)
         {
           sprintf(sss,"SSP_GTC_CTRG %d\n",                       i);                                           ADD_TO_STRING;
+
           sprintf(sss,"SSP_GTC_CTRG_EN %d\n",                    ssp[slot].gtc.ctrg[i].en);                    ADD_TO_STRING;
           sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_EN %d\n",         ssp[slot].gtc.ctrg[i].ft_cluster_en);         ADD_TO_STRING;
           sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_EMIN %d\n",       ssp[slot].gtc.ctrg[i].ft_cluster_emin);       ADD_TO_STRING;

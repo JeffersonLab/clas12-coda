@@ -252,6 +252,8 @@ typedef struct {
   {
     ctrigger ctrg[4];
     ss_ft    ft;
+    int      fanout_en_ctofhtcc;
+    int      fanout_en_cnd;
     int      gtpif_latency;
   } gtc; 
  

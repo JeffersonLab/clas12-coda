@@ -398,7 +398,7 @@ typedef struct
 #define GTC_CTRG_FT_CLUSTER_CTRL1_NMIN_MASK       0x00000F00
 #define GTC_CTRG_FT_CLUSTER_CTRL1_WIDTH_MASK      0x00FF0000
 
-/* GTC sector trigger */
+/* GTC central trigger */
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Ctrl;
@@ -409,6 +409,16 @@ typedef struct
   /* 0x0080-0x0083 */ volatile unsigned int Scaler_trigger;
   /* 0x0084-0x00FF */ BLANK[(0x0100-0x0084)/4];
 } GTC_ctrg_regs;
+
+/* GTC central fanout peripheral */
+#define GTC_CTRIGFANOUT_HTCCCTOF_EN             0x00000001
+#define GTC_CTRIGFANOUT_CND_EN                  0x00000002
+
+typedef struct
+{
+  /* 0x0000-0x0003 */ volatile unsigned int Ctrl;
+  /* 0x0004-0x00FF */ BLANK[(0x0100-0x0004)/4];
+} GTC_ctrigfanout_regs;
 
 /************************/
 /* SSP memory structure */
@@ -457,7 +467,8 @@ typedef struct
   /* 0x4000-0x41FF */ GTC_ssft_regs   ssft[2];
   /* 0x4200-0x42FF */ BLANK[(0x4300-0x4200)/4];
   /* 0x4300-0x43FF */ GTC_gtpif_regs  gtpif;
-  /* 0x4400-0x4FFF */ BLANK[(0x5000-0x4400)/4];
+  /* 0x4400-0x44FF */ GTC_ctrigfanout_regs ctrigfanout;
+  /* 0x4500-0x4FFF */ BLANK[(0x5000-0x4500)/4];
   /* 0x5000-0x53FF */ GTC_ctrg_regs   ctrigger[4];
   } gtc;
 
@@ -872,6 +883,10 @@ int sspGtc_SetTrigger_FtClusterNmin(int id, int trg, int val);
 int sspGtc_GetTrigger_FtClusterNmin(int id, int trg); 
 int sspGtc_SetTrigger_FtClusterWidth(int id, int trg, int val);
 int sspGtc_GetTrigger_FtClusterWidth(int id, int trg);
+int sspGtc_SetFanout_EnableMask(int id, int en_mask);
+int sspGtc_GetFanout_EnableMask(int id);
+
+void sspPrintGtcConfig(int id);
 
 /* Pulser routines */
 int  sspPulserStatus(int id);

@@ -901,6 +901,9 @@ sspStatus(int id, int rflag)
      
   if(sspFirmwareType[id] == SSP_CFG_SSPTYPE_HALLBGT)
      sspPrintGtConfig(id);
+
+  if(sspFirmwareType[id] == SSP_CFG_SSPTYPE_HALLBGTC)
+     sspPrintGtcConfig(id);
   
   if(sspFirmwareType[id] == SSP_CFG_SSPTYPE_HALLBRICH)
     sspRich_PrintFiberStatus(id);
@@ -3990,6 +3993,32 @@ int sspGtc_GetTrigger_FtClusterWidth(int id, int trg)
   return rval*4;
 }
 
+int sspGtc_SetFanout_EnableMask(int id, int en_mask)
+{
+  int rval;
+  
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGTC))
+    return ERROR;
+
+  SSPLOCK(); 
+  sspWriteReg(&pSSP[id]->gtc.ctrigfanout.Ctrl, en_mask);
+  SSPUNLOCK(); 
+ 
+  return OK;
+}
+
+int sspGtc_GetFanout_EnableMask(int id)
+{
+  int rval;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGTC))
+    return ERROR;
+
+  SSPLOCK(); 
+  rval = sspReadReg(&pSSP[id]->gtc.ctrigfanout.Ctrl);
+  SSPUNLOCK(); 
+ 
+  return rval;
+}
 
 /* HPS Routines */
 
@@ -5342,6 +5371,48 @@ void sspPrintHpsConfig(int id)
   printf("\n");
 }
 
+void sspPrintGtcConfig(int id)
+{
+  int trg, val, mask;
+  
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGTC))
+    return;
+
+  mask = sspGtc_GetFanout_EnableMask(id);
+
+  printf("*** GtcConfig ***\n");
+  printf("   Gtp Interface Latency     = %dns\n", sspGtc_GetLatency(id));
+  printf("\n");
+  printf("   *** FT Subsystem ***\n");
+  printf("      Esum Delay           = %dns\n", sspGtc_GetFt_EsumDelay(id));
+  printf("      Integrate Width      = %dns\n", sspGtc_GetFt_EsumIntegrationWidth(id));
+  printf("      Cluster Delay        = %dns\n", sspGtc_GetFt_ClusterDelay(id));
+  printf("\n");
+  printf("   *** Sector Fanout ***\n");
+  printf("      HTCC_CTOF Enabled    = %d\n",   (mask>>0) & 0x1);
+  printf("      CND Enabled          = %d\n",   (mask>>1) & 0x1);
+  printf("\n");
+
+  for(trg = 0; trg<4; trg++)
+  {
+  printf("   *** Central Trigger Bit %d ***\n", trg);
+  val = sspGtc_GetTrigger_Enable(id, trg);
+  printf("      Enabled                      = %d\n", (val&GTC_CTRG_CTRL_EN) ? 1:0);
+  printf("      *** FTCal Esum ***\n");
+  printf("         Require                   = %d\n", (val&GTC_CTRG_CTRL_FTESUM_EMIN_EN) ? 1:0);
+  printf("         Emin                      = %d\n", sspGtc_GetTrigger_FtEsumEmin(id, trg));
+  printf("         Coindicende Width         = %dns\n", sspGtc_GetTrigger_FtEsumWidth(id, trg));
+  printf("      *** FTCal Cluster ***\n");
+  printf("         Require                   = %d\n", (val&GTC_CTRG_CTRL_FTCLUSTER_EN) ? 1:0);
+  printf("         Emin                      = %d\n", sspGtc_GetTrigger_FtClusterEmin(id, trg));
+  printf("         Emax                      = %d\n", sspGtc_GetTrigger_FtClusterEmax(id, trg));
+  printf("         Nmin                      = %d\n", sspGtc_GetTrigger_FtClusterNmin(id, trg));
+  printf("         HodoLayerMin              = %d\n", sspGtc_GetTrigger_FtClusterHodoNmin(id, trg));
+  printf("         Coindidence Width         = %dns\n", sspGtc_GetTrigger_FtClusterWidth(id, trg));
+  printf("\n");
+  }
+}
+
 void sspPrintGtConfig(int id)
 {
   int trg, val;
@@ -5415,6 +5486,15 @@ void sspPrintGtConfig(int id)
   printf("      *** FTOF ***\n");
   printf("         Require FTOF Mask Hit     = %d\n", (val&GT_STRG_CTRL_FTOF_EN) ? 1:0);
   printf("         Coindidence Width         = %dns\n", sspGt_GetTrigger_FtofWidth(id, trg));
+  printf("         Mask                      = 0x%08llX\n", sspGt_GetTrigger_FtofMask(id, trg)); 
+  printf("      *** CTOF ***\n");
+  printf("         Require CTOF Mask Hit     = %d\n", (val&GT_STRG_CTRL_CTOF_EN) ? 1:0);
+  printf("         Coindidence Width         = %dns\n", sspGt_GetTrigger_CtofWidth(id, trg));
+  printf("         Mask                      = 0x%02X\n", sspGt_GetTrigger_CtofMask(id, trg)); 
+  printf("      *** CND ***\n");
+  printf("         Require CND Mask Hit      = %d\n", (val&GT_STRG_CTRL_CND_EN) ? 1:0);
+  printf("         Coindidence Width         = %dns\n", sspGt_GetTrigger_CndWidth(id, trg));
+  printf("         Mask                      = 0x%02X\n", sspGt_GetTrigger_CndMask(id, trg)); 
   printf("\n");
   }
 }
@@ -5424,8 +5504,8 @@ void sspPrintGtScalers(int id)
   double ref, rate; 
   int i; 
   unsigned int scalers[SD_SCALER_NUM];
-  unsigned int gtscalers[15];
-  const char *scalers_name[15] = {
+  unsigned int gtscalers[16];
+  const char *scalers_name[16] = {
     "ssec.cluster",
     "ssec.inner_cosmic",
     "ssec.outer_cosmic",
@@ -5433,6 +5513,7 @@ void sspPrintGtScalers(int id)
     "sspc.cosmic",
     "sshtcc.hit",
     "ssftof.hit",
+    "ssctof.hit",
     "strigger0",
     "strigger1",
     "strigger2",
@@ -5459,8 +5540,9 @@ void sspPrintGtScalers(int id)
   gtscalers[4] = sspReadReg(&pSSP[id]->gt.sspc.Scaler_cosmic);
   gtscalers[5] = sspReadReg(&pSSP[id]->gt.sshtcc.Scaler_htcc);
   gtscalers[6] = sspReadReg(&pSSP[id]->gt.ssftof.Scaler_ftof);
+  gtscalers[7] = sspReadReg(&pSSP[id]->gt.ssctof.Scaler_ctof);
   for(i=0; i<8; i++)
-    gtscalers[7+i] = sspReadReg(&pSSP[id]->gt.strigger[i].Scaler_trigger);
+    gtscalers[8+i] = sspReadReg(&pSSP[id]->gt.strigger[i].Scaler_trigger);
 
   sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0); 
   SSPUNLOCK(); 
@@ -5486,7 +5568,7 @@ void sspPrintGtScalers(int id)
      printf("   %-25s %10u,%.3fHz\n", ssp_scaler_name[i], scalers[i], rate); 
   }
 
-  for(i = 0; i < 15; i++) 
+  for(i = 0; i < 16; i++) 
   { 
     rate = (double)gtscalers[i]; 
     rate = rate / ref; 
