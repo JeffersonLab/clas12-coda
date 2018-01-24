@@ -543,7 +543,7 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
 	  /* HFBR#1 Trigger Source */
 
       /*sergey: add TI_SYNC_USER_SYNCRESET_ENABLED*/
-	  tiSetTriggerSource(TI_TRIGGER_HFBR1 | TI_SYNC_USER_SYNCRESET_ENABLED);
+	  tiSetTriggerSource(TI_TRIGGER_HFBR1 /*| TI_SYNC_USER_SYNCRESET_ENABLED*/);
 	}
       else if(tiSlaveFiberIn==5)
 	{
@@ -556,7 +556,7 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
 	  /* HFBR#5 Trigger Source */
 
       /*sergey: add TI_SYNC_USER_SYNCRESET_ENABLED*/
-	  tiSetTriggerSource(TI_TRIGGER_HFBR5 | TI_SYNC_USER_SYNCRESET_ENABLED);
+	  tiSetTriggerSource(TI_TRIGGER_HFBR5 /*| TI_SYNC_USER_SYNCRESET_ENABLED*/);
 	}
       break;
 
@@ -574,7 +574,7 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
 	{
 	  printf("%s: Fiber Measurement failure.  Check fiber and/or fiber port,\n",
 		 __FUNCTION__);
-	  return ERROR;
+	  /*return ERROR;sergey*/
 	}
 
       vmeWrite32(&TIp->syncWidth, 0x24);
@@ -1368,7 +1368,7 @@ tiSetSlavePort(int port)
       /* HFBR#1 Sync Source */
       tiSetSyncSource(TI_SYNC_HFBR1);
       /* HFBR#1 Trigger Source */
-      tiSetTriggerSource(TI_TRIGGER_HFBR1 | TI_SYNC_USER_SYNCRESET_ENABLED); /*sergey: add TI_SYNC_USER_SYNCRESET_ENABLED*/
+      tiSetTriggerSource(TI_TRIGGER_HFBR1 /*| TI_SYNC_USER_SYNCRESET_ENABLED*/); /*sergey: add TI_SYNC_USER_SYNCRESET_ENABLED*/
     }
   else if(tiSlaveFiberIn==5)
     {
@@ -1379,7 +1379,7 @@ tiSetSlavePort(int port)
       /* HFBR#5 Sync Source */
       tiSetSyncSource(TI_SYNC_HFBR5);
       /* HFBR#5 Trigger Source */
-      tiSetTriggerSource(TI_TRIGGER_HFBR5 | TI_SYNC_USER_SYNCRESET_ENABLED); /*sergey: add TI_SYNC_USER_SYNCRESET_ENABLED*/
+      tiSetTriggerSource(TI_TRIGGER_HFBR5 /*| TI_SYNC_USER_SYNCRESET_ENABLED*/); /*sergey: add TI_SYNC_USER_SYNCRESET_ENABLED*/
     }
 
   /* Measure and apply fiber compensation */
@@ -1633,6 +1633,9 @@ tiReload()
   vmeWrite32(&TIp->reset,TI_RESET_JTAG);
   vmeWrite32(&TIp->JTAGPROMBase[(0x3c)>>2],0);
   vmeWrite32(&TIp->JTAGPROMBase[(0xf2c)>>2],0xEE);
+
+  taskDelay(6); /* on William's advise, must be >40ms */
+
   TIUNLOCK;
 
   printf ("%s: \n FPGA Re-Load ! \n",__FUNCTION__);

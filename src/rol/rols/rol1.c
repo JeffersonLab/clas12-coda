@@ -313,6 +313,7 @@ static int FADC_ROFLAG           = 2;  /* 0-noDMA, 1-board-by-board DMA, 2-chain
 /* for the calculation of maximum data words in the block transfer */
 static unsigned int MAXFADCWORDS = 0;
 static unsigned int MAXTIWORDS  = 0;
+static unsigned int MAXVSCMWORDS  = 100000;
 
 
 /* IC lookup tables */
@@ -426,6 +427,7 @@ __download()
   
   tiSetUserSyncResetReceive(1);
   
+
 
 #ifndef TI_SLAVE
   /* TS 1-6 create physics trigger, no sync event pin, no trigger 2 */
@@ -1910,7 +1912,7 @@ vmeBusUnlock();
       
 /*
         printf("ssp tdcbuf[%2d]:", len);
-        for(jj=0;jj<(len>20?20:len);jj++)
+        for(jj=0;jj<(len>40?40:len);jj++)
           printf(" 0x%08x",tdcbuf[jj]);
         
         printf(" ");
@@ -1924,15 +1926,24 @@ vmeBusUnlock();
 
     if(dCnt>0)
     {
-      printf("SSP Read Errors:");
       for(ii=0; ii<nssp; ii++)
       {
         slot = sspSlot(ii);
         type = sspGetFirmwareType_Shadow(slot);
-        if(type == SSP_CFG_SSPTYPE_HALLBRICH)
-          printf(" %4d", ssp_not_ready_errors[slot]);
+        if( (type == SSP_CFG_SSPTYPE_HALLBRICH) && (ssp_not_ready_errors[slot]) )
+        {
+          printf("SSP Read Errors:");
+          for(ii=0; ii<nssp; ii++)
+          {
+            slot = sspSlot(ii);
+            type = sspGetFirmwareType_Shadow(slot);
+            if(type == SSP_CFG_SSPTYPE_HALLBRICH)
+              printf(" %4d", ssp_not_ready_errors[slot]);
+          }
+          printf("\n");
+          break;
+        }
       }
-      printf("\n");
     }
 
     if(dCnt>0)
@@ -2236,7 +2247,7 @@ vmeBusUnlock();
 
 
 vmeBusLock();
- 	      dCnt = vscmReadBlock(slot,rol->dabufp,500000/*MAXFADCWORDS*/,VSCM_ROFLAG);
+          dCnt = vscmReadBlock(slot,rol->dabufp,500000/*MAXVSCMWORDS*/,VSCM_ROFLAG);
 vmeBusUnlock();
 #ifdef DEBUG
 		  printf("readout ends, len=%d\n",dCnt);
@@ -2253,7 +2264,7 @@ vmeBusUnlock();
 #else
 
 vmeBusLock();
-	      dCnt = vscmReadBlock(slot,tdcbuf,500000/*MAXFADCWORDS*/,VSCM_ROFLAG);
+	      dCnt = vscmReadBlock(slot,tdcbuf,500000/*MAXVSCMWORDS*/,VSCM_ROFLAG);
 vmeBusUnlock();
 
 #ifdef DEBUG
@@ -2283,7 +2294,7 @@ vmeBusUnlock();
 
 
 vmeBusLock();
-	        len = vscmReadBlock(vscmSlot(jj),rol->dabufp,1000/*MAXFADCWORDS*/,VSCM_ROFLAG);
+	        len = vscmReadBlock(vscmSlot(jj),rol->dabufp,MAXVSCMWORDS,VSCM_ROFLAG);
 vmeBusUnlock();
 
 #ifdef DEBUG
@@ -2304,8 +2315,13 @@ vscmPrintFifo(rol->dabufp,len);
 #else
 
 vmeBusLock();
-	        len = vscmReadBlock(vscmSlot(jj),&tdcbuf[dCnt],1000/*MAXFADCWORDS*/,VSCM_ROFLAG);
+	        len = vscmReadBlock(vscmSlot(jj),&tdcbuf[dCnt],MAXVSCMWORDS,VSCM_ROFLAG);
 vmeBusUnlock();
+
+            if(len>(MAXVSCMWORDS-10))
+			{
+              printf("VSCM data from slot %d too large (%d words), increase MAXVSCMWORDS !\n",vscmSlot(jj),len);
+			}
 
 #ifdef DEBUG
 			printf("readout ends, len=%d\n",len);

@@ -281,7 +281,8 @@ void dc_scalers_app::draw_scalers()
     for(int r=0;r<3;r++)
     for(int sl=0;sl<2;sl++)
     {
-      tt[s][r][sl].SetTextSize(0.0225);
+//      tt[s][r][sl].SetTextSize(0.0225);
+      tt[s][r][sl].SetTextSize(0.04);
       tt[s][r][sl].SetBorderSize(0);
       tt[s][r][sl].SetFillColor(kWhite);
       tt[s][r][sl].SetTextColor(kRed);

@@ -81,7 +81,16 @@ typedef struct
   int htcc_width;
 
   int ftof_en;
+  long long ftof_mask;
   int ftof_width;
+
+  int ctof_en;
+  int ctof_mask;
+  int ctof_width;
+
+  int cnd_en;
+  int cnd_mask;
+  int cnd_width;
 
   int ecalin_cosmic_en;
   int ecalout_cosmic_en;
@@ -134,6 +143,16 @@ typedef struct
 {
   int ftof_delay;
 } ss_ftof;
+
+typedef struct
+{
+  int ctof_delay;
+} ss_ctof;
+
+typedef struct
+{
+  int cnd_delay;
+} ss_cnd;
 
 typedef struct
 {
@@ -224,6 +243,8 @@ typedef struct {
     ss_htcc  htcc;
     ss_ftof  ftof;
     ss_dc    dc;
+    ss_ctof  ctof;
+    ss_cnd   cnd;
     int      gtpif_latency;
   } gt;
 

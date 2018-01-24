@@ -302,7 +302,7 @@ __download()
 	if( ( nmvt <= 0 ) || (3 <= nmvt) )
 	{
 		sprintf( log_message, "%s: wrong number of BEUs %d in %s crate %d; must be in [1;3] range",
-			__FUNCTION__, nmvt, mvtRocId2Str( rol->pid ), rol->pid );
+			__FUNCTION__, nmvt, mvtRocId2SysName( rol->pid ), rol->pid );
 		fprintf(stderr, "%s\n", log_message );
 		if( mvt_fptr_err_1 != (FILE *)NULL )
 		{
@@ -317,7 +317,7 @@ __download()
 	else
 	{
 		sprintf( log_message, "%s: found number of BEUs %d in %s crate %d",
-			__FUNCTION__, nmvt, mvtRocId2Str( rol->pid ), rol->pid );
+			__FUNCTION__, nmvt, mvtRocId2SysName( rol->pid ), rol->pid );
 		fprintf( stdout, "%s\n", log_message );
 		UDP_user_request(MSGINF, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
 		UDP_user_request(MSGINF, "rol1", log_message);
@@ -346,7 +346,7 @@ __download()
 		else
 		{
 			sprintf( log_message, "%s: sdInit(1) failed with %d in %s crate %d",
-				__FUNCTION__, ret, mvtRocId2Str( rol->pid ), rol->pid );
+				__FUNCTION__, ret, mvtRocId2SysName( rol->pid ), rol->pid );
 			fprintf( stdout, "%s\n", log_message );
 			if( mvt_fptr_err_1 != (FILE *)NULL )
 			{
@@ -535,7 +535,7 @@ __prestart()
 		if(ret<=0)
 		{
 			sprintf( log_message, "%s: mvtPrestart failed with %d in %s crate %d",
-				__FUNCTION__, ret, mvtRocId2Str( rol->pid ), rol->pid );
+				__FUNCTION__, ret, mvtRocId2SysName( rol->pid ), rol->pid );
 			fprintf(stderr, "%s\n", log_message );
 			if( mvt_fptr_err_1 != (FILE *)NULL )
 			{
@@ -549,7 +549,7 @@ __prestart()
 		else
 		{
 			sprintf( log_message, "%s: found number of FEUs %d in %s crate %d with %d BEUs",
-				__FUNCTION__, ret, mvtRocId2Str( rol->pid ), rol->pid, nmvt );
+				__FUNCTION__, ret, mvtRocId2SysName( rol->pid ), rol->pid, nmvt );
 			fprintf( stdout, "%s\n", log_message );
 			UDP_user_request(MSGINF, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
 			UDP_user_request(MSGINF, "rol1", log_message);

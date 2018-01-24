@@ -1,0 +1,16 @@
+#!/bin/csh                                       
+                                                 
+tcpClient trig2 sspGt_SetTrigger_Enable\(3,3,$1\)
+tcpClient trig2 sspGt_SetTrigger_Enable\(4,3,$1\)
+tcpClient trig2 sspGt_SetTrigger_Enable\(5,3,$1\)
+tcpClient trig2 sspGt_SetTrigger_Enable\(6,3,$1\)
+tcpClient trig2 sspGt_SetTrigger_Enable\(7,3,$1\)
+tcpClient trig2 sspGt_SetTrigger_Enable\(8,3,$1\)
+
+tcpClient trig2 sspGt_SetTrigger_ECPCClusterEmin\(3,3,$2\)
+tcpClient trig2 sspGt_SetTrigger_ECPCClusterEmin\(4,3,$2\)
+tcpClient trig2 sspGt_SetTrigger_ECPCClusterEmin\(5,3,$2\)
+tcpClient trig2 sspGt_SetTrigger_ECPCClusterEmin\(6,3,$2\)
+tcpClient trig2 sspGt_SetTrigger_ECPCClusterEmin\(7,3,$2\)
+tcpClient trig2 sspGt_SetTrigger_ECPCClusterEmin\(8,3,$2\)
+

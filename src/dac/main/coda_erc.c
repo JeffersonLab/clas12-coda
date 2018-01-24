@@ -106,6 +106,10 @@ extern char configname[128]; /* coda_component.c */
 extern char *mysql_host; /* coda_component.c */
 extern char *expid; /* coda_component.c */
 extern char *session; /* coda_component.c */
+
+static int mbytes_in_current_run;
+static int nevents_in_current_run;
+
 #define ER_ERROR 1
 #define ER_OK 0
 
@@ -207,6 +211,94 @@ rocStatus()
 /****************************************************************************/
 
 
+
+
+/* put some statistic into *_option table of the database: nfile, nevent, ndata */
+
+#define NDBVALS 4
+
+void
+update_database(ERp erp)
+{
+  char tmpp[1000];
+  MYSQL *dbsocket;
+  MYSQL_RES *result;
+  MYSQL_ROW row;
+  time_t rawtime;
+
+
+  mbytes_in_current_run += (erp->nlongs*4)/1000000;
+  nevents_in_current_run += erp->nevents;
+  time(&rawtime);
+
+  /* connect to database */
+  dbsocket = dbConnect(mysql_host, expid);
+  if(dbsocket==NULL)
+  {
+    printf("WARN: cannot connect to the database to update run statistics in _option table\n");
+  }
+  else
+  {
+    int iii, numRows;
+    char *db_field[NDBVALS] = {"nfile","nevent","ndata","unixtime"};
+    char db_value[NDBVALS][80];
+
+    sprintf(db_value[0],"%d",erp->splitnb+1);
+	sprintf(db_value[1],"%d",nevents_in_current_run);
+	sprintf(db_value[2],"%d",mbytes_in_current_run);
+	sprintf(db_value[3],"%d",rawtime);
+
+    for(iii=0; iii<NDBVALS; iii++)
+	{
+      sprintf(tmpp,"SELECT name,value FROM %s_option WHERE name='%s'",configname,db_field[iii]);
+      if(mysql_query(dbsocket, tmpp) != 0)
+      {
+        printf("ERROR in mysql_query\n");
+      }
+      else
+      {
+        if( !(result = mysql_store_result(dbsocket)) )
+        {
+          printf("ERROR in mysqlStoreResult()\n");
+          return;
+        }
+        else
+        {
+          numRows = mysql_num_rows(result);
+          printf("nrow=%d\n",numRows);
+          if(numRows == 0)
+          {
+            sprintf(tmpp,"INSERT INTO %s_option (name,value) VALUES ('%s','%s')",configname,db_field[iii],db_value[iii]);
+            printf(">%s<\n",tmpp);
+            if(mysql_query(dbsocket,tmpp) != 0)
+            {
+              printf("ERROR in INSERT\n");
+            }
+          }
+          else if(numRows == 1)
+          {
+            sprintf(tmpp,"UPDATE %s_option SET value='%s' WHERE name='%s'\n",configname,db_value[iii],db_field[iii]);
+            printf(">%s<\n",tmpp);
+            if(mysql_query(dbsocket,tmpp) != 0)
+            {
+              printf("ERROR in UPDATE\n");
+            }
+          }
+          else
+          {
+            printf("ERROR !!\n");
+          }
+
+          mysql_free_result(result);
+	    }
+      }
+	}
+
+    /* disconnect from database */
+    dbDisconnect(dbsocket);
+  }
+
+}
 
 
 
@@ -415,10 +507,6 @@ outputEvents(ERp erp, et_event **pe, int start, int stop)
 {
   int handle1, i, buflen, len, tmp, status=0;
   unsigned int *buffer, *ptr;
-  char tmpp[1000];
-  MYSQL *dbsocket;
-  MYSQL_RES *result;
-  MYSQL_ROW row;
 
   /* evio file output */
   for (i=start; i <= stop; i++)
@@ -471,94 +559,7 @@ outputEvents(ERp erp, et_event **pe, int start, int stop)
     {
 	  evClose(erp->fd);
 
-
-
-
-
-
-
-      /* put some statistic into *_option table of the database: nfile, nevent, ndata */
-
-      /* connect to database */
-      dbsocket = dbConnect(mysql_host, expid);
-      if(dbsocket==NULL)
-      {
-        printf("WARN: cannot connect to the database to update run statistics in _option table\n");
-      }
-      else
-	  {
-        int iii, numRows;
-        char *db_field[3] = {"nfile","nevent","ndata"};
-        char db_value[3][80];
-
-        sprintf(db_value[0],"%d",erp->splitnb+1);
-	    sprintf(db_value[1],"%d",erp->nevents);
-	    sprintf(db_value[2],"%d",erp->nlongs*4);
-
-        for(iii=0; iii<3; iii++)
-		{
-          sprintf(tmpp,"SELECT name,value FROM %s_option WHERE name='%s'",configname,db_field[iii]);
-          if(mysql_query(dbsocket, tmpp) != 0)
-          {
-            printf("ERROR in mysql_query\n");
-          }
-          else
-          {
-            if( !(result = mysql_store_result(dbsocket)) )
-            {
-              printf("ERROR in mysqlStoreResult()\n");
-              return(CODA_ERROR);
-            }
-            else
-            {
-              numRows = mysql_num_rows(result);
-              printf("nrow=%d\n",numRows);
-              if(numRows == 0)
-              {
-                sprintf(tmpp,"INSERT INTO %s_option (name,value) VALUES ('%s','%s')",configname,db_field[iii],db_value[iii]);
-                printf(">%s<\n",tmpp);
-                if(mysql_query(dbsocket,tmpp) != 0)
-                {
-                  printf("ERROR in INSERT\n");
-                }
-              }
-              else if(numRows == 1)
-              {
-                sprintf(tmpp,"UPDATE %s_option SET value='%s' WHERE name='%s'\n",configname,db_value[iii],db_field[iii]);
-                printf(">%s<\n",tmpp);
-                if(mysql_query(dbsocket,tmpp) != 0)
-                {
-                  printf("ERROR in UPDATE\n");
-                }
-              }
-              else
-              {
-                printf("ERROR !!\n");
-              }
-
-              mysql_free_result(result);
-	        }
-          }
-		}
-
-        /* disconnect from database */
-        dbDisconnect(dbsocket);
-	  }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	  update_database(erp);
 
       erp->splitnb ++;
       erp->nevents = 0;
@@ -655,6 +656,8 @@ CODA_write_event(ERp erp, int flag)
 	      if (pe[i]->control[0] == prestartEvent)
           {
 	        printf("Got Prestart Event!!\n");
+			mbytes_in_current_run = 0;
+            nevents_in_current_run = 0;
 	        /* look for first prestart */
 	        if (PrestartCount == 0)
             {
@@ -1030,6 +1033,9 @@ erDaqCmd(char *param)
       {
         (*(erp->close_proc))(erp);
         printf("close_proc executed\n");
+
+		update_database(erp);
+
       }
       erp->fd = -1;
 

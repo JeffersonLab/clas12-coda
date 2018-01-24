@@ -57,7 +57,7 @@ int
 main(int argc, char **argv)
 {
   int status;
-  int ii, l, tag, num;
+  int ii, l, tag, num, i0, i1, i2, i3, i4, filenumber;
   int ind, fragtag, fragnum, nbytes, ind_data, timestamp_flag, type, *nhits;
   int slot, slot_old, event, chan, tdc, itmp, iev, iev_needed, get_next_select, nselected, iselected;
   int banktag, banknum, banktyp = 0xf;
@@ -65,11 +65,16 @@ main(int argc, char **argv)
   unsigned int ret, word;
   unsigned long long timestamp, timestamp_old;
   unsigned char *end, *start;
+  char *input_filename_full[1024];
   FILE *fd;
   char *ch, str_tmp[STRLEN];
   GET_PUT_INIT;
 
-  if(argc!=3) printf("Usage: evioUtilSelect <input evio file> <output evio file>\n");
+  if(argc!=3)
+  {
+    printf("Usage: evioUtilSelect <input evio file> <output evio file>\n");
+    exit(0);
+  }
   input_filename = strdup(argv[1]);
   output_filename = strdup(argv[2]);
   printf("Use >%s< as input file\n",input_filename);
@@ -104,7 +109,7 @@ main(int argc, char **argv)
   nselected = 0;
   while ((ch = getc(fd)) != EOF)
   {
-    if ( ch == '#' || ch == ' ' || ch == '\t' )
+    if ( ch == '#' || /*ch == ' ' ||*/ ch == '\t' )
     {
       while ( getc(fd)!='\n' /*&& getc(fd)!=!= EOF*/ ) {} /*ERROR !!!*/
     }
@@ -113,9 +118,9 @@ main(int argc, char **argv)
     {
       ungetc(ch,fd);
       fgets(str_tmp, STRLEN, fd);
-      printf("str_tmp >%s<",str_tmp);fflush(stdout);
-      sscanf(str_tmp,"%d",&iev_needed);
-      printf("next iev=%d\n",iev_needed);
+      /*printf("str_tmp >%s<",str_tmp);fflush(stdout);*/
+      sscanf(str_tmp,"%d %d %d %d %d",&i0,&iev_needed,&i1,&i2,&i3);
+      /*printf("next iev=%d\n",iev_needed);*/
       event_number[nselected++] = iev_needed;
       if(nselected>=MAX_EVENTS) break;
       if(iev_needed==99999999) break;
@@ -125,17 +130,10 @@ main(int argc, char **argv)
   iselected = 0;
 
   qsort((void *)event_number, nselected, sizeof(int), events_compare);
-  for(ii=0; ii<nselected; ii++) printf("selected[%7d] %7d\n",ii,event_number[ii]);
+  /*for(ii=0; ii<nselected; ii++) printf("selected[%7d] %7d\n",ii,event_number[ii]);*/
 
 #endif
 
-
-  /* open evio input file */
-  if((status = evOpen(input_filename,"r",&input_handle))!=0)
-  {
-    printf("\n ?Unable to open input file %s, status=%d\n\n",input_filename,status);
-    exit(1);
-  }
 
   /* open evio output file */
   if((status = evOpen(output_filename,"w",&output_handle))!=0)
@@ -145,10 +143,30 @@ main(int argc, char **argv)
   }
 
 
+  filenumber = 0;
+  get_next_select = 1;
+
+
+next_file:
+
+
+  /* open evio input file */
+  sprintf(input_filename_full,"%s.%d",input_filename,filenumber);
+  if((status = evOpen(input_filename_full,"r",&input_handle))!=0)
+  {
+    printf("\n ?Unable to open input file %s, status=%d\n\n",input_filename_full,status);
+    evClose(output_handle);
+    fclose(fd);
+    exit(1);
+  }
+  else
+  {
+    printf("\n==> Opened input file %s\n",input_filename_full);
+  }
+
 
   nevent = 0;
   nwrite = 0;
-  get_next_select = 1;
   while (nevent<max_event)
   {
 
@@ -156,7 +174,7 @@ main(int argc, char **argv)
 
     nevent++;
 
-    if(!(nevent%10000)) printf("evioUtilSelect: processed %d events\n",nevent);
+    if(!(nevent%10000)) printf("evioUtilSelect: processed %d events, last iev=%d\n",nevent,iev);
     if(skip_event>=nevent) continue;
     /*if(user_event_select(buf)==0) continue;*/
 
@@ -208,7 +226,27 @@ main(int argc, char **argv)
 
 
 #ifdef SORT_EVENTS
-    if(get_next_select) iev_needed = event_number[iselected++];
+    if(get_next_select)
+	{
+      iev_needed = event_number[iselected++];
+      if(iselected>=nselected)
+	  {
+        evClose(output_handle);
+        fclose(fd);
+        goto out;
+	  }
+      printf("Looking for iev_needed=%d ...\n",iev_needed);
+	}
+
+
+    /*????skip events in event_number[] with numbers smaller then iev*/
+    while(iev_needed < iev)
+	{
+      iev_needed = event_number[iselected++];
+	}
+	/*????*/
+
+
 #else
     if(get_next_select)
 	{
@@ -223,9 +261,9 @@ main(int argc, char **argv)
         {
           ungetc(ch,fd);
           fgets(str_tmp, STRLEN, fd);
-          printf("str_tmp >%s<",str_tmp);fflush(stdout);
+          /*printf("str_tmp >%s<",str_tmp);fflush(stdout);*/
           sscanf(str_tmp,"%d",&iev_needed);
-          printf("next iev=%d\n",iev_needed);
+          /*printf("next iev=%d\n",iev_needed);*/
           if(iev_needed==99999999) goto done;
         }
       }
@@ -267,8 +305,16 @@ done:
 
   /* done */
   printf("\n  Read %d events, copied %d events\n\n",nevent,nwrite);
+  /*
   evClose(output_handle);
   fclose(fd);
+  */
+
+  filenumber++;
+goto next_file;
+
+
+out:
 
   exit(0);
 }

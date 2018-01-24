@@ -102,10 +102,41 @@ char *SysType2Str( SysType sys_type )
 int RocId2SysType( int roc_id )
 {
          if( roc_id == 0x45 ) return SysType_MVT; // 69 mvt1
+    else if( roc_id == 0x44 ) return SysType_MVT; // 68 mvt2
     else if( roc_id == 0x4B ) return SysType_FTT; // 75 mmft1
     else if( roc_id == 0x3F ) return SysType_JTB; // 63 svt3
     else if( roc_id == 0x01 ) return SysType_STB; //  1 sedipcq156
     else                      return SysType_UKN;
+}
+typedef enum
+{
+
+	RocType_MVT1 = 0,
+	RocType_FTT  = 1,
+	RocType_JTB  = 2,
+	RocType_STB  = 3,
+    RocType_MVT2 = 4, 
+	RocType_UKN  = 5
+
+} RocType;
+#define Def_RocNum (RocType_UKN+1)
+int RocId2RocType( int roc_id )
+{
+         if( roc_id == 0x45 ) return RocType_MVT1; // 69 mvt1
+    else if( roc_id == 0x44 ) return RocType_MVT2; // 68 mvt2
+    else if( roc_id == 0x4B ) return RocType_FTT;  // 75 mmft1
+    else if( roc_id == 0x3F ) return RocType_JTB;  // 63 svt3
+    else if( roc_id == 0x01 ) return RocType_STB;  //  1 sedipcq156
+    else                      return RocType_UKN;
+}
+char *RocType2Str( RocType roc_type )
+{
+         if( roc_type == RocType_MVT1 ) return "MVT1";
+    else if( roc_type == RocType_MVT2 ) return "MVT2";
+    else if( roc_type == RocType_FTT  ) return "FTT";
+    else if( roc_type == RocType_JTB  ) return "JTB";
+    else if( roc_type == RocType_STB  ) return "STB";
+    else                                return "UKN";
 }
 
 
@@ -130,8 +161,8 @@ int evt_blk_cnt;
 
 int ti_evt_cnt;
 
-int mvt_raw_evt_cnt[Def_SysNum];
-int mvt_cmp_evt_cnt[Def_SysNum];
+int mvt_raw_evt_cnt[Def_RocNum];
+int mvt_cmp_evt_cnt[Def_RocNum];
 int cfg_evt_cnt;
 
 int unknown_cmp_cnt;
@@ -500,8 +531,8 @@ void TimingHistos_DumpHistos(TimingHistos *tim_hist, FILE *fptr)
 }
 
 // Timing histos
-TimingHistos timing_histos_raw[Def_SysNum];
-TimingHistos timing_histos_cmp[Def_SysNum];
+TimingHistos timing_histos_raw[Def_RocNum];
+TimingHistos timing_histos_cmp[Def_RocNum];
 /***********************************************************
  * End Histogramms
  ***********************************************************/
@@ -518,6 +549,8 @@ typedef struct _PhyEvtStat
 	int id;
 	int size;
 	SysType sys_type;
+	RocType roc_type;
+	int     roc_id;
 	int     data_type;
 	// Ti stat
 	unsigned int ti_evid_hi;
@@ -577,6 +610,8 @@ void PhyEvtStat_Init(PhyEvtStat *phy_evt_stat)
 	phy_evt_stat->id   = 0;
 	phy_evt_stat->size = 0;
 	phy_evt_stat->sys_type  = SysType_UKN;
+	phy_evt_stat->roc_type  = RocType_UKN;
+	phy_evt_stat->roc_id    = -1;
 	phy_evt_stat->data_type = PHY_EVT_DATA_TYPE_NON;
 
 }
@@ -586,7 +621,9 @@ void PhyEvtStat_Dump(PhyEvtStat *phy_evt_stat, FILE *fptr)
 	fprintf( fptr, "  PhyEvtStat = 0x%08x\n", (unsigned int)phy_evt_stat );
 	fprintf( fptr, "   id   = %d\n", phy_evt_stat->id );
 	fprintf( fptr, "   size = %d\n", phy_evt_stat->size );
-	fprintf( fptr, "   sys_type  = %d\n", SysType2Str( phy_evt_stat->sys_type ) );
+	fprintf( fptr, "   sys_type  = %s\n", SysType2Str( phy_evt_stat->sys_type ) );
+	fprintf( fptr, "   roc_type  = %s\n", RocType2Str( phy_evt_stat->roc_type ) );
+	fprintf( fptr, "   roc_id    = %d\n", phy_evt_stat->roc_id );
 	fprintf( fptr, "   data_type = %d\n", phy_evt_stat->data_type );
 	if( phy_evt_stat->ti_evid_hi != 0xFFFFFFFF )
 		fprintf( fptr, "   ti_evid_hi = 0x%08x\n", phy_evt_stat->ti_evid_hi );
@@ -652,7 +689,7 @@ int PhyEvtStat_Validate(PhyEvtStat *phy_evt_stat)
 	int error;
 	unsigned int beu2ti_tstp_offset;
 	unsigned int feu2beu_tstp_offset;
-	SysType sys_type;
+	RocType roc_type;
 
 	if( phy_evt_stat->ti_evid_lo == 0xFFFFFFFF )
 	{
@@ -667,7 +704,7 @@ int PhyEvtStat_Validate(PhyEvtStat *phy_evt_stat)
 	}
 
 	error = 0;
-	sys_type = phy_evt_stat->sys_type;
+	roc_type = phy_evt_stat->roc_type;
 
 	// BEU-s
 	for( beu=0; beu<Def_MaxNbOfBeu; beu++ )
@@ -677,9 +714,9 @@ int PhyEvtStat_Validate(PhyEvtStat *phy_evt_stat)
 		{
 			if( phy_evt_stat->beu_evid_lo[beu] != (phy_evt_stat->ti_evid_lo & 0x7FFF) )
 			{
-				if( ((phy_evt_stat->ti_evid_lo & 0x7FFF) - phy_evt_stat->beu_evid_lo[beu]) != timing_histos_cmp[sys_type].beu_ti_evid_lo_shift_cnt[beu] )
+				if( ((phy_evt_stat->ti_evid_lo & 0x7FFF) - phy_evt_stat->beu_evid_lo[beu]) != timing_histos_cmp[roc_type].beu_ti_evid_lo_shift_cnt[beu] )
 				{
-					timing_histos_cmp[sys_type].beu_ti_evid_lo_shift_cnt[beu] = ((phy_evt_stat->ti_evid_lo & 0x7FFF) - phy_evt_stat->beu_evid_lo[beu]);
+					timing_histos_cmp[roc_type].beu_ti_evid_lo_shift_cnt[beu] = ((phy_evt_stat->ti_evid_lo & 0x7FFF) - phy_evt_stat->beu_evid_lo[beu]);
 					fprintf( stderr, "%s: ERROR beu %d evid_lo = 0x%04x != ti_evid_lo[15:0] = 0x%04x\n",
 						__FUNCTION__, beu, phy_evt_stat->beu_evid_lo[beu], (phy_evt_stat->ti_evid_lo & 0xFFFF) );
 					error |= 4;
@@ -702,24 +739,24 @@ int PhyEvtStat_Validate(PhyEvtStat *phy_evt_stat)
 			{
 				beu2ti_tstp_offset = ( ((((unsigned int)phy_evt_stat->beu_tstp_lo[beu])<<1)&0xFFF) - (phy_evt_stat->ti_tstp_lo & 0xFFF) ) & 0xFFF;
 	//			beu2ti_tstp_offset = (  (((unsigned int)phy_evt_stat->beu_tstp_lo[beu])&0xFFF) - ((phy_evt_stat->ti_tstp_lo >> 1) & 0xFFF) ) & 0xFFF;
-				if( timing_histos_raw[sys_type].beu2ti_tstp_offset[beu] == 0xFFFFffff )
+				if( timing_histos_raw[roc_type].beu2ti_tstp_offset[beu] == 0xFFFFffff )
 				{
-					timing_histos_raw[sys_type].beu2ti_tstp_offset[beu] = beu2ti_tstp_offset;
+					timing_histos_raw[roc_type].beu2ti_tstp_offset[beu] = beu2ti_tstp_offset;
 				}
 /*
 printf("ti=0x%08x beu(%d)=0x%04x offset=0x%08x first_offset=0x%08x diff=0x%04x\n",
 phy_evt_stat->ti_tstp_lo,
 beu, phy_evt_stat->beu_tstp_lo[beu],
-beu2ti_tstp_offset, timing_histos[sys_type].beu2ti_tstp_offset[beu],
-beu2ti_tstp_offset - timing_histos[sys_type].beu2ti_tstp_offset[beu]);
+beu2ti_tstp_offset, timing_histos[roc_type].beu2ti_tstp_offset[beu],
+beu2ti_tstp_offset - timing_histos[roc_type].beu2ti_tstp_offset[beu]);
 //getchar();
 */
-				Histo_Add(&(timing_histos_raw[sys_type].beu2ti_tstp_histo[beu]), (beu2ti_tstp_offset - timing_histos_raw[sys_type].beu2ti_tstp_offset[beu]) );
+				Histo_Add(&(timing_histos_raw[roc_type].beu2ti_tstp_histo[beu]), (beu2ti_tstp_offset - timing_histos_raw[roc_type].beu2ti_tstp_offset[beu]) );
 				// Fine timestamp
 				if( phy_evt_stat->beu_tstp_fn[beu] == 0x0700 )
-					Histo_Add(&(timing_histos_raw[sys_type].beu_ftstp_histo[beu]), 0 );
+					Histo_Add(&(timing_histos_raw[roc_type].beu_ftstp_histo[beu]), 0 );
 				else if( phy_evt_stat->beu_tstp_fn[beu] == 0x0f00 )
-					Histo_Add(&(timing_histos_raw[sys_type].beu_ftstp_histo[beu]), 1 );
+					Histo_Add(&(timing_histos_raw[roc_type].beu_ftstp_histo[beu]), 1 );
 				else
 				{
 					fprintf( stderr, "%s: WARNING beu %d beu_evid_ac = 0x%03x unknown ftstp=0x%04x\n",
@@ -730,16 +767,16 @@ beu2ti_tstp_offset - timing_histos[sys_type].beu2ti_tstp_offset[beu]);
 			{
 				beu2ti_tstp_offset = ( ((((unsigned int)phy_evt_stat->beu_tstp_lo[beu])<<1)&0xFFF) - (phy_evt_stat->ti_tstp_lo & 0xFFF) ) & 0xFFF;
 	//			beu2ti_tstp_offset = (  (((unsigned int)phy_evt_stat->beu_tstp_lo[beu])&0xFFF) - ((phy_evt_stat->ti_tstp_lo >> 1) & 0xFFF) ) & 0xFFF;
-				if( timing_histos_cmp[sys_type].beu2ti_tstp_offset[beu] == 0xFFFFffff )
+				if( timing_histos_cmp[roc_type].beu2ti_tstp_offset[beu] == 0xFFFFffff )
 				{
-					timing_histos_cmp[sys_type].beu2ti_tstp_offset[beu] = beu2ti_tstp_offset;
+					timing_histos_cmp[roc_type].beu2ti_tstp_offset[beu] = beu2ti_tstp_offset;
 				}
-				Histo_Add(&(timing_histos_cmp[sys_type].beu2ti_tstp_histo[beu]), (beu2ti_tstp_offset - timing_histos_cmp[sys_type].beu2ti_tstp_offset[beu]) );
+				Histo_Add(&(timing_histos_cmp[roc_type].beu2ti_tstp_histo[beu]), (beu2ti_tstp_offset - timing_histos_cmp[roc_type].beu2ti_tstp_offset[beu]) );
 				// Fine timestamp
 				if( phy_evt_stat->beu_tstp_fn[beu] == 0x0700 )
-					Histo_Add(&(timing_histos_cmp[sys_type].beu_ftstp_histo[beu]), 0 );
+					Histo_Add(&(timing_histos_cmp[roc_type].beu_ftstp_histo[beu]), 0 );
 				else if( phy_evt_stat->beu_tstp_fn[beu] == 0x0f00 )
-					Histo_Add(&(timing_histos_cmp[sys_type].beu_ftstp_histo[beu]), 1 );
+					Histo_Add(&(timing_histos_cmp[roc_type].beu_ftstp_histo[beu]), 1 );
 				else
 				{
 					fprintf( stderr, "%s: WARNING beu %d beu_evid_ac = 0x%03x unknown ftstp=0x%04x\n",
@@ -785,30 +822,30 @@ beu2ti_tstp_offset - timing_histos[sys_type].beu2ti_tstp_offset[beu]);
 
 				// Timestamp
 				feu2beu_tstp_offset = ( ((unsigned int)phy_evt_stat->feu_tstp[feu]) - (((unsigned int)phy_evt_stat->beu_tstp_lo[beu])&0xFFF) ) & 0xFFF;
-				if( timing_histos_raw[sys_type].feu2beu_tstp_offset[feu] == 0xFFFFffff )
+				if( timing_histos_raw[roc_type].feu2beu_tstp_offset[feu] == 0xFFFFffff )
 				{
-					timing_histos_raw[sys_type].feu2beu_tstp_offset[feu] = feu2beu_tstp_offset;
-					timing_histos_raw[sys_type].feu_beu_id[feu] = beu;
+					timing_histos_raw[roc_type].feu2beu_tstp_offset[feu] = feu2beu_tstp_offset;
+					timing_histos_raw[roc_type].feu_beu_id[feu] = beu;
 				}
-				if( timing_histos_cmp[sys_type].feu2beu_tstp_offset[feu] == 0xFFFFffff )
+				if( timing_histos_cmp[roc_type].feu2beu_tstp_offset[feu] == 0xFFFFffff )
 				{
-					timing_histos_cmp[sys_type].feu2beu_tstp_offset[feu] = feu2beu_tstp_offset;
-					timing_histos_cmp[sys_type].feu_beu_id[feu] = beu;
+					timing_histos_cmp[roc_type].feu2beu_tstp_offset[feu] = feu2beu_tstp_offset;
+					timing_histos_cmp[roc_type].feu_beu_id[feu] = beu;
 				}
-				Histo_Add(&(timing_histos_raw[sys_type].feu2beu_tstp_histo[feu]), (feu2beu_tstp_offset - timing_histos_raw[sys_type].feu2beu_tstp_offset[feu]) );
-				Histo_Add(&(timing_histos_cmp[sys_type].feu2beu_tstp_histo[feu]), (feu2beu_tstp_offset - timing_histos_cmp[sys_type].feu2beu_tstp_offset[feu]) );
+				Histo_Add(&(timing_histos_raw[roc_type].feu2beu_tstp_histo[feu]), (feu2beu_tstp_offset - timing_histos_raw[roc_type].feu2beu_tstp_offset[feu]) );
+				Histo_Add(&(timing_histos_cmp[roc_type].feu2beu_tstp_histo[feu]), (feu2beu_tstp_offset - timing_histos_cmp[roc_type].feu2beu_tstp_offset[feu]) );
 
-if( feu2beu_tstp_offset - timing_histos_cmp[sys_type].feu2beu_tstp_offset[feu] )
+if( feu2beu_tstp_offset - timing_histos_cmp[roc_type].feu2beu_tstp_offset[feu] )
 printf("event id hi=%d mi=%d lo=%d acc=%d beu(%d)=0x%04x 0x%04x 0x%04x feu(%2d)=0x%04x offset=0x%08x first_offset=0x%08x diff=0x%08x\n",
 phy_evt_stat->beu_evid_hi[beu], phy_evt_stat->beu_evid_mi[beu], phy_evt_stat->beu_evid_lo[beu], phy_evt_stat->beu_evid_ac[beu],
 beu, phy_evt_stat->beu_tstp_hi[beu], phy_evt_stat->beu_tstp_mi[beu], phy_evt_stat->beu_tstp_lo[beu],
-feu, phy_evt_stat->feu_tstp[feu], feu2beu_tstp_offset, timing_histos_cmp[sys_type].feu2beu_tstp_offset[feu],
-(feu2beu_tstp_offset - timing_histos_cmp[sys_type].feu2beu_tstp_offset[feu]) );
+feu, phy_evt_stat->feu_tstp[feu], feu2beu_tstp_offset, timing_histos_cmp[roc_type].feu2beu_tstp_offset[feu],
+(feu2beu_tstp_offset - timing_histos_cmp[roc_type].feu2beu_tstp_offset[feu]) );
 //getchar();
 
 
-				Histo_Add(&(timing_histos_raw[sys_type].feu_ftstp_histo[feu]), phy_evt_stat->feu_ftstp[feu] );
-				Histo_Add(&(timing_histos_cmp[sys_type].feu_ftstp_histo[feu]), phy_evt_stat->feu_ftstp[feu] );
+				Histo_Add(&(timing_histos_raw[roc_type].feu_ftstp_histo[feu]), phy_evt_stat->feu_ftstp[feu] );
+				Histo_Add(&(timing_histos_cmp[roc_type].feu_ftstp_histo[feu]), phy_evt_stat->feu_ftstp[feu] );
 			} // if( phy_evt_stat->feu_smp_num[feu] > 0 )
 		} // for( feu=0; feu<Def_MaxNbOfFeu; feu++ )
 	} // if( phy_evt_stat->nb_of_feu > 0 )
@@ -817,8 +854,8 @@ feu, phy_evt_stat->feu_tstp[feu], feu2beu_tstp_offset, timing_histos_cmp[sys_typ
 }
 
 // Per event statistics
-PhyEvtStat phy_evt_stat_raw[Def_SysNum];
-PhyEvtStat phy_evt_stat_cmp[Def_SysNum];
+PhyEvtStat phy_evt_stat_raw[Def_RocNum];
+PhyEvtStat phy_evt_stat_cmp[Def_RocNum];
 
 int FeuWordWrite( unsigned short word, FILE* fptr )
 {
@@ -852,7 +889,7 @@ int PhyEvtStat_SaveFdf(PhyEvtStat *phy_evt_stat, int feu_id, int zero_sup, char 
 	int chan;
 	FILE *feu_fptr;
 	
-//	if( phy_evt_stat->sys_type == SysType_UKN )
+//	if( phy_evt_stat->roc_type == SysType_UKN )
 //	    return 0;
 	
 	feu_fptr = feu_data_fptr[phy_evt_stat->sys_type*Def_MaxNbOfFeu+feu_id];
@@ -2013,6 +2050,10 @@ int TiBank_Disent_Fill( TiBank_Dis *ti_bank, unsigned int *buf )
 		((ti_bank->type_count & 0xFFFFFF00) != 0Xfd010000)
 		&&
                 ((ti_bank->type_count & 0xFFFFFF00) != 0X2b010000)
+		&&
+                ((ti_bank->type_count & 0xFFFFFF00) != 0Xf0010000)
+		&&
+                ((ti_bank->type_count & 0x00FF0000) != 0X00010000)
 	)
 	{
 		fprintf( stderr, "%s: Unexpected TI banck type 0x%08x\n", __FUNCTION__, ti_bank->type_count );
@@ -2175,7 +2216,7 @@ int MvtCmpDataRead( unsigned int *buf, int buf_len, PhyEvtStat *phy_evt_stat )
 
 		u32ptr = (unsigned int *)u08ptr;
 		evnt_id = *u32ptr++;
-//if( (evnt_id & 0x7FFF) == 0x27c1 )
+//if( ((evnt_id & 0x7FFF) == 0x7) || ((evnt_id & 0x7FFF) == 0x8) )
 //fprintf( stdout, " evnt_id=0x%08x\n", evnt_id );
 
 		u08ptr += sizeof(unsigned int);
@@ -2226,6 +2267,8 @@ int MvtCmpDataRead( unsigned int *buf, int buf_len, PhyEvtStat *phy_evt_stat )
 		if( crate != cur_feu )
 		{
 			phy_evt_stat->nb_of_feu++;
+//if( ((evnt_id & 0x7FFF) == 0x7) || ((evnt_id & 0x7FFF) == 0x8) )
+//fprintf( stdout, " phy_evt_stat->nb_of_feu=%d\n", phy_evt_stat->nb_of_feu );
 			cur_feu = crate;
 			cur_drm = -1;
 			phy_evt_stat->feu_evid[crate]   = evnt_id & 0xFFF;
@@ -2279,7 +2322,7 @@ int MvtCmpDataRead( unsigned int *buf, int buf_len, PhyEvtStat *phy_evt_stat )
 //fprintf( stdout, " nb_of_chan=%d nb_of_samples=%d evnt_id=%d feu_tstp=%d feu_fine_tstp=%d\n",
 //		nb_of_chan, nb_of_samples, evnt_id, feu_tstp, feu_fine_tstp );
 
-		Histo_Add( &(timing_histos_cmp[phy_evt_stat->sys_type].feu_smp_size_histo[crate]), 0+2+4+2+nb_of_chan*(1+2+nb_of_samples*1) );
+		Histo_Add( &(timing_histos_cmp[phy_evt_stat->roc_type].feu_smp_size_histo[crate]), 0+2+4+2+nb_of_chan*(1+2+nb_of_samples*1) );
 		if( (first_phy_blk <= evt_blk_cnt) && (evt_blk_cnt <= last_phy_blk) )
 		{
 			if( do_feu_bin_files && ( cur_feu >= 0 ) )
@@ -2296,8 +2339,8 @@ int MvtCmpDataRead( unsigned int *buf, int buf_len, PhyEvtStat *phy_evt_stat )
 				}
 		}
 	} // while( cmp_size )
-	Histo_Add( &(timing_histos_cmp[phy_evt_stat->sys_type].mvt_evt_nb_of_chan_histo), total_nb_of_chan );
-	Histo_Add( &(timing_histos_cmp[phy_evt_stat->sys_type].mvt_evt_nb_of_feu_histo), phy_evt_stat->nb_of_feu );
+	Histo_Add( &(timing_histos_cmp[phy_evt_stat->roc_type].mvt_evt_nb_of_chan_histo), total_nb_of_chan );
+	Histo_Add( &(timing_histos_cmp[phy_evt_stat->roc_type].mvt_evt_nb_of_feu_histo), phy_evt_stat->nb_of_feu );
 /*
 	while( cmp_size )
 	{
@@ -2414,15 +2457,15 @@ void cleanup(int param)
 
 	fprintf(stdout, " ti_evt_cnt=%d\n",     ti_evt_cnt);
 
-	for( index=0; index<Def_SysNum; index++ )
+	for( index=0; index<Def_RocNum; index++ )
     {
         if( mvt_raw_evt_cnt[index] )
-	        fprintf(stdout, " mvt_raw_evt_cnt=%d in system %s\n", mvt_raw_evt_cnt[index], SysType2Str( index));
+	        fprintf(stdout, " mvt_raw_evt_cnt=%d in roc %s\n", mvt_raw_evt_cnt[index], RocType2Str( index));
 	}
-	for( index=0; index<Def_SysNum; index++ )
+	for( index=0; index<Def_RocNum; index++ )
     {
         if( mvt_cmp_evt_cnt[index] )
-	        fprintf(stdout, " mvt_cmp_evt_cnt=%d in system %s\n", mvt_cmp_evt_cnt[index], SysType2Str( index));
+	        fprintf(stdout, " mvt_cmp_evt_cnt=%d in roc %s\n", mvt_cmp_evt_cnt[index], RocType2Str( index));
 	}
 	fprintf(stdout, " cfg_evt_cnt=%d\n", cfg_evt_cnt);
 
@@ -2431,35 +2474,35 @@ void cleanup(int param)
 	fprintf(stdout, " unknown_cmp_cnt=%d\n",     unknown_cmp_cnt);
 	fprintf(stdout, " unknown_ent_cnt=%d\n",     unknown_ent_cnt);
 
-	for( index=0; index<Def_SysNum; index++ )
+	for( index=0; index<Def_RocNum; index++ )
     {
 	    if( mvt_raw_evt_cnt[index] )
 	    {
-            fprintf(stdout, "\nRAW data stat histos for %d events in system %s\n",
-                mvt_raw_evt_cnt[index], SysType2Str( index));
+            fprintf(stdout, "\nRAW data stat histos for %d events in roc %s\n",
+                mvt_raw_evt_cnt[index], RocType2Str( index));
             TimingHistos_DumpStat(&timing_histos_raw[index], stdout);    
             fprintf(stdout, "\n");
 		    if( do_hst_file )
 		    {
-                fprintf(hst_data_fptr, "\nRAW data stat histos for %d events in system %s\n",
-                    mvt_raw_evt_cnt[index], SysType2Str( index));
+                fprintf(hst_data_fptr, "\nRAW data stat histos for %d events in roc %s\n",
+                    mvt_raw_evt_cnt[index], RocType2Str( index));
                 TimingHistos_DumpHistos(&timing_histos_raw[index], hst_data_fptr);
             }
 		}
 	}
 	
-	for( index=0; index<Def_SysNum; index++ )
+	for( index=0; index<Def_RocNum; index++ )
     {
 	    if( mvt_cmp_evt_cnt[index] )
 	    {
-            fprintf(stdout, "\nCMP data stat histos for %d events in system %s\n",
-                mvt_cmp_evt_cnt[index], SysType2Str( index));
+            fprintf(stdout, "\nCMP data stat histos for %d events in roc %s\n",
+                mvt_cmp_evt_cnt[index], RocType2Str( index));
             TimingHistos_DumpStat(&timing_histos_cmp[index], stdout);    
             fprintf(stdout, "\n");
 		    if( do_hst_file )
 		    {
-                fprintf(hst_data_fptr, "\nCMP data stat histos for %d events in system %s\n",
-                    mvt_cmp_evt_cnt[index], SysType2Str( index));
+                fprintf(hst_data_fptr, "\nCMP data stat histos for %d events in roc %s\n",
+                    mvt_cmp_evt_cnt[index], RocType2Str( index));
                 TimingHistos_DumpHistos(&timing_histos_cmp[index], hst_data_fptr);
             }
 		}
@@ -2533,7 +2576,7 @@ void cleanup(int param)
 	}
 
 	// Free allocated timing histos
-	for( index=0; index<Def_SysNum; index++ )
+	for( index=0; index<Def_RocNum; index++ )
 	{
 	    TimingHistos_Free( &timing_histos_raw[index] );
     	TimingHistos_Free( &timing_histos_cmp[index] );
@@ -2582,6 +2625,7 @@ int main( int argc, char* *argv )
 	char disp_data_file_name[128];
 
 	SysType sys_type;
+	RocType roc_type;
 
 	int ret;
 	int feu_wr_len;
@@ -2636,6 +2680,7 @@ int main( int argc, char* *argv )
 	prescale_event = 0;
 
 	sys_type = SysType_UKN;
+	roc_type = RocType_UKN;
 
 	/******************************/
 	/* Check for input parameters */
@@ -2810,7 +2855,7 @@ int main( int argc, char* *argv )
 		mvt_plot_fptr = (FILE *)NULL;
 
 	// Allocated timing histos
-	for( index=0; index<Def_SysNum; index++ )
+	for( index=0; index<Def_RocNum; index++ )
 	{
 	    TimingHistos_Init( &timing_histos_raw[index] );
     	TimingHistos_Init( &timing_histos_cmp[index] );
@@ -2928,13 +2973,15 @@ int main( int argc, char* *argv )
 							{
 								if( ( rd_len = ReadNoumWords(bin_data_fptr, 1, &next_ent_len) ) != 1 )
 								{
-									fprintf( stderr, "%s: ReadNoumWords failed for tst word %d with rd_len=%d != 1\n", __FUNCTION__, net_buf_len, rd_len );
+									fprintf( stderr, "%s: ReadNoumWords failed for tst word %d with rd_len=%d != 1\n",
+										__FUNCTION__, net_buf_len, rd_len );
 									cleanup(-3);
 								}
 								net_buf_len++;
 							} while ( next_ent_len == 0 );
 							rd_word_cnt++;
-							fprintf( stderr, "%s: %4d word after negative and %2d 0 words : 0x%08x %d\n", __FUNCTION__, rd_word_cnt, net_buf_len-1, next_ent_len, next_ent_len );
+							fprintf( stderr, "%s: %4d word after negative and %2d 0 words : 0x%08x %d\n",
+								__FUNCTION__, rd_word_cnt, net_buf_len-1, next_ent_len, next_ent_len );
 						} while( rd_word_cnt < 200 );
 						cleanup(-4);
 					}
@@ -3002,7 +3049,7 @@ int main( int argc, char* *argv )
 					*rd_buf_ptr++ = net_hdr.bit_and_ver;
 					*rd_buf_ptr++ = net_hdr.rsvd2;
 					*rd_buf_ptr++ = net_hdr.magic;
-					rd_buf_len = next_ent_len - Def_NetHdrSize;
+					rd_buf_len = next_ent_len + 1 - Def_NetHdrSize;
 					if( verbose > 2 )
 						fprintf(stdout, "%s: rd_buf_len = %d\n", __FUNCTION__, rd_buf_len);
 					// Now read requested number of words
@@ -3036,7 +3083,7 @@ int main( int argc, char* *argv )
 				if( (DEF_GetEvioEntryDat(cur_ent_type) == DEF_ENTRY_DATA_BNK_0E) || (DEF_GetEvioEntryDat(cur_ent_type) == DEF_ENTRY_DATA_BNK_10) )
 				{
 					if
-					( 
+					(
 						(cur_ent_type == 0x00ab10cc)
 						||
 						(cur_ent_type == 0x000010cc)
@@ -3055,6 +3102,8 @@ int main( int argc, char* *argv )
 						||
 						(DEF_GetEvioEntryTag(cur_ent_type) == 0x45) // MVT mvt1
 						||
+						(DEF_GetEvioEntryTag(cur_ent_type) == 0x44) // MVT mvt2
+						||
 						(DEF_GetEvioEntryTag(cur_ent_type) == 0x4B) // FTT mmft1
 						||
 						(DEF_GetEvioEntryTag(cur_ent_type) == 0x01) // STB sedipcq156
@@ -3066,22 +3115,44 @@ int main( int argc, char* *argv )
 						((cur_ent_type & 0xFFFFFF00) == 0x00fd0e00) // constant trigger out of coda
 						||
 						((cur_ent_type & 0xFFFFFF00) == 0x00000e00) // phy trigger out of coda
+						||
+						((cur_ent_type & 0xFF00FFFF) == 0x000010cc)
 					)
 					{
 //printf("%s: Physics header in cur_ent_type=0x%08x of len=%d\n", __FUNCTION__, cur_ent_type, *rd_buf_ptr);
 						// Looks to be Physics event header
 						evt_hdr_cnt++;
-						sys_type = RocId2SysType( DEF_GetEvioEntryTag(cur_ent_type) );
-						PhyEvtStat_Init( &(phy_evt_stat_raw[sys_type]) );
-						PhyEvtStat_Init( &(phy_evt_stat_cmp[sys_type]) );
-						phy_evt_stat_raw[sys_type].size = (*rd_buf_ptr + 1);
-						phy_evt_stat_cmp[sys_type].size = (*rd_buf_ptr + 1);
-						phy_evt_stat_raw[sys_type].sys_type = sys_type;
-						phy_evt_stat_cmp[sys_type].sys_type = sys_type;
+						if
+					    (
+						    (DEF_GetEvioEntryTag(cur_ent_type) == 0x45) // MVT mvt1
+						    ||
+						    (DEF_GetEvioEntryTag(cur_ent_type) == 0x44) // MVT mvt2
+						    ||
+						    (DEF_GetEvioEntryTag(cur_ent_type) == 0x4B) // FTT mmft1
+						    ||
+						    (DEF_GetEvioEntryTag(cur_ent_type) == 0x01) // STB sedipcq156
+						    ||
+						    (DEF_GetEvioEntryTag(cur_ent_type) == 0x3F) // JTB mvt3
+					    )
+					    {
+						    roc_type = RocId2RocType( DEF_GetEvioEntryTag(cur_ent_type) );
+						    PhyEvtStat_Init( &(phy_evt_stat_raw[roc_type]) );
+						    PhyEvtStat_Init( &(phy_evt_stat_cmp[roc_type]) );
+						    phy_evt_stat_raw[roc_type].size = (*rd_buf_ptr + 1);
+						    phy_evt_stat_cmp[roc_type].size = (*rd_buf_ptr + 1);
+						    phy_evt_stat_raw[roc_type].roc_type = roc_type;
+						    phy_evt_stat_cmp[roc_type].roc_type = roc_type;
+						    phy_evt_stat_raw[roc_type].sys_type = RocId2SysType( DEF_GetEvioEntryTag(cur_ent_type) );
+						    phy_evt_stat_cmp[roc_type].sys_type = RocId2SysType( DEF_GetEvioEntryTag(cur_ent_type) );
+						    phy_evt_stat_raw[roc_type].roc_id   = DEF_GetEvioEntryTag(cur_ent_type);
+						    phy_evt_stat_cmp[roc_type].roc_id   = DEF_GetEvioEntryTag(cur_ent_type);
+    						MvtPlot_Init( &mvt_event_plot );
+    					}
 						// This is a bank of bank: skip the header
+//EntryHdr_Printf(stdout, (EntryHdr *)rd_buf_ptr);
 						rd_buf_ptr = rd_buf_ptr + Def_EntryHdrSize;
 						rd_buf_ptr_len -= Def_EntryHdrSize;
-						MvtPlot_Init( &mvt_event_plot );
+//printf("%s: Physics header =%d of type=%d\n", __FUNCTION__, evt_hdr_cnt, roc_type );
 					}
 					else if
 					(
@@ -3094,7 +3165,7 @@ int main( int argc, char* *argv )
 						(DEF_GetEvioEntryTag(cur_ent_type) == DEF_ENTRY_TAG_RC_PAUSE)
 						||
 						(DEF_GetEvioEntryTag(cur_ent_type) == DEF_ENTRY_TAG_RC_END)
-						)
+					)
 					{
 						// This is a bank of bank for run control messages: skip the header
 						rd_buf_ptr = rd_buf_ptr + Def_EntryHdrSize;
@@ -3102,7 +3173,7 @@ int main( int argc, char* *argv )
 					}
 					else
 					{
-fprintf(stdout, "%s: Unknown cur_ent_type=0x%08x of size %d tag 0x%04x in skipping!\n", __FUNCTION__, cur_ent_type, (*rd_buf_ptr+1), DEF_GetEvioEntryTag(cur_ent_type) );
+//fprintf(stdout, "%s: Unknown cur_ent_type=0x%08x of size %d tag 0x%04x in skipping!\n", __FUNCTION__, cur_ent_type, (*rd_buf_ptr+1), DEF_GetEvioEntryTag(cur_ent_type) );
 						cur_ent_len = (*rd_buf_ptr + 1);
 						rd_buf_ptr = rd_buf_ptr + cur_ent_len;
 						rd_buf_ptr_len -= cur_ent_len;
@@ -3113,43 +3184,51 @@ fprintf(stdout, "%s: Unknown cur_ent_type=0x%08x of size %d tag 0x%04x in skippi
 					if( DEF_GetEvioEntryTag(cur_ent_type) == DEF_ENTRY_TAG_MVT_CMP )
 					{
 						// Looks to be composite MVT data
-						if( (ret = MvtCmpDataRead( rd_buf_ptr, (*rd_buf_ptr + 1), &(phy_evt_stat_cmp[sys_type]) ) ) <= 0 )
+/*
+if( (ti_evt_cnt == 15) || (ti_evt_cnt == 16) )
+{
+	fprintf(stderr, "%s: MvtCmpDataRead buffer of size %d to be processed\n", __FUNCTION__, *rd_buf_ptr + 1 );
+}
+*/
+						if( (ret = MvtCmpDataRead( rd_buf_ptr, (*rd_buf_ptr + 1), &(phy_evt_stat_cmp[roc_type]) ) ) <= 0 )
 						{
 							fprintf(stderr, "%s: MvtCmpDataRead failed with %d for event count %d\n", __FUNCTION__, ret, evt_blk_cnt);
 							break;
 						}
-						phy_evt_stat_cmp[sys_type].data_type = PHY_EVT_DATA_TYPE_CMP;
-						Histo_Add( &(timing_histos_cmp[sys_type].phy_evt_blk_size_histo), phy_evt_stat_cmp[sys_type].size);
+						phy_evt_stat_cmp[roc_type].data_type = PHY_EVT_DATA_TYPE_CMP;
+						Histo_Add( &(timing_histos_cmp[roc_type].phy_evt_blk_size_histo), phy_evt_stat_cmp[roc_type].size);
 
-						mvt_cmp_evt_cnt[sys_type]++;
+						mvt_cmp_evt_cnt[roc_type]++;
 						if( prescale_event == 0 )
 						{
-							if( (ret = PhyEvtStat_Validate( &phy_evt_stat_cmp[sys_type] )) < 0 )
+							if( (ret = PhyEvtStat_Validate( &phy_evt_stat_cmp[roc_type] )) < 0 )
 							{
 								fprintf(stderr, "%s: PhyEvtBlkStat_Validate failed with %d\n", __FUNCTION__, ret);
 							}
 						}
+//printf("Press CR to continue\n");
+//getchar();
 
 						if( (first_phy_blk <= evt_blk_cnt) && (evt_blk_cnt <= last_phy_blk) )
 						{
 							if( asc_data_fptr != (FILE *)NULL )
-								PhyEvtStat_Dump( &phy_evt_stat_cmp[sys_type], asc_data_fptr );
+								PhyEvtStat_Dump( &phy_evt_stat_cmp[roc_type], asc_data_fptr );
 							if( do_disp_file )
 							{
 								MvtPlot_Dump( &mvt_event_plot, evt_blk_cnt, "stdout" );
 							}
 						}
 						if( verbose )
-							PhyEvtStat_Dump( &phy_evt_stat_cmp[sys_type], stdout );
+							PhyEvtStat_Dump( &phy_evt_stat_cmp[roc_type], stdout );
 
 						cur_ent_len = (*rd_buf_ptr + 1);
-						Histo_Add( &(timing_histos_cmp[sys_type].mvt_evt_size_histo), cur_ent_len );
+						Histo_Add( &(timing_histos_cmp[roc_type].mvt_evt_size_histo), cur_ent_len );
 						rd_buf_ptr = rd_buf_ptr + cur_ent_len;
 						rd_buf_ptr_len -= cur_ent_len;
 					}
 					else
 					{
-fprintf(stdout, "%s: Unknown tag for rd_buf = 0x%08x of len=%d of composite type=0x%08x skipping!\n", __FUNCTION__, (unsigned int)rd_buf_ptr, *rd_buf_ptr, *(rd_buf_ptr+1) );
+//fprintf(stdout, "%s: Unknown tag for rd_buf = 0x%08x of len=%d of composite type=0x%08x skipping!\n", __FUNCTION__, (unsigned int)rd_buf_ptr, *rd_buf_ptr, *(rd_buf_ptr+1) );
 						unknown_cmp_cnt++;
 						cur_ent_len = (*rd_buf_ptr + 1);
 						rd_buf_ptr = rd_buf_ptr + cur_ent_len;
@@ -3248,10 +3327,10 @@ fprintf(stdout, "%s: Unknown tag for rd_buf = 0x%08x of len=%d of composite type
 						}
 						// Looks to be EvtHdr
 						// Initialize event stat
-						phy_evt_stat_raw[sys_type].id = evt_blk.num;
-						phy_evt_stat_cmp[sys_type].id = evt_blk.num;
+						phy_evt_stat_raw[roc_type].id = evt_blk.num;
+						phy_evt_stat_cmp[roc_type].id = evt_blk.num;
 						evt_blk_cnt++;
-						if( (first_phy_blk <= evt_hdr_cnt) && (evt_hdr_cnt <= last_phy_blk) && (asc_data_fptr != ((FILE *)NULL)) )
+						if( (first_phy_blk <= evt_blk_cnt) && (evt_blk_cnt <= last_phy_blk) && (asc_data_fptr != ((FILE *)NULL)) )
 							EvtBlk_Printf( (EvtBlk *)rd_buf_ptr, asc_data_fptr );
 						rd_buf_ptr = rd_buf_ptr + ret;
 						rd_buf_ptr_len -= ret;
@@ -3265,46 +3344,46 @@ fprintf(stdout, "%s: Unknown tag for rd_buf = 0x%08x of len=%d of composite type
 TiBank_Disent_Printf( &ti_bank, stdout );
 							break;
 						}
-//fprintf(stdout, "%s: TiBank_Disent_Fill OK with ret=%d\n", __FUNCTION__, ret);
+//fprintf(stdout, "%s: TiBank_Disent_Fill OK with ret=%d for roc_type=%d\n", __FUNCTION__, ret, roc_type);
 						ti_evt_cnt++;
 						if( (first_phy_blk <= evt_hdr_cnt) && (evt_hdr_cnt <= last_phy_blk) && (asc_data_fptr != ((FILE *)NULL)) )
 							TiBank_Disent_Printf( &ti_bank, asc_data_fptr );
 						if( verbose > 1 )
 							TiBank_Disent_Printf( &ti_bank, stdout );
 						// Fill Phy event stat
-						phy_evt_stat_raw[sys_type].ti_evid_lo = ti_bank.evid_lo;
-						phy_evt_stat_raw[sys_type].ti_tstp_lo = ti_bank.tstp_lo;
-						phy_evt_stat_raw[sys_type].ti_evid_hi = ti_bank.evid_tstp_hi        & 0xFFFF;
-						phy_evt_stat_raw[sys_type].ti_tstp_hi =(ti_bank.evid_tstp_hi >> 16) & 0xFFFF;
+						phy_evt_stat_raw[roc_type].ti_evid_lo = ti_bank.evid_lo;
+						phy_evt_stat_raw[roc_type].ti_tstp_lo = ti_bank.tstp_lo;
+						phy_evt_stat_raw[roc_type].ti_evid_hi = ti_bank.evid_tstp_hi        & 0xFFFF;
+						phy_evt_stat_raw[roc_type].ti_tstp_hi =(ti_bank.evid_tstp_hi >> 16) & 0xFFFF;
 						// Inter trigger delay
-						if( ti_bank.evid_lo > 1 && timing_histos_raw[sys_type].ti_tstp_prev != 0xFFFFffff)
+						if( ti_bank.evid_lo > 1 && timing_histos_raw[roc_type].ti_tstp_prev != 0xFFFFffff)
 						{
-							itd = (int)(((((ti_bank.tstp_lo & 0x7FFFffff) - (timing_histos_raw[sys_type].ti_tstp_prev & 0x7FFFffff)) & 0x7FFFffff) * 4. / 1000.)+.5);
-							Histo_Add(&(timing_histos_raw[sys_type].ti_itd_histo), itd );
+							itd = (int)(((((ti_bank.tstp_lo & 0x7FFFffff) - (timing_histos_raw[roc_type].ti_tstp_prev & 0x7FFFffff)) & 0x7FFFffff) * 4. / 1000.)+.5);
+							Histo_Add(&(timing_histos_raw[roc_type].ti_itd_histo), itd );
 						}
-						timing_histos_raw[sys_type].ti_tstp_prev = ti_bank.tstp_lo;
+						timing_histos_raw[roc_type].ti_tstp_prev = ti_bank.tstp_lo;
 
-						phy_evt_stat_cmp[sys_type].ti_evid_lo = ti_bank.evid_lo;
-						phy_evt_stat_cmp[sys_type].ti_tstp_lo = ti_bank.tstp_lo;
-						phy_evt_stat_cmp[sys_type].ti_evid_hi = ti_bank.evid_tstp_hi        & 0xFFFF;
-						phy_evt_stat_cmp[sys_type].ti_tstp_hi =(ti_bank.evid_tstp_hi >> 16) & 0xFFFF;
+						phy_evt_stat_cmp[roc_type].ti_evid_lo = ti_bank.evid_lo;
+						phy_evt_stat_cmp[roc_type].ti_tstp_lo = ti_bank.tstp_lo;
+						phy_evt_stat_cmp[roc_type].ti_evid_hi = ti_bank.evid_tstp_hi        & 0xFFFF;
+						phy_evt_stat_cmp[roc_type].ti_tstp_hi =(ti_bank.evid_tstp_hi >> 16) & 0xFFFF;
 						rd_buf_ptr = rd_buf_ptr + ret;
 						rd_buf_ptr_len -= ret;
 						// Inter trigger delay
-						if( ti_bank.evid_lo > 1 && timing_histos_cmp[sys_type].ti_tstp_prev != 0xFFFFffff)
+						if( ti_bank.evid_lo > 1 && timing_histos_cmp[roc_type].ti_tstp_prev != 0xFFFFffff)
 						{
-							itd = (int)(((((ti_bank.tstp_lo & 0x7FFFffff) - (timing_histos_cmp[sys_type].ti_tstp_prev & 0x7FFFffff)) & 0x7FFFffff) * 4. / 1000.)+.5);
-							Histo_Add(&(timing_histos_cmp[sys_type].ti_itd_histo), itd );
+							itd = (int)(((((ti_bank.tstp_lo & 0x7FFFffff) - (timing_histos_cmp[roc_type].ti_tstp_prev & 0x7FFFffff)) & 0x7FFFffff) * 4. / 1000.)+.5);
+							Histo_Add(&(timing_histos_cmp[roc_type].ti_itd_histo), itd );
 						}
-						timing_histos_cmp[sys_type].ti_tstp_prev = ti_bank.tstp_lo;
+						timing_histos_cmp[roc_type].ti_tstp_prev = ti_bank.tstp_lo;
 					}
 					else if( DEF_GetEvioEntryTag(cur_ent_type) == DEF_ENTRY_TAG_MVT_RAW )
 					{
 						// Looks to be Raw MVT data
-						mvt_raw_evt_cnt[sys_type]++;
-						Histo_Add( &(timing_histos_raw[sys_type].phy_evt_blk_size_histo), phy_evt_stat_raw[sys_type].size);
+						mvt_raw_evt_cnt[roc_type]++;
+						Histo_Add( &(timing_histos_raw[roc_type].phy_evt_blk_size_histo), phy_evt_stat_raw[roc_type].size);
 						cur_ent_len = (*rd_buf_ptr + 1);
-						Histo_Add(&(timing_histos_raw[sys_type].mvt_evt_size_histo), cur_ent_len );
+						Histo_Add(&(timing_histos_raw[roc_type].mvt_evt_size_histo), cur_ent_len );
 						rd_buf_ptr = rd_buf_ptr + cur_ent_len;
 						rd_buf_ptr_len -= cur_ent_len;
 					}

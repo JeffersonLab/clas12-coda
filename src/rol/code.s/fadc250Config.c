@@ -53,6 +53,9 @@ FADC250_GAIN       0.5        <- board Gains, same for all channels
 FADC250_CH_GAIN    0    0.5   <- channel# and Gain_value for this channel
 FADC250_ALLCH_GAIN 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5  <- 16 GAINs
 
+FADC250_CH_DELAY    0   0     <- channel# and delay in ns
+FADC250_ALLCH_DELAY 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+
 FADC250_CONF_FILE  <filename> <- another config filename to be processed on next iteration
 
 
@@ -78,33 +81,33 @@ static FADC250_CONF fa250[NBOARD+1];
 
 
 #define SCAN_MSK \
-	args = sscanf (str_tmp, "%*s %d %d %d %d %d %d %d %d   \
+  args = sscanf (str_tmp, "%*s %d %d %d %d %d %d %d %d   \
                                      %d %d %d %d %d %d %d %d", \
-		       &msk[ 0], &msk[ 1], &msk[ 2], &msk[ 3], \
-		       &msk[ 4], &msk[ 5], &msk[ 6], &msk[ 7], \
-		       &msk[ 8], &msk[ 9], &msk[10], &msk[11], \
-		       &msk[12], &msk[13], &msk[14], &msk[15])
+           &msk[ 0], &msk[ 1], &msk[ 2], &msk[ 3], \
+           &msk[ 4], &msk[ 5], &msk[ 6], &msk[ 7], \
+           &msk[ 8], &msk[ 9], &msk[10], &msk[11], \
+           &msk[12], &msk[13], &msk[14], &msk[15])
 
 #define SCAN_FMSK \
-	args = sscanf (str_tmp, "%*s %f %f %f %f %f %f %f %f   \
+  args = sscanf (str_tmp, "%*s %f %f %f %f %f %f %f %f   \
                                      %f %f %f %f %f %f %f %f", \
-		       &fmsk[ 0], &fmsk[ 1], &fmsk[ 2], &fmsk[ 3], \
-		       &fmsk[ 4], &fmsk[ 5], &fmsk[ 6], &fmsk[ 7], \
-		       &fmsk[ 8], &fmsk[ 9], &fmsk[10], &fmsk[11], \
-		       &fmsk[12], &fmsk[13], &fmsk[14], &fmsk[15])
+           &fmsk[ 0], &fmsk[ 1], &fmsk[ 2], &fmsk[ 3], \
+           &fmsk[ 4], &fmsk[ 5], &fmsk[ 6], &fmsk[ 7], \
+           &fmsk[ 8], &fmsk[ 9], &fmsk[10], &fmsk[11], \
+           &fmsk[12], &fmsk[13], &fmsk[14], &fmsk[15])
 
 #define GET_READ_MSK \
-	SCAN_MSK; \
-	ui1 = 0; \
-	for(jj=0; jj<NCHAN; jj++) \
-	{ \
-	  if((msk[jj] < 0) || (msk[jj] > 1)) \
-	  { \
-	    printf("\nReadConfigFile: Wrong mask bit value, %d\n\n",msk[jj]); return(-6); \
-	  } \
-	  if(strcmp(keyword,"FADC250_ADC_MASK") == 0) msk[jj] = ~(msk[jj])&0x1; \
-	  ui1 |= (msk[jj]<<jj); \
-	}
+  SCAN_MSK; \
+  ui1 = 0; \
+  for(jj=0; jj<NCHAN; jj++) \
+  { \
+    if((msk[jj] < 0) || (msk[jj] > 1)) \
+    { \
+      printf("\nReadConfigFile: Wrong mask bit value, %d\n\n",msk[jj]); return(-6); \
+    } \
+    if(strcmp(keyword,"FADC250_ADC_MASK") == 0) msk[jj] = ~(msk[jj])&0x1; \
+    ui1 |= (msk[jj]<<jj); \
+  }
 
 
 static char *expid = NULL;
@@ -177,6 +180,7 @@ fadc250InitGlobals()
       fa250[jj].dac[ii] = 3300;
       fa250[jj].ped[ii] = 0.;
       fa250[jj].gain[ii] = 0.5;
+      fa250[jj].delay[ii] = 0;
     }
   }
 }
@@ -221,13 +225,13 @@ fadc250ReadConfigFile(char *filename_in)
     if(strlen(filename)!=0) /* filename specified */
     {
       if ( filename[0]=='/' || (filename[0]=='.' && filename[1]=='/') )
-	  {
+    {
         sprintf(fname, "%s", filename);
-	  }
+    }
       else
-	  {
+    {
         sprintf(fname, "%s/fadc250/%s", clonparms, filename);
-	  }
+    }
 
       if((fd=fopen(fname,"r")) == NULL)
       {
@@ -245,14 +249,14 @@ fadc250ReadConfigFile(char *filename_in)
         {
           printf("\nReadConfigFile: Can't open config file >%s<\n",fname);
           return(-2);
-	    }
-	  }
+      }
+    }
     }
     else
-	{
+  {
       printf("\nReadConfigFile: ERROR: since do_parsing=%d (>1), filename must be specified\n",do_parsing);
       return(-1);
-	}
+  }
 
     printf("\nReadConfigFile: Using configuration file >%s<\n",fname);
 
@@ -278,21 +282,21 @@ fadc250ReadConfigFile(char *filename_in)
         /* Start parsing real config inputs */
         if(strcmp(keyword,"FADC250_CRATE") == 0)
         {
-	      if(strcmp(ROC_name,host) == 0)
+        if(strcmp(ROC_name,host) == 0)
           {
-	        printf("\nReadConfigFile: crate = %s  host = %s - activated\n",ROC_name,host);
+          printf("\nReadConfigFile: crate = %s  host = %s - activated\n",ROC_name,host);
             active = 1;
           }
-	      else if(strcmp(ROC_name,"all") == 0)
-		  {
-	        printf("\nReadConfigFile: crate = %s  host = %s - activated\n",ROC_name,host);
+        else if(strcmp(ROC_name,"all") == 0)
+      {
+          printf("\nReadConfigFile: crate = %s  host = %s - activated\n",ROC_name,host);
             active = 1;
-		  }
+      }
           else
-		  {
-	        printf("\nReadConfigFile: crate = %s  host = %s - disactivated\n",ROC_name,host);
+      {
+          printf("\nReadConfigFile: crate = %s  host = %s - disactivated\n",ROC_name,host);
             active = 0;
-		  }
+      }
         }
 
         else if(active && (strcmp(keyword,"FADC250_CONF_FILE")==0))
@@ -301,7 +305,7 @@ fadc250ReadConfigFile(char *filename_in)
           /*printf("str2=%s\n",str2);*/
           strcpy(filename,str2);
           do_parsing = 2;
-	    }
+      }
 
         else if(active && ((strcmp(keyword,"FADC250_SLOT")==0) || (strcmp(keyword,"FADC250_SLOTS")==0)))
         {
@@ -328,59 +332,59 @@ fadc250ReadConfigFile(char *filename_in)
             return(-4);
           }
           /*printf("slot1=%d slot2=%d\n",slot1,slot2);*/
-	    }
+      }
 
         else if(active && (strcmp(keyword,"FADC250_MODE") == 0))
         {
           sscanf (str_tmp, "%*s %d", &i1);
-	      for(slot=slot1; slot<slot2; slot++) fa250[slot].mode = i1;
+        for(slot=slot1; slot<slot2; slot++) fa250[slot].mode = i1;
         }
 
         else if(active && (strcmp(keyword,"FADC250_W_OFFSET") == 0))
         {
           sscanf (str_tmp, "%*s %d", &i1);
-	      for(slot=slot1; slot<slot2; slot++) fa250[slot].winOffset = i1/4;
+        for(slot=slot1; slot<slot2; slot++) fa250[slot].winOffset = i1/4;
         }
 
         else if(active && (strcmp(keyword,"FADC250_W_WIDTH") == 0))
         {
           sscanf (str_tmp, "%*s %d", &i1);
-	      for(slot=slot1; slot<slot2; slot++) fa250[slot].winWidth = i1/4;
+        for(slot=slot1; slot<slot2; slot++) fa250[slot].winWidth = i1/4;
         }
 
         else if(active && (strcmp(keyword,"FADC250_NSA") == 0))
         {
           sscanf (str_tmp, "%*s %d", &i1);
-	      for(slot=slot1; slot<slot2; slot++) fa250[slot].nsa = i1/4;
+        for(slot=slot1; slot<slot2; slot++) fa250[slot].nsa = i1/4;
         }
 
         else if(active && (strcmp(keyword,"FADC250_NSB") == 0))
         {
           sscanf (str_tmp, "%*s %d", &i1);
-	      for(slot=slot1; slot<slot2; slot++) fa250[slot].nsb = i1/4;
+        for(slot=slot1; slot<slot2; slot++) fa250[slot].nsb = i1/4;
         }
 
         else if(active && (strcmp(keyword,"FADC250_NPEAK") == 0))
         {
           sscanf (str_tmp, "%*s %d", &i1);
-	      for(slot=slot1; slot<slot2; slot++) fa250[slot].npeak = i1;
+        for(slot=slot1; slot<slot2; slot++) fa250[slot].npeak = i1;
         }
 
         else if(active && (strcmp(keyword,"FADC250_ADC_MASK") == 0))
         {
-	      GET_READ_MSK;
-	      for(slot=slot1; slot<slot2; slot++) fa250[slot].chDisMask = ui1;
+        GET_READ_MSK;
+        for(slot=slot1; slot<slot2; slot++) fa250[slot].chDisMask = ui1;
 #ifdef DEBUG
-	      printf("\nReadConfigFile: %s = 0x%04x \n",keyword,ui1);
+        printf("\nReadConfigFile: %s = 0x%04x \n",keyword,ui1);
 #endif
         }
 
         else if(active && (strcmp(keyword,"FADC250_TRG_MASK") == 0))
         {
-	      GET_READ_MSK;
-	      for(slot=slot1; slot<slot2; slot++) fa250[slot].trigMask = ui1;
+        GET_READ_MSK;
+        for(slot=slot1; slot<slot2; slot++) fa250[slot].trigMask = ui1;
 #ifdef DEBUG
-	      printf("\nReadConfigFile: %s = 0x%04x \n",keyword,ui1);
+        printf("\nReadConfigFile: %s = 0x%04x \n",keyword,ui1);
 #endif
         }
         else if(active && (strcmp(keyword,"FADC250_TRG_WIDTH") == 0))
@@ -400,10 +404,10 @@ fadc250ReadConfigFile(char *filename_in)
         }
         else if(active && (strcmp(keyword,"FADC250_TET_IGNORE_MASK") == 0))
         {
-	      GET_READ_MSK;
-	      for(slot=slot1; slot<slot2; slot++) fa250[slot].thrIgnoreMask = ui1;
+        GET_READ_MSK;
+        for(slot=slot1; slot<slot2; slot++) fa250[slot].thrIgnoreMask = ui1;
 #ifdef DEBUG
-	      printf("\nReadConfigFile: %s = 0x%04x \n",keyword,ui1);
+        printf("\nReadConfigFile: %s = 0x%04x \n",keyword,ui1);
 #endif
         }
 
@@ -418,27 +422,49 @@ fadc250ReadConfigFile(char *filename_in)
           sscanf (str_tmp, "%*s %d %d", &chan, &ui1);
           if((chan<0) || (chan>NCHAN))
           {
-	        printf("\nReadConfigFile: Wrong channel number %d, %s\n",chan,str_tmp);
-	        return(-7);
+          printf("\nReadConfigFile: Wrong channel number %d, %s\n",chan,str_tmp);
+          return(-7);
           }
           for(slot=slot1; slot<slot2; slot++) fa250[slot].thr[chan] = ui1;
         }
 
-        else if(active && (strcmp(keyword,"FADC250_ALLCH_TET") == 0))
+        else if(active && (strcmp(keyword,"FADC250_CH_DELAY") == 0))
         {
-	      SCAN_MSK;
-	      if(args != 16)
+          sscanf (str_tmp, "%*s %d %d", &chan, &ui1);
+          if((chan<0) || (chan>NCHAN))
           {
-	        printf("\nReadConfigFile: Wrong argument's number %d, should be 16\n\n",args);
+          printf("\nReadConfigFile: Wrong channel number %d, %s\n",chan,str_tmp);
+          return(-7);
+          }
+          for(slot=slot1; slot<slot2; slot++) fa250[slot].delay[chan] = ui1;
+        }
+
+        else if(active && (strcmp(keyword,"FADC250_ALLCH_DELAY") == 0))
+        {
+        SCAN_MSK;
+        if(args != 16)
+          {
+          printf("\nReadConfigFile: Wrong argument's number %d, should be 16\n\n",args);
             return(-8);
           }
-	      for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].thr[ii] = msk[ii];
+        for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].delay[ii] = msk[ii];
+        }
+
+        else if(active && (strcmp(keyword,"FADC250_ALLCH_TET") == 0))
+        {
+        SCAN_MSK;
+        if(args != 16)
+          {
+          printf("\nReadConfigFile: Wrong argument's number %d, should be 16\n\n",args);
+            return(-8);
+          }
+        for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].thr[ii] = msk[ii];
         }
 
         else if(active && (strcmp(keyword,"FADC250_DAC") == 0))
         {
           sscanf (str_tmp, "%*s %d", &ui1);
-	      for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].dac[ii] = ui1;
+        for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].dac[ii] = ui1;
         }
 
         else if(active && (strcmp(keyword,"FADC250_CH_DAC") == 0))
@@ -446,27 +472,27 @@ fadc250ReadConfigFile(char *filename_in)
           sscanf (str_tmp, "%*s %d %d", &chan, &ui1);
           if((chan<0) || (chan>NCHAN))
           {
-	        printf("\nReadConfigFile: Wrong channel number %d, %s\n",chan,str_tmp);
-	        return(-7);
+          printf("\nReadConfigFile: Wrong channel number %d, %s\n",chan,str_tmp);
+          return(-7);
           }
-	      for(slot=slot1; slot<slot2; slot++) fa250[slot].dac[chan] = ui1;
+        for(slot=slot1; slot<slot2; slot++) fa250[slot].dac[chan] = ui1;
         }
 
         else if(active && (strcmp(keyword,"FADC250_ALLCH_DAC") == 0))
         {
-	      SCAN_MSK;
-	      if(args != 16)
+        SCAN_MSK;
+        if(args != 16)
           {
-	        printf("\nReadConfigFile: Wrong argument's number %d, should be 16\n\n",args);
+          printf("\nReadConfigFile: Wrong argument's number %d, should be 16\n\n",args);
             return(-8);
           }
-	      for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].dac[ii] = msk[ii];
+        for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].dac[ii] = msk[ii];
         }
 
         else if(active && (strcmp(keyword,"FADC250_PED") == 0))
         {
           sscanf (str_tmp, "%*s %f", &f1);
-	      for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].ped[ii] = f1;
+        for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].ped[ii] = f1;
         }
 
         else if(active && (strcmp(keyword,"FADC250_CH_PED") == 0))
@@ -474,29 +500,29 @@ fadc250ReadConfigFile(char *filename_in)
           sscanf (str_tmp, "%*s %d %f", &chan, &f1);
           if((chan<0) || (chan>NCHAN))
           {
-	        printf("\nReadConfigFile: Wrong channel number %d, %s\n",chan,str_tmp);
-	        return(-7);
+          printf("\nReadConfigFile: Wrong channel number %d, %s\n",chan,str_tmp);
+          return(-7);
           }
-	      for(slot=slot1; slot<slot2; slot++) fa250[slot].ped[chan] = f1;
+        for(slot=slot1; slot<slot2; slot++) fa250[slot].ped[chan] = f1;
         }
 
         else if(active && (strcmp(keyword,"FADC250_ALLCH_PED") == 0))
         {
-	      SCAN_FMSK;
-	      if(args != 16)
+        SCAN_FMSK;
+        if(args != 16)
           {
-	        printf("\nReadConfigFile: Wrong argument's number %d, should be 16\n\n",args);
+          printf("\nReadConfigFile: Wrong argument's number %d, should be 16\n\n",args);
             return(-8);
           }
-	      for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].ped[ii] = fmsk[ii];
-	      for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++)
+        for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].ped[ii] = fmsk[ii];
+        for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++)
             printf("CONF: read ped[%d][%d]=%f\n",slot,ii,fa250[slot].ped[ii]);
         }
 
         else if(active && (strcmp(keyword,"FADC250_GAIN") == 0))
         {
           sscanf (str_tmp, "%*s %f", &f1);
-	      for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].gain[ii] = f1;
+        for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].gain[ii] = f1;
         }
 
         else if(active && (strcmp(keyword,"FADC250_CH_GAIN") == 0))
@@ -504,27 +530,27 @@ fadc250ReadConfigFile(char *filename_in)
           sscanf (str_tmp, "%*s %d %f", &chan, &f1);
           if((chan<0) || (chan>NCHAN))
           {
-	        printf("\nReadConfigFile: Wrong channel number %d, %s\n",chan,str_tmp);
-	        return(-7);
+          printf("\nReadConfigFile: Wrong channel number %d, %s\n",chan,str_tmp);
+          return(-7);
           }
-	      for(slot=slot1; slot<slot2; slot++) fa250[slot].gain[chan] = f1;
+        for(slot=slot1; slot<slot2; slot++) fa250[slot].gain[chan] = f1;
         }
 
         else if(active && (strcmp(keyword,"FADC250_ALLCH_GAIN") == 0))
         {
-	      SCAN_FMSK;
-	      if(args != 16)
+        SCAN_FMSK;
+        if(args != 16)
           {
-	        printf("\nReadConfigFile: Wrong argument's number %d, should be 16\n\n",args);
+          printf("\nReadConfigFile: Wrong argument's number %d, should be 16\n\n",args);
             return(-8);
           }
-	      for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].gain[ii] = fmsk[ii];
+        for(slot=slot1; slot<slot2; slot++) for(ii=0; ii<NCHAN; ii++) fa250[slot].gain[ii] = fmsk[ii];
         }
 
         else if(active)
-	    {
-			 printf("Error: FADC250 unknown line: fgets returns %s so keyword=%s\n\n",str_tmp,keyword);
-	    }
+      {
+       printf("Error: FADC250 unknown line: fgets returns %s so keyword=%s\n\n",str_tmp,keyword);
+      }
 
       }
     }
@@ -552,12 +578,12 @@ fadc250DownloadAll()
     slot = faSlot(jj);
 
     faSetProcMode(slot,
-		    fa250[slot].mode,
-		    fa250[slot].winOffset,
-		    fa250[slot].winWidth,
-		    fa250[slot].nsb,
-		    fa250[slot].nsa,
-		    fa250[slot].npeak, 0);
+        fa250[slot].mode,
+        fa250[slot].winOffset,
+        fa250[slot].winWidth,
+        fa250[slot].nsb,
+        fa250[slot].nsa,
+        fa250[slot].npeak, 0);
 
     faChanDisable(slot, fa250[slot].chDisMask);
 
@@ -573,7 +599,8 @@ fadc250DownloadAll()
 
     for(ii=0; ii<NCHAN; ii++)
     {
-	  faSetDAC(slot, fa250[slot].dac[ii], (1<<ii));
+      faSetChannelDelay(slot, ii, fa250[slot].delay[ii] / 4);
+      faSetDAC(slot, fa250[slot].dac[ii], (1<<ii));
       faSetChannelGain(slot, ii, fa250[slot].gain[ii]);
 
       ped = fa250[slot].ped[ii] * (float)(fa250[slot].nsa+fa250[slot].nsb);
@@ -581,13 +608,9 @@ fadc250DownloadAll()
 
       /* if threshold=0, don't add pedestal since user is disabling zero suppression */
       if(fa250[slot].thr[ii] > 0)
-	  {
         faSetChThreshold(slot, ii, ((int)fa250[slot].ped[ii])+fa250[slot].thr[ii]);
-	  }
       else
-	  {
         faSetChThreshold(slot, ii, 0);
-	  }
     }
   }
 
@@ -609,12 +632,12 @@ fadc250UploadAll(char *string, int length)
     slot = faSlot(jj);
 
     faGetProcMode(slot,
-		    &fa250[slot].mode,
-		    &fa250[slot].winOffset,
-		    &fa250[slot].winWidth,
-		    &fa250[slot].nsb,
-		    &fa250[slot].nsa,
-		    &fa250[slot].npeak);
+        &fa250[slot].mode,
+        &fa250[slot].winOffset,
+        &fa250[slot].winWidth,
+        &fa250[slot].nsb,
+        &fa250[slot].nsa,
+        &fa250[slot].npeak);
 
 
     fa250[slot].chDisMask = faGetChanMask(slot);
@@ -630,16 +653,17 @@ fadc250UploadAll(char *string, int length)
 
     for(i=0;i<FA_MAX_ADC_CHANNELS;i++)
     {
+      fa250[slot].delay[i] = 4*faGetChannelDelay(slot, i);
       fa250[slot].dac[i] = faGetChannelDAC(slot, i);
 
       fa250[slot].ped[i] = faGetChannelPedestal(slot, i);
       fa250[slot].ped[i] = ((float)fa250[slot].ped[i])/(fa250[slot].nsa+fa250[slot].nsb); /* go back from integral to amplitude */
 
       fa250[slot].thr[i] = faGetChThreshold(slot, i);
-	  if(fa250[slot].thr[i] > 0)
-	  {
- 	    fa250[slot].thr[i] = fa250[slot].thr[i] - (int)fa250[slot].ped[i]; /* MUST SUBTRACT PEDESTAL TO BE CONSISTENT WITH DOWNLOADED THRESHOLD */
-	  }
+    if(fa250[slot].thr[i] > 0)
+    {
+      fa250[slot].thr[i] = fa250[slot].thr[i] - (int)fa250[slot].ped[i]; /* MUST SUBTRACT PEDESTAL TO BE CONSISTENT WITH DOWNLOADED THRESHOLD */
+    }
       fa250[slot].gain[i] = faGetChannelGain(slot, i);
     }
   }
@@ -659,30 +683,39 @@ fadc250UploadAll(char *string, int length)
 
       sprintf(sss,"FADC250_MODE %d\n",      fa250[slot].mode);
       ADD_TO_STRING;
-	  sprintf(sss,"FADC250_W_OFFSET %d\n",  fa250[slot].winOffset*FA_ADC_NS_PER_CLK);
+
+      sprintf(sss,"FADC250_W_OFFSET %d\n",  fa250[slot].winOffset*FA_ADC_NS_PER_CLK);
       ADD_TO_STRING;
-	  sprintf(sss,"FADC250_W_WIDTH  %d\n",  fa250[slot].winWidth*FA_ADC_NS_PER_CLK);
+
+      sprintf(sss,"FADC250_W_WIDTH  %d\n",  fa250[slot].winWidth*FA_ADC_NS_PER_CLK);
       ADD_TO_STRING;
-	  sprintf(sss,"FADC250_NSA %d\n",       fa250[slot].nsa*FA_ADC_NS_PER_CLK);
+
+      sprintf(sss,"FADC250_NSA %d\n",       fa250[slot].nsa*FA_ADC_NS_PER_CLK);
       ADD_TO_STRING;
-	  sprintf(sss,"FADC250_NSB %d\n",       fa250[slot].nsb*FA_ADC_NS_PER_CLK);
+
+      sprintf(sss,"FADC250_NSB %d\n",       fa250[slot].nsb*FA_ADC_NS_PER_CLK);
       ADD_TO_STRING;
-	  sprintf(sss,"FADC250_NPEAK %d\n",     fa250[slot].npeak);
+
+      sprintf(sss,"FADC250_NPEAK %d\n",     fa250[slot].npeak);
       ADD_TO_STRING;
-          sprintf(sss,"FADC250_TRG_MASK %d\n",  fa250[slot].trigMask);
+
+      sprintf(sss,"FADC250_TRG_MASK %d\n",  fa250[slot].trigMask);
       ADD_TO_STRING;
-          sprintf(sss, "FADC250_TRG_WIDTH %d\n", fa250[slot].trigWidth);
+
+      sprintf(sss, "FADC250_TRG_WIDTH %d\n", fa250[slot].trigWidth);
       ADD_TO_STRING;
-          sprintf(sss, "FADC250_TRG_MINTOT %d\n", fa250[slot].trigMinTOT);
+
+      sprintf(sss, "FADC250_TRG_MINTOT %d\n", fa250[slot].trigMinTOT);
       ADD_TO_STRING;
-          sprintf(sss, "FADC250_TRG_MINMULT %d\n", fa250[slot].trigMinMult);
+
+      sprintf(sss, "FADC250_TRG_MINMULT %d\n", fa250[slot].trigMinMult);
       ADD_TO_STRING;
 
       adcChanEnabled = 0xFFFF^fa250[slot].chDisMask;
-	  sprintf(sss,"FADC250_ADC_MASK");
+      sprintf(sss,"FADC250_ADC_MASK");
       ADD_TO_STRING;
       for(i=0; i<16; i++)
-	  {
+      {
         sprintf(sss," %d",(adcChanEnabled>>(15-i))&0x1);
         ADD_TO_STRING;
       }
@@ -701,7 +734,6 @@ fadc250UploadAll(char *string, int length)
 
       sprintf(sss,"FADC250_ALLCH_DAC");
       ADD_TO_STRING;
-
       for(i=0; i<16; i++)
       {
         sprintf(sss," %d",fa250[slot].dac[i]);
@@ -713,7 +745,7 @@ fadc250UploadAll(char *string, int length)
       sprintf(sss,"FADC250_ALLCH_PED");
       ADD_TO_STRING;
       for(i=0; i<16; i++)
-	  {
+      {
         sprintf(sss," %7.3f", fa250[slot].ped[i]);
         ADD_TO_STRING;
       }
@@ -723,17 +755,32 @@ fadc250UploadAll(char *string, int length)
       sprintf(sss,"FADC250_ALLCH_TET");
       ADD_TO_STRING;
       for(i=0; i<16; i++)
-	  {
+      {
         sprintf(sss," %d",fa250[slot].thr[i]);
         ADD_TO_STRING;
       }
       sprintf(sss,"\n");
       ADD_TO_STRING;
 
+
+
+      sprintf(sss,"FADC250_ALLCH_DELAY");
+      ADD_TO_STRING;
+      for(i=0; i<16; i++)
+      {
+        sprintf(sss," %d",fa250[slot].delay[i]);
+        ADD_TO_STRING;
+      }
+      sprintf(sss,"\n");
+      ADD_TO_STRING;
+
+
+
+
       sprintf(sss,"FADC250_ALLCH_GAIN");
       ADD_TO_STRING;
       for(i=0; i<16; i++)
-	  {
+      {
         sprintf(sss," %7.3f",fa250[slot].gain[i]);
         ADD_TO_STRING;
       }

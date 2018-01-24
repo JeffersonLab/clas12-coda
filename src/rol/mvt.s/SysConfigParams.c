@@ -293,6 +293,7 @@ int SysParams_Fprintf( SysParams *params, FILE *fptr )
 	// First produce the ASCII representation of the MVT parameters structure 
 	if( (ret = SysParams_Sprintf( params, buf )) != D_RetCode_Sucsess )
 	{
+fprintf( fptr, "%s", buf );
 		fprintf( stderr, "%s: SysParams_Sprintf failed with  %d\n", __FUNCTION__, ret );
 		return ret;
 	}
@@ -382,6 +383,13 @@ int SysParams_Prop( SysParams *params )
 	if( params == (SysParams *)NULL )
 	{
 		fprintf( stderr, "%s: params=0\n", __FUNCTION__ );
+		return D_RetCode_Err_Null_Pointer;
+	}
+
+	// propagate common bec parameters
+	if( ret = BecParams_Prop( params->Bec_Params ) != D_RetCode_Sucsess )
+	{
+		fprintf( stderr, "%s: BecParams_Prop failed with %d\n", __FUNCTION__, ret );
 		return D_RetCode_Err_Null_Pointer;
 	}
 
@@ -477,7 +485,7 @@ int SysParams_Prop( SysParams *params )
 			sd_params->TrigMult        = bec_params->SelfTrigMult;
 			sd_params->TrigWin         = bec_params->SelfTrigWin;
 
-			// and updaet SD entries in the bec
+			// and update SD entries in the bec
 			bec_params->Sd_Id   = sd_params->Id;
 			bec_params->Sd_Slot = DEF_SD_SLOT;
 
@@ -885,8 +893,12 @@ int SysParams_Parse( SysParams *params, int line_num )
 		}			
 		else if( ( strcmp( argv[0], "Bec" ) == 0 ) || ( strcmp( argv[0], "MVT_Bec" ) == 0 ) || ( strcmp( argv[0], "FTT_Bec" ) == 0 ) )
 		{
-			bec = atoi( argv[1] );
-			if( (bec < 1) || (DEF_MAX_NB_OF_BEC < bec) )
+			// Get Bec ID
+			if( strcmp( argv[1], "*" ) == 0 )
+				bec = 0;
+			else
+				bec = atoi( argv[1] );
+			if( (bec < 0) || (DEF_MAX_NB_OF_BEC < bec) )
 			{
 				fprintf( stderr, "%s: line %d: bec id %d out of range [1,%d]\n", __FUNCTION__, line_num, bec, DEF_MAX_NB_OF_BEC ); 
 				return D_RetCode_Err_Wrong_Param;
@@ -902,7 +914,11 @@ int SysParams_Parse( SysParams *params, int line_num )
 			// Read TI parameters only in Standalone and Expert modes 
 			if( params->RunMode != Clas12 )
 			{
-				bec = atoi( argv[1] );
+				// Get TI ID
+				if( strcmp( argv[1], "*" ) == 0 )
+					bec = 0;
+				else
+					bec = atoi( argv[1] );
 				if( (bec < 0) || (DEF_MAX_NB_OF_BEC < bec) )
 				{
 					fprintf( stderr, "%s: line %d: ti id %d out of range [1,%d]\n", __FUNCTION__, line_num, bec, DEF_MAX_NB_OF_BEC ); 

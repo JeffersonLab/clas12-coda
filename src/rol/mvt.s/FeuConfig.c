@@ -185,7 +185,12 @@ int Beu_ReqResp(int feu, int beu, int lnk, unsigned int adr, unsigned int data_i
 			{
 				fprintf( stderr, "%s: beusspSendSlowControl fail for feu=%d beu=%d lnk=%d with ret %d on pass %d\n", __FUNCTION__, feu, beu, lnk, ret, com_retry );
 				if( sys_log_fptr != (FILE *)NULL )
-					fprintf( sys_log_fptr, "%s: beusspSendSlowControl fail for feu=%d beu=%d lnk=%d with ret %d on pass %d\n", __FUNCTION__, feu, beu, lnk, ret, com_retry );
+        {
+					fprintf( sys_log_fptr, "%s: beusspSendSlowControl fail for feu=%d beu=%d lnk=%d with ret %d on pass %d\n",
+										__FUNCTION__, feu, beu, lnk, ret, com_retry );
+ 					fprintf( sys_log_fptr, "%s: beusspSendSlowControl adr=0x%08x wr_adr_wrd=0x%08x data_in=0x%08x rd_adr_wrd=x%08x data_out=0x%08x\n",
+										__FUNCTION__, adr, wr_adr_wrd, data_in, rd_adr_wrd, data_out );
+        }
 				com_retry--;
 				if( com_retry == 0 )
 					return ret;
@@ -206,11 +211,11 @@ int Beu_ReqResp(int feu, int beu, int lnk, unsigned int adr, unsigned int data_i
 		}
 		if( ((wr_adr_wrd >> 24) & DEF_FEU_READ) != ((rd_adr_wrd >> 24) & DEF_FEU_READ))
 		{
-			fprintf( stderr, "%s: for feu=%d beu=%d lnk=%d direction missmatch %d expected from 0x%08 - %d received in 0x%08x on pass %d\n",
-				__FUNCTION__, feu, beu, lnk, ((wr_adr_wrd >> 24) & DEF_CMD_INDEX_MASK), wr_adr_wrd, ((rd_adr_wrd >> 24) & DEF_CMD_INDEX_MASK), rd_adr_wrd, retry ); 
+			fprintf( stderr, "%s: for feu=%d beu=%d lnk=%d direction missmatch %d expected from 0x%08x - %d received in 0x%08x on pass %d\n",
+				__FUNCTION__, feu, beu, lnk, ((wr_adr_wrd >> 24) & DEF_FEU_READ), wr_adr_wrd, ((rd_adr_wrd >> 24) & DEF_FEU_READ), rd_adr_wrd, retry ); 
 			if( sys_log_fptr != (FILE *)NULL )
-				fprintf( sys_log_fptr, "%s: for feu=%d beu=%d lnk=%d direction missmatch %d expected from 0x%08 - %d received in 0x%08x on pass %d\n",
-					__FUNCTION__, feu, beu, lnk, ((wr_adr_wrd >> 24) & DEF_CMD_INDEX_MASK), wr_adr_wrd, ((rd_adr_wrd >> 24) & DEF_CMD_INDEX_MASK), rd_adr_wrd, retry ); 
+				fprintf( sys_log_fptr, "%s: for feu=%d beu=%d lnk=%d direction missmatch %d expected from 0x%08x - %d received in 0x%08x on pass %d\n",
+					__FUNCTION__, feu, beu, lnk, ((wr_adr_wrd >> 24) & DEF_FEU_READ), wr_adr_wrd, ((rd_adr_wrd >> 24) & DEF_FEU_READ), rd_adr_wrd, retry ); 
 			chack_fail++;
 		}
 		if( ((rd_adr_wrd >> 24) & DEF_FEU_ERROR))
@@ -2534,7 +2539,38 @@ printf("%s: Feu %d dream_pair=%d power wr_val 0x%08x (beu %d lnk %d)\n",
 	// Self Trigger topology parameters : Not yet implemented
 
 	// FEU Communication parameters
-	// Do not touch the Optical link
+	// Optical link
+	if( feu_params->ComChan_Enable >= 0 )
+	{
+		// Set address address 
+		reg_adr = D_CBus_SetModType( 0, D_CBus_Mod_ComChan );
+		reg_adr = D_ComChan_AdrReg_Set( reg_adr, C_ComChan_AdrReg_Csr );
+
+		// Communication Channel parameter
+		wr_val = D_ComChan_Csr_Enable_Put( 0, feu_params->ComChan_Enable );
+		// Write
+		if( (ret = Beu_ReqResp(feu_id, beu_id, beu_lnk_id, reg_adr, wr_val, DEF_FEU_WRITE, &rd_val ) ) < 0 )
+		{
+			fprintf( stderr,  "%s: ComChan Beu_ReqResp failed for feu=%d beu=%d lnk=%d reg=0x%06x with %d\n",
+				__FUNCTION__, feu_id, beu_id, beu_lnk_id, reg_adr, ret );
+			if( sys_log_fptr != (FILE *)NULL )
+				fprintf( sys_log_fptr,  "%s: ComChan Beu_ReqResp failed for feu=%d beu=%d lnk=%d reg=0x%06x with %d\n",
+					__FUNCTION__, feu_id, beu_id, beu_lnk_id, reg_adr, ret );
+			return D_RetCode_Err_NetIO;
+		}
+		else
+		{
+			if( D_ComChan_Csr_Enable_Get(wr_val) != D_ComChan_Csr_Enable_Get(rd_val) )
+			{
+				fprintf( stderr,  "%s: ComChan WrRd_Missmatch for feu=%d beu=%d lnk=%d reg=0x%06x wr_val=0x%08x rd_val=0x%08x\n",
+					__FUNCTION__, feu_id, beu_id, beu_lnk_id, reg_adr, wr_val, rd_val );
+				if( sys_log_fptr != (FILE *)NULL )
+					fprintf( sys_log_fptr,  "%s: ComChan WrRd_Missmatch for feu=%d beu=%d lnk=%d reg=0x%06x wr_val=0x%08x rd_val=0x%08x\n",
+						__FUNCTION__, feu_id, beu_id, beu_lnk_id, reg_adr, wr_val, rd_val );
+				return D_RetCode_Err_WrRd_Missmatch;
+			}
+		}
+	}
 
 	// FEU Communication parameters
 	// Not clear what to do with UDP/IP link
@@ -2582,9 +2618,9 @@ printf("%s: Feu %d dream_pair=%d power wr_val 0x%08x (beu %d lnk %d)\n",
 			}
 		}
 		// Confirm that UDP data channel has been disabled
-		if( sys_log_fptr != (FILE *)NULL )
-			fprintf( sys_log_fptr,  "%s: UdpChan disabled for feu=%d beu=%d lnk=%d\n",
-				__FUNCTION__, feu_id, beu_id, beu_lnk_id );
+//		if( sys_log_fptr != (FILE *)NULL )
+//			fprintf( sys_log_fptr,  "%s: UdpChan disabled for feu=%d beu=%d lnk=%d\n",
+//				__FUNCTION__, feu_id, beu_id, beu_lnk_id );
 	}
 
 	/*

@@ -48,6 +48,7 @@
 
 
 #include "ipc_lib.h"
+#include "MessageActionControl.h"
 
 using namespace std;
 #include <strstream>
@@ -126,7 +127,9 @@ main(int argc, char **argv)
   printf("app >%s<, dest >%s<\n",app,dest);
 
 
-  server.init(app, NULL, NULL, dest);
+  server.AddSendTopic(app, getenv("SESSION"), "daq", dest);
+  server.AddRecvTopic(app, getenv("SESSION"), "daq", "ignore");
+  server.Open();
 
   server << clrm << "command:ipc_control";
   for(int j=i; j<argc; j++)
@@ -135,6 +138,8 @@ main(int argc, char **argv)
     server << argv[j];
   }
   server << endm;
+
+  server.Close();
 
 #if 0
   // read Smartsockets license file

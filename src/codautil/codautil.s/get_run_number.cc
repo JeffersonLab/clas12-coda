@@ -65,5 +65,7 @@ get_run_number(char *mysql_database, char *session)
 	}
   }
 
+  dbDisconnect(connNum);
+
   return(0);
 }

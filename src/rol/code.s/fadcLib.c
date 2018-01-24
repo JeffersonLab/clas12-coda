@@ -298,7 +298,7 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 
 	      if(!noFirmwareCheck)
 		{
-		  if( (rdata&FA_VERSION_MASK) < FA_SUPPORTED_CTRL_FIRMWARE )
+		  if( (rdata&FA_VERSION_MASK) != FA_SUPPORTED_CTRL_FIRMWARE )
 		    {
 		      printf("%s: ERROR Control FPGA Firmware (0x%02x) not supported by this driver.\n",
 			     __FUNCTION__,rdata & FA_VERSION_MASK);
@@ -812,7 +812,7 @@ faStatus(int id, int sflag)
   unsigned int mgtStatus, mgtCtrl;
   unsigned int berr_count=0;
   unsigned int scaler_interval=0;
-  unsigned int tet_trg[16], tet_readout[16];
+  unsigned int tet_trg[16], tet_readout[16], delay[16];
   float gain_trg[16], ped_trg[16];
   unsigned int val;
 
@@ -870,8 +870,9 @@ faStatus(int id, int sflag)
   for(ii=0;ii<FA_MAX_ADC_CHANNELS;ii++)
   {
     gain_trg[ii] = ((float)(vmeRead32(&FAp[id]->adc_gain[ii]) & 0xFFFF)) / 256.0f;
+    delay[ii] = vmeRead16(&FAp[id]->adc_delay[ii]) & FA_ADC_DELAY_MASK;
 
-    ped_trg[ii] = 4.0 * ((float)(vmeRead32(&FAp[id]->adc_pedestal[ii]) & FA_ADC_PEDESTAL_MASK)) / ((float)(NSA+NSB));
+    ped_trg[ii] = 4.0 * ((float)(vmeRead16(&FAp[id]->adc_pedestal[ii]) & FA_ADC_PEDESTAL_MASK)) / ((float)(NSA+NSB));
 
     val = vmeRead16(&(FAp[id]->adc_thres[ii]));
     tet_trg[ii] = (val & FA_THR_VALUE_MASK) - (int)ped_trg[ii];
@@ -1113,10 +1114,10 @@ faStatus(int id, int sflag)
   if( (mgtStatus&0x1)==0 ) printf(" ChannelErr");
   printf("\n\n");
 
-  printf("  Ch| Readout - TET | Trigger - TET | GAIN   | PED    \n");
-  printf("  --|---------------|---------------|--------|--------\n");
+  printf("  Ch| Readout - TET | Trigger - TET | GAIN   | PED    | DELAY\n");
+  printf("  --|---------------|---------------|--------|--------|------\n");
   for(ii=0;ii<FA_MAX_ADC_CHANNELS;ii++)
-    printf("  %2d|          %4d |          %4d |%7.3f |%8.3f\n", ii, tet_readout[ii], tet_trg[ii], gain_trg[ii], ped_trg[ii]);
+    printf("  %2d|          %4d |          %4d |%7.3f |%8.3f |%3d\n", ii, tet_readout[ii], tet_trg[ii], gain_trg[ii], ped_trg[ii], delay[ii]);
 
   printf("\n");
 #else
@@ -3407,6 +3408,7 @@ faGetChannelDAC(int id, unsigned int chan)
 int
 faSetChannelPedestal(int id, unsigned int chan, unsigned int ped)
 {
+  unsigned int lovalue=0, hivalue=0;
   if(id==0) id=fadcID[0];
 
   if((id<=0) || (id>21) || (FAp[id] == NULL)) 
@@ -3430,7 +3432,13 @@ faSetChannelPedestal(int id, unsigned int chan, unsigned int ped)
     }
 
   FALOCK;
-  vmeWrite32(&FAp[id]->adc_pedestal[chan], ped);
+  lovalue = vmeRead16(&FAp[id]->adc_pedestal[(chan&0xE)+0]);
+  hivalue = vmeRead16(&FAp[id]->adc_pedestal[(chan&0xE)+1]);
+
+  if(chan & 0x1) hivalue = ped;
+  else           lovalue = ped;
+
+  vmeWrite32((unsigned int *)&(FAp[id]->adc_pedestal[chan&0xE]), (lovalue<<16) | hivalue);
   FAUNLOCK;
 
   return(OK);
@@ -3457,7 +3465,7 @@ faGetChannelPedestal(int id, unsigned int chan)
     }
 
   FALOCK;
-  rval = vmeRead32(&FAp[id]->adc_pedestal[chan]) & FA_ADC_PEDESTAL_MASK;
+  rval = vmeRead16(&FAp[id]->adc_pedestal[chan]) & FA_ADC_PEDESTAL_MASK;
   FAUNLOCK;
 
   return(rval);
@@ -3466,6 +3474,100 @@ faGetChannelPedestal(int id, unsigned int chan)
 
 
 #ifdef CLAS12
+
+int
+faSetChannelDelay(int id, unsigned int chan, unsigned int delay)
+{
+  unsigned int lovalue=0, hivalue=0;
+  if(id==0) id=fadcID[0];
+
+  if((id<=0) || (id>21) || (FAp[id] == NULL)) 
+    {
+      logMsg("faSetChannelDelay: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
+      return(ERROR);
+    }
+
+  if(chan>16)
+    {
+      logMsg("faSetChannelDelay: ERROR : Channel (%d) out of range (0-15) \n",
+	     chan,0,0,0,0,0);
+      return(ERROR);
+    }
+
+  if(delay>31) 
+    {
+      logMsg("faSetChannelDelay: ERROR : Delay value (%d) out of range (0-31) \n",
+	     delay,0,0,0,0,0);
+      return(ERROR);
+    }
+
+  FALOCK;
+  lovalue = vmeRead16(&FAp[id]->adc_delay[(chan&0xE)+0]);
+  hivalue = vmeRead16(&FAp[id]->adc_delay[(chan&0xE)+1]);
+
+  if(chan & 0x1) hivalue = delay;
+  else           lovalue = delay;
+
+  vmeWrite32((unsigned int *)&(FAp[id]->adc_delay[chan&0xE]), (lovalue<<16) | hivalue);
+  FAUNLOCK;
+
+  return(OK);
+}
+
+/*Begin Andrea*/
+int faSetDelayAll(int id,unsigned int delay){
+  int ch=0;
+  int ret;
+  for (ch=0;ch<16;ch++){
+    ret=faSetChannelDelay(id,ch,delay);
+    if (ret!=OK){
+      logMsg("faSetDelayAll: ERROR for slot %d ch %d\n",id,ch,3,4,5,6);
+      break;
+    }
+  }
+  return ret;
+}
+
+int faSetGlobalDelay(unsigned int delay){
+  int fadc;
+  int id;
+  int ret;
+  for (fadc=0;fadc<nfadc;fadc++){
+    id=fadcID[fadc];
+    faSetDelayAll(id,delay);
+    if (ret!=OK){
+      logMsg("faSetGlobalDelay: ERROR for slot %d \n",fadc,2,3,4,5,6);
+      break;
+    }
+  }
+}
+/*End Andrea*/
+int
+faGetChannelDelay(int id, unsigned int chan)
+{
+  unsigned int rval=0;
+
+  if(id==0) id=fadcID[0];
+
+  if((id<=0) || (id>21) || (FAp[id] == NULL)) 
+    {
+      logMsg("faGetChannelDelay: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
+      return(ERROR);
+    }
+
+  if(chan>16)
+    {
+      logMsg("faSetChannelDelay: ERROR : Channel (%d) out of range (0-15) \n",
+	     chan,0,0,0,0,0);
+      return(ERROR);
+    }
+
+  FALOCK;
+  rval = vmeRead16(&FAp[id]->adc_delay[chan]) & FA_ADC_DELAY_MASK;
+  FAUNLOCK;
+
+  return(rval);
+}
 
 int
 faSetHitbitTrigMask(int id, unsigned short chmask)
@@ -5751,7 +5853,8 @@ faSetPedestal(int id, unsigned int wvalue)
   FALOCK;
   for(ii=0; ii<FA_MAX_ADC_CHANNELS; ii++) 
   {
-	vmeWrite32((unsigned int *)&(FAp[id]->adc_pedestal[ii]),wvalue);
+    if(!(ii&0x1))
+      vmeWrite32((unsigned int *)&(FAp[id]->adc_pedestal[ii]),wvalue | (wvalue<<16));
   }
   FAUNLOCK;
 
@@ -5774,7 +5877,7 @@ faPrintPedestal(int id)
   FALOCK;
   for(ii=0; ii<FA_MAX_ADC_CHANNELS;ii++)
   {
-    tval[ii] = vmeRead32(&(FAp[id]->adc_pedestal[ii]));
+    tval[ii] = vmeRead16(&(FAp[id]->adc_pedestal[ii]));
   }
   FAUNLOCK;
 

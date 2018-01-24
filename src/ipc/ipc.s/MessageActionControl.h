@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <strings.h>
 
+#include <vector>
 #include "MessageAction.h"
 
 
@@ -12,19 +13,21 @@ class MessageActionControl : public MessageAction {
 
   private:
 
-  //static const int NFORMATS = 3;
-  //std::string formats[NFORMATS] = {"command","status","statistics"};
-    static const int NFORMATS = 1;
-    std::string formats[NFORMATS] = {"command"};
+    static const int NFORMATS = 3;
+    std::string formats[NFORMATS] = {"command","status","statistics"};
     int formatid;
 
     int debug;
+    int command;
     int status;
     int statistics;
     int done;
     std::string myname;
-    std::string command;
 
+    std::string option;
+	std::string requester;
+
+	std::vector<std::string> status_list;
 
   public:
 
@@ -32,6 +35,7 @@ class MessageActionControl : public MessageAction {
     {
       myname = myname_;
       done = 0;
+      command = 0;
       status = 0;
       statistics = 0;
       debug = debug_;
@@ -62,14 +66,14 @@ class MessageActionControl : public MessageAction {
 
     int check(std::string fmt)
     {
-	  printf("\ncheckControl: fmt >%s<, debug=%d\n",fmt.c_str(),debug);
+	  //printf("\ncheckControl: fmt >%s<, debug=%d\n",fmt.c_str(),debug);
       int n = 0;
 
       std::vector<std::string> list = fmtsplit(fmt, std::string(":"));
       for(std::vector<std::string>::const_iterator s=list.begin(); s!=list.end(); ++s)
 	  {
-        printf("n=%d\n",n);
-		std::cout << *s << " " << s->c_str() << std::endl;
+        //printf("n=%d\n",n);
+		//std::cout << "*s=" << *s << " " << s->c_str() << std::endl;
 
 		if(n==0) /* first field in 'fmt' is format, compare it with out formats */
 		{
@@ -77,11 +81,11 @@ class MessageActionControl : public MessageAction {
           for(int i=0; i<NFORMATS; i++)
 	      {
             std::string f = formats[i];
-		    std::cout << "==" << f.c_str() << " " << s->c_str() << " " << strlen(f.c_str()) << std::endl;
+		    //std::cout << "==" << f.c_str() << " " << s->c_str() << " " << strlen(f.c_str()) << std::endl;
             if( !strncmp(f.c_str(),s->c_str(),strlen(f.c_str())) )
 		    {
               formatid = i;
-              printf(" -> set formatid=%d\n",formatid);
+              if(debug) printf("check: received command >%s< -> set formatid=%d\n",f.c_str(),formatid);
               break;
 		    }
 	      }
@@ -89,17 +93,22 @@ class MessageActionControl : public MessageAction {
 		}
         else if(n==1) /* sender name; ignore if it is us */
 		{
+          requester = *s;
           if( !strncmp(myname.c_str(),s->c_str(),strlen(myname.c_str())) )
 		  {
-            printf("it is our own message - ignore\n");
+            if(debug) printf("check: it is our own message - ignore\n");
             return(0);
+		  }
+          else
+		  {
+            if(debug) printf("check: requester=>%s<\n",requester.c_str());
 		  }
 		}
 
         n++;
 	  }
-      printf("\ncheckControl: formatid=%d\n",formatid);
 
+      if(debug) printf("check: accept\n");
       return(1);
     }
 
@@ -118,34 +127,75 @@ class MessageActionControl : public MessageAction {
     {
       if(debug) std::cout << "MessageActionControl: decode CONTROL message" << std::endl;      
 
-      server >> command;
-      if(debug) printf("Received command >%s<\n",command.c_str());
+      if(formatid==0) /* received command */
+	  {
+        server >> option;
+        if(debug) printf("decode: received option >%s<\n",option.c_str());
 
-      if(strncasecmp(command.c_str(),"quit",4)==0)
-      {
-        if(debug) printf("set done=1\n");
-        done = 1;
+        if(strncasecmp(option.c_str(),"quit",4)==0)
+        {
+          if(debug) printf("decode: set done=1\n");
+          done = 1;
+	    }
+        else if(strncasecmp(option.c_str(),"status",6)==0)
+        {
+          if(debug) printf("decode: reporting status\n");
+          status = 1;
+	    }
+        else if(strncasecmp(option.c_str(),"statistics",10)==0)
+        {
+          if(debug) printf("decode: reporting statistics\n");
+          statistics = 1;
+	    }
 	  }
-      else if(strncasecmp(command.c_str(),"status",6)==0)
-      {
-        if(debug) printf("reporting status\n");
-        status = 1;
+      else if(formatid==1) /* received status */
+	  {
+        if(debug) printf("decode: received status\n");
 	  }
-      else if(strncasecmp(command.c_str(),"statistics",10)==0)
-      {
-        if(debug) printf("reporting statistics\n");
-        statistics = 1;
-	  }
-
     }
 
-    void process(){
+    void process()
+    {
       if(debug) std::cout << "MessageActionControl: process CONTROL message" << std::endl;
 
-      if(status) {sendStatus();status=0;}
-      if(statistics) {sendStatistics(0, 0, 0.0, 0.0);statistics=0;}
+      if(formatid==0) /* process 'command' */
+	  {
+        if(status) /* process 'command status' - send our status to requester */
+        {
+          sendStatus();
+          status=0;
+        }
+        if(statistics)
+        {
+          sendStatistics(0, 0, 0.0, 0.0);
+          statistics=0;
+        }
+	  }
+      else if(formatid==1) /* provess 'status' */
+	  {
+        if(debug) std::cout << "MessageActionControl: status >" << requester.c_str() << "<received from "<< requester.c_str() << std::endl;
 
+        std::vector<std::string>::iterator iter = status_list.begin();
+
+        while (iter != status_list.end())
+        {
+          if(*iter == requester) iter = status_list.erase(iter);
+          else                   iter++;
+        }
+
+        status_list.push_back(requester);
+	  }
     }
+
+    void clearStatusList()
+	{
+      status_list.clear();
+	}
+
+	std::vector<std::string> getStatusList()
+	{
+      return(status_list);
+	}
 
     void sendCommand(char *destination, char *command)
 	{
@@ -157,10 +207,12 @@ class MessageActionControl : public MessageAction {
 
     void sendStatus()
 	{
-      if(debug) std::cout << "MessageActionControl: sendStatus" << std::endl;     
+      char topic[1024];
+      sprintf(topic,"%s.%s.%s.%s",getenv("EXPID"),getenv("SESSION"),"daq",requester.c_str());
+      if(debug) std::cout << "MessageActionControl: sendStatus to topic " << topic << std::endl;     
       IpcServer &server = IpcServer::Instance();
       server << clrm << "status:"+myname << myname << 0/*<< time(0)*/;
-      server << endm;
+      server << SetTopic(topic) << endm;
 	}
 
     void sendStatistics(int32_t nev_received, int32_t nev_processed,

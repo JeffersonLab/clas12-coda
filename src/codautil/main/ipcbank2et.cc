@@ -217,16 +217,19 @@ main(int argc,char **argv)
 
 
 #ifdef USE_ACTIVEMQ
-  server.init(getenv("EXPID"), NULL, "*", (char *)"ipcbank2et", NULL, "*");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"ipcbank2et");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "ipcbank2et");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "epics_monitor");
+  server.Open();
 
-  /*
+  
   MessageActionControl *control = new MessageActionControl((char *)"ipcbank2et");
   control->setDebug(debug);
-  server.addActionListener(control);
-  */
+  server.AddCallback(control);
+  
   //MessageActionEVIO2ET *evio2et = new MessageActionEVIO2ET(session,"clondaq5");
   MessageActionEVIO2ET *evio2et = new MessageActionEVIO2ET(session);
-  server.addActionListener(evio2et);
+  server.AddCallback(evio2et);
 #else
   // set ipc parameters and connect to ipc system
   ipc_set_application(project);
@@ -277,7 +280,7 @@ main(int argc,char **argv)
     //server.MainLoop((double)wait_time);
     evio2et->set_run_status(get_run_status(database,session));
 
-    if(debug) printf("Geting run number from database >%s< session >%s<\n",database,session);
+    //if(debug) printf("Geting run number from database >%s< session >%s<\n",database,session);
     evio2et->set_run_number(get_run_number(database,session));
 
     //printf("goto sleep, done=%d\n",control->getDone());
@@ -308,12 +311,18 @@ main(int argc,char **argv)
     }
 
     done = evio2et->get_done();
+	if(done)
+	{
+      printf("received done=%d from evio2et\n",done);
+      break;
+	}
 
-	/*
-    control->sendStatus();
     done = control->getDone();
-	printf("main: done=%d\n",done);
-	*/
+	if(done)
+	{
+      printf("received done=%d from Control\n",done);
+      break;
+	}
   }
 
   printf("exiting ..\n");
@@ -333,7 +342,7 @@ main(int argc,char **argv)
   */
 
 #ifdef USE_ACTIVEMQ
-  server.close();
+  server.Close();
 #else
   ipc_close();
 #endif

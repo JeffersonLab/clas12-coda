@@ -47,9 +47,11 @@ SOCK_Dgram::SOCK_Dgram (const Addr &local, int protocol_family, int protocol)
 HANDLE
 SOCK_Dgram::open (const Addr &local, int protocol_family, int protocol)
 {
-  if (SOCK::open (SOCK_DGRAM, protocol_family, 
-		  protocol) == IPC_SAP::INVALID_HANDLE)
+  printf("SOCK_Dgram::open() reached\n");
+  if (SOCK::open (SOCK_DGRAM, protocol_family, protocol) == IPC_SAP::INVALID_HANDLE)
+  {
     return IPC_SAP::INVALID_HANDLE;
+  }
   else
     return this->shared_open (local, protocol_family);
 }

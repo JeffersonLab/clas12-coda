@@ -13,6 +13,7 @@ static int nusertrig, ndone;
 
 
 #define USE_SIS3801
+#define USE_DSC2
 
 
 /* if event rate goes higher then 10kHz, with random triggers we have wrong
@@ -226,35 +227,37 @@ getTdcSlotNumbers(int *slotnumbers)
 static int nsis;
 unsigned int addr;
 #define MASK    0x00000000   /* unmask all 32 channels (0-enable,1-disable) */
+
+/* general settings */
+void
+sis3801config(int id, int mode)
+{
+  sis3801control(id, DISABLE_EXT_NEXT);
+  sis3801reset(id);
+  sis3801clear(id);
+  sis3801setinputmode(id,mode);
+  sis3801enablenextlogic(id);
+  sis3801control(id, ENABLE_EXT_DIS);
+}
+
+static int mode = 2;
+
 #endif
 
-
-int
-sis3801restore(int addr, int mask)
-{
-  sis3801reset(addr);
-  sis3801mask(addr, mask);
-  sis3801enablenextlogic(addr);
-  sis3801control(addr, ENABLE_MODE2);
-  sis3801control(addr, ENABLE_EXT_DIS);
-  /*sis3801control(addr, ENABLE_EXT_NEXT);calls it separately, at once for all scalers*/
-  /*sis3801ledon(addr);*/
-
-  return(0);
-}
 
 
 
 static unsigned long run_trig_count = 0;
 
-
-
 static void
 __download()
 {
   int i1, i2, i3, ii;
-  int mode = 0, isca = 0;
+  int id;
   char *ch, tmp[64];
+  /*unsigned int maxA32Address;
+  unsigned int fadcA32Address = 0x09000000;*/
+
 #ifdef POLLING_MODE
   rol->poll = 1;
 #else
@@ -359,6 +362,34 @@ if(rol->pid==18)
 
 
 
+#ifdef USE_DSC2
+  printf("DSC2 Download() starts =========================\n");
+
+#ifndef VXWORKS
+  vmeSetQuietFlag(1); /* skip the errors associated with BUS Errors */
+#endif
+vmeBusLock();
+  dsc2Init(0x100000,0x80000,16,0);
+vmeBusUnlock();
+#ifndef VXWORKS
+  vmeSetQuietFlag(0); /* Turn the error statements back on */
+#endif
+
+  ndsc2 = dsc2GetNdsc();
+  if(ndsc2>0)
+  {
+    DSC2_READ_CONF_FILE;
+    /*maxA32Address = dsc2GetA32MaxAddress();
+    fadcA32Address = maxA32Address + FA_MAX_A32_MEM;*/
+    ndsc2_daq = dsc2GetNdsc_daq();
+  }
+  else
+  {
+    ndsc2_daq = 0;
+  }
+  printf("dsc2: %d boards set to be readout by daq\n",ndsc2_daq);
+  printf("DSC2 Download() ends =========================\n\n");
+#endif
 
 
 
@@ -370,17 +401,16 @@ if(rol->pid==18)
 
 vmeBusLock();
 
-
   mode = 2; /* Control Inputs mode = 2  */
   nsis = sis3801Init(0x200000, 0x100000, 2, mode);
   /*if(nsis>0) TDC_READ_CONF_FILE;*/
 
-  for(isca = 0; isca < nsis; isca++)
+  for(id = 0; id < nsis; id++)
   {
-    sis3801reset(isca);
-    sis3801clear(isca);
-    sis3801enablenextlogic(isca);
-    printf("    Status = 0x%08x\n",sis3801status(isca));
+    sis3801config(id, mode);
+    sis3801control(id, DISABLE_EXT_NEXT);
+
+    printf("    Status = 0x%08x\n",sis3801status(id));
   }
 
 #if 0
@@ -394,17 +424,6 @@ vmeBusLock();
 
 vmeBusUnlock();
 
-
-
-
-/*
-  for(ii=0; ii<nsis; ii++)
-  {
-    addr = sis3801GetAddress(ii);
-    printf("addr[%d]=0x%08x\n",ii,addr);
-	sis3801control(addr,DISABLE_EXT_NEXT);
-  }
-*/
   printf("SIS3801 Download() ends =========================\n\n");
 #endif
 
@@ -430,7 +449,7 @@ static void
 __prestart()
 {
   int ii, i1, i2, i3;
-  int ret, isca;
+  int ret, id;
 
   /* Clear some global variables etc for a clean start */
   *(rol->nevents) = 0;
@@ -464,19 +483,26 @@ vmeBusUnlock();
 
   /* USER code here */
 
+
+#ifdef USE_DSC2
+  printf("DSC2 Prestart() starts =========================\n");
+  /* dsc2 configuration */
+  if(ndsc2>0) DSC2_READ_CONF_FILE;
+  printf("DSC2 Prestart() ends =========================\n\n");
+#endif
+
+
 #ifdef USE_SIS3801
 
-  for(isca = 0; isca < nsis; isca++)
+vmeBusLock();
+  for(id = 0; id < nsis; id++)
   {
-    sis3801clear(isca);
+    /*sis3801clear(id);*/
+    sis3801config(id, mode);
+    sis3801control(id, DISABLE_EXT_NEXT);
   }
-/*
-  for(ii=0; ii<nsis; ii++)
-  {
-    addr = sis3801GetAddress(ii);
-    sis3801control(addr, DISABLE_EXT_NEXT);
-  }
-*/
+vmeBusUnlock();
+
 #endif
 
 vmeBusLock();
@@ -559,40 +585,23 @@ __end()
 {
   int iwait=0;
   int blocksLeft=0;
-  int id, ii, isca;
+  int id, ii;
 
   printf("\n\nINFO: End1 Reached\n");fflush(stdout);
 
 #ifdef USE_SIS3801
 
-  for(isca = 0; isca < nsis; isca++)
+  for(id = 0; id < nsis; id++)
   {
-    printf("    Status = 0x%08x\n",sis3801status(isca));
-    sis3801control(isca, DISABLE_EXT_NEXT);
+vmeBusLock();
+    sis3801control(id, DISABLE_EXT_NEXT);
+vmeBusUnlock();
+    printf("    Status = 0x%08x\n",sis3801status(id));
   }
 #if 0
   scalIntDisable();
 #endif
 
-  /*
-  for(ii=0; ii<nsis; ii++)
-  {
-    addr = sis3801GetAddress(ii);
-	sis3801control(addr,DISABLE_EXT_NEXT);
-  }
-
-  for(ii=0; ii<nsis; ii++)
-  {
-    addr = sis3801GetAddress(ii);
-    sis3801reset(addr);
-  }
-
-  for(ii=0; ii<nsis; ii++)
-  {
-    addr = sis3801GetAddress(ii);
-    sis3801clear(addr);
-  }
-  */
 #endif
 
   CDODISABLE(TIPRIMARY,TIR_SOURCE,0);
@@ -631,6 +640,20 @@ vmeBusUnlock();
 static void
 __pause()
 {
+  int id;
+
+#ifdef USE_SIS3801
+
+  for(id=0; id<nsis; id++)
+  {
+vmeBusLock();
+    sis3801clear(id);
+    sis3801control(id, DISABLE_EXT_NEXT);
+vmeBusUnlock();
+  }
+
+#endif
+
   CDODISABLE(TIPRIMARY,TIR_SOURCE,0);
   logMsg("INFO: Pause Executed\n",1,2,3,4,5,6);
   
@@ -640,7 +663,7 @@ __pause()
 static void
 __go()
 {
-  int ii, jj, id, slot, isca;
+  int ii, jj, id, slot;
 
   logMsg("INFO: Entering Go 1\n",1,2,3,4,5,6);
 
@@ -651,37 +674,30 @@ vmeBusLock();
 vmeBusUnlock();
 #endif
 
+#ifdef USE_DSC2
+  for(ii=0; ii<ndsc2_daq; ii++)
+  {
+    slot = dsc2Slot(ii);
+vmeBusLock();
+    dsc2ResetScalersGroupA(slot);
+    dsc2ResetScalersGroupB(slot);
+vmeBusUnlock();
+  }
+#endif
+
 #ifdef USE_SIS3801
   run_trig_count = 0;
-
+  for(id=0; id<nsis; id++)
+  {
+vmeBusLock();
+    sis3801control(id, DISABLE_EXT_NEXT);
+    sis3801clear(id);
+vmeBusUnlock();
+  }
 #if 0
   /* Enable interrupts */
   scalIntEnable(0x1);
 #endif
-
-  /* Enable external next (control input #1) */
-
-  /* do it on first event
-  for(isca = 0; isca < nsis; isca++)
-  {
-    sis3801control(isca, ENABLE_EXT_NEXT);
-  }
-  */
-
-  /*
-  for(ii=0; ii<nsis; ii++)
-  {
-    addr = sis3801GetAddress(ii);
-
-    sis3801control(addr, DISABLE_EXT_NEXT);
-    sis3801reset(addr);
-    sis3801clear(addr);
-    sis3801mask(addr, MASK);
-    sis3801enablenextlogic(addr);
-    sis3801control(addr, ENABLE_MODE2);
-    sis3801control(addr, ENABLE_EXT_DIS);
-  }
-  */
 
 #endif
 
@@ -705,7 +721,7 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
   unsigned int *tdcbuf_save, *tdc, utmp;
   unsigned int *dabufp1, *dabufp2;
   int njjloops, slot, type;
-  int nwords, isca;
+  int nwords, id, status;
   int dready = 0, timeout = 0;
 #ifndef VXWORKS
   TIMERL_VAR;
@@ -728,16 +744,18 @@ usleep(100);
   sleep(1);
   */
 
-#ifdef USE_SIS3801
   run_trig_count++;
+
+#ifdef USE_SIS3801
   if(run_trig_count==1)
   {
-
     printf("First event - sis3801: ENABLE_EXT_NEXT\n");
-    for(isca = 0; isca < nsis; isca++)
+vmeBusLock();
+    for(id = 0; id < nsis; id++)
     {
-      sis3801control(isca, ENABLE_EXT_NEXT);
+      sis3801control(id, ENABLE_EXT_NEXT);
     }
+vmeBusUnlock();
   }
 #endif
 
@@ -823,34 +841,41 @@ TIMERL_START;
 
     if(nsis>0)
     {
+      /* get status from all boards */
+      status = 0;
       for(ii=0; ii<nsis; ii++)
       {
-        if(sis3801status(ii) & FIFO_FULL)
+vmeBusLock();
+        status |= sis3801status(ii);
+vmeBusUnlock();
+
+	  }
+
+      /* if at least one board is full, reset */
+      if(status & FIFO_FULL)
+      {
+        printf("SIS3801 IS FULL - CLEAN IT UP AND START AGAIN\n");fflush(stdout);
+
+        for(id=0; id<nsis; id++)
         {
-          printf("SIS3801 IS FULL - CLEAN IT UP AND START AGAIN\n");fflush(stdout);
-
-          for(isca = 0; isca < nsis; isca++)
-          {
-            sis3801reset(isca);
-            sis3801clear(isca);
-            sis3801enablenextlogic(isca);
-            sis3801control(isca, ENABLE_EXT_NEXT);
-            printf("    Status = 0x%08x\n",sis3801status(isca));
-          }
-
-
-		  /*
-          sis3801restore(ii, MASK);
-          sis3801control(ii, ENABLE_EXT_NEXT);
-		  */
+vmeBusLock();
+          sis3801config(id, mode);
+          sis3801control(id, ENABLE_EXT_NEXT);
+vmeBusUnlock();
+          printf("    Status = 0x%08x\n",sis3801status(id));
         }
-        else
-        {
-          dready = 0;
+	  }
+      else
+	  {
+         for(ii=0; ii<nsis; ii++)
+         {
           timeout = 0;
+          dready = 0;
           while((dready == 0) && (timeout++ < 10))
           {
+vmeBusLock();
             dready = (sis3801status(ii) & FIFO_EMPTY) ? 0 : 1;
+vmeBusUnlock();
           }
 
           if(dready == 0)
@@ -893,6 +918,42 @@ vmeBusUnlock();
     }
 #endif
 
+
+
+#ifdef USE_DSC2
+    if(run_trig_count%10000==0)
+    {
+	  printf("ev %d, ndsc2_daq=%d\n",run_trig_count,ndsc2_daq);
+	  if(ndsc2_daq>0)
+	  {
+        BANKOPEN(0xe115,1,rol->pid);
+        for(jj=0; jj<ndsc2_daq; jj++)
+        {
+          slot = dsc2Slot_daq(jj);
+vmeBusLock();
+          /* in following argument 4 set to 0xFF means latch and read everything, 0x3F - do not latch and read everything */
+          nwords = dsc2ReadScalers(slot, tdcbuf, 0x10000, 0x3F, 1);
+          /*printf("nwords=%d, nwords = 0x%08x 0x%08x 0x%08x 0x%08x\n",nwords,tdcbuf[0],tdcbuf[1],tdcbuf[2],tdcbuf[3]);*/
+vmeBusUnlock();
+
+#ifdef SSIPC
+/*
+	      {
+            int status, mm;
+            unsigned int dd[72];
+            for(mm=0; mm<72; mm++) dd[mm] = tdcbuf[mm];
+            status = epics_msg_send("hallb_dsc2_hps2_slot2","uint",72,dd);
+	      }
+*/
+#endif
+          /* unlike other boards, dcs2 scaler readout already swapped in 'dsc2ReadScalers', so swap it back, because
+          rol2.c expects big-endian format*/
+          for(ii=0; ii<nwords; ii++) *rol->dabufp ++ = LSWAP(tdcbuf[ii]);
+        }
+        BANKCLOSE;
+	  }
+	}
+#endif
 
 
 #ifndef TI_SLAVE
@@ -957,9 +1018,6 @@ TIMERL_STOP(100000/block_level,1000+rol->pid);
 
 
 
-#if 1 /* enable/disable sync events processing */
-
-
 
 
     /* read boards configurations */
@@ -1009,51 +1067,6 @@ vmeBusUnlock();
 
 
 
-
-	
-
-
-    /* read scaler(s) */
-    if(syncFlag==1 || EVENT_NUMBER==1)
-    {
-      printf("SYNC: read scalers\n");
-
-#ifdef USE_DSC2
-	  /*printf("ndsc2_daq=%d\n",ndsc2_daq);*/
-	  if(ndsc2_daq>0)
-	  {
-        BANKOPEN(0xe115,1,rol->pid);
-        for(jj=0; jj<ndsc2_daq; jj++)
-        {
-          slot = dsc2Slot_daq(jj);
-vmeBusLock();
-          /* in following argument 4 set to 0xFF means latch and read everything, 0x3F - do not latch and read everything */
-          nwords = dsc2ReadScalers(slot, tdcbuf, 0x10000, 0xFF, 1);
-          /*printf("nwords=%d, nwords = 0x%08x 0x%08x 0x%08x 0x%08x\n",nwords,tdcbuf[0],tdcbuf[1],tdcbuf[2],tdcbuf[3]);*/
-vmeBusUnlock();
-
-#ifdef SSIPC
-/*
-	      {
-            int status, mm;
-            unsigned int dd[72];
-            for(mm=0; mm<72; mm++) dd[mm] = tdcbuf[mm];
-            status = epics_msg_send("hallb_dsc2_hps2_slot2","uint",72,dd);
-	      }
-*/
-#endif
-          /* unlike other boards, dcs2 scaler readout already swapped in 'dsc2ReadScalers', so swap it back, because
-          rol2.c expects big-endian format*/
-          for(ii=0; ii<nwords; ii++) *rol->dabufp ++ = LSWAP(tdcbuf[ii]);
-        }
-        BANKCLOSE;
-	  }
-
-#endif
-      printf("SYNC: read scalers - done\n");
-	}
-
-
 #ifndef TI_SLAVE
     /* print livetime */
     if(syncFlag==1)
@@ -1075,7 +1088,6 @@ vmeBusUnlock();
 #endif
       printf("SYNC: livetime - done\n");
 	}
-#endif
 
 
 

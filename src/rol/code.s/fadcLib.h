@@ -38,7 +38,7 @@
 #define FA_VME_INT_LEVEL           3     
 #define FA_VME_INT_VEC          0xFA
 
-#define FA_SUPPORTED_CTRL_FIRMWARE 0x19
+#define FA_SUPPORTED_CTRL_FIRMWARE 0xB0
 
 struct fadc_struct 
 {
@@ -101,9 +101,10 @@ struct fadc_struct
   /* 0x014C */ volatile unsigned int ptw_last_adr;
   /* 0x0150 */ volatile unsigned int ptw_max_buf;
   /* 0x0154 */ volatile unsigned int adc_test_data;
-  /* 0x0158 */ volatile unsigned int adc_pedestal[16];
 
 #ifdef CLAS12
+  /* 0x0158 */ volatile unsigned short adc_pedestal[16];
+  /* 0x0178 */ volatile unsigned short adc_delay[16];
   /* 0x0198 */ volatile unsigned int adc_gain[16];
   /* 0x01d8 */ volatile unsigned int hitbit_trig_mask;
   /* 0x01dc */ volatile unsigned int hitbit_trig_width;
@@ -118,6 +119,7 @@ struct fadc_struct
   /* 0x02A0 */ volatile unsigned int la_status[8];
   /* 0x02C0 */ volatile unsigned int la_data[16];
 #else
+  /* 0x0158 */ volatile unsigned int adc_pedestal[16];
   /* 0x0198 */ volatile unsigned int spare_adc[(0x200-0x198)>>2];
 
   /* 0x0200 */ volatile unsigned int hitsum_status;
@@ -433,6 +435,7 @@ struct fadc_sdc_struct {
 #define FA_ADC_MIN_THRESH      0
 
 #define FA_ADC_PEDESTAL_MASK   0xffff
+#define FA_ADC_DELAY_MASK      0x1f
 
 /* Define parameters for HITSUM (Trigger) FPGA */
 #define FA_ITRIG_VERSION_MASK     0x1fff
@@ -724,6 +727,8 @@ int faSetThresholdAll(int id, unsigned short tvalue[16]);
 int faSetPedestal(int id, unsigned int wvalue);
 int faPrintPedestal(int id);
 #ifdef CLAS12
+int faSetChannelDelay(int id, unsigned int chan, unsigned int delay);
+int faGetChannelDelay(int id, unsigned int chan);
 int faResetMGT(int id, int reset);
 int faGetMGTChannelStatus(int id);
 int faSetChannelGain(int id, unsigned int chan, float gain);
@@ -742,6 +747,11 @@ int faSetHitbitMinTOT(int id, unsigned short width);
 int faSetHitbitMinMultiplicity(int id, unsigned short mult);
 int faGetHitbitMinTOT(int id);
 int faGetHitbitMinMultiplicity(int id);
+
+/*Andrea*/
+int faSetDelayAll(int id,unsigned int delay);
+int faSetGlobalDelay(unsigned int delay);
+
 
 typedef struct
 {

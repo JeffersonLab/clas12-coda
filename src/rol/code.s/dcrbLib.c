@@ -2221,10 +2221,13 @@ dcrbLinkReset(int id)
   }
 
   vmeWrite32(&(DCRBp[id]->Ser[1].Ctrl), 0x201);
+//  vmeWrite32(&(DCRBp[id]->Ser[0].Ctrl), 0x201);
   taskDelay(1);
   vmeWrite32(&(DCRBp[id]->Ser[1].Ctrl), 0x200);
+//  vmeWrite32(&(DCRBp[id]->Ser[0].Ctrl), 0x200);
   taskDelay(10);
   vmeWrite32(&(DCRBp[id]->Ser[1].Ctrl), 0x800);
+//  vmeWrite32(&(DCRBp[id]->Ser[0].Ctrl), 0x800);
   taskDelay(1);
 
 

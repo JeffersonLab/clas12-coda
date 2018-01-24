@@ -69,11 +69,13 @@ get_run_operators(char *mysql_database, char *session)
   if(mysql_query(dbsock, tmp) != 0)
   {
     printf("ERROR in mysql_query >%s<\n",tmp);
+    dbDisconnect(dbsock);
     return(NULL);
   }
   if( !(result = mysql_store_result(dbsock)) )
   {
     printf("ERROR in mysql_store_result()\n");
+    dbDisconnect(dbsock);
     return(NULL);
   }
   else
@@ -105,11 +107,13 @@ get_run_operators(char *mysql_database, char *session)
   if(mysql_query(dbsock, tmp) != 0)
   {
     printf("ERROR in mysql_query >%s<\n",tmp);
+    dbDisconnect(dbsock);
     return(NULL);
   }
   if( !(result = mysql_store_result(dbsock)) )
   {
     printf("ERROR in mysql_store_result()\n");
+    dbDisconnect(dbsock);
     return(NULL);
   }
   else
@@ -152,11 +156,13 @@ get_run_operators(char *mysql_database, char *session)
   if(mysql_query(dbsock, tmp) != 0)
   {
     printf("ERROR in mysql_query >%s<\n",tmp);
+    dbDisconnect(dbsock);
     return(NULL);
   }
   if( !(result = mysql_store_result(dbsock)) )
   {
     printf("ERROR in mysql_store_result()\n");
+    dbDisconnect(dbsock);
     return(NULL);
   }
   else

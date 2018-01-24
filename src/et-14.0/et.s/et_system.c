@@ -741,9 +741,15 @@ static void et_init_mem_event(et_id *id)
   et_system *sys  = id->sys;
   et_event  *pe   = id->events;
   char      *pmem = id->data;
-  
-  memset((void *) pmem , 0,
-         (size_t) (sys->config.nevents * sys->config.event_size));
+  size_t size;  
+
+  printf("sys->config.nevents=%d\n",sys->config.nevents);fflush(stdout);
+  printf("sys->config.event_size=%d\n",sys->config.event_size);fflush(stdout);
+  size = (size_t) (sys->config.nevents * sys->config.event_size);
+  printf("size=%lld\n",size);fflush(stdout);
+  printf("memset(0x%08x,0,%lld)\n",pmem,size);fflush(stdout);
+  memset((void *) pmem , 0, size);
+  printf("11\n");fflush(stdout);
 
   /* init all event structures (headers) & set pointer to data */
   for (i=0; i < sys->config.nevents ; i++) {

@@ -1,64 +1,3 @@
-/*
-#if defined(VXWORKS) || defined(Linux_vme)
-*/
-
-/* VXWORKS ====================================
-
-The fadcFirmwareTools.c extension to the fadcLib allows for the update of firmware
-for the main FPGA (FX70T) and the ADC Processing FPGA (LX110) for FADC250 V2.
-   fpga_choice :     1 for FX70T (Control FPGA)
-                     2 for LX110 (Processing FPGA)
-
-Easy steps (by example):
-
-SINGLE BOARD:
-
- *** VXWORKS ***
-  - Initialize the board (at VME address 0xee0000)
-     faInit(0xee0000,0,1,0);
-
-  - Check for proper initialization
-     faStatus(0,0);
-
-  - Load in the proper firmware dat file
-     fadcFirmwareReadFile("FX70T_firmware.dat");
-
-  - Load the firmware onto the FADC.  
-    Must specify which FPGA is to be updated (FADC_FIRMWARE_FX70T or FADC_FIRMWARE_LX110)
-     fadcFirmwareLoad(0, FADC_FIRMWARE_FX70T,1);
-
- *** LINUX ***
-  - Run on the command line:
-     fadcFirmwareUpdate <chip_choice> <firmware MCS file> <FADC VME ADDRESS>	
-
-    This process takes 10 minutes (roughly).
-
-MULTIPLE BOARDS
-  This is essentially SINGLE BOARD, done in parallel
-
- *** VXWORKS ***
-  - Initialize the boards (at VME addresses 0xee0000, 0xef0000, 0xf00000)
-     faInit(0xee0000,0x10000,3,0);
-
-  - Check for proper initialization
-     faGStatus(0);
-
-  - Load in the proper firmware dat file
-    fadcFirmwareReadFile("FX70T_firmware.dat");
-
-  - Load the firmware onto the FADCs.  
-    fadcFirmwareGLoad(FADC_FIRMWARE_FX70T,0);
-
- *** LINUX ***
-  - Run on the command line:
-     fadcGFirmwareUpdate <chip_choice> <firmware MCS file>
-
-  This process STILL takes roughly 10 minutes, as each board update is done in parallel.
-
-
-
-
-*/
 
 
 #ifdef Linux_vme
@@ -85,11 +24,17 @@ make sure you are doing right FPGA !!!!!!!!!!!!
 HPS UNIX:
 
  cd $CLON_PARMS/firmwares
- fadc250firmware 1 fe_fadc_ctrl.mcs
- fadc250firmware 2 fe_fadc_adc.mcs
+ fadc250firmware 1 fe_fadc_ctrl_b0.mcs
+ fadc250firmware 2 fe_fadc_adc_1b01.mcs
+
+ ##fadc250firmware 1 fe_fadc_ctrl.mcs
+ ##fadc250firmware 2 fe_fadc_adc.mcs
 
  ##fadc250firmware 1 FADC_CTRL_HPS.mcs
  ##fadc250firmware 2 FADC_ADC_HPS.mcs
+
+
+
 
 HPS VXWORKS:
 
@@ -102,35 +47,6 @@ HPS VXWORKS:
  fadcFirmwareReadMcsFile("FADC_ADC_HPS.mcs")
  fadcFirmwareGLoad(0,0)
 
-
-
-
-
-
-
-
-
-
-!!! NOTUSED_NOTUSED_NOTUSED_NOTUSED_NOTUSED !!!
-
-UNIX:
-
- cd $CLON_PARMS/firmwares
- fadc250firmware 1 CTRL_FPGA_V2_TOP_0x0219.mcs
- fadc250firmware 2 FADC250_V2_TOP_ver90A.mcs
-
-VXWORKS:
-
-#if ppc_vme.boot was not loaded     ld < $CODA/src/rol/VXWORKS_ppc/lib/librol.so
-#if ppc_vme.boot was not loaded     ld < $CODA/src/rol/VXWORKS_ppc/obj/all_rocs.o
- cd "$CLON_PARMS/firmwares"
- faInit((3<<19),(1<<19),20,0x40005)
-
- fadcFirmwareReadMcsFile("CTRL_FPGA_V2_TOP_0x0219.mcs")
- fadcFirmwareGLoad(1,0)
-
- fadcFirmwareReadMcsFile("FADC250_V2_TOP_ver90A.mcs")
- fadcFirmwareGLoad(0,0)
 
  */
 

@@ -236,7 +236,10 @@ sis3801setinputmode(int id, int mode)
 
   /* Set mode bits (if mode != 0) */
   if(mode)
+  {
+    printf("sis3801setinputmode: setting mode=%d\n",mode);
     vmeWrite32(&sisp[id]->csr, mode << 2);
+  }
   SUNLOCK;
 
   return OK;

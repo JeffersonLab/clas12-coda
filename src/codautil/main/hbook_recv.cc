@@ -28,11 +28,12 @@ main()
   int done = 0;
 
   // connect to ipc server
-  server.init(getenv("EXPID"), getenv("SESSION"), "daq", "hist", "daq", "hist");
-  //server.init(NULL, NULL, "*", "*", NULL, "*");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", "hist");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "hist");
+  server.Open();
 
   MessageActionHist *hist = new MessageActionHist((char *)"hbook_recv",debug);
-  server.addActionListener(hist);
+  server.AddCallback(hist);
 
   while(done==0)
   {

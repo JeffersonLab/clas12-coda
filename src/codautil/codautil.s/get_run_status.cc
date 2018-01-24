@@ -64,6 +64,8 @@ get_run_status(char *mysql_database, char *session)
 	}
   }
 
+  dbDisconnect(connNum);
+
   return(chres);
 }
 

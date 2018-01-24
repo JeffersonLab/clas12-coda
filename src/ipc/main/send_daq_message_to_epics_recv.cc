@@ -30,17 +30,18 @@ main()
   printf(" use IPC_HOST >%s<\n",getenv("IPC_HOST"));
 
   // connect to ipc server
-  //server.init(getenv("EXPID"), NULL, NULL, "*", NULL, "*");
-  server.init(NULL, NULL, NULL, "HallB_DAQ", NULL, "HallB_DAQ");
+  server.AddSendTopic(NULL, NULL, NULL, "HallB_DAQ");
+  server.AddRecvTopic(NULL, NULL, NULL, "HallB_DAQ");
+  server.Open();
 
   MessageActionDAQ2EPICS *epics = new MessageActionDAQ2EPICS();
   epics->set_debug(debug);
-  server.addActionListener(epics);
+  server.AddCallback(epics);
 
   while(done==0)
   {
     sleep(1);
   }
 
-
+  server.Close();
 }

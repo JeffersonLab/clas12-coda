@@ -287,3 +287,21 @@ void Histo_Stat( Histo *h, FILE *fptr )
 	else
 		fprintf( fptr, "\n" );
 }
+
+int Histo_GetAvrStd( Histo *h, double *avr, double *std )
+{
+	if( h->count )
+	{
+		*avr = h->sum_x/h->count;
+		if( h->count > 1 )
+			*std = sqrt( ( h->sum_x2 - (h->sum_x*h->sum_x)/h->count ) / ( h->count - 1 ) );
+		else
+			*std = 0.;
+	}
+	else
+	{
+		*avr = 0.;
+		*std = 0.;
+	}
+	return h->count;
+}

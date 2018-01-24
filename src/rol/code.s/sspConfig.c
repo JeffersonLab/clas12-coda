@@ -330,10 +330,17 @@ sspInitGlobals()
       ssp[jj].gt.strg[ii].htcc_width = 0;
       ssp[jj].gt.strg[ii].ftof_en = 0;
       ssp[jj].gt.strg[ii].ftof_width = 0;
+      ssp[jj].gt.strg[ii].ftof_mask = 0;
       ssp[jj].gt.strg[ii].ecalin_cosmic_en = 0;
       ssp[jj].gt.strg[ii].ecalout_cosmic_en = 0;
       ssp[jj].gt.strg[ii].pcal_cosmic_en = 0;
       ssp[jj].gt.strg[ii].cosmic_width = 0;
+      ssp[jj].gt.strg[ii].ctof_en = 0;
+      ssp[jj].gt.strg[ii].ctof_mask = 0;
+      ssp[jj].gt.strg[ii].ctof_width = 0;
+      ssp[jj].gt.strg[ii].cnd_en = 0;
+      ssp[jj].gt.strg[ii].cnd_mask = 0;
+      ssp[jj].gt.strg[ii].cnd_width = 0;
     }
     ssp[jj].gt.ecal.esum_delay = 0;
     ssp[jj].gt.ecal.cluster_delay = 0;
@@ -346,6 +353,8 @@ sspInitGlobals()
     ssp[jj].gt.dc.seg_delay = 0;
     ssp[jj].gt.htcc.htcc_delay = 0;
     ssp[jj].gt.ftof.ftof_delay = 0;
+    ssp[jj].gt.ctof.ctof_delay = 0;
+    ssp[jj].gt.cnd.cnd_delay = 0;
     ssp[jj].gt.gtpif_latency = 0;
 
     // CLAS12 GTC central trigger
@@ -832,6 +841,16 @@ sspReadConfigFile(char *filename_in)
           sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.ftof.ftof_delay = i1;
         }
+        else if(!strcmp(keyword,"SSP_GT_CTOF_DELAY"))
+        {
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.ctof.ctof_delay = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GT_CND_DELAY"))
+        {
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.cnd.cnd_delay = i1;
+        }
 
         else if(!strcmp(keyword,"SSP_GT_STRG"))
         {
@@ -891,6 +910,26 @@ sspReadConfigFile(char *filename_in)
         {
           sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].pcal_cosmic_en = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GT_STRG_HTCC_EN"))
+        {        
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].htcc_en = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GT_STRG_FTOF_EN"))
+        {        
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].ftof_en = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GT_STRG_CTOF_EN"))
+        {        
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].ctof_en = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GT_STRG_CND_EN"))
+        {        
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].cnd_en = i1;
         }
         else if(!strcmp(keyword,"SSP_GT_STRG_COSMIC_WIDTH"))
         {        
@@ -957,11 +996,6 @@ sspReadConfigFile(char *filename_in)
           sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].dc_mult_width = i1;
         }
-        else if(!strcmp(keyword,"SSP_GT_STRG_HTCC_EN"))
-        {        
-          sscanf (str_tmp, "%*s %d", &i1);
-          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].htcc_en = i1;
-        }
         else if((strcmp(keyword,"SSP_GT_STRG_HTCC_MASK")==0))
         {        
           sscanf (str_tmp, "%*s 0x%llX", &ll1);
@@ -972,15 +1006,35 @@ sspReadConfigFile(char *filename_in)
           sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].htcc_width = i1;
         }
-        else if(!strcmp(keyword,"SSP_GT_STRG_FTOF_EN"))
-        {        
-          sscanf (str_tmp, "%*s %d", &i1);
-          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].ftof_en = i1;
-        }
         else if((strcmp(keyword,"SSP_GT_STRG_FTOF_WIDTH")==0))
         {        
           sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].ftof_width = i1;
+        }
+        else if((strcmp(keyword,"SSP_GT_STRG_FTOF_MASK")==0))
+        {        
+          sscanf (str_tmp, "%*s 0x%llX", &ll1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].ftof_mask = ll1;
+        }
+        else if((strcmp(keyword,"SSP_GT_STRG_CTOF_WIDTH")==0))
+        {        
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].ctof_width = i1;
+        }
+        else if((strcmp(keyword,"SSP_GT_STRG_CTOF_MASK")==0))
+        {        
+          sscanf (str_tmp, "%*s 0x%X", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].ctof_mask = i1;
+        }
+        else if((strcmp(keyword,"SSP_GT_STRG_CND_WIDTH")==0))
+        {        
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].cnd_width = i1;
+        }
+        else if((strcmp(keyword,"SSP_GT_STRG_CND_MASK")==0))
+        {        
+          sscanf (str_tmp, "%*s 0x%X", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].cnd_mask = i1;
         }
 
 
@@ -1068,6 +1122,617 @@ printf("%s, %d, %d\n", keyword, ctrg_bit, i1);
           sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.ctrg[ctrg_bit].ft_esum_width = i1;
         }
+
+ 
+        ///////////////////////////////////////////////////////////////////        
+        // RICH 
+        ///////////////////////////////////////////////////////////////////
+        else if(!strcmp(keyword,"SSP_RICH_FIBER"))
+        {
+          sscanf (str_tmp, "%*s %s", str2);
+          if(isdigit(str2[0]))
+          {
+            fiber1 = atoi(str2);
+            fiber2 = fiber1 + 1;
+            if(fiber1<0 || fiber1>31)
+            {
+              printf("\nReadConfigFile: Wrong fiber number %d\n\n",slot1);
+              return(-4);
+            }
+          }
+          else if(!strcmp(str2,"all"))
+          {
+            fiber1 = 0;
+            fiber2 = 32;
+          }
+          else
+          {
+            printf("\nReadConfigFile: Wrong fiber >%s<, must be 'all' or actual fiber number\n\n",str2);
+            return(-4);
+          }
+        }
+        else if(!strcmp(keyword,"SSP_RICH_ASIC"))
+        {
+          sscanf (str_tmp, "%*s %s", str2);
+          if(isdigit(str2[0]))
+          {
+            asic1 = atoi(str2);
+            asic2 = asic1 + 1;
+            if(asic1<0 || asic1>2)
+            {
+              printf("\nReadConfigFile: Wrong asic number %d\n\n",slot1);
+              return(-4);
+            }
+          }
+          else if(!strcmp(str2,"all"))
+          {
+            asic1 = 0;
+            asic2 = 3;
+          }
+          else
+          {
+            printf("\nReadConfigFile: Wrong asic >%s<, must be 'all' or actual fiber number\n\n",str2);
+            return(-4);
+          }
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_CMD_FSU"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].cmd_fsu = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_CMD_SS"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].cmd_ss = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_CMD_FSB"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].cmd_fsb = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SWB_BUF_250F"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_250f = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SWB_BUF_500F"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_500f = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SWB_BUF_1P"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_1p = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SWB_BUF_2P"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_2p = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_ONOFF_SS"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].ONOFF_ss = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_SS_300F"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_ss_300f = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_SS_600F"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_ss_600f = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_SS1200F"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_ss_1200f = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_EN_ADC"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].EN_ADC = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_H1H2_CHOICE"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].H1H2_choice = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSU_20F"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_20f = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSU_40F"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_40f = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSU_25K"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_25k = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSU_50K"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_50k = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSU_100K"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_100k = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSB1_50K"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_50k = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSB1_100K"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_100k = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSB1_100F"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_100f = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSB1_50F"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_50f = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_CMD_FSB_FSU"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].cmd_fsb_fsu = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_VALID_DC_FS"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].valid_dc_fs = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSB2_50K"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_50k = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSB2_100K"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_100k = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSB2_100F"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_100f = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SW_FSB2_50F"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_50f = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_VALID_DC_FSB2"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].valid_dc_fsb2 = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_ENB_TRISTATE"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].ENb_tristate = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_POLAR_DISCRI"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].polar_discri = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_INV_DISCRIADC"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].inv_discriADC = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_D1_D2"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].d1_d2 = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_CMD_CK_MUX"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].cmd_CK_mux = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_ONOFF_OTABG"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].ONOFF_otabg = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_ONOFF_DAC"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].ONOFF_dac = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SMALL_DAC"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].small_dac = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_ENB_OUTADC"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].enb_outADC = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_INV_STARTCMPTGRAY"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].inv_startCmptGray = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_RAMP_8BIT"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].ramp_8bit = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_RAMP_10BIT"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].ramp_10bit = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_DAC0"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].DAC0 = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_DAC1"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+            ssp[slot].rich.fiber[fiber].chip[asic].DAC1 = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_GAIN_0_15"))
+        {
+          argc = SCAN_MSK;
+          if(error = sspReadConfigFile_CheckArgs(argc, 16, keyword)) return error;
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+          for(ch=0; ch<16; ch++)
+            ssp[slot].rich.fiber[fiber].chip[asic].Gain[0+ch] = msk[ch];
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_GAIN_16_31"))
+        {
+          argc = SCAN_MSK;
+          if(error = sspReadConfigFile_CheckArgs(argc, 16, keyword)) return error;
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+          for(ch=0; ch<16; ch++)
+            ssp[slot].rich.fiber[fiber].chip[asic].Gain[16+ch] = msk[ch];
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_GAIN_32_47"))
+        {
+          argc = SCAN_MSK;
+          if(error = sspReadConfigFile_CheckArgs(argc, 16, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+          for(ch=0; ch<16; ch++)
+            ssp[slot].rich.fiber[fiber].chip[asic].Gain[32+ch] = msk[ch];
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_GAIN_48_63"))
+        {
+          argc = SCAN_MSK;
+          if(error = sspReadConfigFile_CheckArgs(argc, 16, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+          for(ch=0; ch<16; ch++)
+            ssp[slot].rich.fiber[fiber].chip[asic].Gain[48+ch] = msk[ch];
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_SUM"))
+        {
+          argc = sscanf (str_tmp, "%*s 0x%X 0x%X", &ui[0], &ui[1]);
+          if(error = sspReadConfigFile_CheckArgs(argc, 2, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+          {
+            ssp[slot].rich.fiber[fiber].chip[asic].Sum[0] = ui[0];
+            ssp[slot].rich.fiber[fiber].chip[asic].Sum[1] = ui[1];
+          }
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_CTEST"))
+        {
+          argc = sscanf (str_tmp, "%*s 0x%X 0x%X", &ui[0], &ui[1]);
+          if(error = sspReadConfigFile_CheckArgs(argc, 2, keyword)) return error;
+
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+          {
+            ssp[slot].rich.fiber[fiber].chip[asic].CTest[0] = ui[0];
+            ssp[slot].rich.fiber[fiber].chip[asic].CTest[1] = ui[1];
+          }
+        }
+        else if(!strcmp(keyword,"SSP_RICH_MAROC_REG_MASKOR"))
+        {
+          argc = sscanf (str_tmp, "%*s 0x%X 0x%X", &ui[0], &ui[1]);
+          if(error = sspReadConfigFile_CheckArgs(argc, 2, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(asic=asic1; asic<asic2; asic++)
+          {
+            ssp[slot].rich.fiber[fiber].chip[asic].MaskOr[0] = ui[0];
+            ssp[slot].rich.fiber[fiber].chip[asic].MaskOr[1] = ui[1];
+          }
+        }        
+        else if(!strcmp(keyword,"SSP_RICH_CTEST_DAC"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+            ssp[slot].rich.fiber[fiber].ctest_dac = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_CTEST_ENABLE"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+            ssp[slot].rich.fiber[fiber].ctest_enable = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_TDC_ENABLE"))
+        {
+          argc = sscanf (str_tmp, "%*s 0x%X 0x%X 0x%X 0x%X 0x%X 0x%X",
+                         &ui[0],&ui[1],&ui[2],&ui[3],&ui[4],&ui[5]);
+          if(error = sspReadConfigFile_CheckArgs(argc, 6, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+          for(ii=0; ii<6; ii++)
+            ssp[slot].rich.fiber[fiber].tdc_enable_mask[ii] = ui[ii];
+        }
+        else if(!strcmp(keyword,"SSP_RICH_W_WIDTH"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+            ssp[slot].rich.fiber[fiber].window_width = i1;
+        }
+        else if(!strcmp(keyword,"SSP_RICH_W_OFFSET"))
+        {
+          argc = sscanf (str_tmp, "%*s %d", &i1);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+            ssp[slot].rich.fiber[fiber].window_offset = i1;
+        }
         else
         {
           ; /* unknown key - do nothing */
@@ -1147,7 +1812,8 @@ sspDownloadAll()
       sspGt_SetDc_SegDelay(slot, ssp[slot].gt.dc.seg_delay);
       sspGt_SetHtcc_Delay(slot, ssp[slot].gt.htcc.htcc_delay);
       sspGt_SetFtof_Delay(slot, ssp[slot].gt.ftof.ftof_delay);
-
+      sspGt_SetCtof_Delay(slot, ssp[slot].gt.ctof.ctof_delay);
+      sspGt_SetCnd_Delay(slot, ssp[slot].gt.cnd.cnd_delay);
 
       for(jj=0; jj<8; jj++)
       {
@@ -1163,27 +1829,32 @@ sspDownloadAll()
                                 (ssp[slot].gt.strg[jj].pcal_cosmic_en<<8) |
                                 (ssp[slot].gt.strg[jj].htcc_en<<9) |
                                 (ssp[slot].gt.strg[jj].ftof_en<<10) |
-                                (ssp[slot].gt.strg[jj].ecalpcal_cluster_emin_en<<11)
+                                (ssp[slot].gt.strg[jj].ecalpcal_cluster_emin_en<<11) |
+                                (ssp[slot].gt.strg[jj].ctof_en<<12) |
+                                (ssp[slot].gt.strg[jj].cnd_en<<13)
                                );
 
-        sspGt_SetTrigger_EcalEsumEmin(slot, jj, ssp[slot].gt.strg[jj].ecal_esum_emin);
-        sspGt_SetTrigger_EcalEsumWidth(slot, jj, ssp[slot].gt.strg[jj].ecal_esum_width);
-        sspGt_SetTrigger_CosmicWidth(slot, jj, ssp[slot].gt.strg[jj].cosmic_width);
-        sspGt_SetTrigger_PcalEsumEmin(slot, jj, ssp[slot].gt.strg[jj].pcal_esum_emin);
-        sspGt_SetTrigger_PcalEsumWidth(slot, jj, ssp[slot].gt.strg[jj].pcal_esum_width);
-        sspGt_SetTrigger_EcalClusterEmin(slot, jj, ssp[slot].gt.strg[jj].ecal_cluster_emin);
+        sspGt_SetTrigger_EcalEsumEmin(slot,     jj, ssp[slot].gt.strg[jj].ecal_esum_emin);
+        sspGt_SetTrigger_EcalEsumWidth(slot,    jj, ssp[slot].gt.strg[jj].ecal_esum_width);
+        sspGt_SetTrigger_CosmicWidth(slot,      jj, ssp[slot].gt.strg[jj].cosmic_width);
+        sspGt_SetTrigger_PcalEsumEmin(slot,     jj, ssp[slot].gt.strg[jj].pcal_esum_emin);
+        sspGt_SetTrigger_PcalEsumWidth(slot,    jj, ssp[slot].gt.strg[jj].pcal_esum_width);
+        sspGt_SetTrigger_EcalClusterEmin(slot,  jj, ssp[slot].gt.strg[jj].ecal_cluster_emin);
         sspGt_SetTrigger_EcalClusterWidth(slot, jj, ssp[slot].gt.strg[jj].ecal_cluster_width);
-        sspGt_SetTrigger_PcalClusterEmin(slot, jj, ssp[slot].gt.strg[jj].pcal_cluster_emin);
+        sspGt_SetTrigger_PcalClusterEmin(slot,  jj, ssp[slot].gt.strg[jj].pcal_cluster_emin);
         sspGt_SetTrigger_PcalClusterWidth(slot, jj, ssp[slot].gt.strg[jj].pcal_cluster_width);
-        sspGt_SetTrigger_DcMultMin(slot, jj, ssp[slot].gt.strg[jj].dc_mult_min);
-        sspGt_SetTrigger_DcMultWidth(slot, jj, ssp[slot].gt.strg[jj].dc_mult_width);
-        sspGt_SetTrigger_ECPCClusterEmin(slot, jj, ssp[slot].gt.strg[jj].ecalpcal_cluster_emin);
+        sspGt_SetTrigger_DcMultMin(slot,        jj, ssp[slot].gt.strg[jj].dc_mult_min);
+        sspGt_SetTrigger_DcMultWidth(slot,      jj, ssp[slot].gt.strg[jj].dc_mult_width);
+        sspGt_SetTrigger_ECPCClusterEmin(slot,  jj, ssp[slot].gt.strg[jj].ecalpcal_cluster_emin);
         sspGt_SetTrigger_ECPCClusterWidth(slot, jj, ssp[slot].gt.strg[jj].ecalpcal_cluster_width);
-
-        sspGt_SetTrigger_HtccWidth(slot, jj, ssp[slot].gt.strg[jj].htcc_width);
-        sspGt_SetTrigger_HtccMask(slot, jj, ssp[slot].gt.strg[jj].htcc_mask);
-
-        sspGt_SetTrigger_FtofWidth(slot, jj, ssp[slot].gt.strg[jj].ftof_width);
+        sspGt_SetTrigger_HtccWidth(slot,        jj, ssp[slot].gt.strg[jj].htcc_width);
+        sspGt_SetTrigger_HtccMask(slot,         jj, ssp[slot].gt.strg[jj].htcc_mask);
+        sspGt_SetTrigger_FtofWidth(slot,        jj, ssp[slot].gt.strg[jj].ftof_width);
+        sspGt_SetTrigger_FtofMask(slot,         jj, ssp[slot].gt.strg[jj].ftof_mask);
+        sspGt_SetTrigger_CtofWidth(slot,        jj, ssp[slot].gt.strg[jj].ctof_width);
+        sspGt_SetTrigger_CtofMask(slot,         jj, ssp[slot].gt.strg[jj].ctof_mask);
+        sspGt_SetTrigger_CndWidth(slot,         jj, ssp[slot].gt.strg[jj].cnd_width);
+        sspGt_SetTrigger_CndMask(slot,          jj, ssp[slot].gt.strg[jj].cnd_mask);
       }
     }
     /******************************************/
@@ -1207,8 +1878,8 @@ sspDownloadAll()
       {
         sspGtc_SetTrigger_Enable(slot, jj,
                                 (ssp[slot].gtc.ctrg[jj].en<<0) |
-                                (ssp[slot].gtc.ctrg[jj].ft_cluster_en<<1) |
-                                (ssp[slot].gtc.ctrg[jj].ft_esum_en<<2)
+                                (ssp[slot].gtc.ctrg[jj].ft_esum_en<<1) |
+                                (ssp[slot].gtc.ctrg[jj].ft_cluster_en<<2)
                                );
 
         sspGtc_SetTrigger_FtEsumEmin(slot, jj, ssp[slot].gtc.ctrg[jj].ft_esum_emin);
@@ -1272,6 +1943,120 @@ sspDownloadAll()
     /******************************************/
     /****** CONFIGURATION END:   TYPE=HPS *****/
     /******************************************/
+    
+    
+    /******************************************/
+    /****** CONFIGURATION START: TYPE=RICH *****/
+    /******************************************/
+    if(ssp[slot].fw_type == SSP_CFG_SSPTYPE_HALLBRICH)
+    {
+      sspRich_GetConnectedFibers(slot, &connectedfibers);
+
+      for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+      {
+        if(connectedfibers & (1<<fiber))
+        {
+          for(asic=0; asic<3; asic++)
+          {
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSU,            0, ssp[slot].rich.fiber[fiber].chip[asic].cmd_fsu);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_SS,             0, ssp[slot].rich.fiber[fiber].chip[asic].cmd_ss);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSB,            0, ssp[slot].rich.fiber[fiber].chip[asic].cmd_fsb);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_250F,       0, ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_250f);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_500F,       0, ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_500f);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_1P,         0, ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_1p);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_2P,         0, ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_2p);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_SS,           0, ssp[slot].rich.fiber[fiber].chip[asic].ONOFF_ss);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS_300F,         0, ssp[slot].rich.fiber[fiber].chip[asic].sw_ss_300f);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS_600F,         0, ssp[slot].rich.fiber[fiber].chip[asic].sw_ss_600f);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS1200F,         0, ssp[slot].rich.fiber[fiber].chip[asic].sw_ss_1200f);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_EN_ADC,             0, ssp[slot].rich.fiber[fiber].chip[asic].EN_ADC);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_H1H2_CHOICE,        0, ssp[slot].rich.fiber[fiber].chip[asic].H1H2_choice);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_20F,         0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_20f);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_40F,         0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_40f);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_25K,         0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_25k);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_50K,         0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_50k);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_100K,        0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_100k);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_50K,        0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_50k);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_100K,       0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_100k);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_100F,       0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_100f);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_50F,        0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_50f);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSB_FSU,        0, ssp[slot].rich.fiber[fiber].chip[asic].cmd_fsb_fsu);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_VALID_DC_FS,        0, ssp[slot].rich.fiber[fiber].chip[asic].valid_dc_fs);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_50K,        0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_50k);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_100K,       0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_100k);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_100F,       0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_100f);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_50F,        0, ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_50f);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_VALID_DC_FSB2,      0, ssp[slot].rich.fiber[fiber].chip[asic].valid_dc_fsb2);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ENB_TRISTATE,       0, ssp[slot].rich.fiber[fiber].chip[asic].ENb_tristate);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_POLAR_DISCRI,       0, ssp[slot].rich.fiber[fiber].chip[asic].polar_discri);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_INV_DISCRIADC,      0, ssp[slot].rich.fiber[fiber].chip[asic].inv_discriADC);
+            
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_D1_D2,              0, ssp[slot].rich.fiber[fiber].chip[asic].d1_d2);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_CK_MUX,         0, ssp[slot].rich.fiber[fiber].chip[asic].cmd_CK_mux);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_OTABG,        0, ssp[slot].rich.fiber[fiber].chip[asic].ONOFF_otabg);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_DAC,          0, ssp[slot].rich.fiber[fiber].chip[asic].ONOFF_dac);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SMALL_DAC,          0, ssp[slot].rich.fiber[fiber].chip[asic].small_dac);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ENB_OUTADC,         0, ssp[slot].rich.fiber[fiber].chip[asic].enb_outADC);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_INV_STARTCMPTGRAY,  0, ssp[slot].rich.fiber[fiber].chip[asic].inv_startCmptGray);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_RAMP_8BIT,          0, ssp[slot].rich.fiber[fiber].chip[asic].ramp_8bit);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_RAMP_10BIT,         0, ssp[slot].rich.fiber[fiber].chip[asic].ramp_10bit);
+            
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_DAC0,               0, ssp[slot].rich.fiber[fiber].chip[asic].DAC0);
+            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_DAC1,               0, ssp[slot].rich.fiber[fiber].chip[asic].DAC1);
+            
+            for(ch=0; ch<64; ch++)
+            {
+              int sum, ctest, maskor, gain;
+              
+              gain = ssp[slot].rich.fiber[fiber].chip[asic].Gain[ch];
+              
+              if(ch < 32)
+              {
+                sum = (ssp[slot].rich.fiber[fiber].chip[asic].Sum[0] & (1<<ch)) ? 1 : 0;
+                ctest = (ssp[slot].rich.fiber[fiber].chip[asic].CTest[0] & (1<<ch)) ? 1 : 0;
+                maskor = (ssp[slot].rich.fiber[fiber].chip[asic].MaskOr[0] & (1<<ch)) ? 1 : 0;
+              }
+              else
+              {
+                sum = (ssp[slot].rich.fiber[fiber].chip[asic].Sum[1] & (1<<(ch-32))) ? 1 : 0;
+                ctest = (ssp[slot].rich.fiber[fiber].chip[asic].CTest[1] & (1<<(ch-32))) ? 1 : 0;
+                maskor = (ssp[slot].rich.fiber[fiber].chip[asic].MaskOr[1] & (1<<(ch-32))) ? 1 : 0;
+              }
+              
+              sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_GAIN,            ch, gain);
+              sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SUM,             ch, sum);
+              sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CTEST,           ch, ctest);
+              sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_MASKOR,          ch, maskor);
+            }
+          }
+        
+          sspRich_UpdateMarocRegs(slot, fiber);
+          
+          sspRich_SetCTestAmplitude(slot, fiber, ssp[slot].rich.fiber[fiber].ctest_dac);
+          
+          if(ssp[slot].rich.fiber[fiber].ctest_enable)
+            sspRich_SetCTestSource(slot, fiber, RICH_SD_CTEST_SRC_SEL_SSP);
+          else
+            sspRich_SetCTestSource(slot, fiber, RICH_SD_CTEST_SRC_SEL_0);
+          
+          
+          sspRich_SetTDCEnableChannelMask(slot, fiber,
+                                          ssp[slot].rich.fiber[fiber].tdc_enable_mask[0],
+                                          ssp[slot].rich.fiber[fiber].tdc_enable_mask[1],
+                                          ssp[slot].rich.fiber[fiber].tdc_enable_mask[2],
+                                          ssp[slot].rich.fiber[fiber].tdc_enable_mask[3],
+                                          ssp[slot].rich.fiber[fiber].tdc_enable_mask[4],
+                                          ssp[slot].rich.fiber[fiber].tdc_enable_mask[5]
+                                        );
+          
+          sspRich_SetLookback(slot, fiber, ssp[slot].rich.fiber[fiber].window_offset);
+          sspRich_SetWindow(slot, fiber, ssp[slot].rich.fiber[fiber].window_width);
+        }
+      }
+    }
+    /******************************************/
+    /****** CONFIGURATION END:  TYPE=RICH *****/
+    /******************************************/
   }
 
   return(0);
@@ -1331,22 +2116,26 @@ sspUploadAll(char *string, int length)
       ssp[slot].gt.dc.seg_delay = sspGt_GetDc_SegDelay(slot);
       ssp[slot].gt.htcc.htcc_delay = sspGt_GetHtcc_Delay(slot);
       ssp[slot].gt.ftof.ftof_delay = sspGt_GetFtof_Delay(slot);
+      ssp[slot].gt.ctof.ctof_delay = sspGt_GetCtof_Delay(slot);
+      ssp[slot].gt.cnd.cnd_delay = sspGt_GetCnd_Delay(slot);
       
       for(jj=0; jj<8; jj++)
       {
         ival = sspGt_GetTrigger_Enable(slot, jj);
-        ssp[slot].gt.strg[jj].en                       = (ival & 0x001) ? 1 : 0;
-        ssp[slot].gt.strg[jj].pcal_cluster_emin_en     = (ival & 0x002) ? 1 : 0;
-        ssp[slot].gt.strg[jj].ecal_cluster_emin_en     = (ival & 0x004) ? 1 : 0;
-        ssp[slot].gt.strg[jj].pcal_esum_en             = (ival & 0x008) ? 1 : 0;
-        ssp[slot].gt.strg[jj].ecal_esum_en             = (ival & 0x010) ? 1 : 0;
-        ssp[slot].gt.strg[jj].dc_mult_en               = (ival & 0x020) ? 1 : 0;
-        ssp[slot].gt.strg[jj].ecalout_cosmic_en        = (ival & 0x040) ? 1 : 0;
-        ssp[slot].gt.strg[jj].ecalin_cosmic_en         = (ival & 0x080) ? 1 : 0;
-        ssp[slot].gt.strg[jj].pcal_cosmic_en           = (ival & 0x100) ? 1 : 0;
-        ssp[slot].gt.strg[jj].htcc_en                  = (ival & 0x200) ? 1 : 0;
-        ssp[slot].gt.strg[jj].ftof_en                  = (ival & 0x400) ? 1 : 0;
-        ssp[slot].gt.strg[jj].ecalpcal_cluster_emin_en = (ival & 0x800) ? 1 : 0;
+        ssp[slot].gt.strg[jj].en                       = (ival & 0x0001) ? 1 : 0;
+        ssp[slot].gt.strg[jj].pcal_cluster_emin_en     = (ival & 0x0002) ? 1 : 0;
+        ssp[slot].gt.strg[jj].ecal_cluster_emin_en     = (ival & 0x0004) ? 1 : 0;
+        ssp[slot].gt.strg[jj].pcal_esum_en             = (ival & 0x0008) ? 1 : 0;
+        ssp[slot].gt.strg[jj].ecal_esum_en             = (ival & 0x0010) ? 1 : 0;
+        ssp[slot].gt.strg[jj].dc_mult_en               = (ival & 0x0020) ? 1 : 0;
+        ssp[slot].gt.strg[jj].ecalout_cosmic_en        = (ival & 0x0040) ? 1 : 0;
+        ssp[slot].gt.strg[jj].ecalin_cosmic_en         = (ival & 0x0080) ? 1 : 0;
+        ssp[slot].gt.strg[jj].pcal_cosmic_en           = (ival & 0x0100) ? 1 : 0;
+        ssp[slot].gt.strg[jj].htcc_en                  = (ival & 0x0200) ? 1 : 0;
+        ssp[slot].gt.strg[jj].ftof_en                  = (ival & 0x0400) ? 1 : 0;
+        ssp[slot].gt.strg[jj].ecalpcal_cluster_emin_en = (ival & 0x0800) ? 1 : 0;
+        ssp[slot].gt.strg[jj].ctof_en                  = (ival & 0x1000) ? 1 : 0;
+        ssp[slot].gt.strg[jj].cnd_en                   = (ival & 0x2000) ? 1 : 0;
        
         ssp[slot].gt.strg[jj].ecal_esum_emin = sspGt_GetTrigger_EcalEsumEmin(slot, jj);
         ssp[slot].gt.strg[jj].ecal_esum_width = sspGt_GetTrigger_EcalEsumWidth(slot, jj);
@@ -1363,9 +2152,16 @@ sspUploadAll(char *string, int length)
         ssp[slot].gt.strg[jj].cosmic_width = sspGt_GetTrigger_CosmicWidth(slot, jj);
 
         ssp[slot].gt.strg[i].htcc_width = sspGt_GetTrigger_HtccWidth(slot, i);
-        ssp[slot].gt.strg[i].htcc_mask = sspGt_GetTrigger_HtccMask(slot, i);
+        ssp[slot].gt.strg[i].htcc_mask  = sspGt_GetTrigger_HtccMask(slot, i);
 
         ssp[slot].gt.strg[i].ftof_width = sspGt_GetTrigger_FtofWidth(slot, i);
+        ssp[slot].gt.strg[i].ftof_mask  = sspGt_GetTrigger_FtofMask(slot, i);
+
+        ssp[slot].gt.strg[i].ctof_width = sspGt_GetTrigger_CtofWidth(slot, i);
+        ssp[slot].gt.strg[i].ctof_mask  = sspGt_GetTrigger_CtofMask(slot, i);
+
+        ssp[slot].gt.strg[i].cnd_width = sspGt_GetTrigger_CndWidth(slot, i);
+        ssp[slot].gt.strg[i].cnd_mask  = sspGt_GetTrigger_CndMask(slot, i);
       }
     }
     /******************************************/
@@ -1452,6 +2248,126 @@ printf("sspGtc_GetTrigger_Enable(%d,%d)=0x%08X\n", slot, i, ival);
     /****** CONFIGURATION END:   TYPE=HPS *****/
     /******************************************/
     
+    /******************************************/
+    /****** CONFIGURATION START: TYPE=RICH *****/
+    /******************************************/
+    if(ssp[slot].fw_type == SSP_CFG_SSPTYPE_HALLBRICH)
+    {
+      sspRich_GetConnectedFibers(slot, &connectedfibers);
+      
+      for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+      {
+        if(connectedfibers & (1<<fiber))
+        {
+          sspRich_UpdateMarocRegs(slot, fiber);
+
+          for(asic=0; asic<3; asic++)
+          {
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSU,            0, &ssp[slot].rich.fiber[fiber].chip[asic].cmd_fsu);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_SS,             0, &ssp[slot].rich.fiber[fiber].chip[asic].cmd_ss);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSB,            0, &ssp[slot].rich.fiber[fiber].chip[asic].cmd_fsb);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_250F,       0, &ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_250f);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_500F,       0, &ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_500f);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_1P,         0, &ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_1p);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_2P,         0, &ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_2p);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_SS,           0, &ssp[slot].rich.fiber[fiber].chip[asic].ONOFF_ss);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS_300F,         0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_ss_300f);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS_600F,         0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_ss_600f);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS1200F,         0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_ss_1200f);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_EN_ADC,             0, &ssp[slot].rich.fiber[fiber].chip[asic].EN_ADC);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_H1H2_CHOICE,        0, &ssp[slot].rich.fiber[fiber].chip[asic].H1H2_choice);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_20F,         0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_20f);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_40F,         0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_40f);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_25K,         0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_25k);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_50K,         0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_50k);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_100K,        0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_100k);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_50K,        0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_50k);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_100K,       0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_100k);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_100F,       0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_100f);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_50F,        0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_50f);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSB_FSU,        0, &ssp[slot].rich.fiber[fiber].chip[asic].cmd_fsb_fsu);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_VALID_DC_FS,        0, &ssp[slot].rich.fiber[fiber].chip[asic].valid_dc_fs);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_50K,        0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_50k);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_100K,       0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_100k);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_100F,       0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_100f);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_50F,        0, &ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_50f);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_VALID_DC_FSB2,      0, &ssp[slot].rich.fiber[fiber].chip[asic].valid_dc_fsb2);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ENB_TRISTATE,       0, &ssp[slot].rich.fiber[fiber].chip[asic].ENb_tristate);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_POLAR_DISCRI,       0, &ssp[slot].rich.fiber[fiber].chip[asic].polar_discri);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_INV_DISCRIADC,      0, &ssp[slot].rich.fiber[fiber].chip[asic].inv_discriADC);
+            
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_D1_D2,              0, &ssp[slot].rich.fiber[fiber].chip[asic].d1_d2);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_CK_MUX,         0, &ssp[slot].rich.fiber[fiber].chip[asic].cmd_CK_mux);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_OTABG,        0, &ssp[slot].rich.fiber[fiber].chip[asic].ONOFF_otabg);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_DAC,          0, &ssp[slot].rich.fiber[fiber].chip[asic].ONOFF_dac);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SMALL_DAC,          0, &ssp[slot].rich.fiber[fiber].chip[asic].small_dac);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ENB_OUTADC,         0, &ssp[slot].rich.fiber[fiber].chip[asic].enb_outADC);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_INV_STARTCMPTGRAY,  0, &ssp[slot].rich.fiber[fiber].chip[asic].inv_startCmptGray);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_RAMP_8BIT,          0, &ssp[slot].rich.fiber[fiber].chip[asic].ramp_8bit);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_RAMP_10BIT,         0, &ssp[slot].rich.fiber[fiber].chip[asic].ramp_10bit);
+            
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_DAC0,               0, &ssp[slot].rich.fiber[fiber].chip[asic].DAC0);
+            sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_DAC1,               0, &ssp[slot].rich.fiber[fiber].chip[asic].DAC1);
+
+            
+            ssp[slot].rich.fiber[fiber].chip[asic].Sum[0] = 0;
+            ssp[slot].rich.fiber[fiber].chip[asic].Sum[1] = 0;
+            ssp[slot].rich.fiber[fiber].chip[asic].CTest[0] = 0;
+            ssp[slot].rich.fiber[fiber].chip[asic].CTest[1] = 0;
+            ssp[slot].rich.fiber[fiber].chip[asic].MaskOr[0] = 0;
+            ssp[slot].rich.fiber[fiber].chip[asic].MaskOr[1] = 0;
+            for(ch=0; ch<64; ch++)
+            {
+              int gain, sum, ctest, maskor;
+              
+              sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_GAIN,            ch, &gain);
+              sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SUM,             ch, &sum);
+              sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CTEST,           ch, &ctest);
+              sspRich_GetMarocReg(slot, fiber, asic, RICH_MAROC_REG_MASKOR,          ch, &maskor);
+              
+              ssp[slot].rich.fiber[fiber].chip[asic].Gain[ch] = gain;
+
+              if(ch < 32)
+              {
+                if(sum)    ssp[slot].rich.fiber[fiber].chip[asic].Sum[0] |= 1<<ch;
+                if(ctest)  ssp[slot].rich.fiber[fiber].chip[asic].CTest[0] |= 1<<ch;
+                if(maskor) ssp[slot].rich.fiber[fiber].chip[asic].MaskOr[0] |= 1<<ch;
+              }
+              else
+              {
+                if(sum)    ssp[slot].rich.fiber[fiber].chip[asic].Sum[1] |= 1<<(ch-32);
+                if(ctest)  ssp[slot].rich.fiber[fiber].chip[asic].CTest[1] |= 1<<(ch-32);
+                if(maskor) ssp[slot].rich.fiber[fiber].chip[asic].MaskOr[1] |= 1<<(ch-32);
+              }
+            }
+          }
+          
+          sspRich_GetCTestAmplitude(slot, fiber, &ssp[slot].rich.fiber[fiber].ctest_dac);
+          
+          sspRich_GetCTestSource(slot, fiber, &src);
+          if(src == RICH_SD_CTEST_SRC_SEL_0)
+            ssp[slot].rich.fiber[fiber].ctest_enable = 0;
+          else
+            ssp[slot].rich.fiber[fiber].ctest_enable = 1;
+          
+          sspRich_GetTDCEnableChannelMask(slot, fiber,
+                                          &ssp[slot].rich.fiber[fiber].tdc_enable_mask[0],
+                                          &ssp[slot].rich.fiber[fiber].tdc_enable_mask[1],
+                                          &ssp[slot].rich.fiber[fiber].tdc_enable_mask[2],
+                                          &ssp[slot].rich.fiber[fiber].tdc_enable_mask[3],
+                                          &ssp[slot].rich.fiber[fiber].tdc_enable_mask[4],
+                                          &ssp[slot].rich.fiber[fiber].tdc_enable_mask[5]
+                                        );
+          
+          sspRich_GetLookback(slot, fiber, &ssp[slot].rich.fiber[fiber].window_offset);
+          sspRich_GetWindow(slot, fiber, &ssp[slot].rich.fiber[fiber].window_width);
+        }
+      }
+    }
+    /******************************************/
+    /****** CONFIGURATION END:  TYPE=RICH *****/
+    /******************************************/
+  
   }
   
   if(length)
@@ -1466,12 +2382,10 @@ printf("sspGtc_GetTrigger_Enable(%d,%d)=0x%08X\n", slot, i, ival);
       /****** CONFIGURATION START: TYPE=ALL *****/
       /******************************************/
       sprintf(sss,"SSP_SLOT %d\n",slot); ADD_TO_STRING;
-
       sprintf(sss,"SSP_FIRMWAREVERSION %d\n", ssp[slot].fw_rev); ADD_TO_STRING;
       sprintf(sss,"SSP_FIRMWARETYPE %d\n", ssp[slot].fw_type); ADD_TO_STRING;
       sprintf(sss,"SSP_W_WIDTH %d\n",ssp[slot].window_width); ADD_TO_STRING;
       sprintf(sss,"SSP_W_OFFSET %d\n",ssp[slot].window_offset); ADD_TO_STRING;
-
       sprintf(sss,"SSP_HPS_PULSER %d\n", ssp[slot].pulser_freq); ADD_TO_STRING;
       for(i = SD_SRC_P2_LVDSOUT0; i <= SD_SRC_P2_LVDSOUT7; i++)
       {
@@ -1499,6 +2413,8 @@ printf("sspGtc_GetTrigger_Enable(%d,%d)=0x%08X\n", slot, i, ival);
         sprintf(sss,"SSP_GT_DC_DELAY %d\n",            ssp[slot].gt.dc.seg_delay);       ADD_TO_STRING;
         sprintf(sss,"SSP_GT_HTCC_DELAY %d\n",          ssp[slot].gt.htcc.htcc_delay);    ADD_TO_STRING;
         sprintf(sss,"SSP_GT_FTOF_DELAY %d\n",          ssp[slot].gt.ftof.ftof_delay);    ADD_TO_STRING;
+        sprintf(sss,"SSP_GT_CTOF_DELAY %d\n",          ssp[slot].gt.ctof.ctof_delay);    ADD_TO_STRING;
+        sprintf(sss,"SSP_GT_CND_DELAY %d\n",           ssp[slot].gt.cnd.cnd_delay);      ADD_TO_STRING;
         
         for(i=0; i<8; i++)
         {
@@ -1512,9 +2428,11 @@ printf("sspGtc_GetTrigger_Enable(%d,%d)=0x%08X\n", slot, i, ival);
           sprintf(sss,"SSP_GT_STRG_ECALIN_COSMIC_EN %d\n",         ssp[slot].gt.strg[i].ecalin_cosmic_en);         ADD_TO_STRING;
           sprintf(sss,"SSP_GT_STRG_ECALOUT_COSMIC_EN %d\n",        ssp[slot].gt.strg[i].ecalout_cosmic_en);        ADD_TO_STRING;
           sprintf(sss,"SSP_GT_STRG_PCAL_COSMIC_EN %d\n",           ssp[slot].gt.strg[i].pcal_cosmic_en);           ADD_TO_STRING;
-          sprintf(sss,"SSP_GT_STRG_PCAL_HTCC_EN %d\n",             ssp[slot].gt.strg[i].htcc_en);                  ADD_TO_STRING;
-          sprintf(sss,"SSP_GT_STRG_PCAL_FTOF_EN %d\n",             ssp[slot].gt.strg[i].ftof_en);                  ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_HTCC_EN %d\n",                  ssp[slot].gt.strg[i].htcc_en);                  ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_FTOF_EN %d\n",                  ssp[slot].gt.strg[i].ftof_en);                  ADD_TO_STRING;
           sprintf(sss,"SSP_GT_STRG_ECALPCAL_CLUSTER_EMIN_EN %d\n", ssp[slot].gt.strg[i].ecalpcal_cluster_emin_en); ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_CTOF_EN %d\n",                  ssp[slot].gt.strg[i].ctof_en);                  ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_CND_EN %d\n",                   ssp[slot].gt.strg[i].cnd_en);                   ADD_TO_STRING;
 
           sprintf(sss,"SSP_GT_STRG_ECALPCAL_CLUSTER_MIN %d\n",     ssp[slot].gt.strg[i].ecalpcal_cluster_emin);    ADD_TO_STRING;
           sprintf(sss,"SSP_GT_STRG_ECALPCAL_CLUSTER_WIDTH %d\n",   ssp[slot].gt.strg[i].ecalpcal_cluster_width);   ADD_TO_STRING;
@@ -1530,8 +2448,13 @@ printf("sspGtc_GetTrigger_Enable(%d,%d)=0x%08X\n", slot, i, ival);
           sprintf(sss,"SSP_GT_STRG_DC_MULT_WIDTH %d\n",            ssp[slot].gt.strg[i].dc_mult_width);            ADD_TO_STRING;
           sprintf(sss,"SSP_GT_STRG_COSMIC_WIDTH %d\n",             ssp[slot].gt.strg[i].cosmic_width);             ADD_TO_STRING;
           sprintf(sss,"SSP_GT_STRG_HTCC_WIDTH %d\n",               ssp[slot].gt.strg[i].htcc_width);               ADD_TO_STRING;
-          sprintf(sss,"SSP_GT_STRG_FTOF_WIDTH %d\n",               ssp[slot].gt.strg[i].ftof_width);               ADD_TO_STRING;
           sprintf(sss,"SSP_GT_STRG_HTCC_MASK 0x%llX\n",            ssp[slot].gt.strg[i].htcc_mask);                ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_FTOF_WIDTH %d\n",               ssp[slot].gt.strg[i].ftof_width);               ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_FTOF_MASK 0x%llX\n",            ssp[slot].gt.strg[i].ftof_mask);                ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_CTOF_WIDTH %d\n",               ssp[slot].gt.strg[i].ctof_width);               ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_CTOF_MASK 0x%02X\n",            ssp[slot].gt.strg[i].ctof_mask);                ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_CND_WIDTH %d\n",                ssp[slot].gt.strg[i].cnd_width);                ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_CND_MASK 0x%02X\n",             ssp[slot].gt.strg[i].cnd_mask);                 ADD_TO_STRING;
         }
       }
       /******************************************/
@@ -1609,6 +2532,119 @@ printf("sspGtc_GetTrigger_Enable(%d,%d)=0x%08X\n", slot, i, ival);
       /******************************************/
       /****** CONFIGURATION END:   TYPE=HPS *****/
       /******************************************/
+      
+      
+      /******************************************/
+      /****** CONFIGURATION START: TYPE=RICH *****/
+      /******************************************/
+      if(ssp[slot].fw_type == SSP_CFG_SSPTYPE_HALLBRICH)
+      {
+        sspRich_GetConnectedFibers(slot, &connectedfibers);
+      
+        for(fiber=0; fiber<32; fiber++)
+        {
+          if(connectedfibers & (1<<fiber))
+          {
+            sprintf(sss, "SSP_RICH_FIBER %d\n", fiber); ADD_TO_STRING;
+            for(asic=0; asic<3; asic++)
+            {
+              sprintf(sss, "SSP_RICH_ASIC %d\n", asic); ADD_TO_STRING;
+              
+              sprintf(sss, "SSP_RICH_MAROC_REG_CMD_FSU %d\n",           ssp[slot].rich.fiber[fiber].chip[asic].cmd_fsu); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_CMD_SS %d\n",            ssp[slot].rich.fiber[fiber].chip[asic].cmd_ss); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_CMD_FSB %d\n",           ssp[slot].rich.fiber[fiber].chip[asic].cmd_fsb); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SWB_BUF_250F %d\n",      ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_250f); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SWB_BUF_500F %d\n",      ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_500f); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SWB_BUF_1P %d\n",        ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_1p); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SWB_BUF_2P %d\n",        ssp[slot].rich.fiber[fiber].chip[asic].swb_buf_2p); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_ONOFF_SS %d\n",          ssp[slot].rich.fiber[fiber].chip[asic].ONOFF_ss); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_SS_300F %d\n",        ssp[slot].rich.fiber[fiber].chip[asic].sw_ss_300f); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_SS_600F %d\n",        ssp[slot].rich.fiber[fiber].chip[asic].sw_ss_600f); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_SS1200F %d\n",        ssp[slot].rich.fiber[fiber].chip[asic].sw_ss_1200f); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_EN_ADC %d\n",            ssp[slot].rich.fiber[fiber].chip[asic].EN_ADC); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_H1H2_CHOICE %d\n",       ssp[slot].rich.fiber[fiber].chip[asic].H1H2_choice); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSU_20F %d\n",        ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_20f); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSU_40F %d\n",        ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_40f); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSU_25K %d\n",        ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_25k); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSU_50K %d\n",        ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_50k); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSU_100K %d\n",       ssp[slot].rich.fiber[fiber].chip[asic].sw_fsu_100k); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSB1_50K %d\n",       ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_50k); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSB1_100K %d\n",      ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_100k); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSB1_100F %d\n",      ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_100f); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSB1_50F %d\n",       ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb1_50f); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_CMD_FSB_FSU %d\n",       ssp[slot].rich.fiber[fiber].chip[asic].cmd_fsb_fsu); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_VALID_DC_FS %d\n",       ssp[slot].rich.fiber[fiber].chip[asic].valid_dc_fs); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSB2_50K %d\n",       ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_50k); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSB2_100K %d\n",      ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_100k); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSB2_100F %d\n",      ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_100f); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SW_FSB2_50F %d\n",       ssp[slot].rich.fiber[fiber].chip[asic].sw_fsb2_50f); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_VALID_DC_FSB2 %d\n",     ssp[slot].rich.fiber[fiber].chip[asic].valid_dc_fsb2); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_ENB_TRISTATE %d\n",      ssp[slot].rich.fiber[fiber].chip[asic].ENb_tristate); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_POLAR_DISCRI %d\n",      ssp[slot].rich.fiber[fiber].chip[asic].polar_discri); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_INV_DISCRIADC %d\n",     ssp[slot].rich.fiber[fiber].chip[asic].inv_discriADC); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_D1_D2 %d\n",             ssp[slot].rich.fiber[fiber].chip[asic].d1_d2); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_CMD_CK_MUX %d\n",        ssp[slot].rich.fiber[fiber].chip[asic].cmd_CK_mux); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_ONOFF_OTABG %d\n",       ssp[slot].rich.fiber[fiber].chip[asic].ONOFF_otabg); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_ONOFF_DAC %d\n",         ssp[slot].rich.fiber[fiber].chip[asic].ONOFF_dac); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_SMALL_DAC %d\n",         ssp[slot].rich.fiber[fiber].chip[asic].small_dac); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_ENB_OUTADC %d\n",        ssp[slot].rich.fiber[fiber].chip[asic].enb_outADC); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_INV_STARTCMPTGRAY %d\n", ssp[slot].rich.fiber[fiber].chip[asic].inv_startCmptGray); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_RAMP_8BIT %d\n",         ssp[slot].rich.fiber[fiber].chip[asic].ramp_8bit); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_RAMP_10BIT %d\n",        ssp[slot].rich.fiber[fiber].chip[asic].ramp_10bit); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_DAC0 %d\n",              ssp[slot].rich.fiber[fiber].chip[asic].DAC0); ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_DAC1 %d\n",              ssp[slot].rich.fiber[fiber].chip[asic].DAC1); ADD_TO_STRING;
+              
+           
+              ADD_TO_STRING;
+              sprintf(sss, "SSP_RICH_MAROC_REG_GAIN_0_15 "); ADD_TO_STRING;
+              for(ch=0; ch<16; ch++) { sprintf(sss, "%d%c", ssp[slot].rich.fiber[fiber].chip[asic].Gain[0+ch], (ch==15)?'\n':' '); ADD_TO_STRING;}
+                
+              sprintf(sss, "SSP_RICH_MAROC_REG_GAIN_16_31 "); ADD_TO_STRING;
+              for(ch=0; ch<16; ch++) { sprintf(sss, "%d%c", ssp[slot].rich.fiber[fiber].chip[asic].Gain[16+ch], (ch==15)?'\n':' '); ADD_TO_STRING;}
+
+              sprintf(sss, "SSP_RICH_MAROC_REG_GAIN_32_47 "); ADD_TO_STRING;
+              for(ch=0; ch<16; ch++) { sprintf(sss, "%d%c", ssp[slot].rich.fiber[fiber].chip[asic].Gain[32+ch], (ch==15)?'\n':' '); ADD_TO_STRING;}
+
+              sprintf(sss, "SSP_RICH_MAROC_REG_GAIN_48_63 "); ADD_TO_STRING;
+              for(ch=0; ch<16; ch++) { sprintf(sss, "%d%c", ssp[slot].rich.fiber[fiber].chip[asic].Gain[48+ch], (ch==15)?'\n':' '); ADD_TO_STRING;}
+              
+              sprintf(sss, "SSP_RICH_MAROC_REG_SUM 0x%08X 0x%08X\n",
+                  ssp[slot].rich.fiber[fiber].chip[asic].Sum[0],
+                  ssp[slot].rich.fiber[fiber].chip[asic].Sum[1]
+                ); ADD_TO_STRING;
+
+              sprintf(sss, "SSP_RICH_MAROC_REG_CTEST 0x%08X 0x%08X\n",
+                  ssp[slot].rich.fiber[fiber].chip[asic].CTest[0],
+                  ssp[slot].rich.fiber[fiber].chip[asic].CTest[1]
+                ); ADD_TO_STRING;
+
+              sprintf(sss, "SSP_RICH_MAROC_REG_MASKOR 0x%08X 0x%08X\n",
+                  ssp[slot].rich.fiber[fiber].chip[asic].MaskOr[0],
+                  ssp[slot].rich.fiber[fiber].chip[asic].MaskOr[1]
+                ); ADD_TO_STRING;
+            }
+
+            sprintf(sss, "SSP_RICH_CTEST_DAC %d\n", ssp[slot].rich.fiber[fiber].ctest_dac); ADD_TO_STRING;
+
+            sprintf(sss, "SSP_RICH_CTEST_ENABLE %d\n", ssp[slot].rich.fiber[fiber].ctest_enable); ADD_TO_STRING;
+
+            sprintf(sss, "SSP_RICH_TDC_ENABLE 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X\n",
+                ssp[slot].rich.fiber[fiber].tdc_enable_mask[0],
+                ssp[slot].rich.fiber[fiber].tdc_enable_mask[1],
+                ssp[slot].rich.fiber[fiber].tdc_enable_mask[2],
+                ssp[slot].rich.fiber[fiber].tdc_enable_mask[3],
+                ssp[slot].rich.fiber[fiber].tdc_enable_mask[4],
+                ssp[slot].rich.fiber[fiber].tdc_enable_mask[5]
+            ); ADD_TO_STRING;
+
+            sprintf(sss, "SSP_RICH_W_WIDTH %d\n", ssp[slot].rich.fiber[fiber].window_width); ADD_TO_STRING;
+            sprintf(sss, "SSP_RICH_W_OFFSET %d\n", ssp[slot].rich.fiber[fiber].window_offset); ADD_TO_STRING;
+          }
+        }
+      }
+    /******************************************/
+    /****** CONFIGURATION END: TYPE=RICH ******/
+    /******************************************/
     }
 
     CLOSE_STRING;
@@ -1616,12 +2652,15 @@ printf("sspGtc_GetTrigger_Enable(%d,%d)=0x%08X\n", slot, i, ival);
   return(0);
 }
 
+
+static char str[500001];
+
 int
 sspUploadAllPrint()
 {
-  char str[32001];
-  sspUploadAll(str, 32000);
+  sspUploadAll(str, 500000);
   printf("%s",str);
+
   return 0;
 }
 

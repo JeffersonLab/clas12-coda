@@ -989,7 +989,8 @@ lenE[jj][nB][nE[nB]] - event length in words
 		  {
             /* event header */
             a_event_type = ((datain[ii]>>24)&0xFF);
-			if(a_event_type==0) printf("ERROR in TI event header word: event type = %d\n",a_event_type);
+
+      			if(a_event_type==0) printf("ERROR in TI event header word: event type = %d\n",a_event_type);
             if(((datain[ii]>>16)&0xFF)!=0x01) printf("ERROR in TI event header word (0x%02x)\n",((datain[ii]>>16)&0xFF));
             a_nwords = datain[ii]&0xFF;
 #ifdef DEBUG1
@@ -1674,7 +1675,6 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
 
     else if(banktag[jj] == 0xe122) /* VTP hardware format */
 	{
-//Ben Nov 22, 2017
       REPORT_RAW_BANK_IF_REQUESTED;
       banknum = rol->pid;
 
@@ -3528,7 +3528,7 @@ if(a_pulsenumber == 0)
 			
             /* event header */
             a_event_type = ((datain[ii]>>24)&0xFF);
-			if(a_event_type==0) printf("ERROR in TI event header word: event type = %d\n",a_event_type);
+       			if(a_event_type==0) printf("ERROR in TI event header word: event type = %d\n",a_event_type);
             if(((datain[ii]>>16)&0xFF)!=0x01) printf("ERROR in TI event header word (0x%02x)\n",((datain[ii]>>16)&0xFF));
             a_nwords = datain[ii]&0xFF;
 #ifdef DEBUG1

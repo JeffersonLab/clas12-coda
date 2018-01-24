@@ -246,22 +246,20 @@ vmeBusUnlock();
 		/*printf("vmeScalersRead: nw=%d, vmescalers[slot][nw-2]=%d, vmescalers[slot][nw-1]=%d\n",nw,vmescalers[slot][nw-2],vmescalers[slot][nw-1]);*/
       }
     }
-
-#if 0
     else if(itype == SCALER_TYPE_SSP)    /* ssp scalers */
 	{
       for(id=0; id<nssp; id++)
       {
         unsigned int fibermask;
         slot = sspSlot(id);
-		printf("slot=%d\n",slot);
-
-vmeBusLock();
-		sspRich_ScanFibers_NoInit(id);
-vmeBusUnlock();
+		/*printf("slot=%d\n",slot);*/
 
         if(sspGetFirmwareType(slot) == SSP_CFG_SSPTYPE_HALLBRICH)
 		{
+vmeBusLock();
+		sspRich_ScanFibers_NoInit(slot);
+vmeBusUnlock();
+
           sspRich_GetConnectedFibers(slot, &fibermask);
           printf("fibermask=0x%08x\n",fibermask);
           /* loop over fibers */
@@ -296,8 +294,6 @@ vmeBusUnlock();
 		/*printf("vmeScalersRead: nw=%d, vmescalers[slot][nw-2]=%d, vmescalers[slot][nw-1]=%d\n",nw,vmescalers[slot][nw-2],vmescalers[slot][nw-1]);*/
       }
     }
-#endif
-
   }
 
   SCALER_UNLOCK;
@@ -322,8 +318,6 @@ vmeDataRead()
 
   for(itype=0; itype<SCALER_TYPE_MAX; itype++)
   {
-	;
-#if 0
     if(itype == SCALER_TYPE_SSP)    /* ssp board */
 	{
       for(id=0; id<nssp; id++)
@@ -366,8 +360,6 @@ vmeBusUnlock();
         for(ii=0; ii<nw; ii++) vmedata[slot][ii] = sspbuf[ii];
       }
     }
-#endif
-
   }
 
   SCALER_UNLOCK;
@@ -684,6 +676,14 @@ faSetA32BaseAddress(fadcA32Address);
 #else
       sleep(vmeScalersReadInterval);
 #endif
+
+
+#if 1
+/* send trigger scalers from SSPs */
+if(nssp>0) sspGSendScalers();
+/* send trigger scalers from SSPs */
+#endif
+
 
 	  //printf("vmeReadTask: reading scalers ...\n");
       vmeScalersRead();

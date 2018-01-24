@@ -166,23 +166,36 @@ int mvtClrLogFilePointer()
 	return( 0 );
 }
 
-char *mvtRocId2Str( int roc_id )
+char *mvtRocId2SysName( int roc_id )
 {
          if( roc_id == 0x45 ) return "MVT"; // 69 mvt1
+    else if( roc_id == 0x44 ) return "MVT"; // 68 mvt2
     else if( roc_id == 0x4B ) return "FTT"; // 75 mmft1
     else if( roc_id == 0x3F ) return "JTB"; // 63 svt3
     else if( roc_id == 0x01 ) return "STB"; //  1 sedipcq156
     else                      return "UKN";
 }
 
-int mvtStr2RocId( char *roc_str )
+int mvtRocName2RocId( char *roc_str )
 {
-	     if( strcmp( roc_str, "MVT" ) == 0 ) return 0x45; // 69 mvt1
-	else if( strcmp( roc_str, "FTT" ) == 0 ) return 0x4B; // 75 mmft1
-	else if( strcmp( roc_str, "JTB" ) == 0 ) return 0x3F; // 63 svt3
-	else if( strcmp( roc_str, "STB" ) == 0 ) return 0x01; //  1 sedipcq156
-	else                                     return 0x00; // Unknown
+	     if( strcmp( roc_str, "mvt1"       ) == 0 ) return 0x45; // 69 mvt1
+	else if( strcmp( roc_str, "mvt2"       ) == 0 ) return 0x44; // 68 mvt2
+	else if( strcmp( roc_str, "mmft1"      ) == 0 ) return 0x4B; // 75 mmft1
+	else if( strcmp( roc_str, "svt3"       ) == 0 ) return 0x3F; // 63 svt3
+	else if( strcmp( roc_str, "sedipcq156" ) == 0 ) return 0x01; //  1 sedipcq156
+	else                                            return 0x00; // Unknown
 }
+
+char *mvtRocId2RocName( int roc_id )
+{
+         if( roc_id == 0x45 ) return "mvt1";       // 69 mvt1
+    else if( roc_id == 0x44 ) return "mvt2";       // 68 mvt2
+    else if( roc_id == 0x4B ) return "mmft1";      // 75 mmft1
+    else if( roc_id == 0x3F ) return "svt3";       // 63 svt3
+    else if( roc_id == 0x01 ) return "sedipcq156"; //  1 sedipcq156
+    else                      return "UKN";
+}
+
 
 /*
  * End of Log file management functions
@@ -297,12 +310,12 @@ int mvtPrestart()
 	struct timeval t1;
 	struct timeval dt;
 
-	// Get start time for performance measurements
-	gettimeofday(&t0,0);
-
 	fprintf(stdout, "%s: **** starting ****\n", __FUNCTION__);
 	if( sys_log_fptr != (FILE *)NULL )
 		fprintf(sys_log_fptr, "%s: **** starting ****\n", __FUNCTION__);
+
+	// Get start time for performance measurements
+	gettimeofday(&t0,0);
 
 	/**********************
 	 * Configure the system
@@ -343,13 +356,6 @@ int mvtPrestart()
 		return(ret);
 	}
 
-	// Get end time for performance measurements
-	gettimeofday(&t1, 0);
-	timersub(&t1,&t0,&dt);
-	fprintf(stdout, "%s: The system has been configured in %d.%d sec\n", __FUNCTION__, dt.tv_sec, (int)(dt.tv_usec / 100000. + 0.5) );
-	if( sys_log_fptr != (FILE *)NULL )
-		fprintf(sys_log_fptr, "%s: The system has been configured in %d.%d sec\n", __FUNCTION__, dt.tv_sec, (int)(dt.tv_usec / 100000. + 0.5) );
-
 	num_of_feu = 0;
 	// Go through back end crates
 	for( bec=1; bec<DEF_MAX_NB_OF_BEC; bec++ )
@@ -366,7 +372,19 @@ int mvtPrestart()
 		} // for( feu=1; feu<DEF_MAX_NB_OF_FEU; feu++ )
 	} // for( bec=1; bec<DEF_MAX_NB_OF_BEC; bec++ )
 
+	// Get end time for performance measurements
+	gettimeofday(&t1, 0);
+	timersub(&t1,&t0,&dt);
+	fprintf(stdout, "%s: The system with %d FEUs has been configured in %d.%d sec\n",
+		__FUNCTION__, num_of_feu, dt.tv_sec, (int)( ((double)dt.tv_usec) / 100000. + 0.5) );
+	if( sys_log_fptr != (FILE *)NULL )
+		fprintf(sys_log_fptr, "%s: The system with %d FEUs has been configured in %d.%d sec\n",
+			__FUNCTION__, num_of_feu, dt.tv_sec, (int)( ((double)dt.tv_usec) / 100000. + 0.5) );
+
 	fprintf(stdout, "%s: **** end ****\n", __FUNCTION__);
+	if( sys_log_fptr != (FILE *)NULL )
+		fprintf(sys_log_fptr, "%s: **** end ****\n", __FUNCTION__);
+
 	return(num_of_feu);
 }
 
@@ -865,7 +883,7 @@ int mvtConfig( char *sys_conf_params_filename, int run_number, int bec_id )
 
 	// Process parameter file
 	line_num = 0;
-	roc_detected = 0;
+	roc_detected = -1;
 	while( fgets( line, LINE_SIZE, sys_conf_params_fptr ) != NULL )
 	{
 		/* parse the line */
@@ -876,30 +894,37 @@ int mvtConfig( char *sys_conf_params_filename, int run_number, int bec_id )
 			if( ( strcmp( argv[0], "MVT_CRATE" )  == 0 ) || ( strcmp( argv[0], "FTT_CRATE" )  == 0 ) )
 			{
 				sprintf( roc_type, "%s", argv[0] );
-				if( strcmp( argv[1], host_name ) == 0 )
+				if( strcmp( argv[1], "all" ) == 0 )
+				{
+					fprintf(stdout, "%s: %s crate on host %s - activated implicitly\n", __FUNCTION__, argv[0], host_name);
+					active = 1;
+				}
+				else if( strcmp( argv[1], host_name ) == 0 )
 				{
 					sprintf( roc_name, "%s", argv[1] );
 					fprintf(stdout, "%s: %s crate on host %s - activated explicitly\n", __FUNCTION__, argv[0], host_name);
 					active = 1;
+					roc_detected = 0;
 				}
-				else if( strcmp( argv[1], "all" ) == 0 )
+				else if( strcmp( argv[1], "end" ) == 0 )
 				{
-					sprintf( roc_name, "%s", argv[1] );
-					fprintf(stdout, "%s: %s crate on host %s - activated implicitly\n", __FUNCTION__, argv[0], host_name);
-					active = 1;
+					if( active )
+					{
+						fprintf(stdout, "%s: %s crate on host %s - disactivated\n", __FUNCTION__, argv[0], host_name);
+						active = 0;
+						if( roc_detected == 0 )
+							roc_detected = 1;
+					}
 				}
 				else
 				{
-					fprintf(stdout, "%s: %s crate on host %s - disactivated\n", __FUNCTION__, argv[0], host_name);
-					if( active )
-					{
-						active = 0;
-						roc_detected = 1;
-					}
+					fprintf(stdout, "%s: %s crate on host %s - parameters will be ignored\n", __FUNCTION__, argv[0], host_name);
+					active = 0;
 				}
  			}
 			else if( active )
 			{
+//fprintf( stderr, "%s: line_num=%d argc=%d argv[0]=%s\n", __FUNCTION__, line_num, argc, argv[0] );
 				// Parse parameters
 				if( (ret = SysParams_Parse( sys_params_ptr, line_num )) != D_RetCode_Sucsess )
 				{
@@ -914,7 +939,7 @@ int mvtConfig( char *sys_conf_params_filename, int run_number, int bec_id )
 	fclose( sys_conf_params_fptr );
 	sys_conf_params_fptr = (FILE *)NULL;
 	
-	if( roc_detected == 0 )
+	if( roc_detected <= 0 )
 	{
 		fprintf( stderr, "%s: Could not detect roc parameters on host %s in file %s\n", __FUNCTION__, host_name, filename );
 		return D_RetCode_Err_Wrong_Param;
@@ -962,6 +987,7 @@ fprintf(stdout, "%s: Using configuration file copy %s\n", __FUNCTION__, filename
 		if( (ret = SysParams_Fprintf( sys_params_ptr, sys_conf_params_fptr )) != D_RetCode_Sucsess )
 		{
 			fprintf( stderr, "%s: SysParams_Fprintf failed for config file %s with %d\n", __FUNCTION__, filename, ret );
+			mvtCleanup();
 			return ret;
 		}
 		fprintf(sys_conf_params_fptr, "%s end\n", roc_type);
@@ -995,7 +1021,7 @@ fprintf(stdout, "%s: Using configuration file copy %s\n", __FUNCTION__, filename
 	// Get end time for performance measurements
 	gettimeofday(&t1, 0);
 	timersub(&t1,&t0,&dt);
-	fprintf(stdout, "%s: The system has been configured in %d.%d sec\n", __FUNCTION__, dt.tv_sec, (int)(dt.tv_usec / 100000. + 0.5) );
+	fprintf(stdout, "%s: The system has been configured in %d.%d sec\n", __FUNCTION__, dt.tv_sec, (int)( ((double)dt.tv_usec) / 100000. + 0.5) );
 
 	// Go through back end crates
 	num_of_beu = 0;

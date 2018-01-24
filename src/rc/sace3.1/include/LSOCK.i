@@ -13,6 +13,7 @@ LSOCK::LSOCK (void)
 inline void
 LSOCK::set_handle (HANDLE handle)
 {
+  printf("LSOCK::set_handle 0x%08x\n",handle);
   this->aux_handle_ = handle;
 }
 

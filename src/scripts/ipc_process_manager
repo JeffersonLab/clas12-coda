@@ -88,24 +88,35 @@ while($done==0) {
     
 
 #  poll ipc processes
-    $ipc_result=`ipc_check -a $project -d $project -u ipc_procman -w $ipc_wait_time -verbose -broadcast`;
+##    $ipc_result=`ipc_check -a $project -d $project -u ipc_procman -w $ipc_wait_time -verbose -broadcast`;
+    $ipc_result=`ipc_check -a $project -d "*" -u ipc_procman -w $ipc_wait_time -verbose -broadcast`;
+    print "ipc_check -a $project -d * -u ipc_procman -w $ipc_wait_time -verbose -broadcast\n";
+    print "ipc_result:\n$ipc_result\n";
     $last_poll=time;
 
 
 #  loop over all procs
     foreach $proc (@proclist) {
 
+#		print "searching for proc $proc\n";
 
 #  check if process responded to ipc poll
 	$found_it=0;
 	chomp($date=`date`);
 	foreach $line (split("\n",$ipc_result)) {
-	    if($line=~/\b$proc\b/) {$found_it=1; last;}
+#		print "line=$line\n";
+	    if($line=~/\b$proc\b/) {
+#          $line_found=$line;
+          $found_it=1;
+          last;
+	  }
 	}
 
 
 #  found process
 	if($found_it==1) {
+#		print "line=$line_found\n";
+		print "FOUND process $proc\n";
 	    if(($verbose!=0)||($debug!=0)) {print(" $date:  $proc found\n");}
 	    if($restart_count{$proc}>0) {
 		print " $date:  $proc found after $restart_count{$proc} restart attempts\n";
@@ -117,6 +128,7 @@ while($done==0) {
 
 #  process not found
 	} else {
+        print "NOT FOUND process $proc\n";
 	    if(($verbose!=0)||($debug!=0)) {print(" $date:  $proc NOT found\n");}
 	    
 	    if((time-$last_break{$proc})<$interval_reset_time) {next;};

@@ -1,6 +1,3 @@
-
-/* c111c_test.c */
-
 #include <stdio.h>
 #include <stdlib.h> 
 #include <fcntl.h> 
@@ -9,22 +6,13 @@
 
 #include "c111cLib.h"
 
-short datain, dataout;
-int  Q;
-
 int main(int argc, char *argv[])
 {
-  pthread_t thread1;
-  int i, j, crate_id;
-  int resp, items_per_row, total_items;
-  char blk_ascii_buf[2048];
-  unsigned int blk_transf_buf[300];
-  short N, A, F;
-  int sock;
-
-  short thresholds[20][8];
+  int Q, i, j, resp, sock;
+  short N, A, F, datain, dataout, thresholds[20][8];
 
   short tSet=-1,slot=-1,chan=-1;
+
   const char* usage="cnd-cfd-thresh [-w(rite) #] [-s(lot) #(1-20)] [-c(han) #(1-8)]\n";
   if (argc>1) {
       if (argc%2 != 1) {
@@ -60,21 +48,13 @@ int main(int argc, char *argv[])
       }
   }
 
-  //printf ("%d %d %d\n",tSet,slot,chan);
-  //exit(1);
-
-  //printf("Connecting to 129.57.160.156 ...\n");
-  
-  /* Open connection with a Camac controller*/
+  // Open connection with a Camac controller
   sock = ccconnect("129.57.160.156",2000);
-  //printf("%d\n",sock);
   if(sock==0)
   {
     printf("Connection failed \n");
     exit(1);
   }
-  
-  /*Read the data*/
   
   /* GANELEC CFDs FCC8
 

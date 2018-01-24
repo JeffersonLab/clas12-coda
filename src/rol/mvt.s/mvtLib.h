@@ -47,7 +47,9 @@ int mvtManageLogFile( FILE* *fptr, int roc_id );
 int mvtSetLogFilePointer( FILE *fptr );
 int mvtClrLogFilePointer();
 
-char *mvtRocId2Str( int roc_id );
-int   mvtStr2RocId( char *roc_str );
+char *mvtRocId2SysName( int roc_id );
+char *mvtRocId2RocName( int roc_id );
+int   mvtRocName2RocId( char *roc_str );
+
 
 #endif // #ifndef __MVTLIB__

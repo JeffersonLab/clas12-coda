@@ -17,19 +17,7 @@
 
 */
 
-
-/* if 'ONE_SERVER' defined, both sending and receiving will be done using 'server',
-   otherwise 'server' will be used for sending and 'recver' for receiving */
-#define ONE_SERVER
-
-
-#ifdef ONE_SERVER
 IpcServer &server = IpcServer::Instance();
-#else
-IpcProducer &server = IpcProducer::Instance();
-IpcConsumer &recver = IpcConsumer::Instance();
-#endif
-
 
 int
 main(int argc AMQCPP_UNUSED, char* argv[] AMQCPP_UNUSED)
@@ -48,23 +36,18 @@ main(int argc AMQCPP_UNUSED, char* argv[] AMQCPP_UNUSED)
     int numMessages = 1;
     int ret;
 
-#ifdef ONE_SERVER
-    server.init(getenv("EXPID"), NULL, NULL, (char *)"server");
-#else
-    server.send_init(getenv("EXPID"), NULL, NULL, (char *)"server");
-    recver.recv_init(getenv("EXPID"), NULL, NULL, (char *)"recver", NULL, (char *)"server");
-#endif
+    server.AddSendTopic(getenv("EXPID"), NULL, NULL, (char *)"server");
+
+    server.AddRecvTopic(getenv("EXPID"), NULL, NULL, (char *)"server");
+    server.AddRecvTopic(getenv("EXPID"), NULL, NULL, (char *)"test");
+
+    server.Open();
 
     MessageActionControl  *control = new MessageActionControl((char *)"server");
     MessageActionTest        *test = new MessageActionTest();
 
-#ifdef ONE_SERVER
-    server.addActionListener(control);
-    server.addActionListener(test);
-#else
-    recver.addActionListener(control);
-    recver.addActionListener(test);
-#endif
+    server.AddCallback(control);
+    server.AddCallback(test);
 
     long long startTime = System::currentTimeMillis();
 
@@ -107,7 +90,7 @@ printf("7=======================================================================
       server << SetSize(4) << SetOffset(1) << arrayPtr;
 */
 printf("8===================================================================================8\n");
-      server << SetTopic("clasrun.*.*.server");
+      server << SetTopic("clasrun.*.*.test");
 printf("9===================================================================================9\n");
       server << endm;
 printf("10=================================================================================10\n");
@@ -124,13 +107,7 @@ printf("10======================================================================
     double totalTime = (double)(endTime - startTime) / 1000.0;
 
 
-#ifdef ONE_SERVER
-    server.close();
-#else
-    server.send_close();
-    recver.recv_close();
-#endif
-
+    server.Close();
 
 
     std::cout << "Time to completion = " << totalTime << " seconds." << std::endl;

@@ -577,7 +577,7 @@ int  beusspDisplayAllReg(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
 
 /*******************************************************************************
  *
- *  beusspSetTargetFeuAndDisplayAllReg - set specific target Feu ,display all beussp registers to screen, set target feu to what it was initially
+ *  beusspSetTargetFeuAndDisplayAllReg - set specific target Feu, display all beussp registers to screen, set target feu to what it was initially
  *
  *  ARGs: 
  *    BEUSSPreg   - map of all beussp registers 
@@ -828,7 +828,7 @@ int  beusspResetMultiGTX(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
 
 		vmeWrite32( &BEUSSPreg->regin_7, 0x00000000);  //multigtx reset low
 		timeout = 0;
-		usleep(1000000);
+		usleep(100000);
 		do{
 			res = vmeRead32( &BEUSSPreg->regout_10  );
 			timeout += 1;
@@ -836,12 +836,12 @@ int  beusspResetMultiGTX(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
 
 
 		if ( timeout < 0x001FFFFF )  {
-			printf("%s: Multi Gigabit tranceivers ready . \n",__FUNCTION__);
+			printf("%s: Multi Gigabit tranceivers ready\n",__FUNCTION__);
 			BEUSSPUNLOCK;
 		}
 		else
 		{
-			fprintf( stderr,"%s: ERROR: Multi Gigabit tranceivers not ready . \n",__FUNCTION__);
+			fprintf( stderr,"%s: ERROR: Multi Gigabit tranceivers not ready res=0x%08x &0x1!=1\n",__FUNCTION__, res);
 			BEUSSPUNLOCK;
 			return ERROR;
 		}
@@ -887,13 +887,12 @@ int  beusspResetGClkPll(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
 
 
 		if ( timeout < 0x001FFFFF )  {
-			printf("%s: GLOBAL clock PLL locked. \n\r",__FUNCTION__); 
+			printf("%s: GLOBAL clock PLL locked\n\r",__FUNCTION__); 
 			BEUSSPUNLOCK;
 		}
 		else
 		{
-			printf("%s: ERROR: GLOBAL clock PLL NOT locked \n\r",__FUNCTION__); 
-			fprintf( stderr,"%s: ERROR: GLOBAL clock PLL NOT locked \n",__FUNCTION__);
+			printf("%s: ERROR: GLOBAL clock PLL NOT locked: res=0x%08x & 0x100 = 0\n\r",__FUNCTION__, res); 
 			BEUSSPUNLOCK;
 			return ERROR;
 		}

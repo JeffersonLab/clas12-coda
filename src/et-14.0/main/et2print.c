@@ -73,7 +73,7 @@ et_initialize(void)
   et_station_config_setrestore(sconfig, ET_STATION_RESTORE_OUT);
   et_station_config_setprescale(sconfig,1);
 
-  if((status = et_station_create(et_sys, &et_statid, "FTOF", sconfig)) < 0)
+  if((status = et_station_create(et_sys, &et_statid, "ET2PRINT", sconfig)) < 0)
   {
     if (status == ET_ERROR_EXISTS) {
       printf("er ET init: station exists, will attach\n");
@@ -123,7 +123,7 @@ gotControlEvent(et_event **pe, int size)
 #define DEBUG
  
 
-#define MAXEVENTS 20
+#define MAXEVENTS 2000000
 
 #define MAXBUF 10000000
 unsigned int buf[MAXBUF];
@@ -318,21 +318,23 @@ iet=0;
     iev ++;
 
     if(!(iev%10000)) printf("\n\n\nEvent %d\n\n",iev);
-    printf("\n\n\nEvent %d\n\n",iev);
+    printf("\n\n\nEvent %d, iet=%d, maxevents=%d\n\n",iev,iet,maxevents);
 
 
-      if(iet >= nevents)
+      if(iet >= maxevents)
 	  {
-        printf("ERROR: iet=%d, nevents=%d\n",iet,nevents);
+        printf("ERROR: iet=%d, maxevents=%d\n",iet,maxevents);
         exit(0);
 	  }
 
 
       et_event_getlength(pe[iet], &len); /*get event length from et*/
-	  /*printf("len1=%d\n",len);*/
+	  /*if(len==2388)*/ printf("event length=%d\n",len);
 
 
-	  /*following 2 lines are working, but 'offitial' is to use  evOpenBuffer()
+#if 0
+
+	  /*following 2 lines are working, but 'official' is to use  evOpenBuffer()
       bufptr = (unsigned int *)pe[iet]->pdata;
       bufptr += 8;
 	  */
@@ -376,6 +378,7 @@ goto a123;
 a123:
 
 
+#endif
 
       iet ++;
 
@@ -391,10 +394,10 @@ a123:
 	  }
 
 
-
-
+#if 0
       status = evClose(handle1);
       if(status!=0) {printf("evClose returns %d\n",status);exit(1);}
+#endif
 
 
   } /*while*/

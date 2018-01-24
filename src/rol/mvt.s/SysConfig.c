@@ -73,7 +73,7 @@ int SysConfig_SetLogFilePointer( FILE *fptr )
 		fprintf
 		(
 			sys_log_fptr,
-			"%s: was called on %02d%02d%02d at %02dH%02d\n",
+			"\n%s: was called on %02d%02d%02d at %02dH%02d\n",
 			__FUNCTION__, 
 			time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday,
 			time_struct->tm_hour,     time_struct->tm_min
@@ -326,7 +326,8 @@ int SysConfig( SysParams *params, int configs_to_do )
 					if( (params->Bec_Params[bec].Beu_Slot[beu]<DEF_MIN_BEU_SLOT) || (DEF_MAX_BEU_SLOT<=params->Bec_Params[bec].Beu_Slot[beu]) )
 					{
 						fprintf( stderr, "%s: usupported slot=%d for beu %d in bec %d, must be in [%d;%d] range\n",
-							__FUNCTION__, params->Bec_Params[bec].Beu_Slot[beu], params->Bec_Params[bec].Beu_Id[beu], bec, DEF_MIN_BEU_SLOT, DEF_MAX_BEU_SLOT );
+							__FUNCTION__, params->Bec_Params[bec].Beu_Slot[beu],
+							params->Bec_Params[bec].Beu_Id[beu], bec, DEF_MIN_BEU_SLOT, DEF_MAX_BEU_SLOT );
 						return D_RetCode_Err_Wrong_Param;
 					}
 					if( (ret=beusspInit(params->BeuSspConf_Col.beu_conf[beu].base_adr_reg, &(beu_reg_control[beu]), &(beu_fifo[beu]), &(params->BeuSspConf_Col.beu_conf[beu]))) < 0 )
@@ -339,16 +340,26 @@ int SysConfig( SysParams *params, int configs_to_do )
 					{
 						fprintf( stderr, "%s: beusspResetGClkPll failed for beu %d in bec %d with %d\n",
 							__FUNCTION__, beu, bec, ret );
+						if( sys_log_fptr != (FILE *)NULL )
+							fprintf( sys_log_fptr, "%s: beusspResetGClkPll failed for beu %d in bec %d with %d\n",
+								__FUNCTION__, beu, bec, ret );
 						return D_RetCode_Err_Wrong_Param;
 					}
-					usleep( 100000 );
+					usleep( 200000 );
 					if( (ret=beusspResetMultiGTX( beu_reg_control[beu] ) ) < 0 )
 					{
 						fprintf( stderr, "%s: beusspResetMultiGTX failed for beu %d in bec %d with %d\n",
 							__FUNCTION__, beu, bec, ret );
+						beusspSetTargetFeuAndDumpAllReg(beu_reg_control[beu], 0, stdout);
+						if( sys_log_fptr != (FILE *)NULL )
+						{
+							fprintf( sys_log_fptr, "%s: beusspResetMultiGTX failed for beu %d in bec %d with %d\n",
+								__FUNCTION__, beu, bec, ret );
+							beusspSetTargetFeuAndDumpAllReg(beu_reg_control[beu], 0, sys_log_fptr);
+						}
 						return D_RetCode_Err_Wrong_Param;
 					}
-					usleep( 100000 );
+					usleep( 200000 );
 					// Display BEU registers
 					beusspDisplayAllReg(beu_reg_control[beu]);
 				}
@@ -458,13 +469,16 @@ int SysConfig( SysParams *params, int configs_to_do )
 					{
 						fprintf( stderr, "%s: FeuReset failed for feu %d beu %d link %d in bec %d with %d\n",
 							__FUNCTION__, feu, beu, beu_lnk, bec, ret );
+				    if( sys_log_fptr != (FILE *)NULL )
+						  fprintf( sys_log_fptr, "%s: FeuReset failed for feu %d beu %d link %d in bec %d with %d\n",
+							  __FUNCTION__, feu, beu, beu_lnk, bec, ret );
 						return ret;
 					}
 					usleep(100000);
 				}
 			} // for( feu=1; feu<DEF_MAX_NB_OF_FEU; feu++ )
 			// Wait before the reset is done and links are ready
-			usleep( 500000 );
+			usleep( 200000 );
 //fprintf(stdout, "%s: Reset all FEUs in bec=%d\n", __FUNCTION__, bec);
 //fprintf(stdout, "Enter CR to synchronise...");
 //getchar();
@@ -490,8 +504,8 @@ int SysConfig( SysParams *params, int configs_to_do )
 			// Synchronise links
 			reset_links      = 0;
 #define DEF_NUM_RX_LINK_RST 20
-#define DEF_NUM_RX_LINK_TOLL_ERR 4
-#define DEF_NUM_RX_LINK_CHK_SEC 8
+#define DEF_NUM_RX_LINK_TOLL_ERR 2
+#define DEF_NUM_RX_LINK_CHK_SEC 4
 			reset_links_cntr = DEF_NUM_RX_LINK_RST;
 			while( reset_links_cntr )
 			{
@@ -642,7 +656,7 @@ int SysConfig( SysParams *params, int configs_to_do )
 			} // while( reset_links )
 			if( reset_links )
 			{
-					fprintf( stderr, "%s: failed to synchronise %d feu links\n", __FUNCTION__, reset_links );
+				fprintf( stderr, "%s: failed to synchronise %d feu links\n", __FUNCTION__, reset_links );
 				if( sys_log_fptr != (FILE *)NULL )
 					fprintf( sys_log_fptr,  "%s: failed to synchronise %d feu links\n", __FUNCTION__, reset_links );
 				return D_RetCode_Err_NetIO;

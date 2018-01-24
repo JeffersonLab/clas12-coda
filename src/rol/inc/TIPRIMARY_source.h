@@ -172,8 +172,8 @@ vmeCheckMutexHealth(1); /*- use 'mutexclean' command if needed !!!!!!!!!!!!!!!!!
 vmeBusLock();
  /*tiSetFiberLatencyOffset_preInit(0xbf);*/ /*default is 0xbf in 4ns ticks*/
   ret = tiInit(TI_ADDR,TI_READOUT,0); /*tiInit((21<<19),2,0)*/
-  if(ret<0) ret = tiInit(0,TI_READOUT,0);
-  if(ret<0) {printf("cannot find TI, ret=%d - exit\n",ret);exit(0);}
+  /*if(ret<0) ret = tiInit(0,TI_READOUT,0);*/
+  if(ret<0) {printf("ERROR: tiInit() returns %d - exit\n",ret);exit(0);}
 #ifdef DEBUG
   tiStatus(1);
 #endif

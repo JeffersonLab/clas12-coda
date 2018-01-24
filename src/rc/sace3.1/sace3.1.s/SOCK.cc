@@ -25,6 +25,7 @@ SOCK::get_remote_addr (Addr &sa) const
 HANDLE
 SOCK::open (int type, int protocol_family, int protocol)
 {
+  printf("SOCK::open() reached\n");
   this->set_handle (::socket (protocol_family, type, protocol));
   return this->get_handle ();
 }

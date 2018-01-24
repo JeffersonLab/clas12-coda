@@ -80,7 +80,9 @@ epics_json_msg_sender_init(const char *expid_, const char *session_, const char 
 
   printf("epics_json_msg_sender_init: expid >%s<, session >%s<, unique_id >%s<, topic >%s<\n",expid,session,unique_id,topic);
 
-  status = server.init(expid, session, unique_id, topic, NULL, "WHATEVER");
+  server.AddSendTopic(expid, session, unique_id, topic);
+  server.AddRecvTopic(expid, session, NULL, "WHATEVER");
+  status = server.Open();
   if(status<0)
   {
     printf("epics_json_msg_sender_init: unable to connect to ipc server on host %s\n",getenv("IPC_HOST"));
@@ -230,7 +232,7 @@ epics_json_msg_close()
 {
   int status;
 
-  status = server.close();
+  status = server.Close();
 }
 
 

@@ -18,6 +18,7 @@ SOCK_Dgram_Brdcast::SOCK_Dgram_Brdcast (const Addr &local, int protocol_family, 
 HANDLE
 SOCK_Dgram_Brdcast::open (const Addr &local, int protocol_family, int protocol)
 {
+  printf("SOCK_Dgram_Brdcast::open() reached\n");
   if (this->SOCK_Dgram::open (local, protocol_family, 
 			      protocol) == IPC_SAP::INVALID_HANDLE)
     return IPC_SAP::INVALID_HANDLE;

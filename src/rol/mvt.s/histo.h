@@ -57,6 +57,7 @@ void  Histo_Dump(  Histo *h, FILE *fptr );
 void  Histo_DumpFormatted(  Histo *h, HistoFormat format, FILE *fptr );
 void  Histo_DumpTail( Histo *h, FILE *fptr );
 void  Histo_Stat(  Histo *h, FILE *fptr );
+int  Histo_GetAvrStd( Histo *h, double *avr, double *std );
 
 extern int Histo_HtoN(  Histo *from, void *to   );
 extern int Histo_NtoH(  Histo *to,   void *from );

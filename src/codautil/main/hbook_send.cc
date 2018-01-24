@@ -15,7 +15,9 @@ int
 main()
 {
   // connect to ipc server
-  server.init(getenv("EXPID"), getenv("SESSION"), "daq", "hist", "daq", "hist");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", "hist");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "hist");
+  server.Open();
 
   Hbook hbook;
 
@@ -28,5 +30,6 @@ main()
   hbook.hprint(1);
 
   hbook.hist2ipc(1, "hbook_send");
- 
+
+  server.Close();
 }

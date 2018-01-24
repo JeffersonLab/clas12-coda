@@ -205,6 +205,7 @@ __go()
   printf("Setting VTP block level to: %d\n", block_level);
   vtpSetBlockLevel(block_level);
 
+  vtpEbResetFifo();
 
   printf("INFO: User Go 1 Enabling\n");
   CDOENABLE(VTP,1,1);

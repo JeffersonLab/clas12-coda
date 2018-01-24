@@ -122,5 +122,6 @@ int BecParams_Sprintf( BecParams *bec_params, char *buf  );
 int BecParams_Fprintf( BecParams *bec_params, FILE *fptr );
 int BecParams_Parse(   BecParams *bec_params, int line_num );
 int BecParams_Fread(   BecParams *bec_params, FILE *fptr );
+int BecParams_Prop(    BecParams *params );
 
 #endif // #ifndef H_BecConfigParams

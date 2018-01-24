@@ -15,7 +15,9 @@ int
 main()
 {
   // connect to ipc server
-  server.init(getenv("EXPID"), getenv("SESSION"), "daq", "hist", "daq", "hist");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", "hist");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "hist");
+  server.Open();
 
   
   uthbook1(1, "clonpc0:test1", 100, 0.0, 100.0);
@@ -38,5 +40,6 @@ main()
   
 
   uthist2ipc(2, "uthbook_send");
- 
+
+  server.Close();
 }

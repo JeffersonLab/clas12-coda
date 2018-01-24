@@ -99,15 +99,15 @@ main(int argc, char *argv[])
   while(1)
   {
 	
-    slot=13;
+    slot=3;
     ret = tcp->ReadScalers(slot, &buf, &len);
     printf("cratemsgclienttest: ret=%d, len=%d slot=%d\n",ret,len, slot);
     for(ii=0; ii<len; ii++) printf("  [%2d] %7d 0x%08x (swap 0x%08x)\n",ii,buf[ii],buf[ii],LSWAP(buf[ii]));fflush(stdout);
-    slot=14;
+    slot=4;
     ret = tcp->ReadScalers(slot, &buf, &len);
     printf("cratemsgclienttest: ret=%d, len=%d slot=%d\n",ret,len, slot);
     for(ii=0; ii<len; ii++) printf("  [%2d] %7d 0x%08x (swap 0x%08x)\n",ii,buf[ii],buf[ii],LSWAP(buf[ii]));fflush(stdout);
-    slot=15;
+    slot=5;
     ret = tcp->ReadScalers(slot, &buf, &len);
     printf("cratemsgclienttest: ret=%d, len=%d slot=%d\n",ret,len, slot);
     for(ii=0; ii<len; ii++) printf("  [%2d] %7d 0x%08x (swap 0x%08x)\n",ii,buf[ii],buf[ii],LSWAP(buf[ii]));fflush(stdout);

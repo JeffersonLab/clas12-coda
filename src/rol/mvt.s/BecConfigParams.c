@@ -106,8 +106,8 @@ int BecParams_Init( BecParams *params )
 	params->BaseAdr_A32m_Com_Max = 0;
 
 	// System and self trigger parameters and topology
-	params->SelfTrigMult = 0;
-	params->SelfTrigWin  = 0;
+	params->SelfTrigMult = -1;
+	params->SelfTrigWin  = -1;
 	for( beu=0; beu<DEF_MAX_NB_OF_BEU; beu++ )
 	{
 		for( feu=0; feu<DEF_MAX_NB_OF_FEU_PER_BEU; feu++ )
@@ -317,8 +317,12 @@ int BecParams_Parse( BecParams *params, int line_num )
 	{
 		if( ( strcmp( argv[0], "Bec" ) == 0 ) || ( strcmp( argv[0], "MVT_Bec" ) == 0 ) || ( strcmp( argv[0], "FTT_Bec" ) == 0 ) )
 		{
-			bec = atoi( argv[1] );
-			if( (bec < 1) || (DEF_MAX_NB_OF_BEC <= bec) )
+			// Get Bec ID
+			if( strcmp( argv[1], "*" ) == 0 )
+				bec = 0;
+			else
+				bec = atoi( argv[1] );
+			if( (bec < 0) || (DEF_MAX_NB_OF_BEC <= bec) )
 			{
 				fprintf( stderr, "%s: line %d: Bec Config_ID %d not in range [1,%d]\n", __FUNCTION__, line_num, bec, DEF_MAX_NB_OF_BEC ); 
 				return D_RetCode_Err_Wrong_Param;
@@ -543,6 +547,40 @@ int BecParams_Fread( BecParams *params, FILE *fptr )
 		}
 	} // while( fgets( line, LINE_SIZE, fptr ) != NULL )
 
+	// All went fine
+	return D_RetCode_Sucsess;
+}
+
+// Propagate common Bec parameters
+int BecParams_Prop( BecParams *params )
+{
+	int bec;
+	BecParams *bec_conf_com;
+	BecParams *bec_conf_cur;
+
+	// Check for Null pointer
+	if( params == (BecParams *)NULL )
+	{
+		fprintf( stderr, "%s: params=0\n", __FUNCTION__ );
+		return D_RetCode_Err_Null_Pointer;
+	}
+
+	// Common ti configuration
+	bec_conf_com = &(params[0]);
+	// Initialize individual structures
+	for( bec=1; bec<DEF_MAX_NB_OF_BEC; bec++ )
+	{
+		// Running ti configuration
+		bec_conf_cur = &(params[bec]);
+		// Set only active BEC-s
+		if( bec_conf_cur->Config_Id > 0 )
+		{
+			if( bec_conf_cur->SelfTrigMult < 0 )
+				bec_conf_cur->SelfTrigMult = bec_conf_com->SelfTrigMult;
+			if( bec_conf_cur->SelfTrigWin < 0 )
+				bec_conf_cur->SelfTrigWin = bec_conf_com->SelfTrigWin;
+		}
+	}
 	// All went fine
 	return D_RetCode_Sucsess;
 }

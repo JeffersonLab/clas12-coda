@@ -51,7 +51,8 @@ main(int argc, char **argv)
   decode_command_line(argc,argv);
 
 
-  server.init(getenv("EXPID"), NULL, NULL, "ipc_msg");
+  server.AddSendTopic(getenv("EXPID"), NULL, NULL, "ipc_msg");
+  server.Open();
 
 
   /*
@@ -206,7 +207,7 @@ main(int argc, char **argv)
   server << clrm << "control" << "quit" << endm;
 
 
-  server.close();
+  server.Close();
 
   exit(0);
 }

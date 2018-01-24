@@ -700,11 +700,17 @@ static void dump_fragment(unsigned int *buf, int fragment_type) {
     /* get type-dependent info */
     switch(fragment_type) {
         case BANK:
+/*printf("11 buf=0x%08x\n",buf);fflush(stdout);*/
             length      = buf[0]+1;
+/*printf("12 len=%d\n",length);fflush(stdout);*/
             tag         = (buf[1]>>16)&0xffff;
+/*printf("13 tag=%d\n",tag);*/
             type        = (buf[1]>>8)&0x3f;
+/*printf("14 type=%d\n",type);*/
             padding     = (buf[1]>>14)&0x3;
+/*printf("15 padding=%d\n",padding);*/
             num         = buf[1]&0xff;
+/*printf("16 num=%d\n",num);*/
             break;
 
         case SEGMENT:

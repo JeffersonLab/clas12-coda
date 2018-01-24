@@ -49,7 +49,11 @@ typedef enum{
 } IPC_ERROR_CODE;
 
 
+/* composite destination (works for both sender and receiver ???)
+Destination destination = session.createQueue("test-queue,test-queue-foo,topic://test-topic-foo")
 
+/topic/test01,/topic/test02,/topic/test15A
+*/
 
 
 /* possible options for brokerURI:
@@ -207,9 +211,9 @@ SendConfigManip SetTopic(std::string topic)
 {
   //std::cout<<"=== SendConfigManip::SetTopic"<<std::endl;
   return SendConfigManip([=](SendConfiguration& conf) {
-	  std::cout<<"SetTopic: Changing message transfer configuration. SetTopic:"<<topic<<std::endl;
+	  //std::cout<<"SetTopic: Changing message transfer configuration. SetTopic:"<<topic<<std::endl;
 	  conf.topic = topic;
-	  std::cout<<"SetTopic: conf.topic: "<<conf.topic<<std::endl;
+	  //std::cout<<"SetTopic: conf.topic: "<<conf.topic<<std::endl;
     });
 }
 /*sergey*/
@@ -289,7 +293,7 @@ private:
 
 	void sendManip()
     {
-      std::cout << "=== sendManip reached" << std::endl;
+      //std::cout << "=== sendManip reached" << std::endl;
 	  SendConfiguration conf;
 
 	  // Go through manipulators and apply their manipulation
@@ -297,7 +301,7 @@ private:
       {
 		manip._action(conf);         // change configuration according to manipulator
 	  }
-      std::cout << "=== sendManip: conf.topic= >" << conf.topic << "<, len=" << strlen(conf.topic.c_str()) << std::endl;
+      //std::cout << "=== sendManip: conf.topic= >" << conf.topic << "<, len=" << strlen(conf.topic.c_str()) << std::endl;
 
 	  _nextSendManips.clear();   // clear manipulators for further ...
 
@@ -305,13 +309,15 @@ private:
       // it topic is set by SetTopic() manipulator then use it, otherwise use default one
       if(strlen(conf.topic.c_str()) == 0)
 	  {
-        strcpy(topic, topic_orig);
-		std::cout << "=== SetTopic 1: set topic= >" << topic << "<" << std::endl;
+        //strcpy(topic, topic_orig);
+        Topic = Topic_orig;
+		//std::cout << "=== SetTopic 1: set topic= >" << Topic.c_str() << "<" << std::endl;
 	  }
       else
 	  {
-        strcpy(topic, conf.topic.c_str());
-		std::cout << "=== SetTopic 2: set topic= >" << topic << "<" << std::endl;
+        //strcpy(topic, conf.topic.c_str());
+        Topic = conf.topic;
+		//std::cout << "=== SetTopic 2: set topic= >" << Topic.c_str() << "<" << std::endl;
 	  }
     }
 
@@ -407,18 +413,25 @@ private:
     Connection* connection;
     Session* session;
     Destination* destination;
+/*
     char* expid;
     char* sesid;
     char* sysid;
     char* unique;
+*/
 
     Thread* producerThread;
     MessageProducer* producer;
     //StreamMessage* message;
 
     int waiting_for_messages;
+/*
     char topic_orig[MAX_TOPIC_LENGTH];
     char topic[MAX_TOPIC_LENGTH];
+*/
+
+    std::string Topic_orig;
+    std::string Topic;
 
     int array_size_in_bytes;
 
@@ -441,11 +454,12 @@ private:
       connection(NULL),
       session(NULL),
       destination(NULL),
+	  /*
       expid(NULL),
       sesid(NULL),
       sysid(NULL),
       unique(NULL),
-
+	  */
       producerThread(NULL),
       producer(NULL),
       message(NULL),
@@ -475,12 +489,36 @@ IpcProducer &sender = IpcProducer::Instance();
       return m_instance;
 	}
 
-    void send_init(char* expid_ = NULL, char* sesid_ = NULL, char* sysid_ = NULL, char* unique_ = NULL)
+    void AddSendTopic(char* expid_ = NULL, char* sesid_ = NULL, char* sysid_ = NULL, char* unique_ = NULL)
 	{
+      char tmp[MAX_TOPIC_LENGTH];
+      char* expid = expid_;
+      char* sesid = sesid_;
+      char* sysid = sysid_;
+      char* unique = unique_;
+
+      if(expid==NULL)  expid = "*";
+      if(sesid==NULL)  sesid = "*";
+      if(sysid==NULL)  sysid = "*";
+      if(unique==NULL) sysid = "*";
+
+      sprintf(tmp,"%s.%s.%s.%s",expid,sesid,sysid,unique);
+
+      if(Topic.length()!=0) Topic += ',';
+      Topic += tmp;
+
+      printf("IpcProducer::AddSendTopic: Topic >%s< len=%d\n",Topic.c_str(),Topic.length());
+	}
+
+
+    void send_init(/*char* expid_ = NULL, char* sesid_ = NULL, char* sysid_ = NULL, char* unique_ = NULL*/)
+	{
+	  /*
 	  expid = expid_;
 	  sesid = sesid_;
 	  sysid = sysid_;
       unique = unique_;
+	  */
       if(library_initialized_counter==0)
       {
         //printf("IpcProducer: initializeLibrary (library_initialized_counter=%d)\n",library_initialized_counter);
@@ -555,13 +593,16 @@ IpcProducer &sender = IpcProducer::Instance();
 	{
       try
       {
+		/*
         if(expid==NULL)  expid = "*";
         if(sesid==NULL)  sesid = "*";
         if(sysid==NULL)  sysid = "*";
         if(unique==NULL) sysid = "*";
         sprintf(topic,"%s.%s.%s.%s",expid,sesid,sysid,unique);
         strcpy(topic_orig, topic);
-        printf("IpcProducer's topic >%s<, topic_orig >%s<\n",topic, topic_orig);
+		*/
+        Topic_orig = Topic;
+        printf("IpcProducer's topic >%s<, topic_orig >%s<\n",Topic.c_str(), Topic_orig.c_str());
 
 		/* step 1: Create a ConnectionFactory (broker's URI specified here: protocol(TCP etc), IP address, port, optionally other params) */
 		/*    username and password can be specified, for example:
@@ -586,7 +627,7 @@ IpcProducer &sender = IpcProducer::Instance();
 
 
         // Create the destination (Topic or Queue)
-		destination = session->createTopic(topic);
+		destination = session->createTopic(Topic.c_str());
 
         // Create a MessageProducer from the Session to the Topic or Queue
         producer = session->createProducer(destination);
@@ -648,8 +689,8 @@ printf("IpcProducer::run: 3\n");
       }catch ( CMSException& e ) { e.printStackTrace(); }
       producer = NULL;
 
-	  printf("TOPIC >%s<\n",topic);
-	  destination = session->createTopic(topic);
+	  //printf("TOPIC >%s<\n",Topic.c_str());
+	  destination = session->createTopic(Topic.c_str());
       producer = session->createProducer(destination);
       producer->setDeliveryMode(DeliveryMode::NON_PERSISTENT);
 	  /*MUST BE HERE SINCE WE CHANGED TOPIC*/
@@ -667,7 +708,7 @@ public:
     IpcProducer &operator << (const SendConfigManip& mm)
     {
 	  _nextSendManips.push_back(mm);
-	  std::cout<<"Insert SendConfigManip"<<std::endl;
+	  //std::cout<<"Insert SendConfigManip"<<std::endl;
 	  return *this;
     }
 
@@ -813,16 +854,6 @@ private:
       }
     }
 };
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -998,16 +1029,18 @@ private:
     Connection* connection;
     Session* session;
     Destination* destination;
+	/*
     char* expid;
     char* sesid;
     char* sysid;
     char* unique;
-
+	*/
     Thread* consumerThread;
     MessageConsumer* consumer;
 
     int waiting_for_messages;
-    char topic[MAX_TOPIC_LENGTH];
+    /*char topic[MAX_TOPIC_LENGTH];*/
+	std::string Topic;
 
     std::vector<MessageAction *> actionListeners;
 
@@ -1022,11 +1055,12 @@ private:
       connection(NULL),
       session(NULL),
       destination(NULL),
+	  /*
       expid(NULL),
       sesid(NULL),
       sysid(NULL),
       unique(NULL),
-
+	  */
       consumerThread(NULL),
       consumer(NULL),
 
@@ -1049,12 +1083,35 @@ private:
       return m_instance;
 	}
 
-    void recv_init(char* expid_ = NULL, char* sesid_ = NULL, char* sysid_ = NULL, char* unique_ = NULL)
+    void AddRecvTopic(char* expid_ = NULL, char* sesid_ = NULL, char* sysid_ = NULL, char* unique_ = NULL)
 	{
+      char tmp[MAX_TOPIC_LENGTH];
+      char* expid = expid_;
+      char* sesid = sesid_;
+      char* sysid = sysid_;
+      char* unique = unique_;
+
+      if(expid==NULL)  expid = "*";
+      if(sesid==NULL)  sesid = "*";
+      if(sysid==NULL)  sysid = "*";
+      if(unique==NULL) sysid = "*";
+
+      sprintf(tmp,"%s.%s.%s.%s",expid,sesid,sysid,unique);
+
+      if(Topic.length()!=0) Topic += ',';
+      Topic += tmp;
+
+      printf("IpcConsumer::recv_addtopic: Topic >%s< len=%d\n",Topic.c_str(),Topic.length());
+	}
+
+    void recv_init(/*char* expid_ = NULL, char* sesid_ = NULL, char* sysid_ = NULL, char* unique_ = NULL*/)
+	{
+	  /*
 	  expid = expid_;
 	  sesid = sesid_;
 	  sysid = sysid_;
       unique = unique_;
+	  */
       if(library_initialized_counter==0)
       {
         //printf("IpcConsumer: initializeLibrary (library_initialized_counter=%d)\n",library_initialized_counter);
@@ -1099,7 +1156,7 @@ private:
       library_initialized_counter--;
     }
 
-	void addActionListener(MessageAction *listener)
+	void AddCallback(MessageAction *listener)
     {
       actionListeners.push_back(listener);
     }
@@ -1124,12 +1181,15 @@ private:
     {
       try
       {
+		/*
         if(expid==NULL)  expid = "*";
         if(sesid==NULL)  sesid = "*";
         if(sysid==NULL)  sysid = "*";
         if(unique==NULL) sysid = "*";
         sprintf(topic,"%s.%s.%s.%s",expid,sesid,sysid,unique);
-        printf("IpcConsumer's topic >%s<\n",topic);
+		*/
+
+        printf("IpcConsumer's topic >%s<\n",Topic.c_str());
 
         // Create a ConnectionFactory
         std::unique_ptr<ConnectionFactory> connectionFactory(
@@ -1145,7 +1205,7 @@ private:
         /*session = connection->createSession(Session::AUTO_ACKNOWLEDGE);*/
 
         // Create the destination (Topic or Queue)
-		destination = session->createTopic(topic);
+		destination = session->createTopic(Topic.c_str());
 		/*destination = session->createQueue(topic);*/
 
         // Create a MessageConsumer from the Session to the Topic or Queue
@@ -1267,8 +1327,9 @@ private:
 		  //std::cout << "\n\nonMessage: message size="<<sizeof(streamMessage)<< std::endl;
 		  //std::cout << "\n\nonMessage: message empty="<<streamMessage->isEmpty()<< std::endl;
 
-          std::string fmt = streamMessage->readString();
-          //std::cout << "\n\nonMessage: start processing, fmt='"<<fmt<<"'"<< std::endl;
+          
+	 std::string fmt = streamMessage->readString();
+          
 
           /* loop over all listeners and select the one with 'format' */
           for(int i = 0; i < actionListeners.size(); i++)
@@ -1278,7 +1339,7 @@ private:
             std::string f = actionListeners[i]->getFormat();
             if( !strncmp(f.c_str(),fmt.c_str(),strlen(f.c_str())) || !strncmp(f.c_str(),"*",strlen(f.c_str())) )
 #else
-			if(actionListeners[i]->check(fmt))
+	      if(actionListeners[i]->check(fmt)) 	  
 #endif
             {
 	      // std::cout << "onMessage: found listener with format '"<<fmt<<"' - processing" << std::endl;
@@ -1395,6 +1456,19 @@ public:
       return m_instance;
 	}
 
+    int Open()
+	{
+	  /*
+      printf("Use following: expid='%s', sesid='%s', sysid_send='%s', unique_send='%s', sysid_recv='%s', unique_recv='%s'\n",
+               expid, sesid, sysid_send, unique_send, sysid_recv, unique_recv);
+	  */
+	  send_init(/*expid, sesid, sysid_send, unique_send*/);
+	  recv_init(/*expid, sesid, sysid_recv, unique_recv*/);
+      inited = 1;
+      return(0);
+	}
+
+	/*
     int init(char* expid, char* sesid,
              char* sysid_send, char* unique_send,
              char* sysid_recv = NULL, char* unique_recv = NULL)
@@ -1408,18 +1482,15 @@ public:
 	  }
       else
 	  {
-		/*
-        printf("Use following: expid='%s', sesid='%s', sysid_send='%s', unique_send='%s', sysid_recv='%s', unique_recv='%s'\n",
-               expid, sesid, sysid_send, unique_send, sysid_recv, unique_recv);
-		*/
 	    send_init(expid, sesid, sysid_send, unique_send);
 	    recv_init(expid, sesid, sysid_recv, unique_recv);
         inited = 1;
         return(0);
 	  }
 	}
+*/
 
-    int close()
+    int Close()
     {
       if(inited)
 	  {

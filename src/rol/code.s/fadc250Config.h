@@ -34,6 +34,7 @@ typedef struct {
   unsigned int trigMinMult;
   unsigned int thr[NCHAN];
   unsigned int dac[NCHAN];
+  unsigned int delay[NCHAN];
   float        ped[NCHAN];
   unsigned int thrIgnoreMask;
   float gain[NCHAN];
