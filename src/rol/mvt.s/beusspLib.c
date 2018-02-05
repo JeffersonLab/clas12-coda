@@ -13,6 +13,8 @@
 #include "beusspLib.h"
 #include <pthread.h>
 
+// Log file pointer to be set from outside
+extern FILE *sys_log_fptr;
 
 // ------------------------------------------------------------------------------------------------
 // general purpose declarations for BEUSSP 
@@ -385,11 +387,19 @@ int beusspSendSlowControl(volatile struct BEUSSP_A24RegStruct * BEUSSPreg, unsig
 	if (((feu_is_there >> numFeu) & 0x00000001 ) != 1 )  
 	{
 		fprintf( stderr,"%s: ERROR: there is no FEU on link %d  Feu present 0x%08x.  \n",__FUNCTION__, numFeu,feu_is_there );
+		if( sys_log_fptr != (FILE *)NULL )
+		{
+			fprintf( sys_log_fptr,"%s: ERROR: there is no FEU on link %d  Feu present 0x%08x.  \n",__FUNCTION__, numFeu,feu_is_there );
+		}
 		return ERROR ;
 	}   
 	if ((( feu_is_active >> numFeu) & 0x00000001 ) != 1 ) 
 	{
-		fprintf( stderr,"%s: ERROR: FEU on link %d is not marked as active.  \n",__FUNCTION__, numFeu);
+		fprintf( stderr,"%s: ERROR: FEU on link %d is not marked as active. feu_is_active=0x%08x\n",__FUNCTION__, numFeu, feu_is_active);
+		if( sys_log_fptr != (FILE *)NULL )
+		{
+			fprintf( sys_log_fptr,"%s: ERROR: FEU on link %d is not marked as active. feu_is_active=0x%08x\n",__FUNCTION__, numFeu, feu_is_active);
+		}
 		return ERROR ;
 	}   
 
@@ -402,9 +412,15 @@ int beusspSendSlowControl(volatile struct BEUSSP_A24RegStruct * BEUSSPreg, unsig
 //	if ( (( (slwctrlstatus & 0x0000003E) != (unsigned int) 0  ) || ((mltgtxstatus & 0x00000001)  ==  (unsigned int) 0 ) )) {
 	if ( ( (slwctrlstatus & 0x0000003E) != (unsigned int) 0  ) )
 	{
-		fprintf( stderr,"%s: ERROR: Peripheral not ready for slow control : scstat=0x%08x scstat&0x3E=0x%02x mgtstat=0x%08x mgtstat&0x1=0x%01x.\r\n",
-			__FUNCTION__,  slwctrlstatus, slwctrlstatus & 0x3E, mltgtxstatus, mltgtxstatus & 0x1 );
 		BEUSSPUNLOCK;   		 
+
+		fprintf( stderr,"%s: ERROR: Peripheral not ready : scstat=0x%08x scstat&0x3E=0x%02x mgtstat=0x%08x mgtstat&0x1=0x%01x.\r\n",
+			__FUNCTION__,  slwctrlstatus, slwctrlstatus & 0x3E, mltgtxstatus, mltgtxstatus & 0x1 );
+		if( sys_log_fptr != (FILE *)NULL )
+		{
+			fprintf( sys_log_fptr,"%s: ERROR: not ready : scstat=0x%08x scstat&0x3E=0x%02x mgtstat=0x%08x mgtstat&0x1=0x%01x.\r\n",
+			__FUNCTION__,  slwctrlstatus, slwctrlstatus & 0x3E, mltgtxstatus, mltgtxstatus & 0x1 );
+		}
 		return ERROR;
 	}
 
@@ -427,9 +443,13 @@ int beusspSendSlowControl(volatile struct BEUSSP_A24RegStruct * BEUSSPreg, unsig
 	{
 		//set low the slowctrl request bit
 		vmeWrite32( &BEUSSPreg->regin_6,  ( (0x000000FF&numFeu)<< 8 )  | (0x00000000) );
-
-		fprintf( stderr,"%s: ERROR: TIMEOUT ! Slow control operation timed out by software. \n\r",__FUNCTION__);
 		BEUSSPUNLOCK;   		 
+
+	 	fprintf( stderr,"%s: ERROR: Software TIMEOUT slwctrlstatus=0x%08x & 0x00000008\n\r",__FUNCTION__, slwctrlstatus);
+		if( sys_log_fptr != (FILE *)NULL )
+		{
+	 		fprintf( sys_log_fptr,"%s: ERROR: Software TIMEOUT slwctrlstatus=0x%08x & 0x00000008\n\r",__FUNCTION__, slwctrlstatus);
+		}
 		return ERROR;
 	}
 
@@ -439,9 +459,13 @@ int beusspSendSlowControl(volatile struct BEUSSP_A24RegStruct * BEUSSPreg, unsig
 	{
 		//set low the slowctrl request bit
 		vmeWrite32( &BEUSSPreg->regin_6,  ( (0x000000FF&numFeu)<< 8 )  | (0x00000000) );
+	 	BEUSSPUNLOCK;
 
-	 	fprintf( stderr,"%s: ERROR:  no Acknowledge received for slow control request. \n\r",__FUNCTION__);
-	 	BEUSSPUNLOCK;   		 
+	 	fprintf( stderr,"%s: ERROR: no Acknowledge received slwctrlstatus=0x%08x & 0x00000010\n\r",__FUNCTION__, slwctrlstatus);
+		if( sys_log_fptr != (FILE *)NULL )
+		{
+	 		fprintf( sys_log_fptr,"%s: ERROR: no Acknowledge received slwctrlstatus=0x%08x & 0x00000010\n\r",__FUNCTION__, slwctrlstatus);
+		}
 	 	return ERROR;
 	}
 		
@@ -449,9 +473,13 @@ int beusspSendSlowControl(volatile struct BEUSSP_A24RegStruct * BEUSSPreg, unsig
 	{
 		//set low the slowctrl request bit
 		vmeWrite32( &BEUSSPreg->regin_6,  ( (0x000000FF&numFeu)<< 8 )  | (0x00000000) );
+	 	BEUSSPUNLOCK;
 
-	 	fprintf( stderr,"%s: ERROR: TIMEOUT ! Slow control operation timed out by hardware. \n\r",__FUNCTION__);
-	 	BEUSSPUNLOCK;   		 
+	 	fprintf( stderr,"%s: ERROR: Hardware TIMEOUT slwctrlstatus=0x%08x & 0x00000020\n\r",__FUNCTION__, slwctrlstatus);
+		if( sys_log_fptr != (FILE *)NULL )
+		{
+	 		fprintf( sys_log_fptr,"%s: ERROR: Hardware TIMEOUT slwctrlstatus=0x%08x & 0x00000020\n\r",__FUNCTION__, slwctrlstatus);
+		}
 	 	return ERROR;
 	}
 
@@ -503,10 +531,11 @@ int  beusspDisplayAllReg(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
 */
 	
 	printf("------------------ BEUSSP REGISTERS ------------------------\r\n" );  
-	printf("board Soft ID   %08X board ID        %08X FWRevision   %08X \r\n",  vmeRead32( &BEUSSPreg->regin_11 ),  vmeRead32( &BEUSSPreg->boardID ),  vmeRead32( &BEUSSPreg->FWRevision ) );	
-	printf("ADR32M          %08X ADR32           %08X ADRGEO       %08X \r\n",  vmeRead32( &BEUSSPreg->adr32m ),  vmeRead32( &BEUSSPreg->adr32 ), vmeRead32( &BEUSSPreg->adrgeo )  );
-	printf("Active links    %08X Masked FEU Emu  %08X NELoopback   %08X \r\n",  vmeRead32( &BEUSSPreg->regin_0 ),  vmeRead32( &BEUSSPreg->regin_1 ), vmeRead32( &BEUSSPreg->regin_C ) );
-	printf("MGTX aligned    %08X MGTX status     %08X \r\n",  vmeRead32( &BEUSSPreg->regout_11 ),vmeRead32( &BEUSSPreg->regout_10 )   );
+	printf("board Soft ID   %08X board ID        %08X FWRevision   %08X \r\n",  vmeRead32( &BEUSSPreg->regin_11 ),  vmeRead32( &BEUSSPreg->boardID ),   vmeRead32( &BEUSSPreg->FWRevision ) );	
+	printf("ADR32M          %08X ADR32           %08X ADRGEO       %08X \r\n",  vmeRead32( &BEUSSPreg->adr32m ),    vmeRead32( &BEUSSPreg->adr32 ),     vmeRead32( &BEUSSPreg->adrgeo )  );
+	printf("Active links    %08X Masked FEU Emu  %08X NELoopback   %08X \r\n",  vmeRead32( &BEUSSPreg->regin_0 ),   vmeRead32( &BEUSSPreg->regin_1 ),   vmeRead32( &BEUSSPreg->regin_C ) );
+	printf("MGTX aligned    %08X MGTX status     %08X Sc&ClkStatus %08X \r\n",  vmeRead32( &BEUSSPreg->regout_11 ), vmeRead32( &BEUSSPreg->regout_10 ), vmeRead32( &BEUSSPreg->regout_B ) );
+	printf("Commands        %08X                                        \r\n",  vmeRead32( &BEUSSPreg->regin_7 ) );
 	data = vmeRead32( &BEUSSPreg->regin_5 ) ;
 	printf("Busy Source     %08X Sync Source     %08X Trig Source  %08X \r\n",  (data&0xFF000000)>>24 , (data&0x00FF0000)>>16 , (data&0x0000FF00)>>8  );
 	printf("\r\n" );  
@@ -636,10 +665,11 @@ int  beusspSetTargetFeuAndDumpAllReg(volatile struct BEUSSP_A24RegStruct *BEUSSP
 */
 	
 	fprintf(fptr, "------------------ BEUSSP REGISTERS ------------------------\r\n" );  
-	fprintf(fptr, "board Soft ID   %08X board ID        %08X FWRevision   %08X \r\n",  vmeRead32( &BEUSSPreg->regin_11 ),  vmeRead32( &BEUSSPreg->boardID ),  vmeRead32( &BEUSSPreg->FWRevision ) );
-	fprintf(fptr, "ADR32M          %08X ADR32           %08X ADRGEO       %08X \r\n",  vmeRead32( &BEUSSPreg->adr32m ),  vmeRead32( &BEUSSPreg->adr32 ), vmeRead32( &BEUSSPreg->adrgeo )  );
-	fprintf(fptr, "Active links    %08X Masked FEU Emu  %08X NELoopback   %08X \r\n",  vmeRead32( &BEUSSPreg->regin_0 ),  vmeRead32( &BEUSSPreg->regin_1 ), vmeRead32( &BEUSSPreg->regin_C ) );
-	fprintf(fptr, "MGTX aligned    %08X MGTX status     %08X \r\n",  vmeRead32( &BEUSSPreg->regout_11 ),vmeRead32( &BEUSSPreg->regout_10 )   );
+	fprintf(fptr, "board Soft ID   %08X board ID        %08X FWRevision   %08X \r\n",  vmeRead32( &BEUSSPreg->regin_11 ), vmeRead32( &BEUSSPreg->boardID ),  vmeRead32( &BEUSSPreg->FWRevision ) );
+	fprintf(fptr, "ADR32M          %08X ADR32           %08X ADRGEO       %08X \r\n",  vmeRead32( &BEUSSPreg->adr32m ),   vmeRead32( &BEUSSPreg->adr32 ),    vmeRead32( &BEUSSPreg->adrgeo )  );
+	fprintf(fptr, "Active links    %08X Masked FEU Emu  %08X NELoopback   %08X \r\n",  vmeRead32( &BEUSSPreg->regin_0 ),  vmeRead32( &BEUSSPreg->regin_1 ),  vmeRead32( &BEUSSPreg->regin_C ) );
+	fprintf(fptr, "MGTX aligned    %08X MGTX status     %08X Sc&ClkStatus %08X \r\n",  vmeRead32( &BEUSSPreg->regout_11 ),vmeRead32( &BEUSSPreg->regout_10 ),vmeRead32( &BEUSSPreg->regout_B ) );
+	fprintf(fptr, "Commands        %08X                                        \r\n",  vmeRead32( &BEUSSPreg->regin_7 ) );
 	data = vmeRead32( &BEUSSPreg->regin_5 ) ;
 	fprintf(fptr, "Busy Source     %08X Sync Source     %08X Trig Source  %08X \r\n",  (data&0xFF000000)>>24 , (data&0x00FF0000)>>16 , (data&0x0000FF00)>>8  );
 	fprintf(fptr, "\r\n" );  
@@ -824,7 +854,6 @@ int  beusspResetMultiGTX(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
 		do{
 			res = vmeRead32( &BEUSSPreg->regout_10  );
 		} while  ( (res & 0x00000001) == 1 )   ;        // check multigtx ready low        
-
 
 		vmeWrite32( &BEUSSPreg->regin_7, 0x00000000);  //multigtx reset low
 		timeout = 0;

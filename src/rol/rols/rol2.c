@@ -4474,7 +4474,7 @@ if(a_pulsenumber == 0)
 		printf("\n\nSECOND PASS VSCM\n");
 #endif
         a_slot_old = -1;
-        for(ibl=0; ibl<nB[jj]; ibl++) /*loop over blocks*/
+        for(ibl=0; ibl<nB[jj]; ibl++) /*loop over blocks (over vscm boards)*/
         {
           a_channel_old = -1;
 #ifdef DEBUG4

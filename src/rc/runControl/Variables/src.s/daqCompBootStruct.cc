@@ -37,7 +37,7 @@
 #include <daqArbStructFactory.h>
 #include "daqCompBootStruct.h"
 
-int daqCompBootStruct::maxNumComps = 100;
+int daqCompBootStruct::maxNumComps = 150;
 int daqCompBootStruct::maxCompNameLen = 80;
 
 daqCompBootStruct::daqCompBootStruct (void)

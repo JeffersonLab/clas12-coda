@@ -113,6 +113,8 @@ rcCompBootDialog::popup (void)
   int ac = 0;
   XmString t;
 
+  /*exit(0);*/
+
   for (int i = 0; i < numComp; i++) {
     names_[i] = new char[::strlen (components[i]) + 1];
     ::strcpy (names_[i], components[i]);

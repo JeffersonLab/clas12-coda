@@ -30,9 +30,10 @@ int intLockKeya;
 #endif
 
 void my_tiDeadtime();
-int my_tiLive();
+int  my_tiLive();
 void my_tiIntAck();
-int my_tiIntEnable(int iflag);
+int  my_tiIntEnable(int iflag);
 void my_tiSyncReset();
+void my_tiStatusDump(int pflag, FILE* fptr);
 
 #endif /* TILIB_H */

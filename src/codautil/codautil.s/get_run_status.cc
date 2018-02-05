@@ -53,13 +53,11 @@ get_run_status(char *mysql_database, char *session)
       if(row_out[0] == NULL)
       {
         mysql_free_result(result);
-        dbDisconnect(connNum);
       }
       else
       {
         strcpy(chres,row_out[0]);
         mysql_free_result(result);
-        dbDisconnect(connNum);
       }
 	}
   }

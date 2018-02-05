@@ -1316,7 +1316,8 @@ main(int argc, char *argv[])
 
   /* connect to IPC server */
   printf("Connect to IPC server...\n");
-  epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");
+  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
+  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
   printf("done.\n");
 
 

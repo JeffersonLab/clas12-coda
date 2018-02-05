@@ -636,7 +636,7 @@ IpcProducer &sender = IpcProducer::Instance();
 
 
 
-        /* wait here until 'waiting_for_messages' becomes 1, then return */
+        /* wait here until 'waiting_for_messages' becomes 0, then return */
 		while(waiting_for_messages)
 		{
 
@@ -696,6 +696,17 @@ printf("IpcProducer::run: 3\n");
 	  /*MUST BE HERE SINCE WE CHANGED TOPIC*/
 
       producer->send(message);
+
+	  /*
+valgrind --leak-check=full
+	  */
+	  /*
+      delete message;
+      delete session;
+      session = connection->createSession(Session::AUTO_ACKNOWLEDGE);
+      message = session->createStreamMessage();
+	  */
+
       return(0);
 	}
 

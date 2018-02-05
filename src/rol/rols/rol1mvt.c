@@ -2091,6 +2091,7 @@ vmeBusUnlock();
     if(len<=0)
     {
       printf("ERROR in tiReadBlock : No data or error, len = %d\n",len);
+      tiStatus(1);
 /********************************************************************
  * MVT START : usrtrig
  *******************************************************************/
@@ -2098,6 +2099,7 @@ vmeBusUnlock();
 			if( mvt_fptr_err_1 != (FILE *)NULL )
 			{
 				fprintf(mvt_fptr_err_1, "ERROR in tiReadBlock : No data or error, len = %d\n",len);
+				mvtTiStatusDump(1, mvt_fptr_err_1);
 				fflush( mvt_fptr_err_1);
 			}
 #endif

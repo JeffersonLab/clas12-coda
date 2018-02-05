@@ -193,6 +193,12 @@ rcRunDInfoPanel::init (void)
   XtSetArg (arg[ac], XmNleftPosition, 1); ac++;
   //XtSetArg (arg[ac], XmNleftWidget, evnbFrame2); ac++;
   XtSetValues (compOption_->baseWidget(), arg, ac);
+
+  /*sergey: trying to make several columns in dropdown component menu*/
+  XtSetArg(arg[ac], XmNpacking, XmPACK_COLUMN); ac++;
+  XtSetArg(arg[ac], XmNnumColumns, 2/*ncols*/); ac++;
+  /*sergey: trying to make several columns in dropdown component menu*/
+
   XtManageChild ( compOption_->baseWidget());
   // create a seperator
   ac = 0;

@@ -201,7 +201,7 @@ rcMonitorParmsDialog::popup (void)
   int ac = 0;
   XmString t;
 
-
+  /*exit(0);*/
 
   for (int i = 0; i < numComp; i++)
   {

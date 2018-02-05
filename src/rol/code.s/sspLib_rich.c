@@ -951,6 +951,12 @@ int sspRich_SetMarocReg(int id, int fiber, int chip, int reg, int channel, int v
 
   switch(reg)
   {
+    case RICH_MAROC_REG_GLOBAL0:
+      sspRich_MAROC_Regs[id][fiber][chip].Global0.val = val;
+      break;
+    case RICH_MAROC_REG_GLOBAL1:
+      sspRich_MAROC_Regs[id][fiber][chip].Global1.val = val;
+      break;
     case RICH_MAROC_REG_CMD_FSU:
       sspRich_MAROC_Regs[id][fiber][chip].Global0.bits.cmd_fsu = val;
       break;
@@ -1131,6 +1137,12 @@ int sspRich_GetMarocReg(int id, int fiber, int chip, int reg, int channel, int *
 
   switch(reg)
   {
+    case RICH_MAROC_REG_GLOBAL0:
+      *val = sspRich_MAROC_Regs[id][fiber][chip].Global0.val;
+      break;
+    case RICH_MAROC_REG_GLOBAL1:
+      *val = sspRich_MAROC_Regs[id][fiber][chip].Global1.val;
+      break;
     case RICH_MAROC_REG_CMD_FSU:
       *val = sspRich_MAROC_Regs_Rd[id][fiber][chip].Global0.bits.cmd_fsu;
       break;

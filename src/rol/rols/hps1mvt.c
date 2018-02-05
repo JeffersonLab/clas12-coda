@@ -1,4 +1,4 @@
-
+ 
 /* hps1
 
 net_thread:  waiting=    280    sending=      0 microsec per event (nev=728)
@@ -847,10 +847,12 @@ constant_set = 1;
 		if(len<=0)
 		{
 			printf("ERROR in tiReadBlock : No data or error, len = %d\n",len);
+			tiStatus(1);
 #ifdef USE_MVT
 			if( mvt_fptr_err_1 != (FILE *)NULL )
 			{
 				fprintf(mvt_fptr_err_1, "ERROR in tiReadBlock : No data or error, len = %d\n",len);
+				mvtTiStatusDump(1, mvt_fptr_err_1);
 				fflush( mvt_fptr_err_1);
 			}
 #endif

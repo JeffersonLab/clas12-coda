@@ -389,6 +389,7 @@ protected:
 public:
   uint16_t tag;            /**<The node tag, max 16-bits depending on container type.*/
   uint8_t num;             /**<The node num, max 8 bits, used by BANK and String container types (2-word header).*/
+  uint32_t nwords;
 };
 
 

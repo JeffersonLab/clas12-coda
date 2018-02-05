@@ -1086,6 +1086,12 @@ int mvtUploadAll( char *string, int length )
 }
 
 
+int mvtTiStatusDump(int pflag, FILE *fptr)
+{
+ my_tiStatusDump(pflag,fptr);  
+ return 0;  
+}
+
 int mvtStatus(int numFeu)
 {
  return mvtStatusDump(numFeu, stdout);  

@@ -35,7 +35,7 @@
 #include <daqArbStructFactory.h>
 #include "daqMonitorStruct.h"
 
-int daqMonitorStruct::maxNumComps = 100;
+int daqMonitorStruct::maxNumComps = 150;
 int daqMonitorStruct::maxCompNameLen = 80;
 
 daqMonitorStruct::daqMonitorStruct (void)

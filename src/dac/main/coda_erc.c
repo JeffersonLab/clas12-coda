@@ -215,11 +215,12 @@ rocStatus()
 
 /* put some statistic into *_option table of the database: nfile, nevent, ndata */
 
-#define NDBVALS 4
+#define NDBVALS 5
 
 void
 update_database(ERp erp)
 {
+  objClass object = localobject;
   char tmpp[1000];
   MYSQL *dbsocket;
   MYSQL_RES *result;
@@ -240,13 +241,14 @@ update_database(ERp erp)
   else
   {
     int iii, numRows;
-    char *db_field[NDBVALS] = {"nfile","nevent","ndata","unixtime"};
+    char *db_field[NDBVALS] = {"nfile","nevent","ndata","unixtime","runnum"};
     char db_value[NDBVALS][80];
 
     sprintf(db_value[0],"%d",erp->splitnb+1);
 	sprintf(db_value[1],"%d",nevents_in_current_run);
 	sprintf(db_value[2],"%d",mbytes_in_current_run);
 	sprintf(db_value[3],"%d",rawtime);
+	sprintf(db_value[4],"%d",object->runNumber);
 
     for(iii=0; iii<NDBVALS; iii++)
 	{
@@ -1015,6 +1017,10 @@ erDaqCmd(char *param)
       /* if thread was started, cancel it */
 	  if(erp->write_thread > 0)
 	  {
+        printf("update_database called ..\n");
+	    update_database(erp);
+        printf(".. update_database done\n");
+
         /*pthread_cancel(erp->write_thread);*/
 
         printf("waiting for write thread 3 ..\n");fflush(stdout);
@@ -1033,9 +1039,6 @@ erDaqCmd(char *param)
       {
         (*(erp->close_proc))(erp);
         printf("close_proc executed\n");
-
-		update_database(erp);
-
       }
       erp->fd = -1;
 

@@ -1193,7 +1193,9 @@ string evioDOMContainerNode::getHeader(int depth, const evioToStringConfig *conf
   if((parent==NULL)||((parent->getContentType()==0xe)||(parent->getContentType()==0x10)))
     os << dec << "\" num=\"" << (int)num;
 
-  if((config!=NULL)&&(config->verbose)) {
+  os << dec << "\" nwords=\"" << (int)nwords; /*sergey" to do .. */
+
+  /*if((config!=NULL)&&(config->verbose))*/ {
     os << dec << "\" nchildren=\"" << getSize();
   }
 
@@ -1324,10 +1326,11 @@ string evioCompositeDOMLeafNode::getBody(int depth, const evioToStringConfig *co
   // dump data as uint32_t
   os << indent2 << "<data tag=\"" << dataTag << "\" num=\"" << (int)dataNum << "\"> " << endl;
   vector<uint32_t>::const_iterator iter;
-  for(iter=data.begin(); iter!=data.end();) {
-
+  for(iter=data.begin(); iter!=data.end();)
+  {
     os << indent3;
-    for(int j=0; (j<wid)&&(iter!=data.end()); j++) {
+    for(int j=0; (j<wid)&&(iter!=data.end()); j++)
+    {
       os.width(swid);
       os << hex << showbase << *iter << spaces;
       iter++;

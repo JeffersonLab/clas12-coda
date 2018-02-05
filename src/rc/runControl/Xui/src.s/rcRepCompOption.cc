@@ -97,6 +97,8 @@ rcRepCompOption::compCallback (int status, void* arg, daqNetData* data)
 
   printf("+++++ rcRepCompOption::compCallback: obj->numComp_=%d\n",obj->numComp_);
 
+  /*exit(0);*/
+
   if (status == CODA_SUCCESS)
   {
     /* do not expect more than RCXUI_MAX_COMPONENTS components */

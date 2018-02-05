@@ -99,9 +99,7 @@ int
 epics_json_msg_send(const char *caname, const char *catype, int nelem, void *data)
 {
   strstream message;
-#if 0
-  json j3;
-#endif
+
   int ii;
   int32_t  *iarray;
   uint32_t *uarray;
@@ -129,12 +127,10 @@ epics_json_msg_send(const char *caname, const char *catype, int nelem, void *dat
     return(-1);
   }
 
-
-
   /* clear message */
   server << clrm;
-  /*a.c. send a first string that is the FORMAT*/
-  //  server << "json"; //Comment for now, but this really should be here (K. Livinston app for scalers is not expetinc this yet)
+
+  /* server << "json"; - json messages do not have format string in front of json */
 
   /* construct json message manually */
   message << "{" << "\"" << caname << "\"" << ":";
@@ -187,7 +183,60 @@ epics_json_msg_send(const char *caname, const char *catype, int nelem, void *dat
   if(nelem>1) message << "]";
   message << "}" << ends;
 
+
+  //cout << "will send >" << message.str() << "<" << endl;
+  server << message.str();
+
+  /*end and send message*/
+  server << endm;
+
+
+
+  /*
+  the stream 'message' is now frozen due to str();
+  output to a frozen stream may be truncated;
+  freeze(false) must be called or the  destructor will leak
+  */
+  message.freeze(false);
+
+
+  /*
+  int ia[5] = {1,2,3,4,5};
+server << clrm << "abckjgfdhgjksfdhgdfjgkljfdklghjsdfkhgjsdf;kljhksl;gjhkl;sgjhkl;sjhklj" << endm;
+//server << clrm << ia << endm;
+server << clrm << "abckjgfdhgjksfdhgdfjgkljfdklghjsdfkhgjsdf;kljhksl;gjhkl;sgjhkl;sjhklj" << endm;
+  */
+
+  return(0);
+}
+
+int
+epics_json_msg_close()
+{
+  int status;
+
+  status = server.Close();
+}
+
+
+
+/*to be used by daq*/
+int
+send_daq_message_to_epics(const char *expid, const char *session, const char *myname, const char *caname, const char *catype, int nelem, void *data)
+{
+  epics_json_msg_sender_init(expid, session, myname, "HallB_DAQ");
+  epics_json_msg_send(caname, catype, nelem, data);
+  epics_json_msg_close();
+}
+
+
+
+
+
+
 #if 0
+  json j3;
+
   if( !strcmp(catype,"int"))         { iarray = (int32_t)calloc(nelem, sifeof(int)); for(ii=0; ii<nelem; ii++) iarray[ii] = (int32_t)((int *)data)[ii]; j3 = {{caname, iarray}}; free(iarray); }
   else if( !strcmp(catype,"uint"))   { for(ii=0; ii<nelem; ii++) uarray[ii] = (int32_t)((int *)data)[ii]; j3 = {{caname, uarray}}; }
   else if( !strcmp(catype,"float"))  { for(ii=0; ii<nelem; ii++) farray[ii] = (float)((float *)data)[ii]; j3 = {{caname, farray}}; }
@@ -217,31 +266,3 @@ epics_json_msg_send(const char *caname, const char *catype, int nelem, void *dat
   /*form json message*/
   message << j3.dump() << ends;
 #endif
-
-  //cout << "will send >" << message.str() << "<" << endl;
-  server << message.str();
-
-  /*end and send message*/
-  server << endm;
-
-  return(0);
-}
-
-int
-epics_json_msg_close()
-{
-  int status;
-
-  status = server.Close();
-}
-
-
-
-/*to be used by daq*/
-int
-send_daq_message_to_epics(const char *expid, const char *session, const char *myname, const char *caname, const char *catype, int nelem, void *data)
-{
-  epics_json_msg_sender_init(expid, session, myname, "HallB_DAQ");
-  epics_json_msg_send(caname, catype, nelem, data);
-  epics_json_msg_close();
-}

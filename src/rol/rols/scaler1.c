@@ -14,6 +14,7 @@ static int nusertrig, ndone;
 
 #define USE_SIS3801
 #define USE_DSC2
+#define USE_V851
 
 
 /* if event rate goes higher then 10kHz, with random triggers we have wrong
@@ -428,7 +429,12 @@ vmeBusUnlock();
 #endif
 
 
-
+#ifdef USE_V851
+vmeBusLock();
+  v851Init(0xd000,0);
+  v851_start(1000000);
+vmeBusUnlock();
+#endif
 
 
   sprintf(rcname,"RC%02d",rol->pid);
@@ -904,6 +910,33 @@ vmeBusUnlock();
             BANKCLOSE;
 		  }
 
+
+
+#ifdef USE_DSC2
+	  if(ndsc2_daq>0)
+	  {
+        BANKOPEN(0xe115,1,rol->pid);
+        for(jj=0; jj<ndsc2_daq; jj++)
+        {
+          slot = dsc2Slot_daq(jj);
+
+vmeBusLock();
+          /* in following argument 4 set to 0xFF means latch and read everything, 0x3F - do not latch and read everything */
+          nwords = dsc2ReadScalers(slot, tdcbuf, 0x10000, 0x3F, 1);
+          /*printf("nwords=%d, nwords = 0x%08x 0x%08x 0x%08x 0x%08x\n",nwords,tdcbuf[0],tdcbuf[1],tdcbuf[2],tdcbuf[3]);*/
+vmeBusUnlock();
+
+          /* unlike other boards, dcs2 scaler readout already swapped in 'dsc2ReadScalers', so swap it back, because
+          rol2.c expects big-endian format*/
+          for(ii=0; ii<nwords; ii++) *rol->dabufp ++ = LSWAP(tdcbuf[ii]);
+        }
+        BANKCLOSE;
+	  }
+#endif
+
+
+
+
 		  /*
           ret = scaler7201readHLS(scaler0, ring0, nHLS);
           if(ret==0) printRingFull = 1;
@@ -920,10 +953,14 @@ vmeBusUnlock();
 
 
 
+
+
+#if 0
 #ifdef USE_DSC2
     if(run_trig_count%10000==0)
     {
 	  printf("ev %d, ndsc2_daq=%d\n",run_trig_count,ndsc2_daq);
+
 	  if(ndsc2_daq>0)
 	  {
         BANKOPEN(0xe115,1,rol->pid);
@@ -952,8 +989,12 @@ vmeBusUnlock();
         }
         BANKCLOSE;
 	  }
+
 	}
 #endif
+#endif
+
+
 
 
 #ifndef TI_SLAVE

@@ -60,7 +60,7 @@ int SysConfig_SetLogFilePointer( FILE *fptr )
 
 	if( sys_log_fptr != (FILE *)NULL )
 	{
-		fprintf( stderr, "%s: Error sys_log_fptr is non NULL\n", __FUNCTION__ );
+		fprintf( sys_log_fptr, "%s: Error sys_log_fptr is non NULL\n", __FUNCTION__ );
 		return D_RetCode_Wrn_Null_Pointer;
 	}
 

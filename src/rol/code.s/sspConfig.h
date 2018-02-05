@@ -156,47 +156,64 @@ typedef struct
 
 typedef struct
 {
-  int cmd_fsu;
-  int cmd_ss;
-  int cmd_fsb;
-  int swb_buf_250f;
-  int swb_buf_500f;
-  int swb_buf_1p;
-  int swb_buf_2p;
-  int ONOFF_ss;
-  int sw_ss_300f;
-  int sw_ss_600f;
-  int sw_ss_1200f;
-  int EN_ADC;
-  int H1H2_choice;
-  int sw_fsu_20f;
-  int sw_fsu_40f;
-  int sw_fsu_25k;
-  int sw_fsu_50k;
-  int sw_fsu_100k;
-  int sw_fsb1_50k;
-  int sw_fsb1_100k;
-  int sw_fsb1_100f;
-  int sw_fsb1_50f;
-  int cmd_fsb_fsu;
-  int valid_dc_fs;
-  int sw_fsb2_50k;
-  int sw_fsb2_100k;
-  int sw_fsb2_100f;
-  int sw_fsb2_50f;
-  int valid_dc_fsb2;
-  int ENb_tristate;
-  int polar_discri;
-  int inv_discriADC;
-  int d1_d2;
-  int cmd_CK_mux;
-  int ONOFF_otabg;
-  int ONOFF_dac;
-  int small_dac;
-  int enb_outADC;
-  int inv_startCmptGray;
-  int ramp_8bit;
-  int ramp_10bit;
+  union
+  {
+    unsigned int val;
+    struct
+    {
+      unsigned int cmd_fsu      : 1;
+      unsigned int cmd_ss     : 1;
+      unsigned int cmd_fsb      : 1;
+      unsigned int swb_buf_250f : 1;
+      unsigned int swb_buf_500f : 1;
+      unsigned int swb_buf_1p   : 1;
+      unsigned int swb_buf_2p   : 1;
+      unsigned int ONOFF_ss   : 1;
+      unsigned int sw_ss_300f   : 1;
+      unsigned int sw_ss_600f   : 1;
+      unsigned int sw_ss_1200f  : 1;
+      unsigned int EN_ADC     : 1;
+      unsigned int H1H2_choice  : 1;
+      unsigned int sw_fsu_20f   : 1;
+      unsigned int sw_fsu_40f   : 1;
+      unsigned int sw_fsu_25k   : 1;
+      unsigned int sw_fsu_50k   : 1;
+      unsigned int sw_fsu_100k  : 1;
+      unsigned int sw_fsb1_50k  : 1;
+      unsigned int sw_fsb1_100k : 1;
+      unsigned int sw_fsb1_100f : 1;
+      unsigned int sw_fsb1_50f  : 1;
+      unsigned int cmd_fsb_fsu  : 1;
+      unsigned int valid_dc_fs  : 1;
+      unsigned int sw_fsb2_50k  : 1;
+      unsigned int sw_fsb2_100k : 1;
+      unsigned int sw_fsb2_100f : 1;
+      unsigned int sw_fsb2_50f  : 1;
+      unsigned int valid_dc_fsb2  : 1;
+      unsigned int ENb_tristate : 1;
+      unsigned int polar_discri : 1;
+      unsigned int inv_discriADC  : 1;
+    } bits;
+  } Global0;
+
+  union
+  {
+    unsigned int val;
+    struct
+    {
+      unsigned int d1_d2          : 1;
+      unsigned int cmd_CK_mux       : 1;
+      unsigned int ONOFF_otabg      : 1;
+      unsigned int ONOFF_dac        : 1;
+      unsigned int small_dac        : 1;
+      unsigned int enb_outADC       : 1;
+      unsigned int inv_startCmptGray  : 1;
+      unsigned int ramp_8bit        : 1;
+      unsigned int ramp_10bit       : 1;
+      unsigned int Reserved0        : 23;
+    } bits;
+  } Global1;
+
   int DAC0;
   int DAC1;
   int Gain[64];

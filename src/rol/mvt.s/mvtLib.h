@@ -41,7 +41,8 @@ int mvtGetZSMode(int id);
 int mvtSetCurrentBlockLevel( int block_level );
 int mvtGetRepRawData();
 int mvtStatus(int numFeu);
-int mvtStatusDump(int numFeu, FILE *fptr);
+int mvtStatusDump(int numFeu,  FILE *fptr);
+int mvtTiStatusDump(int pflag, FILE *fptr);
 
 int mvtManageLogFile( FILE* *fptr, int roc_id );
 int mvtSetLogFilePointer( FILE *fptr );

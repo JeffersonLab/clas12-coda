@@ -2059,6 +2059,8 @@ sspGtSendScalers(int id)
   return OK;
 }
 
+
+
 int sspGt_HtccDelayScan(int delay_min, int delay_max, int idle)
 { 
   int id, delay, val;
@@ -2073,6 +2075,187 @@ int sspGt_HtccDelayScan(int delay_min, int delay_max, int idle)
   {
     for(id=3; id<=8; id++)
       sspGt_SetHtcc_Delay(id, delay);
+
+    system("tcpClient trig1 tsSyncReset");
+
+    // Reset Scalers
+    for(id=3; id<=8; id++)
+    {
+      SSPLOCK();
+      sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 1);
+      sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0);
+      SSPUNLOCK();
+    }
+
+    sleep(idle);
+
+    printf("Delay = %4dns, STRIGGER3(sec1-6): ", delay);
+
+    // Read Scalers
+    for(id=3; id<=8; id++)
+    {
+      SSPLOCK();
+      sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 1);
+
+      val = sspReadReg(&pSSP[id]->Sd.Scalers[SD_SCALER_SYSCLK]);
+      if(!val)
+        ref = 1.0;
+      else
+        ref = ((float)val) / 100000.0;
+
+      val = sspReadReg(&pSSP[id]->gt.strigger[3].Scaler_trigger);
+
+      sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0);
+      SSPUNLOCK();
+
+      fval = ((float)val) / ref;
+      printf(" %9.3f", fval);
+    }
+  }
+}
+
+
+
+/* new scan */
+int
+sspGt_FtofFtDelayScan(int delay_min, int delay_max, int idle)
+{ 
+  int id, delay, val;
+  float ref, fval;
+  for(id=3; id<=8; id++)
+  {
+    if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+      return ERROR;
+  }
+
+  for(delay = delay_min; delay <= delay_max; delay+=4)
+  {
+    for(id=3; id<=8; id++) sspGt_SetFtof_Delay(id, delay);
+    system("tcpClient trig1 tsSyncReset");
+    sleep(idle);
+    printf("Delay = %4dns, ", delay);
+    system("tcpClient trig2vtp vtpGtPrintScalers | grep Trigger0");
+  }
+}
+
+int
+sspGt_CtofFtDelayScan(int delay_min, int delay_max, int idle)
+{ 
+  int id, delay, val;
+  float ref, fval;
+  for(id=3; id<=8; id++)
+  {
+    if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+      return ERROR;
+  }
+
+  for(delay = delay_min; delay <= delay_max; delay+=4)
+  {
+    for(id=3; id<=8; id++) sspGt_SetCtof_Delay(id, delay);
+    system("tcpClient trig1 tsSyncReset");
+    sleep(idle);
+    printf("Delay = %4dns, ", delay);
+    system("tcpClient trig2vtp vtpGtPrintScalers | grep Trigger0");
+  }
+}
+
+int
+sspGt_CndFtDelayScan(int delay_min, int delay_max, int idle)
+{ 
+  int id, delay, val;
+  float ref, fval;
+  for(id=3; id<=8; id++)
+  {
+    if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+      return ERROR;
+  }
+
+  for(delay = delay_min; delay <= delay_max; delay+=4)
+  {
+    for(id=3; id<=8; id++) sspGt_SetCnd_Delay(id, delay);
+    system("tcpClient trig1 tsSyncReset");
+    sleep(idle);
+    printf("Delay = %4dns, ", delay);
+    system("tcpClient trig2vtp vtpGtPrintScalers | grep Trigger0");
+  }
+}
+/* new scan */
+
+
+
+
+
+int sspGt_EcPcDelayScan(int delay_min, int delay_max, int idle)
+{ 
+  int id, delay, val;
+  float ref, fval;
+  for(id=3; id<=8; id++)
+  {
+    if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+      return ERROR;
+  }
+  
+  for(delay = delay_min; delay <= delay_max; delay+=32)
+  {
+    for(id=3; id<=8; id++)
+    {
+      sspGt_SetPcal_ClusterDelay(id, delay);
+      sspGt_SetEcal_ClusterDelay(id, delay);
+      sspGt_SetHtcc_Delay(id, delay+156);
+    }
+
+    system("tcpClient trig1 tsSyncReset");
+
+    // Reset Scalers
+    for(id=3; id<=8; id++)
+    {
+      SSPLOCK();
+      sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 1);
+      sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0);
+      SSPUNLOCK();
+    }
+
+    sleep(idle);
+
+    printf("Delay = %4dns, STRIGGER3(sec1-6): ", delay);
+
+    // Read Scalers
+    for(id=3; id<=8; id++)
+    {
+      SSPLOCK();
+      sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 1);
+
+      val = sspReadReg(&pSSP[id]->Sd.Scalers[SD_SCALER_SYSCLK]);
+      if(!val)
+        ref = 1.0;
+      else
+        ref = ((float)val) / 100000.0;
+
+      val = sspReadReg(&pSSP[id]->gt.strigger[3].Scaler_trigger);
+
+      sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0);
+      SSPUNLOCK();
+
+      fval = ((float)val) / ref;
+      printf(" %9.3f", fval);
+    }
+  }
+}
+
+int sspGt_DcDelayScan(int delay_min, int delay_max, int idle)
+{ 
+  int id, delay, val;
+  float ref, fval;
+  for(id=3; id<=8; id++)
+  {
+    if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+      return ERROR;
+  }
+  
+  for(delay = delay_min; delay <= delay_max; delay+=32)
+  {
+    for(id=3; id<=8; id++)
+      sspGt_SetDc_SegDelay(id, delay);
 
     system("tcpClient trig1 tsSyncReset");
 
@@ -5504,8 +5687,8 @@ void sspPrintGtScalers(int id)
   double ref, rate; 
   int i; 
   unsigned int scalers[SD_SCALER_NUM];
-  unsigned int gtscalers[16];
-  const char *scalers_name[16] = {
+  unsigned int gtscalers[17];
+  const char *scalers_name[17] = {
     "ssec.cluster",
     "ssec.inner_cosmic",
     "ssec.outer_cosmic",
@@ -5514,6 +5697,7 @@ void sspPrintGtScalers(int id)
     "sshtcc.hit",
     "ssftof.hit",
     "ssctof.hit",
+    "sscnd.hit",
     "strigger0",
     "strigger1",
     "strigger2",
@@ -5541,8 +5725,9 @@ void sspPrintGtScalers(int id)
   gtscalers[5] = sspReadReg(&pSSP[id]->gt.sshtcc.Scaler_htcc);
   gtscalers[6] = sspReadReg(&pSSP[id]->gt.ssftof.Scaler_ftof);
   gtscalers[7] = sspReadReg(&pSSP[id]->gt.ssctof.Scaler_ctof);
-  for(i=0; i<8; i++)
-    gtscalers[8+i] = sspReadReg(&pSSP[id]->gt.strigger[i].Scaler_trigger);
+  gtscalers[8] = sspReadReg(&pSSP[id]->gt.sscnd.Scaler_cnd);
+  for(i=0; i<9; i++)
+    gtscalers[9+i] = sspReadReg(&pSSP[id]->gt.strigger[i].Scaler_trigger);
 
   sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0); 
   SSPUNLOCK(); 
@@ -5568,7 +5753,7 @@ void sspPrintGtScalers(int id)
      printf("   %-25s %10u,%.3fHz\n", ssp_scaler_name[i], scalers[i], rate); 
   }
 
-  for(i = 0; i < 16; i++) 
+  for(i = 0; i < 17; i++) 
   { 
     rate = (double)gtscalers[i]; 
     rate = rate / ref; 

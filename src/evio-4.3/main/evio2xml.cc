@@ -34,7 +34,7 @@ int max_event       = 0;
 int skip            = 0;
 bool dumpDict       = false;
 bool evioPause      = false;
-int maxbuf          = 100000;   // ??? no error
+int maxbuf          = 10000000;   // ??? no error
 
 
 // set in toStringConfig()
@@ -121,10 +121,13 @@ int main(int argc, char **argv) {
 
     // loop over all buffers in file
     if(debug)cout << "file open, about to read event" << endl;
-       while(!done && ((max_event<=0)||(evcount<max_event)) && chan->read()) {
+
+    while(!done && ((max_event<=0)||(evcount<max_event)) && chan->read())
+    {
       evcount++;
       if((skip>0)&&(evcount<=skip))continue;
 
+      printf("\n\nEVENT NUMBER %d\n\n",evcount);
 
       // create event tree from channel contents
       if(debug)cout << "event read, about to make tree" << endl;

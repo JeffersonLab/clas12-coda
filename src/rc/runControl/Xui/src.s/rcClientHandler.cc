@@ -397,6 +397,8 @@ rcClientHandler::dbaseCallback (int status, void* arg, daqNetData* data)
     delete [](obj->dbases_[i]);
   obj->numDbases_ = 0;
 
+exit(0);
+
   if (status == CODA_SUCCESS)
   {
     // do not expect more than 100 databases

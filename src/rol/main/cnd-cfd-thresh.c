@@ -111,49 +111,50 @@ int main(int argc, char *argv[])
       for (N=1; N<20; N++) printf("%5d ",thresholds[N-1][A]); printf("\n");
   }
 
-  if (tSet>=0) {
+  // not setting thresholds, just quit:
+  if (tSet<0) exit(0);
 
-      // SET THRESHOLDS:
-      printf("Write Thresholds::::::::::::::::::::::::::::::\n");
-      for (N=1; N<20; N++) {
-          if (slot>0 && N!=slot) continue; 
-          for (A=0; A<=7; A++) {
-              if (chan>0 && A!=chan-1) continue;
-              printf("Writing thresholds slot=%d chan=%d val=%d\n",N,A+1,tSet);
-              F=16;
-              datain = tSet;
-              resp = CNAF16(sock, N, A, F, &Q, &datain);
-              if (resp != 0)
-              {
-                  printf("ERROR: Negative response from socket server\n");
-                  printf(" ======> resp=%d, Q=%d, slot=%d, chan=%d, F=%d, datain=%d\n",resp,Q,N,A+1,datain);
-                  return 0;
-              }
-          }
-      }
-
-      // READ ALL THRESHOLDS:
-      printf("Read All Thresholds Again :::::::::::::::::::::::::\n");
-      for(N=1; N<20; N++) {
-          for(A=0; A<=7; A++) {
-              F = 0;
-              resp = CNAF16(sock, N, A, F, &Q, &dataout);
-              thresholds[N-1][A] = dataout;
-              if (resp != 0)
-              {
-                  printf("ERROR: Negative response from socket server\n");
-                  printf(" ======> resp=%d, Q=%d, slot=%d, chan=%d, F=%d, datain=%d\n",resp,Q,N,A+1,datain);
-                  exit(0);
-              }
-          }
-      }
-      // PRINT ALL THRESHOLDS:
-      printf("      ");
-      for (N=1; N<20; N++) printf("%5d ",N); printf("\n");
+  // SET THRESHOLDS:
+  printf("Write Thresholds::::::::::::::::::::::::::::::\n");
+  for (N=1; N<20; N++) {
+      if (slot>0 && N!=slot) continue; 
       for (A=0; A<=7; A++) {
-          printf("%5d ",A+1);
-          for (N=1; N<20; N++) printf("%5d ",thresholds[N-1][A]); printf("\n");
+          if (chan>0 && A!=chan-1) continue;
+          printf("Writing thresholds slot=%d chan=%d val=%d\n",N,A+1,tSet);
+          F=16;
+          datain = tSet;
+          resp = CNAF16(sock, N, A, F, &Q, &datain);
+          if (resp != 0)
+          {
+              printf("ERROR: Negative response from socket server\n");
+              printf(" ======> resp=%d, Q=%d, slot=%d, chan=%d, F=%d, datain=%d\n",resp,Q,N,A+1,datain);
+              return 0;
+          }
       }
   }
+
+  // READ ALL THRESHOLDS:
+  printf("Read All Thresholds Again :::::::::::::::::::::::::\n");
+  for(N=1; N<20; N++) {
+      for(A=0; A<=7; A++) {
+          F = 0;
+          resp = CNAF16(sock, N, A, F, &Q, &dataout);
+          thresholds[N-1][A] = dataout;
+          if (resp != 0)
+          {
+              printf("ERROR: Negative response from socket server\n");
+              printf(" ======> resp=%d, Q=%d, slot=%d, chan=%d, F=%d, datain=%d\n",resp,Q,N,A+1,datain);
+              exit(0);
+          }
+      }
+  }
+  // PRINT ALL THRESHOLDS:
+  printf("      ");
+  for (N=1; N<20; N++) printf("%5d ",N); printf("\n");
+  for (A=0; A<=7; A++) {
+      printf("%5d ",A+1);
+      for (N=1; N<20; N++) printf("%5d ",thresholds[N-1][A]); printf("\n");
+  }
+
 }
 
