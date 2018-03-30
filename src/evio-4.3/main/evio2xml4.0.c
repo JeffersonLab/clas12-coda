@@ -29,7 +29,7 @@ enum {
 
 
 /*  misc macros, etc. */
-#define MAXXMLBUF  1000000
+#define MAXXMLBUF  100000
 #define MAXDICT    5000
 #define MAXDEPTH   512
 #define min(a, b)  ( ( (a) > (b) ) ? (b) : (a) )
@@ -59,13 +59,13 @@ static int nevent         = 0;
 static int skip_event     = 0;
 static int max_event      = 0;
 static int nevok          = 0;
-static int evok[200];
+static int evok[100];
 static int nnoev          = 0;
-static int noev[200];
+static int noev[100];
 static int nfragok        = 0;
-static int fragok[200];
+static int fragok[100];
 static int nnofrag        = 0;
-static int nofrag[200];
+static int nofrag[100];
 static int pause          = 0;
 static int maxbuf         = MAXEVIOBUF;
 static int debug          = 0;
@@ -178,7 +178,7 @@ int set_no_data(int val);
 /*--------------------------------------------------------------------------*/
 
 
-int main(int argc, char **argv)
+int main (int argc, char **argv)
 {
 
   int handle, status;
@@ -235,11 +235,9 @@ int main(int argc, char **argv)
 
   /* loop over events, perhaps skip some, dump up to max_event events */
   nevent=0;
-  while ((status=evRead(handle,buf,maxbuf))==0)
-  {
+  while ((status=evRead(handle,buf,maxbuf))==0) {
     nevent++;
-	printf("\n\nEVENT NUMBER %d\n\n",nevent);
-   if(skip_event>=nevent){printf("cont1\n");continue;}
+    if(skip_event>=nevent){printf("cont1\n");continue;}
     if(user_event_select(buf)==0){printf("cont2\n");continue;}
     xml[0]='\0';              /* clear xml string buffer */
     evio_xmldump(buf,nevent,xml,maxbuf*sizeof(unsigned int)*EVIO2XML);
@@ -667,7 +665,6 @@ void evio_xmldump(unsigned int *buf, int bufnum, char *string, int len) {
             "===================== -->\n\n",nbuf,buf[0]+1,4*(buf[0]+1));
   
     depth=0;
-	printf("\n+++++ evio_xmldump before dump_fragment0: bufnum=%d len=%d\n",bufnum,len);
     dump_fragment(buf,BANK);
 
 
@@ -693,7 +690,7 @@ void set_user_frag_select_func( int (*f) (int tag) ) {
  */
 static void dump_fragment(unsigned int *buf, int fragment_type) {
 
-  int i,length,type,is_a_container,noexpand, padding=0;
+    int length,type,is_a_container,noexpand, padding=0;
     unsigned short tag;
     unsigned char num;
 
@@ -703,30 +700,14 @@ static void dump_fragment(unsigned int *buf, int fragment_type) {
     /* get type-dependent info */
     switch(fragment_type) {
         case BANK:
-printf("11 buf=0x%08x\n",buf);fflush(stdout);
             length      = buf[0]+1;
-printf("12 len=%d\n",length);fflush(stdout);
             tag         = (buf[1]>>16)&0xffff;
-printf("13 tag=%d\n",tag);
             type        = (buf[1]>>8)&0x3f;
-printf("14 type=%d\n",type);
             padding     = (buf[1]>>14)&0x3;
-printf("15 padding=%d\n",padding);
             num         = buf[1]&0xff;
-printf("16 num=%d\n",num);
-
- printf(" words:\n");
- for(i=0; i<5; i++) printf(" 0x%08x",buf[i]);printf("\n");
- for(i=5; i<10; i++) printf(" 0x%08x",buf[i]);printf("\n");
- for(i=10; i<15; i++) printf(" 0x%08x",buf[i]);printf("\n");
- for(i=15; i<20; i++) printf(" 0x%08x",buf[i]);printf("\n");
- for(i=20; i<25; i++) printf(" 0x%08x",buf[i]);printf("\n");
- for(i=25; i<30; i++) printf(" 0x%08x",buf[i]);printf("\n");
- printf("\n");
             break;
 
         case SEGMENT:
-printf("17 SEGMENT\n",num);
             length      = (buf[0]&0xffff)+1;
             type        = (buf[0]>>16)&0x3f;
             padding     = (buf[0]>>22)&0x3;
@@ -735,7 +716,6 @@ printf("17 SEGMENT\n",num);
             break;
     
         case TAGSEGMENT:
-printf("18 TAGSEGMENT\n",num);
             length      = (buf[0]&0xffff)+1;
             type        = (buf[0]>>16)&0xf;
             tag         = (buf[0]>>20)&0xfff;
@@ -781,7 +761,7 @@ printf("18 TAGSEGMENT\n",num);
     indent(0);
 
 
-    /* format and content: evGetTypename() returns format string, like "composite" */
+    /* format and content */
     if((fragment_type==BANK)&&(depth==1)) {
         xml+=sprintf(xml,"<%s format=\"evio\" count=\"%d\"",event_tag,nbuf);
         if(brief==0)xml+=sprintf(xml," content=\"%s\"",evGetTypename(type));
@@ -805,9 +785,7 @@ printf("18 TAGSEGMENT\n",num);
     if((brief==0)&&(fragment_type==BANK))xml+=sprintf(xml," num=\"%d\"",(int)num);
 
     /* length, ndata for verbose */
-    /*sergey if(verbose!=0) replaced by*/if(brief==0)
-    {
-	  printf("> length=%d, ndata=%d\n",length,get_ndata(type, (length - fragment_offset[fragment_type]), padding));
+    /*sergey if(verbose!=0) replaced by*/if(brief==0) {
         xml+=sprintf(xml," length=\"%d\" ndata=\"%d\"",length,
                      get_ndata(type, (length - fragment_offset[fragment_type]), padding));
     }
@@ -819,10 +797,9 @@ printf("18 TAGSEGMENT\n",num);
   
 
     /* fragment data */
-	
-	printf("===> calling dump_data: type=%d tag=%d num=%d fragment_type=%d len=%d(length=%d fragment_offset=%d)\n",
-		   type,tag,num,fragment_type,length-fragment_offset[fragment_type],length,fragment_offset[fragment_type]);
-	
+	/*
+	printf("type=%d tag=%d num=%d len=%d\n",type,tag,num,length-fragment_offset[fragment_type]);
+	*/
     dump_data(&buf[fragment_offset[fragment_type]], type,
                length-fragment_offset[fragment_type], padding, noexpand);
 
@@ -996,10 +973,9 @@ dump_composite(unsigned int *buf)
     num    =  buf[index+1] & 0xff;
 
     padding = (buf[index+1] >> 14) & 0x3;
-	
-	/*printf("composite data header 0x%08x 0x%08x, padding=%d\n",buf[index],buf[index+1],padding);*/
-	xml += sprintf(xml,"(PADDING=%d)\n",padding);
-
+	/*
+	printf("padding=%d\n",padding);
+	*/
     /* 'padding' contains the number of extra characters in the end of data - Sergey */
     /*printf("2---> %d %d %d %d\n",length,type,tag,num);*/
 	
@@ -1027,41 +1003,6 @@ dump_composite(unsigned int *buf)
   return;
 }
 
-/*
-
-===> calling dump_data: type=15 tag=57617 num=8 fragment_type=0 len=64(length=66 fragment_offset=2)
-
-== dump_data: type=15 length=64 padding=0 noexpand=0
-
-== dump_data1: type=15 length=64 padding=0 noexpand=0
-TYPE 0xf
--- nindent=6 (indent_size was 3)
-after dump_fragment1: p=72 length=72
--- nindent=3 (indent_size was 3)
-after dump_fragment1: p=7675 length=7855
-befor dump_fragment1: p=7675 length=7855
-11 buf=0x7d019804
-12 len=3814
-13 tag=62
-14 type=14
-15 padding=0
-16 num=229
-===> calling dump_data: type=14 tag=62 num=229 fragment_type=0 len=3812(length=3814 fragment_offset=2)
-
-== dump_data: type=14 length=3812 padding=0 noexpand=0
-
-== dump_data1: type=14 length=3812 padding=0 noexpand=0
-TYPE 0x10/0xe
-befor dump_fragment1: p=0 length=3812
-11 buf=0x7d01980c
-12 len=6
-13 tag=57610
-14 type=1
-15 padding=0
-16 num=8
-
- */
-
 
 
 /**
@@ -1073,8 +1014,7 @@ befor dump_fragment1: p=0 length=3812
  * @param padding  number of bytes to be ignored at end of data
  * @param noexpand if true, just print data as ints, don't expand as detailed xml
  */
-/*static*/ void
-dump_data(unsigned int *data, int type, int length, int padding, int noexpand) {
+static void dump_data(unsigned int *data, int type, int length, int padding, int noexpand) {
 
     int i,j,len;
     int p=0;
@@ -1084,9 +1024,6 @@ dump_data(unsigned int *data, int type, int length, int padding, int noexpand) {
     char format[132];
     int fLen,fTag,dLen,dTag;
 
-	
-	printf("\n== dump_data: type=%d length=%d padding=%d noexpand=%d\n", type, length, padding, noexpand);
-	
 
     nindent+=indent_size;
 
@@ -1107,15 +1044,12 @@ dump_data(unsigned int *data, int type, int length, int padding, int noexpand) {
 
 
     /* dump the data or call dump_fragment */
-	printf("\n== dump_data1: type=%d length=%d padding=%d noexpand=%d\n", type, length, padding, noexpand);fflush(stdout);
     switch (type) {
 
         /* unknown */
         case 0x0:
-		  printf("TYPE 0\n");fflush(stdout);
             /* unsigned 32 bit int */
         case 0x1:
-		  printf("TYPE 1\n");fflush(stdout);
             if(!no_data) {
                 sprintf(format,"%%#%d%s ",w32,(xtod==0)?"x":"d");
 				/*printf("0x1: length=%d\n",length);fflush(stdout);*/
@@ -1150,7 +1084,6 @@ dump_data(unsigned int *data, int type, int length, int padding, int noexpand) {
                 c=start;
                 while((c[0]!=0x4)&&((c-start)<length*4)) {
                     len=strlen(c);
-printf("c=>%c< len=%d\n",c[0],len);
                     indent(0);
                     sprintf(format,"<![CDATA[%%.%ds]]>\n",len);
                     xml+=sprintf(xml,format,c);
@@ -1289,7 +1222,6 @@ printf("c=>%c< len=%d\n",c[0],len);
 
             /* composite */
         case 0xf:
-		  printf("TYPE 0xf\n");fflush(stdout);
             dump_composite(&data[0]);
 			/*
             if(!no_data) {
@@ -1325,21 +1257,16 @@ printf("c=>%c< len=%d\n",c[0],len);
             /* bank */
         case 0xe:
         case 0x10:
-		  printf("TYPE 0x10/0xe\n");fflush(stdout);
             while(p<length) {
-			  printf("befor dump_fragment1: p=%d length=%d\n",p,length);
                 dump_fragment(&data[p],BANK);
                 p+=data[p]+1;
-			  printf("after dump_fragment1: p=%d length=%d\n",p,length);
             }
             break;
 
             /* segment */
         case 0xd:
         case 0x20:
-		  printf("TYPE 0x20/0xd\n");fflush(stdout);
             while(p<length) {
-			  printf("before dump_fragment2: p=%d length=%d\n",p,length);
                 dump_fragment(&data[p],SEGMENT);
                 p+=(data[p]&0xffff)+1;
             }
@@ -1347,16 +1274,13 @@ printf("c=>%c< len=%d\n",c[0],len);
 
             /* tagsegment */
         case 0xc:
-		  printf("TYPE 0xc\n");fflush(stdout);
             while(p<length) {
-			  printf("before dump_fragment3: p=%d length=%d\n",p,length);
                 dump_fragment(&data[p],TAGSEGMENT);
                 p+=(data[p]&0xffff)+1;
             }
             break;
 
         default:
-		  printf("TYPE default\n");fflush(stdout);
             if(!no_data) {
                 sprintf(format,"%%#%d%s ",w32,(xtod==0)?"x":"d");
                 for(i=0; i<length; i+=n32) {
@@ -1373,8 +1297,6 @@ printf("c=>%c< len=%d\n",c[0],len);
 
     /* decrease indent */
     nindent-=indent_size;
-    printf("-- nindent=%d (indent_size was %d)\n",nindent,indent_size);fflush(stdout);
-
     return;
 }
 

@@ -14,11 +14,11 @@ int sspRichConnectedAsic[MAX_VME_SLOTS+1][RICH_FIBER_NUM];   /* array of valid M
 
 int sspRich_SaveConfig(const char * filename){
   printf("%s\n",__FUNCTION__);
-  FILE * fout; 
+  FILE * fout;
   int i,j;
   fout = fopen(filename, "w");
   if(!fout){ printf("Error: file %s not opened",filename);return -1;}
- 
+
  fprintf(fout,"%d\n",sspGetNssp());
 
   for(i=0;i<MAX_VME_SLOTS+1;i++){
@@ -28,7 +28,7 @@ int sspRich_SaveConfig(const char * filename){
     for(j=0;j<RICH_FIBER_NUM;j++){
       fprintf(fout,"%d %d %d\n",i,j,sspRichConnectedAsic[i][j]);
     }
-  } 
+  }
   fclose(fout);
   return 0;
 }
@@ -65,8 +65,8 @@ int sspRich_PrintConnectedAsic_All(){
   int i;
   int type; // maroc board variant can be 2 or 3 mapmt
   nssp = sspGetNssp();
-  
-  for(i=0;i<nssp;i++){  
+
+  for(i=0;i<nssp;i++){
     slot = sspSlot(i);
     for(fiber=0;fiber<32;fiber++){
       type = sspRichConnectedAsic[slot][fiber];
@@ -1989,7 +1989,7 @@ int sspRich_TestRead(int id, int fiber, int n)
 
 int sspRich_Init(int id)
 {
-  int fiber, asic, tries;
+  int fiber, asic, tries,success;
 
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
     return ERROR;
@@ -2035,9 +2035,14 @@ int sspRich_Init(int id)
       sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.SerCtrl, 5);
       usleep(10);
       SSPUNLOCK();
-  
-      sspRich_DiscoveryAsic(id, fiber);
-     }
+
+      for(tries=1;tries<=5;tries++)
+      {
+        success = sspRich_DiscoveryAsic(id,fiber);
+        //printf("ASIC discovery %d %d repetition %d\n",id,fiber,tries);
+        if(success==OK) break;
+      }
+    }
   }
 }
 #endif

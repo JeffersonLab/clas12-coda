@@ -85,7 +85,93 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include "evio.h"
+
+
+
+
+typedef      long long       hrtime_t; 
+
+static hrtime_t/*uint64_t*/
+gethrtime(void)
+{
+  static double firstsecs = 0.;
+  uint64_t ret;
+  double microsecs;
+  double d1=0.,d2;
+  struct timeval to;
+  gettimeofday(&to, NULL);
+  d1 = to.tv_sec;
+  if(firstsecs==0) firstsecs=d1;
+  d1 = d1 - firstsecs;
+  d2 = to.tv_usec;
+  /*printf("d1=%f d2=%f\n",d1,d2);*/
+  microsecs = d2 + d1*1000000.0;
+  /*printf("microsecs=%f\n",microsecs);*/
+  ret = microsecs;
+  /*printf("ret=%ld\n",ret);*/
+
+  /*
+  int nsec_total;
+  struct timeval to, abs_time;
+  nsec_total = 1000 * to.tv_usec + 1000000000 * to.tv_sec;
+  if (nsec_total >= 1000000000) {
+    abs_time.tv_nsec = nsec_total - 1000000000;
+    abs_time.tv_sec  = deltatime->tv_sec + to.tv_sec + 1;
+  }
+  else {
+    abs_time.tv_nsec = nsec_total;
+    abs_time.tv_sec  = deltatime->tv_sec + to.tv_sec;
+  }
+  */
+
+  return(ret);
+}
+
+#define ABS(x)      ((x) < 0 ? -(x) : (x))
+
+#define TIMERL_VAR \
+  static hrtime_t startTim, stopTim, dTim; \
+  static int nTim; \
+  static hrtime_t Tim, rmsTim, minTim=10000000, maxTim, normTim=1
+
+#define TIMERL_START \
+{ \
+  startTim = gethrtime(); \
+}
+
+#define TIMERL_STOP(whentoprint_macros,histid_macros) \
+{ \
+  stopTim = gethrtime(); \
+  if(stopTim > startTim) \
+  { \
+    nTim ++; \
+    dTim = stopTim - startTim; \
+    /*if(histid_macros >= 0)   \
+    { \
+      uthfill(histi, histid_macros, (int)(dTim/normTim), 0, 1); \
+    }*/														\
+    Tim += dTim; \
+    rmsTim += dTim*dTim; \
+    minTim = minTim < dTim ? minTim : dTim; \
+    maxTim = maxTim > dTim ? maxTim : dTim; \
+    /*logMsg("good: %d %ud %ud -> %d\n",nTim,startTim,stopTim,Tim,5,6);*/ \
+    if(nTim == whentoprint_macros) \
+    { \
+      /*printf("timer: %7llu microsec (min=%7llu max=%7llu rms**2=%7llu)\n", \
+                Tim/nTim/normTim,minTim/normTim,maxTim/normTim, \
+                ABS(rmsTim/nTim-Tim*Tim/nTim/nTim)/normTim/normTim);*/	\
+      nTim = Tim = 0; \
+    } \
+  } \
+  else \
+  { \
+    /*logMsg("bad:  %d %ud %ud -> %d\n",nTim,startTim,stopTim,Tim,5,6);*/ \
+  } \
+}
+
+
 
 
 /* A few items to make the code more readable */
@@ -107,7 +193,7 @@
 #define EV_BLOCKSIZE_V3 8192
 
 /** Version 4's target block size in 32 bit words (256kB) */
-#define EV_BLOCKSIZE_V4 64000
+#define EV_BLOCKSIZE_V4 512000 /*sergey: was 64000*/
 
 /** Minimum block size allowed if size reset */
 #define EV_BLOCKSIZE_MIN 256
@@ -4408,9 +4494,13 @@ if (debug) {
  *                    if file name could not be generated;
  *                    if error writing event;
  */
-static int evFlush(EVFILE *a) {
-    long pos;
-    uint32_t nBytes, debug=0, bytesToWrite=0, blockHeaderBytes = 4*EV_HDSIZ;
+static int
+evFlush(EVFILE *a)
+{
+  long pos;
+  uint32_t nBytes, debug=0, bytesToWrite=0, blockHeaderBytes = 4*EV_HDSIZ;
+
+  TIMERL_VAR;
 
     
     /* If nothing to write ... */
@@ -4418,6 +4508,9 @@ static int evFlush(EVFILE *a) {
 if (debug) printf("    evFlush: no events to write\n");
         return(S_SUCCESS);
     }
+
+
+
 
     /* How much data do we write? */
     bytesToWrite = a->bytesToBuf;
@@ -4443,7 +4536,7 @@ if (debug) printf("    evFlush: write %u events to PIPE\n", a->eventsToBuf);
         if (ferror(a->file)) return(S_FAILURE);
     }
     else if (a->rw == EV_WRITEFILE) {
-if (debug) printf("    evFlush: write %u events to FILE\n", a->eventsToBuf);
+if (debug) printf("\n    evFlush: write %u events (%d bytes) to FILE\n", a->eventsToBuf, bytesToWrite);
         /* Clear EOF and error indicators for file stream */
         if (a->file != NULL) clearerr(a->file);
 
@@ -4489,12 +4582,16 @@ if (debug) printf("    evFlush: append\n");
             pos = -1L * blockHeaderBytes;
             fseek(a->file, pos, SEEK_CUR);
         }
-if (debug) printf("    evFlush: write %d bytes\n", bytesToWrite);
+if (debug) printf("    evFlush: fwrite %d bytes\n", bytesToWrite);
+
+TIMERL_START;
 
         /* Write block to file */
         nBytes = fwrite((const void *)a->buf, 1, bytesToWrite, a->file);
         fflush(a->file);
-        
+
+TIMERL_STOP(100,0);
+
         /* Return for error condition of file stream */
         if (ferror(a->file)) return(S_FAILURE);
     }

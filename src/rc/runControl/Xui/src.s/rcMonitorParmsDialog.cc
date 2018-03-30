@@ -46,6 +46,7 @@
 #include <daqMonitorStruct.h>
 #include "rcMonitorParmsDialog.h"
 
+
 extern Widget monFr;
 
 rcMonitorParmsDialog::rcMonitorParmsDialog (char* name, char* title,

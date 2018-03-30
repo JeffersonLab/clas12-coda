@@ -2196,8 +2196,12 @@ Sleep(int msec)
     select(0, 0, 0, 0, &select_timeout);
 }
 
+
 /*
  * cleanup by sending SIGHUP to client processes
+
+coda_roc -m clondb1 -e clasrun -s mvtsetup -o "svt3 TS" > /home/boiarino/zz.zz.zz &
+
  */
 void
 Cleanup(int code)
@@ -2212,6 +2216,7 @@ Cleanup(int code)
     cleaning = TRUE;
 
     TRACE(("Cleanup %d\n", code));
+printf("cterm:Cleanup %d\n", code);
 
     screen = &term->screen;
 

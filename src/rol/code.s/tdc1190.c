@@ -2856,6 +2856,7 @@ printf("tdc1190ReadBoardDmaStart[%d]: c1190vme=0x%08x, tdata=0x%08x, nbytes=%d\n
   return(res);
 }
 
+
 /* returns the number of words transfered, or error */
 int
 tdc1190ReadBoardDmaDone(int ib)
@@ -2870,6 +2871,7 @@ tdc1190ReadBoardDmaDone(int ib)
     return(-1);
   }
 
+#if 0
   if(berr_fifo == 0x01) /*fifo readout*/
   {
     mbytes = nbytes_save[ib] - res;
@@ -2881,6 +2883,7 @@ tdc1190ReadBoardDmaDone(int ib)
       return(-2);
     }
   }
+#endif
 
   return(res>>2); /* return length in words */
 }
@@ -2895,6 +2898,7 @@ tdc1190ReadStart(INT32 *tdcbuf, INT32 *rlenbuf)
   int nn[21];
   unsigned short tdata;
   int notready;
+  int mbytes, res;
 
 /* whole routine: 42 usec */
 
@@ -2946,29 +2950,63 @@ tdc1190ReadStart(INT32 *tdcbuf, INT32 *rlenbuf)
   /* readout */
   notready = 0;
   itdcbuf = 0;
+  for(jj=0; jj<Nc1190; jj++) rlenbuf[jj] = 0;
+
   for(jj=0; jj<Nc1190; jj++)
   {
 
     if(sngl_blt_mblt == 0x01) /*no DMA*/
     {
-      rlenbuf[jj] = tdc1190ReadBoard(jj,&tdcbuf[itdcbuf]);
+      res = tdc1190ReadBoard(jj,&tdcbuf[itdcbuf]);
+      if(res <= 0)
+      {
+        logMsg("[%2d] ERROR: tdc1190ReadEvent[noDma] returns %d\n",jj,res,3,4,5,6);
+        notready = 1;
+      }
+      else
+      {
+        rlenbuf[jj] += res;
+        itdcbuf += res;
+      }
     }
     else
     {
       /* 18usec x 2boards = 36Usec */
-      tdc1190ReadBoardDmaStart(jj,&tdcbuf[itdcbuf]);
-      rlenbuf[jj] = tdc1190ReadBoardDmaDone(jj);
-    }
 
-    if(rlenbuf[jj] <= 0)
-    {
-      logMsg("[%2d] ERROR: tdc1190ReadEvent[Dma] returns %d\n",
-        jj,rlenbuf[jj],3,4,5,6);
-      notready = 1;
-    }
-    else
-    {
-      itdcbuf += rlenbuf[jj];
+      tdc1190ReadBoardDmaStart(jj,&tdcbuf[itdcbuf]);
+      res = tdc1190ReadBoardDmaDone(jj); /* returns the number of words */
+
+repeat_dma:
+
+      mbytes = nbytes_save[jj] - (res<<2);
+      if(res <= 0)
+      {
+        logMsg("[%2d] ERROR: tdc1190ReadEvent[Dma] returns %d\n",jj,res,3,4,5,6);
+        notready = 1;
+      }
+      else if(mbytes>0)
+	  {
+		/* logMsg("%s: WARN: nbytes_save[%d]=%d, res=%d => mbytes=%d, DMAing again\n",(int)__FUNCTION__,jj,nbytes_save[jj],res,mbytes,6);*/
+        rlenbuf[jj] += res; /* byte couter for the board 'jj' */
+        itdcbuf += res; /* output buffer index */
+		nbytes_save[jj] = mbytes; /* the number of bytes remains in buffer 'jj' */
+
+        res = usrVme2MemDmaStart( (UINT32 *)c1190vme[jj], &tdcbuf[itdcbuf], mbytes);
+        if(res < 0)
+        {
+          logMsg("tdc1190ReadEventDmaRepeat: ERROR: usrVme2MemDmaStart returned %d\n",res,0,0,0,0,0);
+        }
+        res = tdc1190ReadBoardDmaDone(jj); /* returns the number of words */
+
+        goto repeat_dma;
+	  }
+      else
+      {
+        /*logMsg("%s: INFO: nbytes_save[%d]=%d, res=%d => mbytes=%d, DMA is done\n",(int)__FUNCTION__,jj,nbytes_save[jj],res,mbytes,6);*/
+        rlenbuf[jj] += res;
+        itdcbuf += res;
+      }
+
     }
 
   }
@@ -4688,8 +4726,6 @@ tdc1190GetBLTEventNumber(int id)
   UNLOCK_1190;
   return rval;
 }
-
-
 
 
 

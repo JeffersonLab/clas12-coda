@@ -370,7 +370,7 @@ if(rol->pid==18)
   vmeSetQuietFlag(1); /* skip the errors associated with BUS Errors */
 #endif
 vmeBusLock();
-  dsc2Init(0x100000,0x80000,16,0);
+  dsc2Init(0x400000,0x80000,1,0);
 vmeBusUnlock();
 #ifndef VXWORKS
   vmeSetQuietFlag(0); /* Turn the error statements back on */
@@ -723,12 +723,12 @@ vmeBusUnlock();
 void
 usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
 {
-  int *jw, ind, ind2, i, ii, jj, jjj, blen, len, rlen, itdcbuf, nbytes;
+  int *jw, ind, ind2, i, ii, jj, kk, blen, len, rlen, itdcbuf, nbytes;
   unsigned int *tdcbuf_save, *tdc, utmp;
   unsigned int *dabufp1, *dabufp2;
   int njjloops, slot, type;
   int nwords, id, status;
-  int dready = 0, timeout = 0;
+  int dready = 0, timeout = 0, siswasread = 0;
 #ifndef VXWORKS
   TIMERL_VAR;
 #endif
@@ -873,8 +873,9 @@ vmeBusUnlock();
 	  }
       else
 	  {
-         for(ii=0; ii<nsis; ii++)
-         {
+        siswasread = 0;
+        for(ii=0; ii<nsis; ii++)
+        {
           timeout = 0;
           dready = 0;
           while((dready == 0) && (timeout++ < 10))
@@ -908,34 +909,9 @@ vmeBusUnlock();
             BANKOPEN(0xe125,1,/*rol->pid*/ii);
             for(jj=0; jj<len; jj++) *rol->dabufp++ = LSWAP(tdcbuf[jj]);
             BANKCLOSE;
+
+            siswasread = 1;
 		  }
-
-
-
-#ifdef USE_DSC2
-	  if(ndsc2_daq>0)
-	  {
-        BANKOPEN(0xe115,1,rol->pid);
-        for(jj=0; jj<ndsc2_daq; jj++)
-        {
-          slot = dsc2Slot_daq(jj);
-
-vmeBusLock();
-          /* in following argument 4 set to 0xFF means latch and read everything, 0x3F - do not latch and read everything */
-          nwords = dsc2ReadScalers(slot, tdcbuf, 0x10000, 0x3F, 1);
-          /*printf("nwords=%d, nwords = 0x%08x 0x%08x 0x%08x 0x%08x\n",nwords,tdcbuf[0],tdcbuf[1],tdcbuf[2],tdcbuf[3]);*/
-vmeBusUnlock();
-
-          /* unlike other boards, dcs2 scaler readout already swapped in 'dsc2ReadScalers', so swap it back, because
-          rol2.c expects big-endian format*/
-          for(ii=0; ii<nwords; ii++) *rol->dabufp ++ = LSWAP(tdcbuf[ii]);
-        }
-        BANKCLOSE;
-	  }
-#endif
-
-
-
 
 		  /*
           ret = scaler7201readHLS(scaler0, ring0, nHLS);
@@ -947,6 +923,30 @@ vmeBusUnlock();
           }
 		  */
         }
+
+#ifdef USE_DSC2
+        if(siswasread)
+		{
+	      if(ndsc2_daq>0)
+	      {
+            BANKOPEN(0xe115,1,rol->pid);
+            for(jj=0; jj<ndsc2_daq; jj++)
+            {
+              slot = dsc2Slot_daq(jj);
+vmeBusLock();
+              /* in following argument 4 set to 0xFF means latch and read everything, 0x3F - do not latch and read everything */
+              nwords = dsc2ReadScalers(slot, tdcbuf, 0x10000, 0xFF, 1);
+              /*printf("nwords=%d, nwords = 0x%08x 0x%08x 0x%08x 0x%08x\n",nwords,tdcbuf[0],tdcbuf[1],tdcbuf[2],tdcbuf[3]);*/
+vmeBusUnlock();
+              /* unlike other boards, dcs2 scaler readout already swapped in 'dsc2ReadScalers', so swap it back, because
+              rol2.c expects big-endian format*/
+              for(kk=0; kk<nwords; kk++) *rol->dabufp ++ = LSWAP(tdcbuf[kk]);
+            }
+            BANKCLOSE;
+	      }
+		}
+#endif
+
 	  }
     }
 #endif

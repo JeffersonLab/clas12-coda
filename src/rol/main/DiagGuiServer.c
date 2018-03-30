@@ -145,7 +145,7 @@ static pthread_mutex_t vmescalers_lock;
 #endif
 
 
-static int nfadc, ndsc2_tcp, nvscm, nssp, rflag, rmode;
+static int nfadc, ndsc2_tcp, nvscm, nssp, ntd, rflag, rmode;
 static unsigned int  vmescalersmap[MAXBOARDS+1];  /* crate map */
 
 static unsigned int  vmescalerslen[MAXBOARDS];  /*scalers space (the number of words) */
@@ -203,6 +203,8 @@ vmeScalersRead()
   int itype, id, ii, nw, nw_len, slot, fiber;
   unsigned int chmask = 0xFFFF;
 
+  /*printf("vmeScalersRead reached\n");*/
+
   SCALER_LOCK;
 
   for(itype=0; itype<SCALER_TYPE_MAX; itype++)
@@ -213,6 +215,7 @@ vmeScalersRead()
       for(id=0; id<ndsc2_tcp; id++)
       {
         slot = dsc2Slot_tcp(id);
+		rflag = 0xFF;
 vmeBusLock();
         nw = dsc2ReadScalers(slot, tdcbuf, MAXWORDS, rflag, 1/*rmode*/);
 /*vmeBusUnlock(); move below trying to debug problem 'in FADC data: trailer #words 58 != actual #words 54'*/
@@ -294,7 +297,48 @@ vmeBusUnlock();
 		/*printf("vmeScalersRead: nw=%d, vmescalers[slot][nw-2]=%d, vmescalers[slot][nw-1]=%d\n",nw,vmescalers[slot][nw-2],vmescalers[slot][nw-1]);*/
       }
     }
+    else if(itype == SCALER_TYPE_TD)    /* td scalers */
+	{
+      char name[100];
+      float ref, data[16*8]; /* 8 scalers per slot, maximum can be 16 TDs */
+      int jj;
+      unsigned int tdbuf[20];
+      static unsigned int buf[16][11], bufold[16][11];
+
+	  if(ntd>0)
+	  {
+        jj = 0;
+        for(id=0; id<ntd; id++)
+        {
+          slot = tdSlot(id);
+vmeBusLock();
+          nw = tdReadScalers(slot, tdbuf);
+vmeBusUnlock();
+          /*
+          vmescalerslen[slot] = nw;
+          for(ii=0; ii<nw; ii++) vmescalers[slot][ii] = tdbuf[ii];
+          */
+
+          for(ii=0; ii<11; ii++) buf[id][ii] = tdbuf[ii];
+        }
+
+        for(id=0; id<ntd; id++)
+        {
+          ref = (float)(buf[id][9]-bufold[id][9]) + (float)(buf[id][10]-bufold[id][10]);
+          for(ii=0; ii<8; ii++) 
+          {
+            data[jj++] = ((float)((buf[id][ii]-bufold[id][ii])*100)) / ref;
+          }
+          for(ii=0; ii<11; ii++) bufold[id][ii] = buf[id][ii];
+		}
+
+        sprintf(name,"ROCS_BUSY");
+        epics_json_msg_send(name, "float", ntd*8, data);
+	  }
+    }
+
   }
+
 
   SCALER_UNLOCK;
 
@@ -532,13 +576,19 @@ static void
 vmeReadTask()
 {
   int id, iFlag;
-  int ii, jj, slot;
+  int ii, jj, slot, interval;
   unsigned int maxA32Address;
   unsigned int fadcA32Address = 0x09000000;
 
 #ifdef VXWORKS
   extern unsigned long sysClkRateGet();
 #endif
+
+  daqConfig("");
+  interval = daqGetExternalVmeReadoutInterval();
+  vmeSetScalersReadInterval(interval);
+  interval = vmeGetScalersReadInterval();
+  printf("Set scalers readout interval to %d seconds\n\n",interval);
 
   for(ii=0; ii<MAXBOARDS; ii++)
   {
@@ -582,7 +632,7 @@ vmeReadTask()
   }
   /*iFlag |= (1<<19);*/ /* ignore slot numbers, enumerate boards from 0 */
 
-  dsc2Init(0x100000,0x80000,16,iFlag);
+  dsc2Init(0x100000,0x80000,20,iFlag);
   dsc2Config("");
 maxA32Address = dsc2GetA32MaxAddress();
 fadcA32Address = maxA32Address + FA_MAX_A32_MEM;
@@ -652,6 +702,19 @@ faSetA32BaseAddress(fadcA32Address);
 
 
 
+
+  /***********/
+  /* TD INIT */
+
+  ntd = 0;
+  tdInit((3<<19),0x80000,20,0);
+  ntd = tdGetNtds(); /* actual number of TD boards found  */
+
+
+
+
+
+
   /* always clean up init flag ! */
   init_boards = 0;
 
@@ -661,7 +724,7 @@ faSetA32BaseAddress(fadcA32Address);
 
   while(1)
   {
-    if(vmeScalersReadInterval==0) /* if interval==0, wait 1 sec and check again */
+    if(vmeScalersReadInterval==0) /* if interval==0, wait 1 sec and check again if interval changed on flight - not implemented yet !!*/
     {
 #ifdef VXWORKS
       taskDelay(sysClkRateGet());
@@ -671,6 +734,9 @@ faSetA32BaseAddress(fadcA32Address);
     }
     else
     {
+
+
+	  /* should do it on timer, right now it is interval+readout time */
 #ifdef VXWORKS
       taskDelay(sysClkRateGet()*vmeScalersReadInterval);
 #else
@@ -678,10 +744,16 @@ faSetA32BaseAddress(fadcA32Address);
 #endif
 
 
+
+
 #if 1
 /* send trigger scalers from SSPs */
 if(nssp>0) sspGSendScalers();
 /* send trigger scalers from SSPs */
+#endif
+
+#if 1
+if(nvscm>0) vscmGSendScalers();
 #endif
 
 

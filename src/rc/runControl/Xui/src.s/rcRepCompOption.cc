@@ -42,7 +42,7 @@
 rcRepCompOption::rcRepCompOption (Widget parent, char* name,
 				  char* title, rcClientHandler& handler,
 				  rcRunDInfoPanel* panel)
-:XcodaSimpleOptionMenu (parent, name, title), netHandler_ (handler),
+:XcodaSimpleOptionMenu (parent, name, title, RCXUI_MAX_COMPONENTS), netHandler_ (handler), /*sergey: add RCXUI_MAX_COMPONENTS as 4th parameter to XcodaSimpleOptionMenu*/
  dpanel_ (panel), numComp_ (0)
 {
 #ifdef _TRACE_OBJECTS
@@ -94,10 +94,9 @@ void
 rcRepCompOption::compCallback (int status, void* arg, daqNetData* data)
 {
   rcRepCompOption* obj = (rcRepCompOption *)arg;
+  int ncols;
 
   printf("+++++ rcRepCompOption::compCallback: obj->numComp_=%d\n",obj->numComp_);
-
-  /*exit(0);*/
 
   if (status == CODA_SUCCESS)
   {
@@ -129,9 +128,16 @@ rcRepCompOption::offCallback (int status, void *, daqNetData* data)
 void
 rcRepCompOption::doit (void)
 {
+  int ncols;
   assert (currentSel_ < numComp_);
 
-  printf("rcRepCompOption::doit reached, switching from >%s< to >%s<\n",components_[prevSel_],components_[currentSel_]);
+  printf("rcRepCompOption::doit() reached, switching from >%s< to >%s<\n",components_[prevSel_],components_[currentSel_]);
+
+  /* sergey: set pulldown menu to display 16 rows maxinum */
+  ncols = numComp_ / 16 + 1;
+  setNcolumns(ncols); /*sergey: function from motif/src.s/XcodaSimpleOptionMenu.cc*/
+
+  printf("rcRepCompOption::doit(): numComp_=%d, ncols=%d\n",numComp_,ncols);
 
   /* if DA_DOWNLOADED, then stop monitoring previous component and start monitoring new one */
   if (netHandler_.status () >= DA_DOWNLOADED )
@@ -154,6 +160,8 @@ rcRepCompOption::entriesChangedAction (void)
 char*
 rcRepCompOption::currentComponent (void) const
 {
+  printf("rcRepCompOption::currentComponent() reached\n");
+
   assert (currentSel_ < numComp_);
   
   if (::strcmp (components_[currentSel_], "unknown") == 0)

@@ -278,8 +278,8 @@ dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
     dscID[Ndsc] = slotno;
 
     dscp[dscID[Ndsc]] = (struct dsc_struct*)laddr_inc;
-    printf("Initialized dsc2 ID %d slot %d at VME (USER) address 0x%x (0x%x).\n",
-		   Ndsc, dscID[Ndsc], (UINT32) dscp[dscID[Ndsc]] - dscA24Offset, (UINT32) dscp[dscID[Ndsc]]);
+    printf("Initialized dsc2 ID %d slot %d at VME (USER) address 0x%x (0x%x) firmware 0x%08x.\n",
+		   Ndsc, dscID[Ndsc], (UINT32) dscp[dscID[Ndsc]] - dscA24Offset, (UINT32) dscp[dscID[Ndsc]],fwrev);
     Ndsc++;
     if(Ndsc>=ndsc) break;
   }

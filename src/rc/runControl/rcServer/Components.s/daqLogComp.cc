@@ -151,6 +151,7 @@ daqLogComp::configure (void)
   if (run->getNetConfigInfo (title_, config_) != CODA_SUCCESS)
     fprintf (stderr, "Something is fishy..........\n");
 
+  reporter->cmsglog (CMSGLOG_INFO,"%s configured ok\n", title_);
   setState (CODA_CONFIGURED);
   
   return status_;

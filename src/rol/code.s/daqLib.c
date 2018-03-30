@@ -18,6 +18,7 @@
 
 
 static int report_raw_data;
+static int external_vme_readout_interval;
 
 int
 daqInit()
@@ -31,6 +32,12 @@ daqGetReportRawData()
   return(report_raw_data);
 }
 
+int
+daqGetExternalVmeReadoutInterval()
+{
+  return(external_vme_readout_interval);
+}
+
 
 /****************************************************************************
  *
@@ -42,6 +49,8 @@ config file format:
 DAQ_CRATE      <tdcecal1>     <- crate name, usually IP name
 
 DAQ_REPORT_RAW_DATA 0/1          # if 1, tell ROL2 to keep raw data banks
+
+DAQ_EXTERNAL_VME_READOUT_INTERVAL 1   # vme readout interval (seconds, 0 to 10) by DiagGuiServer, 0 means disable readout
 
 DAQ_CRATE end
 */
@@ -95,6 +104,7 @@ daqInitGlobals()
   int ii, jj;
 
   report_raw_data = 0;
+  external_vme_readout_interval = 1;
 
   return(0);
 }
@@ -212,6 +222,12 @@ daqReadConfigFile(char *filename)
         report_raw_data = i1;
       }
 
+      else if(active && (strcmp(keyword,"DAQ_EXTERNAL_VME_READOUT_INTERVAL")==0))
+      {
+        sscanf (str_tmp, "%*s %d", &i1);
+        external_vme_readout_interval = i1;
+      }
+
       else
       {
         ; /* unknown key - do nothing */
@@ -267,6 +283,9 @@ daqUploadAll(char *string, int length)
     str[0] = '\0';
 
     sprintf(sss,"DAQ_REPORT_RAW_DATA %d\n",report_raw_data);
+    ADD_TO_STRING;
+
+    sprintf(sss,"DAQ_EXTERNAL_VME_READOUT_INTERVAL %d\n",external_vme_readout_interval);
     ADD_TO_STRING;
 
     CLOSE_STRING;

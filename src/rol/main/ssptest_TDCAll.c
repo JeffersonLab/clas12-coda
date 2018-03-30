@@ -11,57 +11,60 @@
 #include "sspConfig.h"
 #include "tiLib.h"
 
-
-
-#define gBUF_LEN  500000
-unsigned int gBuf[gBUF_LEN];
-
-
-
 #define SSP_RICH_CONFIG_FILE "./config/dafarm35.cnf"
 #define SSP_RICH_OUT_FILE "./ssprich_tdc.bin"
-#define SSP_RICH_Q_EVENTS 5 // number of events at fixed charge
 
 
+#define TMAP "/home/clasrun/rich/suite/maps/threshold.txt";
+#define GMAP "/home/clasrun/rich/suite/maps/gain.txt";
+
+
+#define BUFSIZE 10000000
 // functions
-int sspRich_InitMarocReg(int slot,int fiber,int asic,int threshold,int gain);
+int sspRich_InitMarocReg(int slot,int fiber,int asic,int threshold,int gain, int ctestChannel);
+int GetThreshold(int slot,int fiber,int asic);
+int ResetGains();
+int LoadGains();
+
 int sspRich_ParseData(unsigned int *  buf,int wordcnt, int printFlag);
 int sspRich_GetNfibersAll();
 int sspRich_GetNmarocAll();
+
+
+// gloabls
+int gmap[8][32][3][64];// slot, fiber, asic, channel
+unsigned int dabuf[BUFSIZE];
+
 
 //----------------------------------------
 int main(int argc, char *argv[]){
 //----------------------------------------
 
-  int DMAt = 1; // 1 enable DMA transfer
+  int bLevel = 1; // Block Level
 
   // run variables
-  int trigExt=0; // 0 for internal trigger; 1 for external trigger
+  int trigMode=0; // 0 for external trigger; 1 to 15 is prescale for internal trigger
   int maxEvent = 100000;
 
-  int pulserSrc = 1; // 0 =local SSP pulser, 1 = use TI pulser 
-
   // tdc settings
-  int window = 300; // ns  // 200
-  int lookback = 1550; // ns // 2700
+  int window = 4000; //300; // ns  // 200
+  int lookback = 4000; //1550; // ns // 2700
 
   // maroc settings
-  int threshold = 300;
+  int threshold = 230;
   int gain = 64;
   int ctestAmplitude= 0;
-  int pulserFrequency=1000000;
-
-
+  int ctestChannel=-1;
 
   // ti variables
   unsigned int tiData[256];
   int tibready=0;
   int timeout=0;
   int dCnt;
-  int prescale=13;
+  int prescale=15;
 
 
-  // ssp variables 
+  // ssp variables
   int nssp = 0;
   int id;
   int geo;
@@ -76,51 +79,51 @@ int main(int argc, char *argv[]){
   int nmarocs = 0;
   int mode;
 
- 
+
   // scalers variables
   unsigned int  maroc[RICH_CHAN_NUM];
   int duration =1;
   int ref;
   int absChannel;
 
-
   // event readout
   int wordcnt;
   int wordRd;
-  int nevent=0;
-  int loop=0;
-  int nread=0;
   int ready=0;
+
+
+  //DMA variables
+  int i1,i2,i3;
+  unsigned int * tdcbuf;
 
 
   //output file
   FILE * fout;
   char foutName[80]=SSP_RICH_OUT_FILE;
- 
+
 
  /* Checks Arguments*/
-  if(argc==3){
+  if(argc==7){
     threshold = atoi(argv[1]);
-     maxEvent = atoi(argv[2]);
+    gain      = atoi(argv[2]);
+    maxEvent  = atoi(argv[3]);
+    trigMode  = atoi(argv[4]);
+    prescale  = trigMode;
+    ctestAmplitude  = atoi(argv[5]);
+    ctestChannel  = atoi(argv[6]);
   }
-  else if(argc==4){
-    threshold = atoi(argv[1]);
-     maxEvent = atoi(argv[2]);
-     trigExt = atoi(argv[3]);
-  }
-  else if(argc==6){
-    threshold = atoi(argv[1]);
-    maxEvent = atoi(argv[2]);
-    trigExt = atoi(argv[3]);
-    pulserSrc = atoi(argv[4]); 
-    ctestAmplitude= atoi(argv[5]); 
-  }
-  else{
+  else
+  {
     printf("\n");
-    printf("Usage Mode 1: ssptest [TDC threshold; 0 to enable external file] [Event Preset]\n");
-    printf("Usage Mode 2: ssptest [TDC threshold; 0 to enable external file] [Event Preset] [Trigger Type: 0 internal, 1 external]\n");
-    printf("Usage Mode 3: ssptest [TDC threshold; 0 to enable external file] [Event Preset] [Trigger Type: 0 internal, 1 external] [PulserSource: 0 local ssp, 1 use TI pulser] [CTEST]\n");
-    printf("\n");
+    printf("Usage: ssptest_TDCAll");
+    printf("[Threshold; 0 to use map] ");
+    printf("[Gain; 0 to use map] ");
+    printf("[Event Preset] ");
+    printf("[Trigger type; 0 external, 1 to 15 prescale for internal] ");
+    printf("[CTEST Amplitude;  0 OFF, 1 to 4095 charge] ");
+    printf("[CTEST Channel; -1 OFF, 0 to 63 to select MAROC channel ] ");
+
+    printf("\n\n");
     exit(0);
   }
 
@@ -129,16 +132,13 @@ int main(int argc, char *argv[]){
   //----------
   vmeOpenDefaultWindows();
 
-  int i1,i2,i3;
 
-  if(DMAt==1){ 
-    usrVmeDmaInit();
-    usrVmeDmaMemory(&i1, &i2, &i3);
-    i2 = (i2 & 0xFFFFFFF0) + 16;    
-    usrVmeDmaSetConfig(2,5,1); /*A32,2eSST,267MB/s*/
-  }
-  unsigned int * tdcbuf = (unsigned int *) i2;
-
+  //DMA init
+  usrVmeDmaInit();
+  usrVmeDmaMemory(&i1, &i2, &i3);
+  i2 = (i2 & 0xFFFFFFF0) + 16;
+  usrVmeDmaSetConfig(2,5,1); /*A32,2eSST,267MB/s*/
+  tdcbuf = (unsigned int *) i2;
 
 
   //-----------
@@ -147,35 +147,38 @@ int main(int argc, char *argv[]){
   tiInit(21,TI_READOUT_EXT_POLL,0); // ti slot is 21
   tiCheckAddresses();
 
-  if(trigExt){
-    tiSetTriggerSource(TI_TRIGGER_TSINPUTS); // Front Panel 
+  if(trigMode==0){
+    tiSetTriggerSource(TI_TRIGGER_TSINPUTS); // Front Panel
   }else{
     tiSetTriggerSource(TI_TRIGGER_TRIG21); // Internal generator
     tiSetTrig21Delay(0); // ti Delay is 0 + about 2.6 microseconds
   }
 
   //---------------
-  // SSP Init  
+  // SSP Init
   //---------------
-  sspInit(0, 0, 1,SSP_INIT_MODE_VXS |  SSP_INIT_SKIP_FIRMWARE_CHECK);  
+  sspInit(0, 0, 1,SSP_INIT_MODE_VXS |  SSP_INIT_SKIP_FIRMWARE_CHECK);
   nssp = sspGetNssp();
 
   nfibers = sspRich_GetNfibersAll();
   if(nfibers<=0) {printf("No fibers connected. Exit\n");return -1;}
-  nmarocs = sspRich_GetNmarocAll();  
+  nmarocs = sspRich_GetNmarocAll();
   if(nmarocs<=0) {printf("No maroc connected. Exit\n");return -1;}
 
-//  printf("Total fibers %d \n",nfibers);
-//  printf("Total maroc %d \n",nmarocs);
+  printf("Total fibers %d \n",nfibers);
+  printf("Total maroc %d \n",nmarocs);
 
-//  sspRich_PrintConnectedAsic_All();
+  sspRich_PrintConnectedAsic_All();
 
   //------------------------
-  // Front End Configuration 
-  //------------------------  
+  // Front End Configuration
+  //------------------------
   //sspConfig(SSP_RICH_CONFIG_FILE);
-  fprintf(stderr, "Configuring %d MAROC boards...",nmarocs);
-  int vv;
+
+  fprintf(stderr, "Configuring %d MAROC boards...\n",nmarocs);
+  ResetGains();
+  LoadGains();
+
   for(i=0;i<nssp;i++)
   {
     slot = sspSlot(i);
@@ -187,19 +190,13 @@ int main(int argc, char *argv[]){
         if(sspRich_IsAsicInvalid(slot,j)) continue;
 
         // MAROC Slow Control (Gains,thresholds,)
-        for(asic = 0; asic < 3; asic++) sspRich_InitMarocReg(slot,j,asic,threshold,gain);
-        //printf("******** WR **** SLOT %d FIBER %2d *********\n",slot,j);
-        //sspRich_PrintMarocRegs(slot, j, 0, RICH_MAROC_REGS_WR);
+        for(asic = 0; asic < 3; asic++) sspRich_InitMarocReg(slot,j,asic,threshold,gain,ctestChannel);
         sspRich_UpdateMarocRegs(slot, j);// First update shift into MAROC ASIC
         sspRich_UpdateMarocRegs(slot, j);// Second update shift into MAROC ASIC, and out of MAROC ASIC into FPGA
-        //printf("******** RD **** SLOT %d FIBER %2d *********\n",slot,j);
-        // sspRich_PrintMarocRegs(slot, j, 0, RICH_MAROC_REGS_RD);
 
-        // CTEST Amplitude
-        sspRich_SetCTestAmplitude(slot, j, ctestAmplitude);
-
-        // CTEST signal source
-        if(ctestAmplitude>0)sspRich_SetCTestSource(slot,j, RICH_SD_CTEST_SRC_SEL_SSP); // this is TRIG2 in the firmware
+        // Test Pulse
+        sspRich_SetCTestAmplitude(slot, j, ctestAmplitude); // charge amplitude
+        if(ctestAmplitude>0)sspRich_SetCTestSource(slot,j, RICH_SD_CTEST_SRC_SEL_SSP); // signal source is TRIG2 from SSP
         else sspRich_SetCTestSource(slot,j, RICH_SD_CTEST_SRC_SEL_0);
 
         // TDC enable
@@ -220,18 +217,18 @@ int main(int argc, char *argv[]){
 
 
   //------------------
-  // SSP prestart 
-  //------------------  
+  // SSP prestart
+  //------------------
 
   for(i=0;i<nssp;i++){
     slot = sspSlot(i);
 
-    // RESET Event Builder (redundant? checj sspRich_Init)
-    sspSetBlockLevel(slot, 1);
-   // sspSetBlockLevel(slot, 8);
-    
+    sspSetBlockLevel(slot, bLevel);
+
     //sspSetIOSrc(slot, SD_SRC_SYNC, SD_SRC_SEL_0);
     //sspSetIOSrc(slot, SD_SRC_TRIG, SD_SRC_SEL_0);
+
+    // RESET Event Builder (redundant? checj sspRich_Init)
     sspEbReset(slot, 1);
     sspEbReset(slot, 0);
 
@@ -242,24 +239,13 @@ int main(int argc, char *argv[]){
     sspSetIOSrc(slot, SD_SRC_LVDSOUT1, SD_SRC_SEL_TRIG1);
     sspSetIOSrc(slot, SD_SRC_LVDSOUT0, SD_SRC_SEL_TRIG2);
 
-
-    // ASSIGN SD_SRC_TRIG2
-
-    if(ctestAmplitude>0){
-      if(pulserSrc ==1){
-        sspSetIOSrc(slot, SD_SRC_TRIG2, SD_SRC_SEL_TRIG2); // use TI pulser (does'it work?)
-        printf("Use TI  pulser\n");
-      }
-      else if(pulserSrc ==0){
-        sspPulserSetup(slot, pulserFrequency/2., 0.5, 0xFFFFFFFF);
-        sspSetIOSrc(slot, SD_SRC_TRIG2, SD_SRC_SEL_PULSER); // use local uncorrelated pulser
-        printf("Use local SSP pulser\n");
-
-      }
-      else{
-        printf("No pulser selected\n");
-      }
-    }
+    // Test Pulse from TI
+    if(ctestAmplitude>0)sspSetIOSrc(slot, SD_SRC_TRIG2, SD_SRC_SEL_TRIG2); // SSP TRIG2 comes from TI TRIG2 
+    // as alterntive you can use local SSP pulser (good in case of single SSp board)
+    // int pulserFrequency=1000000;
+    //  sspPulserSetup(slot, pulserFrequency/2., 0.5, 0xFFFFFFFF);
+    //    sspSetIOSrc(slot, SD_SRC_TRIG2, SD_SRC_SEL_PULSER); // use local uncorrelated pulser
+    //    printf("Use local SSP pulser\n");
   }
 
   // Open Outfile
@@ -272,242 +258,172 @@ int main(int argc, char *argv[]){
 
   //------------------
   // TI prestart
-  //------------------  
+  //------------------
 
   tiClockReset();
   taskDelay(1);
   tiTrigLinkReset();
-  taskDelay(1);  
+  taskDelay(1);
   tiEnableVXSSignals();
   tiSyncReset(1);
   taskDelay(1);
   tiEnableTriggerSource();
   tiSetBlockLimit(0);
 
-  if(trigExt){
+  if(trigMode==0){
     tiLoadTriggerTable(0);
-    tiEnableTSInput(TI_TSINPUT_1); // plug logical trigger source to TS#1 
+    tiEnableTSInput(TI_TSINPUT_1); // plug logical trigger source to TS#1
   }else{
-    tiSetRandomTrigger(2,prescale); // prescale 15
-   /* unsigned int nevents = 100000; // integer number of events to trigger
-    unsigned int period = 83;// periof multiplier 0-0x7FFF (0-32767) 
-    int range = 0; // min 120 ns; increments od 120 ns; 245.76 us 
+    tiSetRandomTrigger(2,prescale);
+   /* or
+    unsigned int nevents = 100000; // integer number of events to trigger
+    unsigned int period = 83;// periof multiplier 0-0x7FFF (0-32767)
+    int range = 0; // min 120 ns; increments od 120 ns; 245.76 us
     tiSoftTrig(2,nevents,period,range);
-  */
+    */
   }
-  
- /* tiStatus(1);
-  printf("Press return to start\n");
-  getchar();
-*/
-  //--------------
-  // DEBUG 
-  //--------------  
-/*
-  while(1){
-    nread=0;
-    while((tibready==0) && (timeout<100)){
-      tibready=tiBReady();
-      timeout++;
-    }
 
-    if(timeout>=100){timeout=0;continue;}
-  
-    timeout=0;
-    tibready=0;
-    dCnt = tiReadBlock((unsigned int *)&tiData,256,0);
-    if(dCnt<=0){printf("TI No data or error.  dCnt = %d\n",dCnt);continue;}
-
-    tiIntAck(); 
-  } // end of while
-*/
-
-  int bcomplete;
+  int evnt=0;
   int bready[nssp];
+  int z;
 
-
+  int bcount=0;
+  int bn,sl;
   for(i=0;i<nssp;i++)bready[i]=0;
+
+ if(trigMode==0)printf("External Trigger Mode, wait for triggers..\n");
+
 
   //--------------
   // EVENT READOUT
-  //--------------  
-  while(nevent<maxEvent){
-    nread=0;
+  //--------------
+  while(evnt<maxEvent){
     ready=0;
 
-    while(!tibready)
-     tibready=tiBReady();
-/*
-    while((tibready==0) && (timeout<100)){
-      tibready=tiBReady();
-      timeout++;
-    }
-
-    if(timeout>=100){timeout=0;continue;}
-  
-    timeout=0;
-*/
+    while(!tibready) tibready=tiBReady();
     tibready=0;
-  
-    dCnt = tiReadBlock((unsigned int *)&tiData,256,0);
+
+    dCnt = tiReadBlock((unsigned int *)&tiData,256,1);
     if(dCnt<=0){printf("TI No data or error.  dCnt = %d\n",dCnt);continue;}
 
     while(ready<nssp)
     {
       for(i=0;i<nssp;i++){
-    //    printf("SLOT %d",i+3);
-      //  sspPrintEbStatus(slot);
-      //  printf("\n");
-
         if(sspBReady(sspSlot(i)))
           bready[i]=1;
-       }       
-       ready=0;
-       for(i=0;i<nssp;i++){
-         ready +=bready[i];
-//          printf("Ready[%d]=%d ",i,bready[i]);
-       }
-  //     printf("ready=%d\n",ready);
-    }   
-
+      }
+      ready=0;
+      for(i=0;i<nssp;i++){
+        ready +=bready[i];
+      }
+    }
 
     for(i=0;i<nssp;i++)
     {
       bready[i]=0;
-
       slot = sspSlot(i);
-    //  printf("SLOT %d\n",slot);
-    //  sspPrintEbStatus(slot);
-    //  printf("\n");
-      wordcnt = sspGetEbWordCnt(slot); 
-      if(wordcnt > gBUF_LEN){printf("ERROR - %d words, event too large...\n",wordcnt);exit(1);}
-
-
-      if(DMAt!=1){
-        wordRd = sspReadBlock(slot, gBuf, wordcnt, 0);
-        if(wordRd <= 0){printf("ERROR - event readout error...\n");exit(1);}
-        fwrite(gBuf,wordcnt, sizeof(*gBuf), fout);
-        bcomplete =  sspRich_ParseData(gBuf,wordcnt,0);// use 1 to enable  print
-        if(!bcomplete){// printf("Trailer missing, make a second read\n");
-          wordcnt = sspGetEbWordCnt(slot);
-          if(wordcnt > gBUF_LEN){printf("ERROR - %d words, event too large...\n",wordcnt);exit(1);}
-          wordRd = sspReadBlock(slot, gBuf, wordcnt, 0);
-          if(wordRd <= 0){printf("ERROR - event readout error...\n");exit(1);}
-          fwrite(gBuf,wordcnt, sizeof(*gBuf), fout);
-          bcomplete =  sspRich_ParseData(gBuf,wordcnt,0);
-          //  if(bcomplete)printf("Block complete after second read OK\n");
-         //  else{printf("Block INCOMPLETE\n\n\n");}
-        }
-      }else{ // DMA transfer
-        wordRd = sspReadBlock(slot, tdcbuf, 1000000, 1); // DMA
-        fwrite(tdcbuf,wordRd, sizeof(tdcbuf[0]), fout);
-        bcomplete =  sspRich_ParseData(tdcbuf,wordRd,0);// use 1 to enable  print
+      wordcnt = sspGetEbWordCnt(slot);
+      if(wordcnt > BUFSIZE){printf("ERROR - %d words, event too large...\n",wordcnt);exit(1);}
+      wordRd = sspReadBlock(slot, tdcbuf, BUFSIZE, 1);
+      for(z=0;z<wordRd;z++){
+        dabuf[z] =(tdcbuf[z]&0x000000FF)<<24;
+        dabuf[z]|=(tdcbuf[z]&0x0000FF00)<<8;
+        dabuf[z]|=(tdcbuf[z]&0x00FF0000)>>8;
+        dabuf[z]|=(tdcbuf[z]&0xFF000000)>>24;
       }
-      nread++; 
-    } 
-  
-    tiIntAck();  // Tell TI we're ready for next event
-    nevent++; 
+      fwrite(dabuf,wordRd, sizeof(dabuf[0]), fout);
 
-    if(nevent%100==0)printf("Event %d\n",nevent);
+      bn = (dabuf[0] >>  8 ) & 0x3FF;
+      sl = (dabuf[0] >> 22 ) & 0x1F;
+
+      if(sl==7){
+        evnt=bn+bcount*1024;
+        if(bn==1023)bcount++;      
+      }
+    }
+    tiIntAck();  // Tell TI we're ready for next event
+    if(evnt%(maxEvent/20)==0)printf("Event %6d\n",evnt); // Tell user how many events we have
   } // end of while
 
   fclose(fout);
-  printf("Binary Data written on %s (%d events)\n",foutName,nevent);
+  printf("Binary Data written on %s (%d events)\n",foutName,evnt);
   return 0;
 }
 
 
 //----------------------------------------
-int  sspRich_InitMarocReg(int slot,int fiber,int asic,int threshold,int gain){
+int  sspRich_InitMarocReg(int slot,int fiber,int asic,int threshold,int gain,int ctestChannel){
 //----------------------------------------
 
-    int ctest=1; // check logic! 1 = enable, 0 disable?
-    int pri = 0;
-    int i;
-    FILE *  fin;
-//    const char * filename = "/home/matt/test/ped/thr_relative/threshold.txt";
-    const char * filename = "./threshold.txt";
-    int var[4];
-    if(threshold==0){
-      if(pri) printf("Threshold from External File\n");
-      fin = fopen(filename,"r");
-      if(fin){
-       if(pri) printf("Reading file %s\n",filename);
-        while(fscanf(fin,"%d %d %d %d \n",var,var+1,var+2,var+3)!=EOF) // slot, fiber, asic, threshold
-        {
-           if(pri) printf("%d %3d %d %4d\n",var[0],var[1],var[2],var[3]);
-          if(var[0]==slot && var[1]==fiber && var[2]==asic){
-            threshold = var[3];
-            break;
-          }
-        }
-      }else{
-        if(pri)printf("File %s not found...use 230");
-        threshold = 230;
-      }
-    }
-    if(threshold!=0)printf("slot %d fiber %2d asic %d threshold %3d\n",slot,fiber,asic,threshold);
+  int i;
+  int gain_choice=gain;
+  double gain_mean = 0;
 
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSU, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_SS, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSB, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_250F, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_500F, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_1P, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_2P, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_SS, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS_300F, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS_600F, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS1200F, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_EN_ADC, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_H1H2_CHOICE, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_20F, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_40F, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_25K, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_50K, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_100K, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_50K, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_100K, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_100F, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_50F, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSB_FSU, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_VALID_DC_FS, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_50K, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_100K, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_100F, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_50F, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_VALID_DC_FSB2, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ENB_TRISTATE, 0, 1);
-   // sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_POLAR_DISCRI, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_POLAR_DISCRI, 0, 1);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_INV_DISCRIADC, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_D1_D2, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_CK_MUX, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_OTABG, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_DAC, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SMALL_DAC, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ENB_OUTADC, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_INV_STARTCMPTGRAY, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_RAMP_8BIT, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_RAMP_10BIT, 0, 0);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_DAC0, 0, threshold);
-    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_DAC1, 0, 0);
 
-    for(i = 0; i < 64; i++)
-    {
-      sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_GAIN, i, gain);
-      sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SUM, i, 0);
-      sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CTEST, i, 1);
-      sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_MASKOR, i, 0);
+  int chtest=ctestChannel;
+  int ctest=0;
 
-  if(gain!=64 || ctest!=1) printf("channel %d gain %d ctest %d\n",i,gain,ctest);
+  if(threshold==0) threshold = GetThreshold(slot,fiber,asic);
 
-    }
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSU, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_SS, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSB, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_250F, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_500F, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_1P, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_2P, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_SS, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS_300F, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS_600F, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS1200F, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_EN_ADC, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_H1H2_CHOICE, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_20F, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_40F, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_25K, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_50K, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_100K, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_50K, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_100K, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_100F, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_50F, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSB_FSU, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_VALID_DC_FS, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_50K, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_100K, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_100F, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_50F, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_VALID_DC_FSB2, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ENB_TRISTATE, 0, 1);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_POLAR_DISCRI, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_INV_DISCRIADC, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_D1_D2, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_CK_MUX, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_OTABG, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_DAC, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SMALL_DAC, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ENB_OUTADC, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_INV_STARTCMPTGRAY, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_RAMP_8BIT, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_RAMP_10BIT, 0, 0);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_DAC0, 0, threshold);
+  sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_DAC1, 0, 0);
 
+  for(i = 0; i < 64; i++)
+  {
+    if(i==chtest)ctest=1;else ctest=0;
+
+    if(gain_choice==0) gain=GetGain(slot,fiber,asic,i);
+    gain_mean+=gain;
+    //printf("slot %d fiber %d asic %d channel %2d gain %3d\n",slot,fiber,asic,i,gain);
+    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_GAIN, i, gain);
+    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SUM, i, 0);
+    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CTEST, i, ctest);
+    sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_MASKOR, i, 0);
+  }
+  printf("slot %d fiber %2d asic %d threshold %3d gain mean %6.3lf\n",slot,fiber,asic,threshold,gain_mean/64.);
   return 0;
 }
-
 
 
 //----------------------------------------------------------------------------
@@ -530,9 +446,10 @@ int sspRich_ParseData(unsigned int *  buf,int wordcnt, int printFlag){
   int time;
   int p =printFlag;
 
-  int blockComplete = 0;
-
  for(i=0;i<wordcnt;i++){
+
+
+    if(i==0)p=1;else p=0;
 
    if(buf[i] & 0x80000000){ // Data Type defininig, bit 31 =1
       tag = ( buf[i] >> 27 ) & 0xF;
@@ -540,11 +457,13 @@ int sspRich_ParseData(unsigned int *  buf,int wordcnt, int printFlag){
     }else{ // Data type continuation, bit 31 = 0
       tag_idx++;
     }
-  //  if(tag!=15){
+
+   // if(tag!=15){
       if(p)printf("%4d ",i);
       if(p)printf("0x%08x ",buf[i]);
-      if(p)printf("%2d ",tag); 
+      if(p)printf("%2d ",tag);
    // }
+
     switch(tag){
       case 0:
         blockLevel = (buf[i] >>  0 ) & 0xFF;
@@ -553,10 +472,11 @@ int sspRich_ParseData(unsigned int *  buf,int wordcnt, int printFlag){
 
         if(p){
           printf("[ BLOCK HEADER] ");
-          //printf("LEVEL %d ",blockLevel);
+          printf("LEVEL %d ",blockLevel);
           printf("SLOT %d ",slot);
           printf("BLKNUM %d ",blockNum);
         }
+
       break;
 
       case 1:
@@ -568,7 +488,6 @@ int sspRich_ParseData(unsigned int *  buf,int wordcnt, int printFlag){
          printf("SLOT %d ",slot);
          printf("NWORDS %d ",nwords);
        }
-       blockComplete = 1;
        break;
 
 
@@ -621,17 +540,17 @@ int sspRich_ParseData(unsigned int *  buf,int wordcnt, int printFlag){
          }
       break;
 
-      case 14: if(p)printf("[          DNV]\n");
+      case 14: if(p)printf("[          DNV]");
       break;
-      case 15: if(p)printf("[       FILLER]\n ");
+      case 15: if(p)printf("[       FILLER]");
       break;
-      default: if(p)printf("[      UNKNOWN]\n ");
+      default: if(p)printf("[      UNKNOWN]");
       break;
     }
 
     if(p)printf("\n");
   }
-  return blockComplete;;
+  return evtNum;
 }
 
 
@@ -640,7 +559,7 @@ int sspRich_GetNfibersAll(){
 //----------------------------------------
   int i,j,slot;
   int nssp = sspGetNssp();
-  int n=0;  
+  int n=0;
   int fibers;
   for(i=0;i<nssp;i++){
     slot = sspSlot(i);
@@ -658,7 +577,7 @@ int sspRich_GetNmarocAll(){
 
   int i,j,slot;
   int nssp = sspGetNssp();
-  int n=0;  
+  int n=0;
   int fibers;
   for(i=0;i<nssp;i++){
     slot = sspSlot(i);
@@ -670,6 +589,95 @@ int sspRich_GetNmarocAll(){
   }
   return n;
 }
+
+
+//----------------------------------------
+int GetThreshold(int slot,int fiber,int asic){
+//----------------------------------------
+
+  FILE *  fin;
+  int var[4];
+  int thr;
+  int thr_default = 230;
+  const char * filename = TMAP;
+
+  thr = thr_default;
+
+  fin = fopen(filename,"r");
+  if(!fin)
+  {
+   printf("Threshold file %s not found...\n");
+  }
+  else
+  {
+    while(fscanf(fin,"%d %d %d %d \n",var,var+1,var+2,var+3)!=EOF) // slot, fiber, asic, threshold
+    {
+      //printf("%d %3d %d %4d\n",var[0],var[1],var[2],var[3]);
+      if(var[0]==slot && var[1]==fiber && var[2]==asic){
+        thr = var[3];
+        break;
+      }
+    }
+    fclose(fin);
+  }
+  return thr;
+}
+
+//----------------------------------------
+int ResetGains(){
+//----------------------------------------
+
+ int slot, fiber, asic, channel;
+ int gain_default=64;
+ for(slot=3;slot<=7;slot++)
+   for(fiber=0;fiber<=31;fiber++)
+     for(asic=0;asic<=2;asic++)
+       for(channel=0;channel<=63;channel++)
+         gmap[slot][fiber][asic][channel]= gain_default;
+
+  return 0;
+}
+
+
+//----------------------------------------
+int LoadGains(){
+//----------------------------------------
+  FILE *  fin;
+  int var[4];
+  int slot, fiber,asic, channel, gain;
+
+ // const char * filename = "/home/clasrun/rich/calibration_suite/maps/eqmap_all_sorted.txt";
+  const char * filename = GMAP;
+
+  fin = fopen(filename,"r");
+  if(!fin)
+  {
+    printf("Gain file %s not found...\n");
+  }
+  else
+  {
+    while(fscanf(fin,"%d %d %d %d\n",var,var+1,var+2,var+3)!=EOF)  // slot, fiber, channel [0,191], gain 
+    {
+      //printf("%d %3d %d %4d\n",var[0],var[1],var[2],var[3]);
+      slot   = var[0];
+      fiber  = var[1];
+      asic   = var[2]/64;
+      channel= var[2]%64;
+      gain   = var[3];
+      gmap[slot][fiber][asic][channel]= gain;
+    }
+    fclose(fin);
+  }
+  return 0;
+}
+
+//----------------------------------------
+int GetGain(int slot,int fiber,int asic,int channel){
+//----------------------------------------
+
+  return gmap[slot][fiber][asic][channel];
+}
+
 
 #else
 

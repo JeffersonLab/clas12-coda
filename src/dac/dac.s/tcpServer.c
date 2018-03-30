@@ -248,16 +248,31 @@ tcpServer(char *name, char *mysqlhost)
 {
   pthread_t id;
   pthread_attr_t attr;
+  int status;
 
   printf("tcpServer reached: name >%s<, mysqlhost >%s<\n",name,mysqlhost);fflush(stdout);
   strcpy(localname,name);
   strcpy(mysql_host,mysqlhost);
   printf("tcpServer reached: localname >%s<, mysql_host >%s<\n",localname,mysql_host);fflush(stdout);
 
+  printf("tcpServer 0\n");fflush(stdout);
   pthread_attr_init(&attr); /* initialize attr with default attributes */
+  printf("tcpServer 1\n");fflush(stdout);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+  printf("tcpServer 2\n");fflush(stdout);
   pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
-  pthread_create(&id, &attr, TcpServer, NULL);
+  printf("tcpServer 3\n");fflush(stdout);
+  status = pthread_create(&id, &attr, TcpServer, NULL);
+  printf("tcpServer 4\n");fflush(stdout);
+  if(status!=0)
+  {
+    printf("tcpServer: ERROR: pthread_create returned %d - exit\n",status);fflush(stdout);
+    exit(0); 
+  }
+  else
+  {
+    printf("tcpServer: pthread_create succeeded\n");fflush(stdout);
+  }
 }
 
 

@@ -13,7 +13,7 @@ TI_ADD_SLAVE 1                                 # for every slave need to be adde
 
 TI_FIBER_DELAY_OFFSET 0x80 0xcf                # fiber delay and offsets
 
-TI_SYNC_DELAY_WIDTH 0x52 0x2f                  # sync delay and width
+TI_SYNC_DELAY_WIDTH 0x52 0x2f                  # sync delay and width (not used ???)
 
 TI_BLOCK_LEVEL 1                               # the number of events in readout block
 
@@ -82,7 +82,7 @@ tiSetExpid(char *string)
 
 
 /* tiInit() have to be called before this function */
-int  
+int
 tiConfig(char *fname)
 {
   int res;
@@ -492,7 +492,7 @@ tiUploadAll(char *string, int length)
   random_enabled = tiGetRandomTriggerEnable(1);
   random_prescale = tiGetRandomTriggerSetting(1);
 
-  /*
+  /*DO NOT USE tiGetFiberDelay() UNTIL IT RETURNS RIGHT VALUES, OTHERWISE CALLING tiUploadAll() WILL SCRUDUP FOLLOWING tiDownloadAll() !!!!!!!!
   delay = tiGetFiberDelay();
   sync_delay = tiGetSyncDelay();
   */
@@ -549,10 +549,10 @@ tiUploadAll(char *string, int length)
     sprintf(sss,"TI_RANDOM_TRIGGER %d %d\n",random_enabled,random_prescale);
     ADD_TO_STRING;
 
-	/*
+	
     sprintf(sss,"TI_FIBER_DELAY_OFFSET %d %d\n",delay,0);
     ADD_TO_STRING;
-
+	/*
     sprintf(sss,"TI_SYNC_DELAY_WIDTH %d %d\n",sync_delay,0);
     ADD_TO_STRING;
 	*/

@@ -42,7 +42,6 @@
 /* prototype */
 static void * signal_thread (void *arg);
 
-
 #define MAXBUF 500000
 static int maxbufbytes = MAXBUF*4;;
 static unsigned int buf[MAXBUF];
@@ -51,7 +50,7 @@ int
 main(int argc,char **argv)
 {
   int             handle, handle1, len;
-  int             i, ii, j, status, nevents_max, buflen;
+  int             i, ii, j, status, nevents_max, buflen, event_type;
   size_t          event_size;
   double          freq=0.0, freq_tot=0.0, freq_avg=0.0, datafreq=0.0, datafreq_tot=0.0, datafreq_avg=0.0;
   int             iterations=1, count, evcount;
@@ -91,6 +90,7 @@ main(int argc,char **argv)
 
   timeout.tv_sec  = 0;
   timeout.tv_nsec = 1;
+
 
   /*************************/
   /* setup signal handling */
@@ -160,13 +160,13 @@ restartLinux:
 
   /* open eviofile */
 
+
   if ( (status = evOpen(filename,"r",&handle)) !=0)
   {
 	printf("cannot open >%d<, evOpen status %d \n",filename,status);
     fflush(stdout);
     goto error;
   }
-
 
   while (et_alive(id))
   {
@@ -180,7 +180,7 @@ restartLinux:
     /* loop NUMLOOPS times before printing out statistics */
     evcount = 0;
     datacount = 0.0;
-    for (j=0; j < NUMLOOPS ; j++)
+    for (j=0; j<NUMLOOPS; j++)
     {
       status = et_events_new(id, attach1, pe, ET_SLEEP, NULL, event_size, CHUNK, &count);
 
@@ -228,7 +228,11 @@ restartLinux:
         status = evOpenBuffer(pdata, MAXBUF, "w", &handle1);
         if(status!=0) printf("evOpenBuffer returns %d\n",status);
 
-		if((status=evRead(handle,buf,maxbufbytes)) == EOF)
+
+
+next_event:
+
+		if((status = evRead(handle,buf,maxbufbytes)) == EOF)
 		{
           /*printf("reopen data file >%s<\n",filename);*/
           status = evClose(handle);
@@ -252,6 +256,21 @@ restartLinux:
 		}
 
 		
+		/*ignore special events */
+        event_type = (buf[1]>>16)&0xffff; /* actually it is bank tag */
+		/*
+        for(i=0; i<50; i++) printf("[%2d] 0x%08x\n",i,buf[i]);
+		exit(0);
+		*/
+        if(event_type==17||event_type==18||event_type==20)
+		{
+          printf("Skip control event type %d\n",event_type);
+          goto next_event;
+		}
+
+
+
+
         status = evWrite(handle1, buf);
         if(status!=0) printf("evWrite returns %d\n",status);
 

@@ -286,6 +286,9 @@ rcRateDisplay::init (rcMenuWindow *menW)
 				     arg, ac);
 
 
+
+
+
   Widget _wid = menW->createTabFrame("Options",0);
   Widget children[5];      /* Children to manage */
   Arg al[64];                    /* Arg List */
@@ -303,9 +306,9 @@ rcRateDisplay::init (rcMenuWindow *menW)
     to_value.addr = NULL;
     XtConvertAndStore (_wid, XmRString, &from_value, XmRPixel, &to_value);
     if ( to_value.addr )
-      {
-	XtSetArg(al[ac], XmNborderColor, *(unsigned int *)to_value.addr); ac++;
-      }
+    {
+	  XtSetArg(al[ac], XmNborderColor, *(unsigned int *)to_value.addr); ac++;
+    }
   }
 
   ac = 0;
@@ -318,6 +321,7 @@ rcRateDisplay::init (rcMenuWindow *menW)
   XtSetArg (al[ac], XmNrightAttachment, XmATTACH_FORM); ac++;
   XtSetArg (al[ac], XmNrightOffset, 2); ac++;
   OutFrame = XmCreateFrame ( _wid, "OutFrame", al, ac );
+
   ac = 0;
   xmstrings[0] = XmStringCreateLtoR ( "Run Control Options", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
   XtSetArg(al[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
@@ -326,16 +330,19 @@ rcRateDisplay::init (rcMenuWindow *menW)
   XmStringFree ( xmstrings [ 0 ] );
 
   outForm = XtCreateManagedWidget ("outForm", xmFormWidgetClass, OutFrame, arg, ac);
+
   // File name frame
   ac = 0;
   XtSetArg (al[ac], XmNheight, 60); ac++;
   fileFr = XmCreateFrame ( outForm, "fileFr", al, ac );
+
   ac = 0;
   xmstrings[0] = XmStringCreateLtoR ( "File name", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
   XtSetArg(al[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   XtSetArg(al[ac], XmNlabelString, xmstrings[0]); ac++;
   fileLabel = XmCreateLabel ( fileFr, "fileLabel", al, ac );
   XmStringFree ( xmstrings [ 0 ] );
+
   ac = 0;
   /*
   tokenFr = XmCreateFrame ( outForm, "tokenFr", al, ac );
@@ -348,6 +355,7 @@ rcRateDisplay::init (rcMenuWindow *menW)
   ac = 0;
   */
   bootFr = XmCreateFrame ( outForm, "bootFr", al, ac );
+
   ac = 0;
   xmstrings[0] = XmStringCreateLtoR ( "Auto boot control", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
   XtSetArg(al[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
@@ -392,6 +400,9 @@ rcRateDisplay::init (rcMenuWindow *menW)
     XtSetArg(al[ac], XmNrightOffset, 1); ac++;
     XtSetValues ( tokenFr,al, ac );
   */
+
+#if 0 /*sergey: disable 'Options' tab until fixed */
+
   ac = 0;
   XtSetArg(al[ac], XmNtopAttachment, XmATTACH_WIDGET); ac++;
   XtSetArg(al[ac], XmNtopWidget, fileFr); ac++;
@@ -403,6 +414,7 @@ rcRateDisplay::init (rcMenuWindow *menW)
   XtSetArg(al[ac], XmNrightAttachment, XmATTACH_FORM); ac++;
   XtSetArg(al[ac], XmNrightOffset, 1); ac++;
   XtSetValues ( bootFr,al, ac );
+
   ac = 0;
   XtSetArg(al[ac], XmNtopAttachment, XmATTACH_WIDGET); ac++;
   XtSetArg(al[ac], XmNtopOffset, 4); ac++;
@@ -414,6 +426,7 @@ rcRateDisplay::init (rcMenuWindow *menW)
   XtSetArg(al[ac], XmNrightAttachment, XmATTACH_FORM); ac++;
   XtSetArg(al[ac], XmNrightOffset, 1); ac++;
   XtSetValues ( updFr,al, ac );
+
   ac = 0;
   XtSetArg(al[ac], XmNtopAttachment, XmATTACH_WIDGET); ac++;
   XtSetArg(al[ac], XmNtopOffset, 4); ac++;
@@ -425,6 +438,7 @@ rcRateDisplay::init (rcMenuWindow *menW)
   XtSetArg(al[ac], XmNrightAttachment, XmATTACH_FORM); ac++;
   XtSetArg(al[ac], XmNrightOffset, 1); ac++;
   XtSetValues ( monFr,al, ac );
+
   ac = 0;
   children[ac++] = fileFr;
   //children[ac++] = tokenFr;
@@ -453,7 +467,17 @@ rcRateDisplay::init (rcMenuWindow *menW)
   XtManageChildren(children, ac);
   ac = 0;
   XtManageChild ( OutFrame);
-  
+
+#endif /*sergey: disable 'Options' tab until fixed */
+
+
+
+
+
+
+
+
+
   ac = 0;
   
 

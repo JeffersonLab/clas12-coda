@@ -67,7 +67,7 @@ rcConfigure::~rcConfigure (void)
 
 void doitCbk(rcConfigure *obj)
 {
-/*printf("c1\n");fflush(stdout);*/
+  printf("c1\n");fflush(stdout);
   obj->doit();
 }
 

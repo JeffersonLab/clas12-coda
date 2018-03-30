@@ -108,6 +108,8 @@
 #include <rcTclInterface.h>
 #endif
 
+#define DEBUG_MSGS
+
 /* Sergey: status_, state_ etc described in daqTarget.h */
 
 //===========================================================================
@@ -636,22 +638,125 @@ int
 netComponent::configure (void)
 {
 #ifdef DEBUG_MSGS
-  printf("netComponent::configure reached\n");fflush(stdout);
+  printf("netComponent::configure reached for %s\n",title_);fflush(stdout);
 #endif
-  status_ = CODA_SUCCESS;
+
+  status_ = CODA_ERROR;
   // remove all the old information
 
+  printf("netComponent::configure 01 for %s\n",title_);fflush(stdout);
   config_ = 0;
+
+  printf("netComponent::configure 02 for %s\n",title_);fflush(stdout);
+
   // get configuration information
   daqRun* run = subsys_.system().run();
-  if (run->getNetConfigInfo (title_, config_) != CODA_SUCCESS)
-    fprintf (stderr, "Something is fishy..........\n");
 
-  setState(CODA_CONFIGURED); /* sets 'state_' */
-  
-  // get information on the Itcl object that map onto the C++ object
-  // only get state information for enable components
-  if (enabled_) codaDaCompConfigure (title_);
+  printf("netComponent::configure 03 for %s\n",title_);fflush(stdout);
+
+  if (run->getNetConfigInfo (title_, config_) != CODA_SUCCESS)
+  {
+    fprintf (stderr, "Something is fishy..........\n");
+    printf("Something is fishy..........\n");
+  }
+
+  printf("netComponent::configure 11 for %s\n",title_);fflush(stdout);
+  printf("netComponent::configure 12 for %s\n",title_);fflush(stdout);
+
+
+  /* sergey: wait for tcp to connect, at least we'll make sure component is started; timeout set = 30sec */
+  for(int i=0; i<6; i++)
+  {
+    status_ = ::codaDaCheckConnection(title_);
+	if(status_ == 0) break;
+    reporter->cmsglog (CMSGLOG_INFO,"%s configure underway.....\n", title_);
+    printf("%s configure underway.....\n", title_);
+    sleep(5);
+  }
+
+  printf("netComponent::configure 13 for %s\n",title_);fflush(stdout);
+  printf("netComponent::configure 14 for %s\n",title_);fflush(stdout);
+
+
+  /*
+state_ = state(); ?????
+        if(state_ == CODA_ACTIVE)
+          reporter->cmsglog (CMSGLOG_INFO,"%s ok!?!?!\n", title_);
+        else
+          reporter->cmsglog (CMSGLOG_INFO,"%s underway.....\n", title_);
+  */
+
+
+  if(status_ != 0)
+  {
+    printf("ERROR: %s configure failed !\n", title_);
+    reporter->cmsglog(CMSGLOG_ERROR,"component %s configure failed !\n", title_);
+
+    setState(CODA_DORMANT);
+	setOverrideState (CODA_DORMANT);
+  }
+  else
+  {
+	printf("netComponent::configure: setting ??? status_=%d\n",status_);
+	printf("netComponent::configure: setting !!! status_=%d\n",status_);
+    status_ = CODA_SUCCESS;
+	printf("netComponent::configure: set status_=%d\n",status_);
+    reporter->cmsglog(CMSGLOG_INFO,"%s configure succeeded\n", title_);
+
+#ifdef DEBUG_MSGS
+    printf("netComponent::configure: set state='CODA_CONFIGURED'\n");fflush(stdout);
+#endif
+
+
+
+	/*sergey: was
+    setState(CODA_CONFIGURED);
+
+    // get information on the Itcl object that map onto the C++ object
+    // only get state information for enable components
+    if (enabled_) codaDaCompConfigure (title_);
+	*/
+
+
+
+	printf("netComponent::configure: calling setState(CODA_CONFIGURED)\n");
+    setState(/*CODA_CONFIGURING*/CODA_CONFIGURED); 
+	printf("netComponent::configure: called setState(CODA_CONFIGURED)\n");
+
+    if (enabled_) codaDaCompConfigure (title_);
+	
+
+	/*
+    transformState(CODA_CONFIGURING, CODA_CONFIGURED, status_);
+	*/
+
+  }
+
+
+  /*
+transitioner::extraRunParmSetup
+transitioner::doTransition reached
+transitioner::title
+configurer::action
+==> Do transition Configure on subsystem TS
+configurer::executeItem reached
+
+netComponent::configure reached for ROC85
+
+DB select: >SELECT inuse FROM process WHERE name='ROC85'<
+DB select: >SELECT host FROM process WHERE name='ROC85'<
+hostnamee=>clondaq4< portnum=5002
+calling connect() to host >clondaq4< port 5002 (name >ROC85<) ..
+.. connected to >clondaq4<!
+ Sending 11 bytes: alive ROC85
+
+netComponent::configure: set state='CODA_CONFIGURED'
+--> daqTarget::setState: set state of ROC85 to 4
+
+
+
+dddddd
+  */
 
 
 
@@ -697,7 +802,7 @@ if (enabled_)
 
 
 
-  return status_;
+ return(status_);
 }
 
 
@@ -1025,20 +1130,20 @@ netComponent::status (void) const
 }
 
 
-/* sergey: checks component state; transitioner::transitionFinished() use that info to deside if transition is finished */
+/* sergey: checks component state; transitioner::transitionFinished() use that info to decide if transition is finished */
 int
 netComponent::state(void)
 {
   /* 'netComponent::daqComponent::daqTarget::state_' updated in portHandler() based on 'STA:' message from component;
   we'll return 'st' after some checks */
+#ifdef DEBUG_MSGS
+  printf("\n== netComponent::state() reached, state_=%d\n",state_);
+#endif
   int st = state_;
 
   daqRun* run = subsys_.system().run();
   int updateI = run->dataUpdateInterval();
 
-#ifdef DEBUG_MSGS
-  printf("netComponent::state() reached\n");
-#endif
 
   /*Sergey
   printf ("netComponent::state: Component %s at state %d\n",title_, state_);
@@ -1091,8 +1196,15 @@ netComponent::state(void)
 #ifdef DEBUG_MSGS
   printf ("netComponent::state: Component %s at state %d\n",title_,state_);
 #endif
+
   return(st);
 }
+
+
+
+
+
+
 
 int
 netComponent::state2 (void)

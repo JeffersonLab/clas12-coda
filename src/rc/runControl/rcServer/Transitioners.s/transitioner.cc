@@ -76,9 +76,8 @@
 #include <dplite.h>
 */
 #define _CODA_DEBUG
-#ifndef _TRACE_OBJECTS
-# define _TRACE_OBJECTS
-#endif
+
+#define _TRACE_OBJECTS
 
 // timer interval for ping transitioning components, 1000 msec
 int transitioner::tickInterval_ = 1000;
@@ -90,7 +89,7 @@ transitioner::transitioner (daqSystem* system)
  transitionList_ (), tranListIte_ (transitionList_), timer_ (), names_ (0), 
  status_ (CODA_SUCCESS), timeoutCount_ (0), waitScript_ (0)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf ("transitioner::transitioner: Create Transitioner Class Object\n");
 #endif
   timer_.transitionerPtr (this);
@@ -98,7 +97,7 @@ transitioner::transitioner (daqSystem* system)
 
 transitioner::~transitioner (void)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf ("transitioner::~transitioner: Delete Transitioner Class Object\n");
 #endif
   if (names_)
@@ -110,7 +109,7 @@ transitioner::~transitioner (void)
 void
 transitioner::build (void)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::build reached\n");
 #endif
   // clean up transition list first
@@ -134,16 +133,17 @@ transitioner::build (void)
 }
 
 
-// check whether a transition is finished by comparing
-// final state with the sucess state
+/* check whether a transition is finished by comparing final state with the sucess state */
 int
 transitioner::transitionFinished (int fstate, int successState)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::transitionFinished reached, returns (%d == %d)\n",fstate,successState);
 #endif
   return(fstate == successState);
 }
+
+
 
 
 // initiate transition for all subsystems having
@@ -151,8 +151,8 @@ transitioner::transitionFinished (int fstate, int successState)
 void
 transitioner::doTransition (void)
 {
-#ifndef _TRACE_OBJECTS
-  printf("transitioner::doTransition reached\n");
+#ifdef _TRACE_OBJECTS
+  printf("transitioner::doTransition reached\n");fflush(stdout);
 #endif
   int priority;
   int gotAll = 0;
@@ -196,11 +196,11 @@ transitioner::doTransition (void)
       {
         subsys = (daqSubSystem *)ite ();
 
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
         printf("==> Do transition %s on subsystem %s\n",/*className*/title(),subsys->title());
 #endif
         executeItem(subsys);
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
         printf("transitioner::doTransition ==> executeItem called, transition started, now checking it's status\n");
 #endif
       }
@@ -208,7 +208,7 @@ transitioner::doTransition (void)
       // check whether this transition is busy
       if(transitionBusy() )
       {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
         printf("transitioner::doTransition ==> 'transitionBusy' returns 'busy'\n");
 #endif
         timer_.auto_arm (transitioner::tickInterval_);
@@ -219,21 +219,26 @@ transitioner::doTransition (void)
     }
     else
     {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
       printf("transitioner::doTransition ==> All finished - calls 'confirmTransition'\n");
 #endif
       // there is nothing to do in transition
       // all are finished, so confirm to successful state
       confirmTransition ();
+
       busy = 1;
     }
   }
 }
 
+
+
+
+
 void
 transitioner::cancel (int type)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::cancel reached\n");
 #endif
   timer_.dis_arm ();
@@ -250,7 +255,7 @@ transitioner::cancel (int type)
 void
 transitioner::confirmFailure (int type)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::confirmFailure\n");
 #endif
 
@@ -299,11 +304,14 @@ transitioner::confirmFailure (int type)
   }
 }
 
-// confirm that transition succeeded
+
+
+
+/* check here if transition succeeded or failed */
 void
 transitioner::confirmTransition (void)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::confirmTransition reached\n");
 #endif
 
@@ -317,8 +325,8 @@ transitioner::confirmTransition (void)
     if (subsys->enabled ())
     {
       state = subSystemState (subsys);
-      if (!transitionFinished (state, successState ()) )
-      { // failed
+      if (!transitionFinished (state, successState ()) ) /* failed */
+      {
 	    reporter->cmsglog (CMSGLOG_ERROR,"%s : subsystem failed in %s state\n",
 			   subsys->title (), 
 			   codaDaqState->stateString (state));
@@ -327,9 +335,17 @@ transitioner::confirmTransition (void)
     }
   }
 
+
+  printf("transitioner::confirmTransition 11\n");
+
+
+  /* if success, call 'setupSuccess' which will call 'successState' from corresponding class */
   if (!failed)
   {
+  printf("transitioner::confirmTransition 12\n");
+    /* declare transition succeeded; if for example doing 'Configure', 'Download' button will show up after that */
     setupSuccess ();
+  printf("transitioner::confirmTransition 13\n");
     
     // run a script here in blocked mode so all scripts should be short
     // This is a global script to be executed at the end of a Transition
@@ -368,10 +384,13 @@ transitioner::confirmTransition (void)
   }
 }
 
+
+
+
 void
 transitioner::child (transitioner *tr)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::child 1\n");
 #endif
   child_ = tr;
@@ -380,7 +399,7 @@ transitioner::child (transitioner *tr)
 transitioner*
 transitioner::child (void) const
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::child 2\n");
 #endif
   return child_;
@@ -393,7 +412,7 @@ transitioner::cleanupChildren (void)
   // together by auto transition
   transitioner *p = child_;
   transitioner *q = 0;
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::cleanupChildren\n");
 #endif
   while(p)
@@ -408,7 +427,7 @@ transitioner::cleanupChildren (void)
 void
 transitioner::extraRunParmSetup (void)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::extraRunParmSetup\n");
 #endif
   // empty
@@ -417,43 +436,58 @@ transitioner::extraRunParmSetup (void)
 const char*
 transitioner::title (void)
 {
-#ifndef _TRACE_OBJECTS
-  printf("transitioner::title\n");
+#ifdef _TRACE_OBJECTS
+  printf("transitioner::title\n");fflush(stdout);
 #endif
   return codaDaqActions->actionString (action ());
 }
 
+
 void
 transitioner::execute (void)
 {
-#ifndef _TRACE_OBJECTS
-  printf("!!!!!!!!!! transitioner::execute\n");
+#ifdef _TRACE_OBJECTS
+  printf("!!!!!!!!!! transitioner::execute\n");fflush(stdout);
 #endif
 
   /* set current transitioner to the system */
   system_->currTransitioner (this);
 
+  printf("!!!!!!!!!! transitioner::execute 1\n");fflush(stdout);
+
   /* first build transition list */
   build();
 
-  /* set state information */
+  printf("!!!!!!!!!! transitioner::execute 2\n");fflush(stdout);
+
+  /* set state information (Download button appears after that !!!!!!!!!!!!!!!!) */
   system_->setState (transitionState ());
+
+  printf("!!!!!!!!!! transitioner::execute 3\n");fflush(stdout);
+
   status_ = CODA_SUCCESS;
+
+  printf("!!!!!!!!!! transitioner::execute 4\n");fflush(stdout);
 
   /* extra system wide parameter set up */
   extraRunParmSetup ();
 
+  printf("!!!!!!!!!! transitioner::execute 5\n");fflush(stdout);
+
   /* move cursor to the begginning of the list */
   tranListIte_.init();
+
+  printf("!!!!!!!!!! transitioner::execute 6\n");fflush(stdout);
 
   /* now start engine */
   doTransition ();
 }
 
+
 void
 transitioner::setupFailure (void)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::setupFailure\n");
 #endif
   system_->setState (failureState ());
@@ -468,13 +502,19 @@ transitioner::setupFailure (void)
   status_ = CODA_ERROR;
 }
 
+
+/*sergey: called from 'transitioner::confirmTransition' */
 void
 transitioner::setupSuccess (void)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::setupSuccess\n");
 #endif
+  printf("transitioner::setupSuccess 11\n");
+  /*sergey: calling 'successState' from corresponding class, like 'configurer::successState' etc */
   system_->setState (successState ());
+  printf("transitioner::setupSuccess 12\n");
+
   reporter->cmsglog (CMSGLOG_INFO,"transition %s succeeded !\n",title());
   status_ = CODA_SUCCESS;
 }
@@ -484,7 +524,7 @@ transitioner::subSystemState(daqSubSystem* subsys)
 {
   int tmp;
   tmp = subsys->state();
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::subSystemState reached, returns %d\n",tmp);
 #endif
   return(tmp);
@@ -496,7 +536,7 @@ transitioner::subSystemState(daqSubSystem* subsys)
 void
 transitioner::timerCallback(void)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::timerCallback 16\n");
 #endif
   if(transitionBusy())
@@ -507,7 +547,7 @@ transitioner::timerCallback(void)
        (transitionTimeout()*1000)/transitioner::tickInterval_)
     {
       timer_.dis_arm();
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
       printf("%s : %s subsystem(s) timeout !!!(%d %d %d)\n",
 			 title(),names_,timeoutCount_,transitionTimeout(),
 			 transitioner::tickInterval_);
@@ -520,7 +560,7 @@ transitioner::timerCallback(void)
     }
     else if(timeoutCount_ % 4 == 0)
     {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
       printf("%s : waiting for %s subsystem(s)...\n",
 			title (), names_);
 #endif
@@ -529,7 +569,7 @@ transitioner::timerCallback(void)
     }
     else if(timeoutCount_ % 8 == 0)
     {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
       printf("%s : %s subsystem(s) still busy...\n",
 			title (), names_);
 #endif
@@ -556,7 +596,7 @@ transitioner::transitionBusy (void)
   daqSubSystem* subsys = 0;
   int           state = 0;
 
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::transitionBusy reached\n");
 #endif
   if(names_)
@@ -567,7 +607,7 @@ transitioner::transitionBusy (void)
 
   for(ite.init(); !ite; ++ite)
   {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
 	printf("transitioner::transitionBusy - next 'ite'\n");
 #endif
     subsys = (daqSubSystem *) ite();
@@ -582,13 +622,13 @@ transitioner::transitionBusy (void)
       names_ = new char[::strlen (subsys->title()) + 1];
       ::strcpy (names_, subsys->title());
 
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
       printf("transitioner::transitionBusy returns 1, still not finished (names_ >%s<)\n",names_);
 #endif
       return(1);
     }
   }
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::transitionBusy returns 0\n");
 #endif
   return(0);
@@ -597,7 +637,7 @@ transitioner::transitionBusy (void)
 int
 transitioner::transitionTimeout (void)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::transitionTimeout: returns %d\n",transitioner::timeout_);
 #endif
   return transitioner::timeout_;
@@ -606,7 +646,7 @@ transitioner::transitionTimeout (void)
 void
 transitioner::setTransitionTimeout (int sec)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::setTransitionTimeout: set %d (%d)\n",transitioner::timeout_,sec);
 #endif
   transitioner::timeout_ = sec;
@@ -615,7 +655,7 @@ transitioner::setTransitionTimeout (int sec)
 int
 transitioner::tickInterval (void) const
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::tickInterval\n");
 #endif
   return transitioner::tickInterval_;
@@ -624,7 +664,7 @@ transitioner::tickInterval (void) const
 void
 transitioner::waitForScript (void)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::waitForScript\n");
 #endif
   waitScript_ = 1;
@@ -633,7 +673,7 @@ transitioner::waitForScript (void)
 void
 transitioner::noWaitForScript (void)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::noWaitForScript\n");
 #endif
   waitScript_ = 0;
@@ -642,7 +682,7 @@ transitioner::noWaitForScript (void)
 void
 transitioner::sendTransitionResult (int success)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::sendTransitionResult\n");
 #endif
   // reset transitioner of the system
@@ -656,7 +696,7 @@ transitioner::sendTransitionResult (int success)
 void
 transitioner::runUserSuccessScript (void)
 {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::runUserSuccessScript\n");fflush(stdout);
 #endif
 
@@ -665,35 +705,35 @@ transitioner::runUserSuccessScript (void)
   static void (*istat)(int);
   static void (*qstat)(int);
 
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::runUserSuccessScript 1\n");fflush(stdout);
 #endif
   // get daqRun Object
   daqRun* run = system_->run ();
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::runUserSuccessScript 2\n");fflush(stdout);
 #endif
 
   // get script system
   daqScriptSystem& ssys = run->scriptSystem ();
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::runUserSuccessScript 3\n");fflush(stdout);
 #endif
 
   char* script = ssys.script (action());
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::runUserSuccessScript 4\n");fflush(stdout);
 #endif
 
   if (!script)
   {
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
     printf("transitioner::runUserSuccessScript 5\n");fflush(stdout);
 #endif
     return;
   }
 
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::runUserSuccessScript 6\n");fflush(stdout);
 #endif
   // construct a user script which has X window Display information
@@ -701,7 +741,7 @@ transitioner::runUserSuccessScript (void)
   ::sprintf (realscript, "setenv DISPLAY %s; ", run->controlDisplay());
   ::strcat  (realscript, script);
 
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::runUserSuccessScript: State finished real script is: %s\n", realscript);fflush(stdout);
 #endif
 
@@ -779,7 +819,7 @@ transitioner::runUserSuccessScript (void)
   // Hysterical past - Ask Jie Chen, I don't know - RWM!
   estatus = (signed char) (status>>8)&0xff;
 
-#ifndef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner.cc: script terminated with status %x estatus = %d\n",
     status,estatus);
 #endif

@@ -241,7 +241,10 @@ etStart()
     fprintf(stderr, "ET file name is too long\n");
     exit(-1);
   }
-  sprintf(etp->et_name, "/tmp/et_sys_%s", etp->et_filename);
+
+  /*sergey: sprintf(etp->et_name, "/tmp/et_sys_%s", etp->et_filename);*/
+  sprintf(etp->et_name, "/et/%s", etp->et_filename);
+
   printf("et_start: ET name '%s'\n", etp->et_name);
 
 

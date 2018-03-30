@@ -20,8 +20,8 @@ set runnum=`run_number`
 
 # get_eor_scalers updates DB
 #  get_eor_scalers,run_log_files,run_log_end must run sequentially
-############old##############(setenv RUN_NUMBER $runnum; echo " "; echo run number: $runnum; echo " "; echo starting: `date`; echo "eor:"; get_eor_scalers; echo "files:"; run_log_files -a clasrun; echo "end:"; run_log_end -a clasrun -s clashps; echo ending: `date`;) >>& $CLON_LOG/run_log/run_log_files_end.log &
-(setenv RUN_NUMBER $runnum; echo " "; echo run number: $runnum; echo " "; echo starting: `date`; echo "end:"; run_log_comment -a clasrun -fix; run_log_end -a clasrun; echo ending: `date`;) >>& $CLON_LOG/run_log/run_log_files_end.log &
+########(setenv RUN_NUMBER $runnum; echo " "; echo run number: $runnum; echo " "; echo starting: `date`; echo "end:"; run_log_comment -a clasrun -fix; run_log_end -a clasrun; echo ending: `date`;) >>& $CLON_LOG/run_log/run_log_files_end.log &
+(setenv RUN_NUMBER $runnum; echo " "; echo run number: $runnum; echo " "; echo starting: `date`; echo "end:"; run_log_comment -a clasrun -fix; echo ending: `date`;) >>& $CLON_LOG/run_log/run_end.log &
 
 
 #  reset run lock in clastrig2
@@ -29,7 +29,7 @@ set runnum=`run_number`
 
 
 #  smartsockets broadcast
-rc_transition -a clasrun -d run_control -file    end  >& /dev/null &
+###################rc_transition -a clasrun -d run_control -file    end  >& /dev/null &
 
 
 #  end of run printouts...sleep to allow run to finish ending

@@ -93,9 +93,9 @@
 #include <rcCancel.h>
 
 #include "rcButtonPanel.h"
-/*
+
 #define _TRACE_OBJECTS
-*/
+
 rcButtonPanel::rcButtonPanel (Widget parent,
 			      char* name,
 			      rcClientHandler& handler)
@@ -343,6 +343,7 @@ rcButtonPanel::config (int status)
 #ifdef _TRACE_OBJECTS
 	printf("rcButtonPanel::config: status=%d\n",status);fflush(stdout);
 #endif
+
     switch (status)
     {
     case DA_DORMANT:
@@ -351,19 +352,39 @@ rcButtonPanel::config (int status)
 #endif
       loadAndConfigure ();
       break;
+
+
+
+
+
     case DA_BOOTED:
 #ifdef _TRACE_OBJECTS
       printf("rcButtonPanel::config:     case DA_BOOTED:\n");
 #endif
+	  /*sergey: need 'break' here ?????????!!!!!!!!!!!*/
+#ifdef _TRACE_OBJECTS
+      printf("rcButtonPanel::config:     booted finished\n");
+#endif
+      break;
+
+
+
+
+
     case DA_CONFIGURED:
 #ifdef _TRACE_OBJECTS
       printf("rcButtonPanel::config:     case DA_CONFIGURED:\n");
 #endif
       download ();
 #ifdef _TRACE_OBJECTS
-      printf("rcButtonPanel::config:     download finished\n");
+      printf("rcButtonPanel::config:     configured finished\n");
 #endif
       break;
+
+
+
+
+
     case DA_DOWNLOADED:
 #ifdef _TRACE_OBJECTS
       printf("rcButtonPanel::config:     case DA_DOWNLOADED:\n");
@@ -371,6 +392,7 @@ rcButtonPanel::config (int status)
       hackIsActive = 0;
       prestart ();
       break;
+
     case DA_PAUSED:
 #ifdef _TRACE_OBJECTS
       printf("rcButtonPanel::config:     case DA_PAUSED:\n");
@@ -390,6 +412,7 @@ rcButtonPanel::config (int status)
 	    goAndEnd ();
       }
       break;
+
     case DA_ACTIVE:
 #ifdef _TRACE_OBJECTS
       printf("rcButtonPanel::config:     case DA_ACTIVE:\n");
@@ -397,6 +420,7 @@ rcButtonPanel::config (int status)
       hackIsActive = 2;
       endAndPause ();
       break;
+
     default:
 #ifdef _TRACE_OBJECTS
       printf("rcButtonPanel::config:     default.\n");
@@ -589,7 +613,8 @@ rcButtonPanel::download (void)
   config_->manage ();
   if (!(limitButtons_ & 2))
   {
-    auto_->manage ();
+	;
+    /*auto_->manage (); sergey: hide 'Start Run' */
   }
 }
 
@@ -616,7 +641,11 @@ rcButtonPanel::prestart (void)
   {
     config_->manage ();
   }
-  if (!(limitButtons_ & 2)) auto_->manage ();
+  if (!(limitButtons_ & 2))
+  {
+	;
+    /*auto_->manage (); sergey: hide 'Start Run' */
+  }
 }
 
 void
@@ -639,7 +668,11 @@ rcButtonPanel::goAndEnd (void)
     go_->manage ();
   }
   end_->manage ();
-  if (!(limitButtons_ & 2)) auto_->manage ();
+  if (!(limitButtons_ & 2))
+  {
+	;
+    /*auto_->manage (); sergey: hide 'Start Run' */
+  }
 }  
 
 
@@ -659,9 +692,10 @@ rcButtonPanel::endAndPause (void)
 
   end_->manage ();
   if ((limitButtons_ != 1) &&
-      (limitButtons_ != 2) ) {
+      (limitButtons_ != 2) )
+  {
     resume_->unmanage ();
-    pause_->manage ();
+    /*pause_->manage (); sergey: hide 'Pause' */
   }
 }  
 
@@ -680,9 +714,10 @@ rcButtonPanel::resumeAndEnd (void)
   auto_->unmanage ();
 
   if ((limitButtons_ != 1) &&
-      (limitButtons_ != 2) ) {
+      (limitButtons_ != 2) )
+  {
     pause_->unmanage ();
-    resume_->manage ();
+    /*resume_->manage (); sergey: hide 'Resume' */
   }
   end_->manage ();
 }  

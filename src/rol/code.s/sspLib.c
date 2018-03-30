@@ -14,6 +14,51 @@
  *           Jefferson Lab Data Acquisition Group 
  *           September 2013 
  * 
+ * delay scans:
+
+ 0. Kill DiagGuiServer on trig2
+
+ 1. set delays in file 'trigger_delay_scan.trg' to 'almost' desired values:
+
+SSP_GT_HTCC_DELAY         140
+
+SSP_GT_FTOF_DELAY          80
+SSP_GT_ECAL_CLUSTER_DELAY   0
+SSP_GT_PCAL_CLUSTER_DELAY   0
+SSP_GT_CTOF_DELAY          212
+SSP_GT_CND_DELAY           220
+SSP_GT_PCAL_PCU_DELAY      76
+
+ 2. run following:
+
+sspGt_HtccDelayScan(int delay_min, int delay_max, int idle)
+
+ 3. Found 'middles' of distributions and add/subtract it to
+existing delays in corresponding detectors
+
+
+OTHER USEFUL PROCEDURES:
+
+tcpClient trig2 'sspGt_SetPcal_PcuDelay(3,200)'
+tcpClient trig2 'sspGt_SetPcal_PcuDelay(4,200)'
+tcpClient trig2 'sspGt_SetPcal_PcuDelay(5,200)'
+tcpClient trig2 'sspGt_SetPcal_PcuDelay(6,200)'
+tcpClient trig2 'sspGt_SetPcal_PcuDelay(7,200)'
+tcpClient trig2 'sspGt_SetPcal_PcuDelay(8,200)'
+sspGt_FtofPcuDelayScan(100,500,1)
+
+
+
+
+other delay scans:
+  sspGt_FtofPcuDelayScan(int delay_min, int delay_max, int idle)
+  sspGt_FtofFtDelayScan(int delay_min, int delay_max, int idle)
+  sspGt_CtofFtDelayScan(int delay_min, int delay_max, int idle)
+  sspGt_CndFtDelayScan(int delay_min, int delay_max, int idle)
+  sspGt_EcPcDelayScan(int delay_min, int delay_max, int idle)
+  sspGt_DcDelayScan(int delay_min, int delay_max, int idle)
+  sspGt_FtDelayScan(int delay_min, int delay_max, int idle)
+
  * 
  */ 
 /*
@@ -2046,6 +2091,11 @@ sspGtSendScalers(int id)
   sprintf(name, "SSPGT_SLOT%d_PCPIXEL_RATE", id);
   epics_json_msg_send(name, "float", 1, data);
 
+  // PCU 
+  data[0] = ref * ((float)sspReadReg(&pSSP[id]->gt.sspc.Scaler_pcu));
+  sprintf(name, "SSPGT_SLOT%d_PCU_RATE", id);
+  epics_json_msg_send(name, "float", 1, data);
+
   // GT trigger bit scalers
   for(i=0; i<8; i++)
     data[i] = ref * ((float)sspReadReg(&pSSP[id]->gt.strigger[i].Scaler_trigger));
@@ -2061,9 +2111,10 @@ sspGtSendScalers(int id)
 
 
 
-int sspGt_HtccDelayScan(int delay_min, int delay_max, int idle)
+int
+sspGt_HtccDelayScan(int delay_min, int delay_max, int idle)
 { 
-  int id, delay, val;
+  int i, id, delay, val, vals[8];
   float ref, fval;
   for(id=3; id<=8; id++)
   {
@@ -2089,11 +2140,12 @@ int sspGt_HtccDelayScan(int delay_min, int delay_max, int idle)
 
     sleep(idle);
 
-    printf("Delay = %4dns, STRIGGER3(sec1-6): ", delay);
+    printf("Delay = %4dns, STRIGGER(sec1-6): ", delay);
 
     // Read Scalers
     for(id=3; id<=8; id++)
     {
+      printf("slot=%d ", id);
       SSPLOCK();
       sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 1);
 
@@ -2103,13 +2155,76 @@ int sspGt_HtccDelayScan(int delay_min, int delay_max, int idle)
       else
         ref = ((float)val) / 100000.0;
 
-      val = sspReadReg(&pSSP[id]->gt.strigger[3].Scaler_trigger);
+      for(i=0;i<8;i++)
+        vals[i] = sspReadReg(&pSSP[id]->gt.strigger[i].Scaler_trigger);
 
       sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0);
       SSPUNLOCK();
 
-      fval = ((float)val) / ref;
+      for(i=0;i<8;i++)
+      {
+        fval = ((float)vals[i]) / ref;
+        printf(" %9.3f", fval);
+      }
+      printf("\n");
+    }
+  }
+}
+
+
+int
+sspGt_FtofPcuDelayScan(int delay_min, int delay_max, int idle)
+{ 
+  int i, id, delay, val, vals;
+  float ref, fval;
+  for(id=3; id<=8; id++)
+  {
+    if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+      return ERROR;
+  }
+  
+  for(delay = delay_min; delay <= delay_max; delay+=4)
+  {
+    for(id=3; id<=8; id++)
+      sspGt_SetFtof_Delay(id, delay);
+
+    //system("tcpClient trig1 tsSyncReset");
+
+    // Reset Scalers
+    for(id=3; id<=8; id++)
+    {
+      SSPLOCK();
+      sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 1);
+      sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0);
+      SSPUNLOCK();
+    }
+
+    sleep(idle);
+
+    printf("Delay = %4dns, STRIGGER(sec1-6): ", delay);
+
+    // Read Scalers
+    for(id=3; id<=8; id++)
+    {
+      printf("slot=%d ", id);
+      SSPLOCK();
+      sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 1);
+
+      val = sspReadReg(&pSSP[id]->Sd.Scalers[SD_SCALER_SYSCLK]);
+      if(!val)
+        ref = 1.0;
+      else
+        ref = ((float)val) / 100000.0;
+
+       vals = sspReadReg(&pSSP[id]->gt.sspcuftof.Scaler);
+
+      sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0);
+      SSPUNLOCK();
+
+      fval = ((float)vals) / ref;
       printf(" %9.3f", fval);
+
+      printf("\n");
     }
   }
 }
@@ -2185,7 +2300,8 @@ sspGt_CndFtDelayScan(int delay_min, int delay_max, int idle)
 
 
 
-int sspGt_EcPcDelayScan(int delay_min, int delay_max, int idle)
+int
+sspGt_EcPcDelayScan(int delay_min, int delay_max, int idle)
 { 
   int id, delay, val;
   float ref, fval;
@@ -2242,7 +2358,8 @@ int sspGt_EcPcDelayScan(int delay_min, int delay_max, int idle)
   }
 }
 
-int sspGt_DcDelayScan(int delay_min, int delay_max, int idle)
+int
+sspGt_DcDelayScan(int delay_min, int delay_max, int idle)
 { 
   int id, delay, val;
   float ref, fval;
@@ -2299,7 +2416,8 @@ int sspGt_DcDelayScan(int delay_min, int delay_max, int idle)
 
 
 /*Andrea start*/
-int sspGt_FtDelayScan(int delay_min, int delay_max, int idle)
+int
+sspGt_FtDelayScan(int delay_min, int delay_max, int idle)
 { 
   int id, delay, val;
   float ref, fval;
@@ -2591,6 +2709,38 @@ int sspGt_GetPcal_CosmicDelay(int id)
   return val*4;
 }
 
+int sspGt_SetPcal_PcuDelay(int id, int delay)
+{
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  if( (delay < 0) || (delay > 4*1023) )
+  {
+    printf("%s: ERROR: delay is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+  
+  delay/=4;
+  SSPLOCK();
+  sspWriteReg(&pSSP[id]->gt.sspc.Delay_pcu, delay);
+  SSPUNLOCK();
+
+  return OK;
+} 
+  
+int sspGt_GetPcal_PcuDelay(int id)
+{
+  int val;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  SSPLOCK();
+  val = sspReadReg(&pSSP[id]->gt.sspc.Delay_pcu);
+  SSPUNLOCK();
+
+  return val*4;
+}
+
 int sspGt_SetPcal_EsumIntegrationWidth(int id, int width)
 {
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
@@ -2639,7 +2789,6 @@ int sspGt_SetDc_SegDelay(int id, int delay)
   SSPUNLOCK();
 
   return OK;
-
 }
 
 int sspGt_GetDc_SegDelay(int id)
@@ -2653,8 +2802,121 @@ int sspGt_GetDc_SegDelay(int id)
   SSPUNLOCK();
 
   return val*4;
-
 }
+
+
+
+
+int sspGt_SetPcuFtof_FtofWidth(int id, int width)
+{
+  int val;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  if( (width < 0) || (width > 4*63) )
+  {
+    printf("%s: ERROR: width is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  width/=4;
+  SSPLOCK();
+  val = sspReadReg(&pSSP[id]->gt.sspcuftof.Ctrl);
+  val = (val & 0xFFFFFF00) | width;
+  sspWriteReg(&pSSP[id]->gt.sspcuftof.Ctrl, val);
+  SSPUNLOCK();
+
+  return OK;
+}
+
+int sspGt_GetPcuFtof_FtofWidth(int id)
+{
+  int val;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  SSPLOCK();
+  val = (sspReadReg(&pSSP[id]->gt.sspcuftof.Ctrl)>>0) & 0xFF;
+  SSPUNLOCK();
+
+  return val*4;
+}
+
+
+
+
+int sspGt_SetPcuFtof_PcuWidth(int id, int width)
+{
+  int val;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  if( (width < 0) || (width > 4*63) )
+  {
+    printf("%s: ERROR: width is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  width/=4;
+  SSPLOCK();
+  val = sspReadReg(&pSSP[id]->gt.sspcuftof.Ctrl);
+  val = (val & 0xFFFF00FF) | (width<<8);
+  sspWriteReg(&pSSP[id]->gt.sspcuftof.Ctrl, val);
+  SSPUNLOCK();
+
+  return OK;
+}
+
+int sspGt_GetPcuFtof_PcuWidth(int id)
+{
+  int val;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  SSPLOCK();
+  val = (sspReadReg(&pSSP[id]->gt.sspcuftof.Ctrl)>>8) & 0xFF;
+  SSPUNLOCK();
+
+  return val*4;
+}
+
+
+
+int sspGt_SetPcuFtof_MatchWidth(int id, int width)
+{
+  int val;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  if( (width < 0) || (width > 5) )
+  {
+    printf("%s: ERROR: width is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  SSPLOCK();
+  val = sspReadReg(&pSSP[id]->gt.sspcuftof.Ctrl);
+  val = (val & 0xFFF8FFFF) | (width<<16);
+  sspWriteReg(&pSSP[id]->gt.sspcuftof.Ctrl, val);
+  SSPUNLOCK();
+
+  return OK;
+}
+
+int sspGt_GetPcuFtof_MatchWidth(int id)
+{
+  int val;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  SSPLOCK();
+  val = (sspReadReg(&pSSP[id]->gt.sspcuftof.Ctrl)>>16) & 0x7;
+  SSPUNLOCK();
+
+  return val;
+}
+
+
 
 int sspGt_SetTrigger_Enable(int id, int trg, int en_mask)
 {
@@ -2979,6 +3241,51 @@ int sspGt_GetTrigger_EcalClusterEmin(int id, int trg)
   return rval;
 }
 
+int sspGt_SetTrigger_EcalClusterEmax(int id, int trg, int val)
+{
+  int rval;
+  
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  if( (val < 0) || (val > 65535) )
+  {
+    printf("%s: ERROR: val is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+ 
+  if( (trg < 0) || (trg > 7) )
+  {
+    printf("%s: ERROR: trg is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  SSPLOCK(); 
+  sspWriteReg(&pSSP[id]->gt.strigger[trg].ECCtrl1, val);
+  SSPUNLOCK(); 
+ 
+  return OK; 
+}
+
+int sspGt_GetTrigger_EcalClusterEmax(int id, int trg)
+{
+  int rval;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  if( (trg < 0) || (trg > 7) )
+  {
+    printf("%s: ERROR: trg is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  SSPLOCK(); 
+  rval = sspReadReg(&pSSP[id]->gt.strigger[trg].ECCtrl1) & 0xFFFF;
+  SSPUNLOCK(); 
+ 
+  return rval;
+}
+
 int sspGt_SetTrigger_EcalClusterWidth(int id, int trg, int val)
 {
   int rval;
@@ -3070,6 +3377,51 @@ int sspGt_GetTrigger_PcalClusterEmin(int id, int trg)
 
   SSPLOCK(); 
   rval = sspReadReg(&pSSP[id]->gt.strigger[trg].PCCtrl_cluster) & GT_STRG_PCCTRL_CLUSTER_EMIN_MASK;
+  SSPUNLOCK(); 
+ 
+  return rval;
+}
+
+int sspGt_SetTrigger_PcalClusterEmax(int id, int trg, int val)
+{
+  int rval;
+  
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  if( (trg < 0) || (trg > 7) )
+  {
+    printf("%s: ERROR: trg is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  if( (val < 0) || (val > 65535) )
+  {
+    printf("%s: ERROR: val is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+ 
+  SSPLOCK(); 
+  sspWriteReg(&pSSP[id]->gt.strigger[trg].PCCtrl1, val);
+  SSPUNLOCK(); 
+ 
+  return OK; 
+}
+
+int sspGt_GetTrigger_PcalClusterEmax(int id, int trg)
+{
+  int rval;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  if( (trg < 0) || (trg > 7) )
+  {
+    printf("%s: ERROR: trg is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  SSPLOCK(); 
+  rval = sspReadReg(&pSSP[id]->gt.strigger[trg].PCCtrl1) & 0xFFFF;
   SSPUNLOCK(); 
  
   return rval;
@@ -3326,6 +3678,57 @@ int sspGt_GetTrigger_DcMultWidth(int id, int trg)
   return rval*4;
 }
 
+/*
+static int sspGt_FtofPcalMatchTolerance[MAX_VME_SLOTS+1][8];
+
+int sspGt_SetTrigger_FtofPcalMatchTolerance(int id, int trg, int val)
+{
+  int rval;
+
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  if( (trg < 0) || (trg > 7) )
+  {
+    printf("%s: ERROR: trg is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  if( (val < 0) || (val > 61) )
+  {
+    printf("%s: ERROR: val is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  if(trg >= 4)
+    printf("WARNING: FtofPcal matching not supported on trigger bits 4-7!!!\n");
+
+  sspGt_FtofPcalMatchTolerance[id][trg] = val;
+
+  SSPLOCK();
+  sspWriteReg(&pSSP[id]->gt.strigger[trg].FtofPcalData0, );
+  sspWriteReg(&pSSP[id]->gt.strigger[trg].FtofPcalData1, );
+  sspWriteReg(&pSSP[id]->gt.strigger[trg].FtofPcalCtrl, );
+  SSPUNLOCK();
+
+  return OK;
+}
+
+int sspGt_GetTrigger_FtofPcalMatchTolerance(int id, int trg)
+{
+  int rval;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  if( (trg < 0) || (trg > 7) )
+  {
+    printf("%s: ERROR: trg is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  return sspGt_FtofPcalMatchTolerance[id][trg];
+}
+*/
 int sspGt_SetHtcc_Delay(int id, int delay)
 {
   int rval;
@@ -3716,6 +4119,71 @@ int sspGt_GetTrigger_CndMask(int id, int trg)
   return rval;
 }
 
+int sspGt_SetTrigger_FtofPcuWidth(int id, int trg, int val)
+{
+  int rval;
+  
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  if( (val < 0) || (val > 255*4) )
+  {
+    printf("%s: ERROR: val is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+ 
+  val/=4;
+  SSPLOCK(); 
+  rval = sspReadReg(&pSSP[id]->gt.strigger[trg].FtofPcuCtrl);
+  rval = (val<<0) | (rval & ~GT_STRG_FTOFPCU_CTRL_WIDTH_MASK);
+  sspWriteReg(&pSSP[id]->gt.strigger[trg].FtofPcuCtrl, rval);
+  SSPUNLOCK(); 
+ 
+  return OK;
+}
+
+int sspGt_GetTrigger_FtofPcuWidth(int id, int trg)
+{
+  int rval;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  SSPLOCK(); 
+  rval = (sspReadReg(&pSSP[id]->gt.strigger[trg].FtofPcuCtrl) & GT_STRG_FTOFPCU_CTRL_WIDTH_MASK)>>0;
+  SSPUNLOCK(); 
+ 
+  return rval*4;
+}
+
+int sspGt_SetTrigger_FtofPcuMatchMask(int id, int trg, int mask)
+{
+  int rval;
+  
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  SSPLOCK(); 
+  rval = sspReadReg(&pSSP[id]->gt.strigger[trg].FtofPcuCtrl);
+  rval = (mask<<16) | (rval & ~GT_STRG_FTOFPCU_CTRL_MATCH_MASK);
+  sspWriteReg(&pSSP[id]->gt.strigger[trg].FtofPcuCtrl, rval);
+  SSPUNLOCK(); 
+ 
+  return OK;
+}
+
+int sspGt_GetTrigger_FtofPcuMatchMask(int id, int trg)
+{
+  int rval;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+    return ERROR;
+
+  SSPLOCK(); 
+  rval = (sspReadReg(&pSSP[id]->gt.strigger[trg].FtofPcuCtrl) & GT_STRG_FTOFPCU_CTRL_MATCH_MASK)>>16;
+  SSPUNLOCK(); 
+ 
+  return rval;
+}
+
 /***************************************
      GTC Routines
 ***************************************/
@@ -3735,21 +4203,25 @@ sspGtcSendScalers(int id)
   //Read/normalize reference 
   val = sspReadReg(&pSSP[id]->Sd.Scalers[SD_SCALER_SYSCLK]); 
   if(!val) val = 1;
-  ref = 50000000.0f / (float)val;
+  ref = 100000.0f / (float)val;
 
-  // FT scalers
-  for(i=0; i<2; i++)
-    data[i] = ref * ((float)sspReadReg(&pSSP[id]->gtc.ssft[i].Scaler_cluster));
 
-  sprintf(name, "SSPGTC_SLOT%d_FTCLUSTER_RATE", id);
-  epics_json_msg_send(name, "float", 2, data);
+  if(id == 9) // FT is in GTC slot 9 only
+  {
+    // FT scalers
+    for(i=0; i<2; i++)
+      data[i] = ref * ((float)sspReadReg(&pSSP[id]->gtc.ssft[i].Scaler_cluster));
 
-  // GTC trigger bit scalers
-  for(i=0; i<4; i++)
-    data[i] = ref * ((float)sspReadReg(&pSSP[id]->gtc.ctrigger[i].Scaler_trigger));
+    sprintf(name, "SSPGTC_FTCLUSTER_RATE", id);
+    epics_json_msg_send(name, "float", 2, data);
 
-  sprintf(name, "SSPGTC_SLOT%d_TRIGGERBIT_RATE", id);
-  epics_json_msg_send(name, "float", 4, data);
+    // GTC trigger bit scalers
+    for(i=0; i<4; i++)
+      data[i] = ref * ((float)sspReadReg(&pSSP[id]->gtc.ctrigger[i].Scaler_trigger));
+
+    sprintf(name, "SSPGTC_TRIGGERBIT_RATE", id);
+    epics_json_msg_send(name, "float", 4, data);
+  }
 
   sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0); 
   SSPUNLOCK(); 
@@ -5617,6 +6089,7 @@ void sspPrintGtConfig(int id)
   printf("      Esum Integrate Width   = %dns\n", sspGt_GetPcal_EsumIntegrationWidth(id));
   printf("      Cluster Delay          = %dns\n", sspGt_GetPcal_ClusterDelay(id));
   printf("      Cosmic Delay           = %dns\n", sspGt_GetPcal_CosmicDelay(id));
+  printf("      Pcu Delay              = %dns\n", sspGt_GetPcal_PcuDelay(id));
   printf("\n");
   printf("   *** DC Subsystem ***\n");
   printf("      Segment Delay          = %dns\n", sspGt_GetDc_SegDelay(id));
@@ -5626,6 +6099,11 @@ void sspPrintGtConfig(int id)
   printf("\n");
   printf("   *** FTOF Subsystem ***\n");
   printf("      Mask Delay             = %dns\n", sspGt_GetFtof_Delay(id));
+  printf("\n");
+  printf("   *** FTOF*PCU Subsystem ***\n");
+  printf("      FTOF Width             = %dns\n", sspGt_GetPcuFtof_FtofWidth(id));
+  printf("      PCU  Width             = %dns\n", sspGt_GetPcuFtof_PcuWidth(id));
+  printf("      PCU*FTOF tolerance     = +/-%dFTOF bars\n", sspGt_GetPcuFtof_MatchWidth(id));
 
   printf("\n");
   for(trg = 0; trg<8; trg++)
@@ -5644,10 +6122,12 @@ void sspPrintGtConfig(int id)
   printf("      *** Ecal Cluster ***\n");
   printf("         Require                   = %d\n", (val&GT_STRG_CTRL_ECCLUSTER_EMIN_EN) ? 1:0);
   printf("         Emin                      = %d\n", sspGt_GetTrigger_EcalClusterEmin(id, trg));
+  printf("         Emax                      = %d\n", sspGt_GetTrigger_EcalClusterEmax(id, trg));
   printf("         Coindidence Width         = %dns\n", sspGt_GetTrigger_EcalClusterWidth(id, trg));
   printf("      *** Pcal Cluster ***\n");
   printf("         Require                   = %d\n", (val&GT_STRG_CTRL_PCCLUSTER_EMIN_EN) ? 1:0);
   printf("         Emin                      = %d\n", sspGt_GetTrigger_PcalClusterEmin(id, trg));
+  printf("         Emax                      = %d\n", sspGt_GetTrigger_PcalClusterEmax(id, trg));
   printf("         Coincidence Width         = %dns\n", sspGt_GetTrigger_PcalClusterWidth(id, trg));
   printf("      *** EcalPcal Cluster ***\n");
   printf("         Require                   = %d\n", (val&GT_STRG_CTRL_ECPCCLUSTER_EMIN_EN) ? 1:0);
@@ -5677,7 +6157,11 @@ void sspPrintGtConfig(int id)
   printf("      *** CND ***\n");
   printf("         Require CND Mask Hit      = %d\n", (val&GT_STRG_CTRL_CND_EN) ? 1:0);
   printf("         Coindidence Width         = %dns\n", sspGt_GetTrigger_CndWidth(id, trg));
-  printf("         Mask                      = 0x%02X\n", sspGt_GetTrigger_CndMask(id, trg)); 
+  printf("         Mask                      = 0x%02X\n", sspGt_GetTrigger_CndMask(id, trg));
+  printf("      *** FTOF*PCU ***\n");
+  printf("         Require                   = %d\n", (val&GT_STRG_CTRL_FTOFPC_EN) ? 1:0);
+  printf("         Coindidence Width         = %dns\n", sspGt_GetTrigger_FtofPcuWidth(id, trg));
+  printf("         Match Mask                = %02X\n", sspGt_GetTrigger_FtofPcuMatchMask(id, trg));
   printf("\n");
   }
 }
@@ -5687,8 +6171,8 @@ void sspPrintGtScalers(int id)
   double ref, rate; 
   int i; 
   unsigned int scalers[SD_SCALER_NUM];
-  unsigned int gtscalers[17];
-  const char *scalers_name[17] = {
+  unsigned int gtscalers[24];
+  const char *scalers_name[24] = {
     "ssec.cluster",
     "ssec.inner_cosmic",
     "ssec.outer_cosmic",
@@ -5698,6 +6182,13 @@ void sspPrintGtScalers(int id)
     "ssftof.hit",
     "ssctof.hit",
     "sscnd.hit",
+    "ssftofpcu.hit0",
+    "ssftofpcu.hit1",
+    "ssftofpcu.hit2",
+    "ssftofpcu.hit3",
+    "ssftofpcu.hit4",
+    "ssftofpcu.hit5",
+    "sspcu.hit",
     "strigger0",
     "strigger1",
     "strigger2",
@@ -5726,8 +6217,15 @@ void sspPrintGtScalers(int id)
   gtscalers[6] = sspReadReg(&pSSP[id]->gt.ssftof.Scaler_ftof);
   gtscalers[7] = sspReadReg(&pSSP[id]->gt.ssctof.Scaler_ctof);
   gtscalers[8] = sspReadReg(&pSSP[id]->gt.sscnd.Scaler_cnd);
-  for(i=0; i<9; i++)
-    gtscalers[9+i] = sspReadReg(&pSSP[id]->gt.strigger[i].Scaler_trigger);
+  gtscalers[9] = sspReadReg(&pSSP[id]->gt.sspcuftof.Scaler[0]);
+  gtscalers[10] = sspReadReg(&pSSP[id]->gt.sspcuftof.Scaler[1]);
+  gtscalers[11] = sspReadReg(&pSSP[id]->gt.sspcuftof.Scaler[2]);
+  gtscalers[12] = sspReadReg(&pSSP[id]->gt.sspcuftof.Scaler[3]);
+  gtscalers[13] = sspReadReg(&pSSP[id]->gt.sspcuftof.Scaler[4]);
+  gtscalers[14] = sspReadReg(&pSSP[id]->gt.sspcuftof.Scaler[5]);
+  gtscalers[15] = sspReadReg(&pSSP[id]->gt.sspc.Scaler_pcu);
+  for(i=0; i<8; i++)
+    gtscalers[16+i] = sspReadReg(&pSSP[id]->gt.strigger[i].Scaler_trigger);
 
   sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0); 
   SSPUNLOCK(); 
@@ -5753,7 +6251,7 @@ void sspPrintGtScalers(int id)
      printf("   %-25s %10u,%.3fHz\n", ssp_scaler_name[i], scalers[i], rate); 
   }
 
-  for(i = 0; i < 17; i++) 
+  for(i = 0; i < 24; i++) 
   { 
     rate = (double)gtscalers[i]; 
     rate = rate / ref; 

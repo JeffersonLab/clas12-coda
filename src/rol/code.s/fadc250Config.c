@@ -225,13 +225,13 @@ fadc250ReadConfigFile(char *filename_in)
     if(strlen(filename)!=0) /* filename specified */
     {
       if ( filename[0]=='/' || (filename[0]=='.' && filename[1]=='/') )
-    {
+      {
         sprintf(fname, "%s", filename);
-    }
+      }
       else
-    {
+      {
         sprintf(fname, "%s/fadc250/%s", clonparms, filename);
-    }
+      }
 
       if((fd=fopen(fname,"r")) == NULL)
       {
@@ -249,14 +249,14 @@ fadc250ReadConfigFile(char *filename_in)
         {
           printf("\nReadConfigFile: Can't open config file >%s<\n",fname);
           return(-2);
+        }
       }
     }
-    }
     else
-  {
+    {
       printf("\nReadConfigFile: ERROR: since do_parsing=%d (>1), filename must be specified\n",do_parsing);
       return(-1);
-  }
+    }
 
     printf("\nReadConfigFile: Using configuration file >%s<\n",fname);
 
@@ -282,21 +282,21 @@ fadc250ReadConfigFile(char *filename_in)
         /* Start parsing real config inputs */
         if(strcmp(keyword,"FADC250_CRATE") == 0)
         {
-        if(strcmp(ROC_name,host) == 0)
+          if(strcmp(ROC_name,host) == 0)
           {
-          printf("\nReadConfigFile: crate = %s  host = %s - activated\n",ROC_name,host);
-            active = 1;
+            printf("\nReadConfigFile: crate = %s  host = %s - activated\n",ROC_name,host);
+              active = 1;
           }
-        else if(strcmp(ROC_name,"all") == 0)
-      {
-          printf("\nReadConfigFile: crate = %s  host = %s - activated\n",ROC_name,host);
-            active = 1;
-      }
+          else if(strcmp(ROC_name,"all") == 0)
+          {
+            printf("\nReadConfigFile: crate = %s  host = %s - activated\n",ROC_name,host);
+              active = 1;
+          }
           else
-      {
-          printf("\nReadConfigFile: crate = %s  host = %s - disactivated\n",ROC_name,host);
-            active = 0;
-      }
+          {
+            printf("\nReadConfigFile: crate = %s  host = %s - disactivated\n",ROC_name,host);
+              active = 0;
+          }
         }
 
         else if(active && (strcmp(keyword,"FADC250_CONF_FILE")==0))
@@ -305,7 +305,7 @@ fadc250ReadConfigFile(char *filename_in)
           /*printf("str2=%s\n",str2);*/
           strcpy(filename,str2);
           do_parsing = 2;
-      }
+        }
 
         else if(active && ((strcmp(keyword,"FADC250_SLOT")==0) || (strcmp(keyword,"FADC250_SLOTS")==0)))
         {

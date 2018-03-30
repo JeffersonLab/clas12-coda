@@ -591,6 +591,23 @@ vmeBusLock();
   tsStatus(1);
 vmeBusUnlock();
 
+
+vmeBusLock();
+  ret = tdGStatus(block_level);
+vmeBusUnlock();
+  if(ret)
+  {
+    logMsg("ERROR: Go 1: WRONG BLOCK_LEVEL, START NEW RUN FROM 'CONFIGURE !!!\n",1,2,3,4,5,6);
+    logMsg("ERROR: Go 1: WRONG BLOCK_LEVEL, START NEW RUN FROM 'CONFIGURE !!!\n",1,2,3,4,5,6);
+    logMsg("ERROR: Go 1: WRONG BLOCK_LEVEL, START NEW RUN FROM 'CONFIGURE !!!\n",1,2,3,4,5,6);
+    UDP_user_request(MSGERR, "rol1", "WRONG BLOCK_LEVEL, START NEW RUN FROM 'CONFIGURE !!!");
+  }
+  else
+  {
+    UDP_user_request(0, "rol1", "BLOCK_LEVEL IS OK");
+  }
+
+
   printf("INFO: Prestart1 Executed\n");fflush(stdout);
 
   *(rol->nevents) = 0;
@@ -655,18 +672,14 @@ __pause()
 static void
 __go()
 {
-  int ii, jj, id, slot;
+  int ii, jj, id, slot, ret;
 
   logMsg("INFO: Entering Go 1\n",1,2,3,4,5,6);
 
   /* set sync event interval (in blocks) */
 vmeBusLock();
- tsSetSyncEventInterval(0/*10000*//*block_level*/);
+  tsSetSyncEventInterval(0/*10000*//*block_level*/);
 vmeBusUnlock();
-
-
-
-
 
 
   /* always clear exceptions */

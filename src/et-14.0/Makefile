@@ -39,7 +39,7 @@ ifeq ("$(OSTYPE)","Darwin")
 endif
 
 #evio
-LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libevio.so
+LIBNAMES += $(CODA)/src/evio-4.3/$(OSTYPE_MACHINE)/lib/libevio.so
 
 #smartsockets
 #LIBNAMES += $(CLON_LIB)/libipc.a
@@ -86,6 +86,7 @@ install: install_lib
 	cp $(localbin)/et_2_et $(CODA)/$(OSTYPE_MACHINE)/bin/
 	cp $(localbin)/et_2_et_multi $(CODA)/$(OSTYPE_MACHINE)/bin/
 	cp $(localbin)/evio2et $(CODA)/$(OSTYPE_MACHINE)/bin/
+	cp $(localbin)/evio2mem2et $(CODA)/$(OSTYPE_MACHINE)/bin/
 	cp $(localbin)/et2print $(CODA)/$(OSTYPE_MACHINE)/bin/
 
 	rm -rf tmp

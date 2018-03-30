@@ -301,6 +301,17 @@ rocIdprint()
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
 /****************************************************************************/
 /************************************ ROC ***********************************/
 
@@ -2534,17 +2545,18 @@ TRANSITION_UNLOCK;
 
 
 /* Recover_Init() must be called for following to work !!! (see coda_constructor.c) */
-#ifdef Linux_vme
 __attribute__((destructor)) void end (void)
 {
+  printf("__attribute__\n");fflush(stdout);
+#ifdef Linux_vme
   printf("coda_roc is exiting, clear dma memory\n");
   bb_dma_free();
 
   printf("\n\n coda_roc: ======= Close the default VME windows =========\n\n");
   vmeCloseA32Slave();
   vmeCloseDefaultWindows();
-}
 #endif
+}
 
 
 

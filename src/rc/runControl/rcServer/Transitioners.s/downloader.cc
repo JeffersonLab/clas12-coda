@@ -32,6 +32,8 @@
 #include <daqSubSystem.h>
 #include "downloader.h"
 
+#define _TRACE_OBJECTS
+
 downloader::downloader (daqSystem* system)
 :transitioner (system), timeoutCache_ (0)
 {
@@ -65,6 +67,63 @@ downloader::executeItem (daqSubSystem* subsys)
   printf("downloader::executeItem reached\n");fflush(stdout);
 #endif
   subsys->download(); /* calls daqSubSystem::download() */
+
+  /*
+netComponent::download reached
+netComponent::download: established_
+netComponent::state() reached
+netComponent::state: Component ROC85 at state 4
+Sergey: DUMMY codaDaCompSetState reached
+codaCompClnt::codaDaDownload reached
+DB select: >SELECT inuse FROM process WHERE name='ROC85'<
+DB select: >SELECT host FROM process WHERE name='ROC85'<
+hostnamee=>clondaq4< portnum=5002
+calling connect() to host >clondaq4< port 5002 ..
+.. connected to >clondaq4<!
+ Sending 16 bytes: download sergey6
+DOWNLOADDOWNLOADDOWNLOADDOWNLOADDOWNLOAD
+netComponent::transformState reached
+ROC85 download underway.....
+netComponent::state() reached
+netComponent::state: Component ROC85 at state 5
+downloader::successState (returns CODA_DOWNLOADED)
+netComponent::state() reached
+netComponent::state: Component ROC85 at state 5
+downloader::successState (returns CODA_DOWNLOADED)
+downloader::transitionTimeout
+netComponent::state() reached
+netComponent::state: Component ROC85 at state 5
+downloader::successState (returns CODA_DOWNLOADED)
+downloader::transitionTimeout
+netComponent::state() reached
+netComponent::state: Component ROC85 at state 5
+downloader::successState (returns CODA_DOWNLOADED)
+downloader::transitionTimeout
+netComponent::state() reached
+netComponent::state: Component ROC85 at state 6
+downloader::successState (returns CODA_DOWNLOADED)
+netComponent::state() reached
+
+  and now for all:
+
+netComponent::state: Component ER_DAQ6 at state 6
+downloader::successState (returns CODA_DOWNLOADED)
+netComponent::state() reached
+netComponent::state: Component EB_DAQ6 at state 6
+downloader::successState (returns CODA_DOWNLOADED)
+netComponent::state() reached
+netComponent::state: Component ET_DAQ6 at state 6
+downloader::successState (returns CODA_DOWNLOADED)
+netComponent::state() reached
+netComponent::state: Component ROC85 at state 6
+downloader::successState (returns CODA_DOWNLOADED)
+downloader::setupSuccess
+downloader::successState (returns CODA_DOWNLOADED)
+downloader::action
+downloader::action
+
+  */
+
 }
 
 int
@@ -80,7 +139,7 @@ int
 downloader::successState (void)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("downloader::successState (returns CODA_DOWNLOADED)\n");
+  printf ("downloader::successState (always returns CODA_DOWNLOADED)\n");
 #endif
   return CODA_DOWNLOADED;
 }

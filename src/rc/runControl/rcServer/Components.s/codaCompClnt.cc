@@ -132,7 +132,6 @@ alarmHandler(int sig)
 * -> tcpClient("remoteSystemName","This is my message");  
 * * RETURNS: OK, or ERROR if the message could not be sent to the server. */ 
 
-
 static int
 tcpClient(char *name, char *message)
 {
@@ -168,26 +167,32 @@ tcpClient(char *name, char *message)
   /* use 'inuse' field */
   sprintf(tmp,"SELECT inuse FROM process WHERE name='%s'",name);
 #ifdef DEBUG_MSGS
-  printf("DB select: >%s<\n",tmp);
+  printf("tcpClient: DB select: >%s<\n",tmp);
 #endif
   if(dbGetInt(dbsock, tmp, &portnum)==ERROR) return(ERROR);
 
+  if(portnum==0)
+  {
+    printf("tcpClient: Component %s has zero 'inuse' field in process table, probably not ready\n",name);
+    return(ERROR);
+  }
+
   sprintf(tmp,"SELECT host FROM process WHERE name='%s'",name);
 #ifdef DEBUG_MSGS
-  printf("DB select: >%s<\n",tmp);
+  printf("tcpClient: DB select: >%s<\n",tmp);
 #endif
   if(dbGetStr(dbsock, tmp, hostname)==ERROR) return(ERROR);
 
   dbDisconnect(dbsock);
 #ifdef DEBUG_MSGS
-  printf("hostnamee=>%s< portnum=%d\n",hostname,portnum);
+  printf("tcpClient: hostnamee=>%s< portnum=%d\n",hostname,portnum);
 #endif
   serverAddr.sin_port = htons(portnum);
 
   hptr = gethostbyname(hostname);
   if(hptr == NULL)
   {
-    printf("unknown hostname >%s<\n",hostname); 
+    printf("tcpClient: unknown hostname >%s<\n",hostname); 
     close(sFd);
     exit(1);
   }
@@ -200,17 +205,17 @@ tcpClient(char *name, char *message)
   signal(SIGALRM,alarmHandler);
   alarm(TIMEOUT_IN_SECONDS); /* in 'TIMEOUT_IN_SECONDS' seconds connect call will be interrupted if did not finished */
   
-  printf("calling connect() to host >%s< port %d ..\n",hostname,portnum);fflush(stdout);
+  printf("tcpClient: calling connect() to host >%s< port %d (name >%s<) ..\n",hostname,portnum,name);fflush(stdout);
   
   /* connect to server */ 
-  if(connect (sFd, (struct sockaddr *) &serverAddr, sockAddrSize) == ERROR)
+  if(connect (sFd, (struct sockaddr *) &serverAddr, sockAddrSize) != 0)
   {
     perror("connect"); 
     close(sFd); 
     return(ERROR); 
   }
    
-  printf(".. connected to >%s<!\n",hostname);fflush(stdout);
+  printf("tcpClient: .. connected to >%s<!\n",hostname);fflush(stdout);
   
   alarm(0); /* clear alarm so it will not interrupt us */
 
@@ -221,7 +226,7 @@ tcpClient(char *name, char *message)
   myRequest.reply = FALSE;
 
 #ifdef DEBUG_MSGS
-  printf(" Sending %d bytes: %s\n",myRequest.msgLen, myRequest.message);
+  printf("tcpClient: sending %d bytes: %s\n",myRequest.msgLen, myRequest.message);
 #endif
 
   /* convert integers to network byte order */
@@ -264,6 +269,8 @@ DP_cmd_init(char *)
   return(0);
 }
 
+
+/* called at download */
 int
 codaDaCreate(char *name, int version, int id, char *type, char *host, int interval)
 {
@@ -273,7 +280,7 @@ codaDaCreate(char *name, int version, int id, char *type, char *host, int interv
   char res[1000];
 
 #ifdef DEBUG_MSGS
-  printf("codaDaCreate reached for %s\n",name);
+  printf("codaDaCreate reached for %s\n",name);fflush(stdout);
 #endif
 
   // codaDaReport second arg is 1 means "really ask"
@@ -719,13 +726,34 @@ codaDaCompSetState (char* name, int st)
 
 
 
+/* called from netComponent::configure() */
 int
 codaDaCompConfigure (char* name)
 {
 #ifdef DEBUG_MSGS
   printf("codaCompClnt::codaDaCompConfigure reached (name >%s<)\n",name);fflush(stdout);
 #endif
+
+
+  /* sergey: check components status here - have to wait for 'configured' ??? */
+
+  /*printf("sleep 10 sec\n");*/
+  /*sleep(10);*/
+  /*printf("slept\n");*/
+
   return CODA_SUCCESS;
 }
 
 
+/* sergey: if just want to check tcp connection to component */
+int
+codaDaCheckConnection(char *name)
+{
+  int status = 0;
+  char temp[CODA_SCRIPT_LENGTH];
+
+  sprintf(temp,"alive %s",name);
+  status = tcpClient(name,temp);
+      
+  return(status);
+}

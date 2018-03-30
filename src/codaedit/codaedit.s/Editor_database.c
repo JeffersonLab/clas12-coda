@@ -1278,6 +1278,54 @@ updateDaqCompToProcTable (daqComp* comp)
   return(-1);
 }
 
+
+
+
+
+
+
+
+
+/*sergey: set 'inuse' field in 'process' table to 'no' for specified component; assumes that component exist */
+/* have to do it before starting new components, so runcontrol can check if component is started,
+otherwise it will use old port number and may accidenty ping another component using that port */
+int
+setCompInuseField(char *compname, int portnum)
+{
+  char queryString[QUERY_LEN];
+
+  if (databaseSelected ())
+  {
+    sprintf (queryString, "update %s set inuse = '%d' where name = '%s'", 
+			 PROCESS_TABLE_NAME, portnum, compname);
+    printf ("setCompInuseField: query >%s<\n",queryString);
+
+    if (mysql_query (mysql, queryString) != 0)
+    {
+      printf ("setCompInuseField: setting %s component as inused in process table error: %s\n", compname, mysql_error(mysql));
+      return(-1);
+    }
+    else
+	{
+      printf ("setCompInuseField: setting %s component as inused in process table\n", compname);
+	}
+    return(0);
+  }
+
+  return(-1);
+}
+
+
+
+
+
+
+
+
+
+
+
+
 int
 selectConfigTable (char* config)
 {
@@ -1744,5 +1792,3 @@ compInConfigTables (char* name)
 
   return(0);
 }
-
-    

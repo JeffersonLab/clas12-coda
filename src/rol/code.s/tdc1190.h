@@ -425,4 +425,7 @@ void tdc1290PrintDMAdataType(int dataType);
 void tdc1290PrintDMABerrFifo(int method);
 int tdc1290UploadAll(char *string, int length);
 
+void tdc1190SetExpid(char *string);
+void tdc1290SetExpid(char *string);
+
 /*S.P.end*/

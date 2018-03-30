@@ -1,4 +1,5 @@
 
+
 /* rol1.c - 'standard' first readout list */
 
 #if defined(VXWORKS) || defined(Linux_vme)
@@ -36,6 +37,7 @@ around that problem temporary patches were applied - until fixed (Sergey) */
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
+
 
 #ifndef VXWORKS
 #include <sys/time.h>
@@ -126,7 +128,6 @@ extern int rocMask; /* defined in roc_component.c */
 
 #define NTICKS 1000 /* the number of ticks per second */
 /*temporary here: for time profiling */
-
 
 
 
@@ -487,7 +488,7 @@ if(rol->pid==18)
   vmeSetQuietFlag(1); /* skip the errors associated with BUS Errors */
 #endif
 vmeBusLock();
-  dsc2Init(0x100000,0x80000,16,0);
+  dsc2Init(0x100000,0x80000,20,0);
 vmeBusUnlock();
 #ifndef VXWORKS
   vmeSetQuietFlag(0); /* Turn the error statements back on */
@@ -940,6 +941,7 @@ vmeBusUnlock();
 
   logMsg("INFO: User Download Executed\n",1,2,3,4,5,6);
 }
+
 
 
 
@@ -2937,7 +2939,7 @@ vmeBusUnlock();
       if(nssp>0)
       {
 vmeBusLock();
-        len = sspUploadAll(chptr, 10000);
+        len = sspUploadAll(chptr, 300000);
 vmeBusUnlock();
         /*printf("\nSSP len=%d\n",len);
         printf("%s\n",chptr);*/

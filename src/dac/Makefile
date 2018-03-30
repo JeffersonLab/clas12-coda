@@ -13,6 +13,10 @@ MAIN = dac
 #------------------
 include $(CODA)/src/Makefile.include
 
+#CFLAGS = -O2
+#CXXFLAGS = $(CFLAGS)
+#CC = /apps/gcc/4.9.4/bin/gcc -O2
+#CXX = /apps/gcc/4.9.4/bin/g++ -O2
 
 ifeq ("$(OSTYPE_MACHINE)","SunOS_i86pc")
     CFLAGS += -DSunOS_i86pc
@@ -44,6 +48,7 @@ endif
 #-----------------------
 # customize definitions
 #-----------------------
+
 CLON_FLAGS += -I./$(MAIN).s \
 	-I$(CODA)/common/include \
 	-D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS \
@@ -88,18 +93,30 @@ else
 ##################  LIBNAMES += $(globallib)/libbosio.a 
   LIBNAMES += $(globallib)/libcreg.a
 
+
+
+
+# do it for VME as well ???????????????
 #use system mysql, and then remaining calls from our mysql
-###  LIBNAMES += /usr/lib/mysql/libmysqlclient.a # system mysql
-###  LIBNAMES += /usr/lib/libz.so # compress/uncompress
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+endif
+
+
+
 
   LIBNAMES += $(globallib)/libmysql4.1.20.a # the rest of mysql (our stuff)
-#  LIBNAMES += $(CODA)/src/mysql4.1.20/Linux_i686/obj/libdb.o
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
   LIBNAMES += $(CODA)/src/rol/jvme/libjvme.so
 endif
-  LIBNAMES += $(globallib)/libevio.a
-  LIBNAMES += $(globallib)/libet.a
+
+  LIBNAMES += $(CODA)/src/evio-4.3/$(OSTYPE_MACHINE)/lib/libevio.a
+##  LIBNAMES += $(globallib)/libevio.a
+
+  LIBNAMES += $(CODA)/src/et-14.0/$(OSTYPE_MACHINE)/lib/libet.a
+##  LIBNAMES += $(globallib)/libet.a
+
 endif
 
 #ifeq ("$(OSTYPE_MACHINE)","SunOS_sun4u")

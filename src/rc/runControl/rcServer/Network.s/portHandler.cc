@@ -69,7 +69,7 @@ portHandler::open (int async)
 
 	if(brdcastListener_.open (brdAddr /*sap_any*/) == -1)
     {
-      printf("portHandler::open error 1 (Sergey: have to investigate !)\n");
+      printf("portHandler::open error 1 (Sergey: somebody is holding port, try to run 'netstat -anp | grep <port>' to find and kill them\n");
 	  return(-1);
 	}
 #else

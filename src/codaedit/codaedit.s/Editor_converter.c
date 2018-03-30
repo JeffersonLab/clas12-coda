@@ -1738,6 +1738,12 @@ constructRcnetCompsWithConfig (char* config,
             components with change 'TS' to 'ROC' */
   /* TO DO: make sure that 'constructRcnetComps' calls which does not have that correction
 	 do not create any problems; clicking 'Save' updates 'process' table with new settings .. */
+
+  /* NOTE: call 'setCompInuseField(daq->comp_name, 0)' sets 'inuse' field in 'process' table to 0,
+      after that 'netComponent::configure' will try to connect until connection works, it allows it
+      to make sure component has been started
+  */
+
   printf("----- config table: first name >%s<\n",cinfos[0]->comp_name);
 
   /* first component from 'config' table */
@@ -1752,8 +1758,10 @@ constructRcnetCompsWithConfig (char* config,
 	  {
         daq->type = CODA_TRIG;
         printf("+++++ change >%s< type from CODA_ROC to CODA_TRIG !!!\n",daq->comp_name);
-		/* sergey: UPDATE PROCESS TABLE HERE ???!!! */
+
+		/* sergey: UPDATE PROCESS TABLE HERE ???!!!*/
 	  }
+      setCompInuseField(daq->comp_name, 0);
 	}
   }
 
@@ -1770,8 +1778,10 @@ constructRcnetCompsWithConfig (char* config,
 	    {
           daq->type = CODA_ROC;
           printf("+++++ change >%s< type from CODA_TRIG to CODA_ROC !!!\n",daq->comp_name);
-		  /* sergey: UPDATE PROCESS TABLE HERE ???!!! */
+
+		  /* sergey: UPDATE PROCESS TABLE HERE ???!!!*/
 	    }
+        setCompInuseField(daq->comp_name, 0);
 	  }
     }
   }

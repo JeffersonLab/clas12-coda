@@ -24,7 +24,7 @@
 
 #include "wdLib.h"
 
-#define SYNC()		{ __asm__ volatile("eieio"); __asm__ volatile("sync"); }
+#define SYNC()    { __asm__ volatile("eieio"); __asm__ volatile("sync"); }
 #define VSCMLOCK
 #define VSCMUNLOCK
 
@@ -50,6 +50,8 @@ Use nanosleep() on Linux when more accuracy is needed
 */
 #define taskDelay(ticks) usleep(ticks * 100)
 
+#include <unistd.h>
+#include <stddef.h>
 #include <time.h>
 #include <pthread.h>
 
@@ -70,6 +72,9 @@ extern unsigned int *dma_dabufp;
 #include "vscmLib.h"
 
 #include "xxxConfig.h"
+
+#include "ipc.h"
+
 static int active;
 
 /* Define Global Variables */
@@ -86,6 +91,71 @@ int vscmA24Offset = 0x0;                                /* Difference in CPU A24
 int vscmInited = 0;
 int minSlot = 21;
 int maxSlot = 1;
+
+typedef struct
+{
+  int module;
+  int region;
+} BST_trans_entry;
+
+//                           CRATE,SLOT,HFCB
+BST_trans_entry BST_trans_table[2][22][2] = {
+    // SVT1
+    {
+      // HFCB0    HFCB1
+      // Mod,Reg  Mod,Reg
+      { { 0, 0}, { 0, 0} }, // SLOT  0 
+      { { 0, 0}, { 0, 0} }, // SLOT  1 
+      { { 0, 0}, { 0, 0} }, // SLOT  2 
+      { { 1, 1}, { 2, 1} }, // SLOT  3 
+      { { 3, 1}, { 9, 1} }, // SLOT  4 
+      { {10, 1}, { 0, 0} }, // SLOT  5 
+      { { 0, 0}, { 0, 0} }, // SLOT  6 
+      { { 1, 2}, { 2, 2} }, // SLOT  7 
+      { { 3, 2}, { 4, 2} }, // SLOT  8 
+      { {12, 2}, {13, 2} }, // SLOT  9 
+      { {14, 2}, { 0, 0} }, // SLOT 10 
+      { { 0, 0}, { 0, 0} }, // SLOT 11 
+      { { 0, 0}, { 0, 0} }, // SLOT 12 
+      { { 1, 3}, { 2, 3} }, // SLOT 13 
+      { { 3, 3}, { 4, 3} }, // SLOT 14 
+      { { 5, 3}, {15, 3} }, // SLOT 15 
+      { {16, 3}, {17, 3} }, // SLOT 16 
+      { {18, 3}, { 0, 0} }, // SLOT 17 
+      { { 0, 0}, { 0, 0} }, // SLOT 18 
+      { { 0, 0}, { 0, 0} }, // SLOT 19 
+      { { 0, 0}, { 0, 0} }, // SLOT 20 
+      { { 0, 0}, { 0, 0} }, // SLOT 21 
+    },
+    // SVT2
+    {
+      // HFCB0    HFCB1
+      // Mod,Reg  Mod,Reg
+      { { 0, 0}, { 0, 0} }, // SLOT  0 
+      { { 0, 0}, { 0, 0} }, // SLOT  1 
+      { { 0, 0}, { 0, 0} }, // SLOT  2 
+      { { 4, 1}, { 5, 1} }, // SLOT  3 
+      { { 6, 1}, { 7, 1} }, // SLOT  4 
+      { { 8, 1}, { 0, 0} }, // SLOT  5 
+      { { 0, 0}, { 0, 0} }, // SLOT  6 
+      { { 5, 2}, { 6, 2} }, // SLOT  7 
+      { { 7, 2}, { 8, 2} }, // SLOT  8 
+      { { 9, 2}, {10, 2} }, // SLOT  9 
+      { {11, 2}, { 0, 0} }, // SLOT 10 
+      { { 0, 0}, { 0, 0} }, // SLOT 11 
+      { { 0, 0}, { 0, 0} }, // SLOT 12 
+      { { 6, 3}, { 7, 3} }, // SLOT 13 
+      { { 8, 3}, { 9, 3} }, // SLOT 14 
+      { {10, 3}, {11, 3} }, // SLOT 15 
+      { {12, 3}, {13, 3} }, // SLOT 16 
+      { {14, 3}, { 0, 0} }, // SLOT 17 
+      { { 0, 0}, { 0, 0} }, // SLOT 18 
+      { { 0, 0}, { 0, 0} }, // SLOT 19 
+      { { 0, 0}, { 0, 0} }, // SLOT 20 
+      { { 0, 0}, { 0, 0} }, // SLOT 21 
+    }
+  };
+
 
 #define VCSM_SEM_BUF_LEN    256
 
@@ -159,9 +229,9 @@ vscmId(unsigned int slot)
   for(id=0; id<nvscm; id++)
   {
     if(vscmID[id]==slot)
-	{
+  {
       return(id);
-	}
+  }
   }
 
   printf("%s: ERROR: VSCM in slot %d does not exist or not initialized.\n",__FUNCTION__,slot);
@@ -187,7 +257,7 @@ vscmConfigDownload(int id, char *fname)
   nval = 0;
   while ((ch = fgets(str, STRLEN, fd)) != NULL)
   {
-	/*printf(">%s< %d\n",str,strlen(ch));*/
+  /*printf(">%s< %d\n",str,strlen(ch));*/
     if (ch[0] == '#' || ch[0] == ' ' || ch[0] == '\t' || \
         ch[0] == '\n' || ch[0] == '\r') {
       continue;
@@ -280,12 +350,12 @@ vscmConfigDownload(int id, char *fname)
       else
       {
         ; /* unknown key - do nothing */
-		/*
+    /*
         logMsg("ERROR: %s: unknown keyword >%s< (%u 0x%02x)\n", \
                 __func__, keyword, ch[0], ch[0]);
         fclose(fd);
         return -3;
-		*/
+    */
       }
     }
   }
@@ -434,7 +504,7 @@ fssrSetThreshold(int id, int chip, int idx, uint8_t thr)
 
   val = thr;
   reg = (FSSR_ADDR_REG_DISC_THR0 + idx);
-	fssrTransfer(id, chip, reg, FSSR_CMD_WRITE, 8, &val);
+  fssrTransfer(id, chip, reg, FSSR_CMD_WRITE, 8, &val);
 }
 
 uint8_t
@@ -492,6 +562,7 @@ fssrWaitReady(int id) {
   for (i = 0; i < 10; i++) {
     if(vmeRead32(&VSCMpr[id]->FssrSerCfg) & (1 << 14))
       return 1;
+    //usleep(1000);
     taskDelay(1);
   }
 #ifdef DEBUG
@@ -505,7 +576,7 @@ fssrTransfer(int id, uint8_t chip, uint8_t reg, uint8_t cmd, \
               uint8_t nBits, uint32_t *pData)
 {
   uint32_t SerCfgReg = 0;
-	
+  
   SerCfgReg |= (chip & 0xF) << 24;
   SerCfgReg |= (reg & 0x1F) << 0;
   SerCfgReg |= (cmd & 0x7) << 8;
@@ -518,12 +589,12 @@ fssrTransfer(int id, uint8_t chip, uint8_t reg, uint8_t cmd, \
   if (pData && nBits > 96) vmeWrite32(&VSCMpr[id]->FssrSerData[3], pData[3]);
 
   if (!fssrWaitReady(id))
-    logMsg("ERROR: %s not ready to start\n", __func__);
-	
+    logMsg("ERROR: %s(%d,%d,%d,%d,%d,...) not ready to start\n", __func__, id, chip, reg, cmd, nBits);
+  
   vmeWrite32(&VSCMpr[id]->FssrSerCfg, SerCfgReg);
-	
+  
   if (!fssrWaitReady(id))
-    logMsg("ERROR: %s did not end\n", __func__);
+    logMsg("ERROR: %s(%d,%d,%d,%d,%d,...) did not end\n", __func__, id, chip, reg, cmd, nBits);
 
   if (pData && (cmd == FSSR_CMD_READ)) {
     int i;
@@ -555,7 +626,7 @@ fssrTransfer(int id, uint8_t chip, uint8_t reg, uint8_t cmd, \
       }
     }
   }
-	
+  
 #if DEBUG
   if (cmd == FSSR_CMD_READ) {
     logMsg("Data response: 0x%08X 0x%08X 0x%08X 0x%08X\n", \
@@ -804,7 +875,7 @@ fssrGetBCONum(int id, int chip)
 uint8_t
 fssrGetBCONumOffset(int id, int chip, uint8_t offset) {
   uint32_t rsp;
-	
+  
   vmeWrite32(&VSCMpr[id]->FssrSerClk, 0x100 | ((offset + 1) & 0xFF));
   fssrTransfer(id, chip, FSSR_ADDR_REG_AQBCO, FSSR_CMD_SET, 1, NULL);
   vmeWrite32(&VSCMpr[id]->FssrSerClk, 0);
@@ -824,7 +895,7 @@ fssrGetBCONumNoSync(int id, int chip)
 
   fssrTransfer(id, chip, FSSR_ADDR_REG_AQBCO, FSSR_CMD_SET, 1, NULL);
   fssrTransfer(id, chip, FSSR_ADDR_REG_AQBCO, FSSR_CMD_READ, 9, &rsp);
-	
+  
 #if DEBUG
   logMsg("BCO [no sync] = %u\n", rsp & 0xFF);
 #endif
@@ -1002,12 +1073,12 @@ fssrStatus(int id, int chip)
     return;
   }
 
-  vscmDisableChipScaler(id, chip);	
+  vscmDisableChipScaler(id, chip);  
 
   ref = vmeRead32(&VSCMpr[id]->Fssr[chip].ScalerRef);
 
   printf("SLOT: %d ", id);
-	
+  
   switch (chip) {
     case 0: printf("HFCB 1 U1:\n"); break;
     case 1: printf("HFCB 1 U2:\n"); break;
@@ -1044,10 +1115,10 @@ fssrStatus(int id, int chip)
           vmeRead32(&VSCMpr[id]->Fssr[chip].ScalerCoreTalking)));
   printf("FSSR Max Latency   = %u (BCO ticks)\n", \
           vmeRead32(&VSCMpr[id]->Fssr[chip].LatencyMax));
-	
+  
   vmeWrite32(&VSCMpr[id]->ScalerLatch, 0xFF);
 
-  printf("----------- Config ------------\n");	
+  printf("----------- Config ------------\n");  
   printf("FSSR BCO Clock Period: %uns\n", \
           vmeRead32(&VSCMpr[id]->FssrClkCfg) * 8);
   printf("FSSR Control: 0x%02X\n", fssrGetControl(id, chip));
@@ -1056,10 +1127,10 @@ fssrStatus(int id, int chip)
           fssrGetThreshold(id, chip, 2), fssrGetThreshold(id, chip, 3), \
           fssrGetThreshold(id, chip, 4), fssrGetThreshold(id, chip, 5), \
           fssrGetThreshold(id, chip, 6), fssrGetThreshold(id, chip, 7));
-		
+    
   fssrGetKillMask(id, chip, mask);
   printf("FSSR Kill[ch127->0]: 0x%08X 0x%08X 0x%08X 0x%08X\n", mask[3], mask[2], mask[1], mask[0]);
-	
+  
   fssrGetInjectMask(id, chip, mask);
   printf("FSSR Inject[ch127->0]: 0x%08X 0x%08X 0x%08X 0x%08X\n", mask[3], mask[2], mask[1], mask[0]);
 
@@ -1067,7 +1138,7 @@ fssrStatus(int id, int chip)
           fssrGetBCONumOffset(id, chip, FSSR_SCR_BCONUM_START), \
           fssrGetBCONumOffset(id, chip, FSSR_SCR_BCONUM_START-128), \
           fssrGetBCONumOffset(id, chip, FSSR_SCR_BCONUM_START-1));
-  printf("\n");	
+  printf("\n"); 
 }
 
 
@@ -1220,7 +1291,7 @@ vscmSetTriggerWindow(int id, \
 
   bcoStop_i = (0x100 - stop / bcoFreq) & 0xFF;
   bcoStop_r = (0x100 - stop % bcoFreq) & 0xFF;
-	
+  
   vmeWrite32(&VSCMpr[id]->TriggerWindow, \
               (bcoStart_r << 0) | (bcoStart_i << 8) | \
               (bcoStop_r << 16) | (bcoStop_i << 24));
@@ -1308,7 +1379,7 @@ vscmPrintFifo(unsigned int *buf, int n)
     word = LSWAP(buf[i]);
 #endif
     printf("0x%08X", word);
-			
+      
     if(word & 0x80000000)
     {
       int type = (word>>27)&0xF;
@@ -1316,41 +1387,41 @@ vscmPrintFifo(unsigned int *buf, int n)
       {
         case DATA_TYPE_BLKHDR:
           printf(" {BLKHDR} SLOTID: %d", (word>>22)&0x1f);
-	  printf(" NEVENTS: %d", (word>>11)&0x7ff);
-	  printf(" BLOCK: %d\n", (word>>0)&0x7ff);
-	  break;
+    printf(" NEVENTS: %d", (word>>11)&0x7ff);
+    printf(" BLOCK: %d\n", (word>>0)&0x7ff);
+    break;
         case DATA_TYPE_BLKTLR:
           printf(" {BLKTLR} SLOTID: %d", (word>>22)&0x1f);
-	  printf(" NWORDS: %d\n", (word>>0)&0x3fffff);
-	  break;
+    printf(" NWORDS: %d\n", (word>>0)&0x3fffff);
+    break;
         case DATA_TYPE_EVTHDR:
-	  printf(" {EVTHDR} EVENT: %d\n", (word>>0)&0x7ffffff);
-	  break;
+    printf(" {EVTHDR} EVENT: %d\n", (word>>0)&0x7ffffff);
+    break;
         case DATA_TYPE_TRGTIME:
-	  printf(" {TRGTIME}\n");
-	  break;
+    printf(" {TRGTIME}\n");
+    break;
         case DATA_TYPE_BCOTIME:
-	  printf(" {BCOTIME}\n");
-	  break;
+    printf(" {BCOTIME}\n");
+    break;
         case DATA_TYPE_FSSREVT:
-	  printf(" {FSSREVT}");
-	  printf(" HFCBID: %1u", (word>>20)&0x1);
-	  printf(" CHIPID: %1u", (word>>19)&0x7);
-	  printf(" CH: %3u", (word>>12)&0x7F);
-	  printf(" BCO: %3u", (word>>4)&0xFF);
-	  printf(" ADC: %1u\n", (word>>0)&0x7);
-	  break;
+    printf(" {FSSREVT}");
+    printf(" HFCBID: %1u", (word>>20)&0x1);
+    printf(" CHIPID: %1u", (word>>19)&0x7);
+    printf(" CH: %3u", (word>>12)&0x7F);
+    printf(" BCO: %3u", (word>>4)&0xFF);
+    printf(" ADC: %1u\n", (word>>0)&0x7);
+    break;
         case DATA_TYPE_DNV:
-	  printf(" {***DNV***}\n");
+    printf(" {***DNV***}\n");
           return;
-	  break;
+    break;
         case DATA_TYPE_FILLER:
-	  printf(" {FILLER}\n");
-	  break;
+    printf(" {FILLER}\n");
+    break;
         default:
-	  printf(" {***DATATYPE ERROR***}\n");
+    printf(" {***DATATYPE ERROR***}\n");
           return;
-	  break;
+    break;
       }
     }
     else
@@ -1741,7 +1812,7 @@ vscmFifoClear(int id)
   if (vscmIsNotInit(&id, __func__))
     return;
 
-	vmeWrite32(&VSCMpr[id]->Reset, 1);
+  vmeWrite32(&VSCMpr[id]->Reset, 1);
 }
 
 void
@@ -2002,10 +2073,10 @@ vscmPulser(int id, int ch, uint32_t amp, uint32_t num_pulses)
     }
 
     if (ch == 0 || ch == 1) {
-			vmeWrite32(&VSCMpr[id]->DacCh0,	(i << 23) | ((length - 1) << 14) | val);
-		}
-		if (ch == 0 || ch == 2) {	
-      vmeWrite32(&VSCMpr[id]->DacCh1,	(i << 23) | ((length - 1) << 14) | val);
+      vmeWrite32(&VSCMpr[id]->DacCh0, (i << 23) | ((length - 1) << 14) | val);
+    }
+    if (ch == 0 || ch == 2) { 
+      vmeWrite32(&VSCMpr[id]->DacCh1, (i << 23) | ((length - 1) << 14) | val);
     }
   }
 }
@@ -2149,10 +2220,10 @@ vscmPrestart(char *fname)
   {
     env = getenv("CLON_PARMS");
     if(env==NULL)
-	{
+  {
       printf("ERROR in vscmPrestart: evn var CLON_PARMS does not exist\n");
       return;
-	}
+  }
     strcpy(filename,env);
     strcat(filename,"/vscm/");
     strcat(filename,fname);
@@ -2162,7 +2233,7 @@ vscmPrestart(char *fname)
   /* Initialize FSSR2 chips */
   for (i = 0; i < nvscm; i++)
   {
-	fssrSetChipID(vscmID[i], 0, 1, 2, 3, 4);
+  fssrSetChipID(vscmID[i], 0, 1, 2, 3, 4);
     vscmConfigDownload(vscmID[i], filename);
   }
 }
@@ -2387,7 +2458,7 @@ vscmMonitorSem(int id, int print)
   {
     val = vmeRead32(&VSCMpr[id]->Sem) & 0x1FF;
     if(val & 0x100)
-      break;	// exit if SEM monitor transmit is empty
+      break;  // exit if SEM monitor transmit is empty
 
     if(val == 0x0D)
       val = 0x00;
@@ -2416,6 +2487,105 @@ vscmSemProcessAll()
 {
   vscmMonitorSemAll();
   vscmSemPrintStatsAll();
+}
+
+int
+vscmGSendScalers()
+{
+  char name[100];
+  int i, id, hfcb, strip, chip, crate;
+  float ref[4], data[512];
+  unsigned int val;
+  char host[100];
+
+  gethostname(host,sizeof(host));
+  for(i=0; i<strlen(host); i++)
+  {
+    if(host[i] == '.')
+    {
+      host[i] = '\0';
+      break;
+    }
+  }
+
+  if(!strcmp(host, "svt1"))
+    crate = 0;
+  else if(!strcmp(host, "svt2"))
+    crate = 1;
+  else
+    return;
+
+  for(i=0; i<nvscm; i++)
+  {
+    id = vscmID[i];
+    if(vscmIsNotInit(&id, __func__))
+      return 0;
+
+    // SEM controller processing
+    vscmMonitorSem(id, 0);
+
+    // SEM State
+    val = vscmSem[id].current_state;
+    sprintf(name, "SVT_DAQ_SVT%dSLOT%d:SEMSTATE", crate+1, id);
+    epics_json_msg_send(name, "int", 1, &val);
+
+    // SEM State
+    val = vscmSem[id].sc.observation;
+    sprintf(name, "SVT_DAQ_SVT%dSLOT%d:SEMERROR", crate+1, id);
+    epics_json_msg_send(name, "int", 1, &val);
+
+    // get&send VSCM related scalers
+    vmeWrite32(&VSCMpr[id]->ScalerLatch, 0x00);
+
+    for(hfcb=0; hfcb<2; hfcb++)
+    {
+      BST_trans_entry entry = BST_trans_table[crate][vscmID[i]][hfcb];
+      if(!entry.module || !entry.region)
+        continue;
+
+      // Get reference scalers
+      for(chip=0; chip<4; chip++)
+      {
+        val = vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerRef);
+        if(!val) val = 1;
+        ref[chip] = 125000000.0 / (float)val;
+      }
+
+      // Event word scaler
+      for(chip=0; chip<4; chip++)
+        data[chip] = ref[chip] * ((float)vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerEvent));
+      sprintf(name, "SVT_DAQ_R%dS%d:EVTRATE", entry.region, entry.module);
+      epics_json_msg_send(name, "float", 4, data);
+
+      // Gothit scaler
+      for(chip=0; chip<4; chip++)
+        data[chip] = ref[chip] * ((float)vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerGotHit));
+      sprintf(name, "SVT_DAQ_R%dS%d:GOTHIT", entry.region, entry.module);
+      epics_json_msg_send(name, "float", 4, data);
+
+      // Error scaler
+      for(chip=0; chip<4; chip++)
+      {
+        data[chip] = ref[chip] * ((float)vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerMarkErr));
+        data[chip]+= ref[chip] * ((float)vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerEncErr));
+        data[chip]+= ref[chip] * ((float)vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerChipIdErr));
+      }
+      sprintf(name, "SVT_DAQ_R%dS%d:FSSRERR", entry.region, entry.module);
+      epics_json_msg_send(name, "float", 4, data);
+
+      // Strip scalers
+      for(chip=0; chip<4; chip++)
+      {
+        for(strip=0; strip<128; strip++)
+          data[chip*128+strip] = ref[chip] * ((float)vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerStrip));
+      }
+      sprintf(name, "SVT_DAQ_R%dS%d:STRIPRATE", entry.region, entry.module);
+      epics_json_msg_send(name, "float", 512, data);
+    }
+
+    vmeWrite32(&VSCMpr[id]->ScalerLatch, 0xFF);
+  }
+  return 0;
 }
 
 /*
@@ -2590,19 +2760,19 @@ vscmInit(uintptr_t addr, uint32_t addr_inc, int numvscm, int flag)
       res = vmeBusToLocalAdrs(0x09, (char *)a32addr, (char **)&laddr);
       if (res != 0)
       {
-	      printf("ERROR: %s: in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",
+        printf("ERROR: %s: in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",
                 __func__, a32addr);
-	      return EXIT_FAILURE;
+        return EXIT_FAILURE;
       }
 #endif
       VSCMpmb = (uintptr_t *)laddr;  /* Set a pointer to the FIFO */
-	  for (i = 0; i < nvscm; i++)
+    for (i = 0; i < nvscm; i++)
       {
-  	    /* Write the register and enable */
+        /* Write the register and enable */
         vmeWrite32((volatile unsigned int *)&(VSCMpr[vscmID[i]]->Adr32M),
                     ((a32addr + VSCM_MAX_A32MB_SIZE) >> 7) |
                     (a32addr >> 23) | (1 << 25));
-	  }
+    }
       vmeWrite32((volatile unsigned int *)&(VSCMpr[minSlot]->Adr32M),
                 vmeRead32((volatile unsigned int *)&(VSCMpr[minSlot]->Adr32M))
                             | (1 << 26));
@@ -2628,33 +2798,33 @@ vscmInit(uintptr_t addr, uint32_t addr_inc, int numvscm, int flag)
 #else
 
       if((flag&0x1)==0)
-	  {
+    {
         /* get clock from switch slot B (2,0-int, 3,1-ext)*/
         vmeWrite32(&VSCMpr[boardID]->ClockCfg, 3); /* sets clock */
         vmeWrite32(&VSCMpr[boardID]->ClockCfg, 1); /* release reset */
-	  }
-	  else
-	  {
+    }
+    else
+    {
         /* get clock from switch slot B (2,0-int, 3,1-ext)*/
         vmeWrite32(&VSCMpr[boardID]->ClockCfg, 2); /* sets clock */
         vmeWrite32(&VSCMpr[boardID]->ClockCfg, 0); /* release reset */
-	  }
+    }
 
       /* get trigger from switch slot B */
       vmeWrite32(&VSCMpr[boardID]->Trigger, IO_MUX_SWB_TRIG1);
 
       /* if there is no TI, cannot use IO_MUX_SWB_SYNC !!!
-		 to avoid problems, set it to IO_MUX_0 if internal */
+     to avoid problems, set it to IO_MUX_0 if internal */
       if((flag&0x1)==0)
-	  {
+    {
         /* get sync from switch slot B */
         vmeWrite32(&VSCMpr[boardID]->Sync, IO_MUX_SWB_SYNC);
-	  }
-	  else
-	  {
+    }
+    else
+    {
         /* set SYNC line to IO_MUX_0 */
         vmeWrite32(&VSCMpr[boardID]->Sync, IO_MUX_0);
-	  }
+    }
 
       /* busy to switch slot B */
       vmeWrite32(&VSCMpr[boardID]->SwBGpio, IO_MUX_BUSY | (1 << 24));
@@ -2675,9 +2845,9 @@ vscmInit(uintptr_t addr, uint32_t addr_inc, int numvscm, int flag)
 
       /* the number of events per block */
       vmeWrite32(&VSCMpr[boardID]->BlockCfg, 1);
-		
-	  /* maximum number of unprocessed triggers in buffer before busy is asserted */
-		vmeWrite32(&VSCMpr[boardID]->TrigBusyThr, 100);
+    
+    /* maximum number of unprocessed triggers in buffer before busy is asserted */
+    vmeWrite32(&VSCMpr[boardID]->TrigBusyThr, 100);
 
 
       /* delay for trigger processing in a board - must be more then 4us for 70MHz readout clock;
@@ -2698,20 +2868,20 @@ vscmInit(uintptr_t addr, uint32_t addr_inc, int numvscm, int flag)
       vscmSetDacCalibration(boardID);
       vscmSetPulserRate(boardID, 200000);
 
-		/* Send FSSR gothit OR to SWB Trigout */
-/*		vmeWrite32(&VSCMpr[boardID]->TrigOutCfg, IO_MUX_FSSRHIT_TRIG);*/
+    /* Send FSSR gothit OR to SWB Trigout */
+/*    vmeWrite32(&VSCMpr[boardID]->TrigOutCfg, IO_MUX_FSSRHIT_TRIG);*/
 
-		/* Send FSSR gothit OR to SWB Trigout: this one requires coincidence between top/bottom silicon layers on each HFCB */
-		vmeWrite32(&VSCMpr[boardID]->TrigOutCfg, IO_MUX_FSSRHIT_TBAND_TRIG);
-		
-		/* Enable all gothit signals, stretch by 64*8ns for triggering */
-		vscmSetHitMask(boardID, 0xFF, 64);
+    /* Send FSSR gothit OR to SWB Trigout: this one requires coincidence between top/bottom silicon layers on each HFCB */
+    vmeWrite32(&VSCMpr[boardID]->TrigOutCfg, IO_MUX_FSSRHIT_TBAND_TRIG);
+    
+    /* Enable all gothit signals, stretch by 64*8ns for triggering */
+    vscmSetHitMask(boardID, 0xFF, 64);
 
       /* Clear event buffers */
       vscmFifoClear(boardID);
-	
+  
       vscmSWSync(boardID);
-	  /*fssrMasterReset(boardID);*/
+    /*fssrMasterReset(boardID);*/
     }
 
 #ifdef CODA3DMA
@@ -2791,7 +2961,7 @@ vscmInitGlobals()
     slot = vscmID[kk];
     vscmFifoClear(slot);
     fssrMasterReset(slot);
-	fssrSetChipID(slot, 0, 1, 2, 3, 4);
+  fssrSetChipID(slot, 0, 1, 2, 3, 4);
   }
 
   taskDelay(10);
@@ -2816,20 +2986,20 @@ vscmInitGlobals()
     for(ii=0;ii<8;ii++) conf[slot].fssr_addr_reg_dcr[ii] = 0x18;
 
     for(ii=0;ii<8;ii++)
-	{
+  {
       conf[slot].fssr_addr_reg_kill_mask[ii][0] = 0;
       conf[slot].fssr_addr_reg_kill_mask[ii][1] = 0;
       conf[slot].fssr_addr_reg_kill_mask[ii][2] = 0;
       conf[slot].fssr_addr_reg_kill_mask[ii][3] = 0;
-	}
+  }
 
     for(ii=0;ii<8;ii++)
-	{
+  {
       conf[slot].fssr_addr_reg_inject_mask[ii][0] = 0;
       conf[slot].fssr_addr_reg_inject_mask[ii][1] = 0;
       conf[slot].fssr_addr_reg_inject_mask[ii][2] = 0;
       conf[slot].fssr_addr_reg_inject_mask[ii][3] = 0;
-	}
+  }
 
   }
  
@@ -2839,9 +3009,10 @@ vscmInitGlobals()
 
 
 int
-vscmReadConfigFile(char *filename)
+vscmReadConfigFile(char *filename_in)
 {
   FILE   *fd;
+  char   filename[FNLEN];
   char   fname[FNLEN] = { "" };  /* config file name */
   int    ii, jj, ch;
   char   str_tmp[STRLEN], keyword[ROCLEN];
@@ -2853,6 +3024,7 @@ vscmReadConfigFile(char *filename)
   unsigned int  ui1, ui2;
   char *getenv();
   char *clonparms;
+  int do_parsing;
 
   int nval;
   char charval[10][STRLEN];
@@ -2871,203 +3043,241 @@ vscmReadConfigFile(char *filename)
     printf("\nNOTE: use EXPID=>%s< from CODA\n",expid);
   }
 
-  if(strlen(filename)!=0) /* filename specified */
-  {
-    if ( filename[0]=='/' || (filename[0]=='.' && filename[1]=='/') )
-	{
-      sprintf(fname, "%s", filename);
-	}
-    else
-	{
-      sprintf(fname, "%s/vscm/%s", clonparms, filename);
-	}
+  strcpy(filename,filename_in); /* copy filename from parameter list to local string */
+  do_parsing = 1;
 
-    if((fd=fopen(fname,"r")) == NULL)
-    {
-      printf("\nvscmReadConfigFile: Can't open config file >%s<\n",fname);
-      return(-1);
-    }
-  }
-  else /* filename does not specified */
+  while(do_parsing)
   {
-    sprintf(fname, "%s/vscm/%s.cnf", clonparms, host);
-    if((fd=fopen(fname,"r")) == NULL)
+    if(strlen(filename)!=0) /* filename specified */
     {
-      sprintf(fname, "%s/vscm/%s.cnf", clonparms, expid);
+      if ( filename[0]=='/' || (filename[0]=='.' && filename[1]=='/') )
+      {
+        sprintf(fname, "%s", filename);
+      }
+      else
+      {
+        sprintf(fname, "%s/vscm/%s", clonparms, filename);
+      }
+
       if((fd=fopen(fname,"r")) == NULL)
       {
         printf("\nvscmReadConfigFile: Can't open config file >%s<\n",fname);
-        return(-2);
-	  }
-	}
-
-  }
-  printf("\nvscmReadConfigFile: Using configuration file >%s<\n",fname);
-
-  /* Parsing of config file */
-  active = 0;
-  while ((ch = getc(fd)) != EOF)
-  {
-    if ( ch == '#' || ch == ' ' || ch == '\t' )
-    {
-      while (getc(fd) != '\n') {}
+        return(-1);
+      }
     }
-    else if( ch == '\n' ) {}
+    else if(do_parsing<2) /* filename does not specified */
+    {
+      sprintf(fname, "%s/vscm/%s.cnf", clonparms, host);
+      if((fd=fopen(fname,"r")) == NULL)
+      {
+        sprintf(fname, "%s/vscm/%s.cnf", clonparms, expid);
+        if((fd=fopen(fname,"r")) == NULL)
+        {
+          printf("\nvscmReadConfigFile: Can't open config file >%s<\n",fname);
+          return(-2);
+        }
+      }
+    }
     else
     {
-      ungetc(ch,fd);
-      fgets(str_tmp, STRLEN, fd);
-      sscanf (str_tmp, "%s %s", keyword, ROC_name);
+      printf("\nReadConfigFile: ERROR: since do_parsing=%d (>1), filename must be specified\n",do_parsing);
+      return(-1);
+    }
 
+    printf("\nvscmReadConfigFile: Using configuration file >%s<\n",fname);
 
-      /* Start parsing real config inputs */
-      if(strcmp(keyword,"VSCM_CRATE") == 0)
+    /* Parsing of config file */
+    active = 0; /* by default disable crate */
+    do_parsing = 0; /* will parse only one file specified above, unless it changed during parsing */
+    while ((ch = getc(fd)) != EOF)
+    {
+      if ( ch == '#' || ch == ' ' || ch == '\t' )
       {
-	    if(strcmp(ROC_name,host) == 0)
-        {
-	      printf("\nReadConfigFile: crate = %s  host = %s - activated\n",ROC_name,host);
-          active = 1;
-        }
-	    else if(strcmp(ROC_name,"all") == 0)
-		{
-	      printf("\nReadConfigFile: crate = %s  host = %s - activated\n",ROC_name,host);
-          active = 1;
-		}
-        else
-		{
-	      printf("\nReadConfigFile: crate = %s  host = %s - disactivated\n",ROC_name,host);
-          active = 0;
-		}
+        while (getc(fd) != '\n') {}
       }
-
-      else if(active && (strcmp(keyword,"VSCM_SLOT")==0))
+      else if( ch == '\n' ) {}
+      else
       {
-        sscanf (str_tmp, "%*s %s", str2);
-        if(isdigit(str2[0]))
+        ungetc(ch,fd);
+        fgets(str_tmp, STRLEN, fd);
+        sscanf (str_tmp, "%s %s", keyword, ROC_name);
+
+
+        /* Start parsing real config inputs */
+        if(strcmp(keyword,"VSCM_CRATE") == 0)
         {
-          slot1 = atoi(str2);
-          slot2 = slot1 + 1;
-          if(slot1<2 && slot1>21)
+          if(strcmp(ROC_name,host) == 0)
           {
-            printf("\nReadConfigFile: Wrong slot number %d\n\n",slot1);
+            printf("\nReadConfigFile: crate = %s  host = %s - activated\n",ROC_name,host);
+            active = 1;
+          }
+          else if(strcmp(ROC_name,"all") == 0)
+          {
+            printf("\nReadConfigFile: crate = %s  host = %s - activated\n",ROC_name,host);
+            active = 1;
+          }
+          else
+          {
+            printf("\nReadConfigFile: crate = %s  host = %s - disactivated\n",ROC_name,host);
+            active = 0;
+          }
+        }
+
+        else if(active && (strcmp(keyword,"VSCM_CONF_FILE")==0))
+        {
+          sscanf (str_tmp, "%*s %s", str2);
+          /*printf("str2=%s\n",str2);*/
+          strcpy(filename,str2);
+          do_parsing = 2;
+        }
+
+        else if(active && (strcmp(keyword,"VSCM_SLOT")==0))
+        {
+          sscanf (str_tmp, "%*s %s", str2);
+          if(isdigit(str2[0]))
+          {
+            slot1 = atoi(str2);
+            slot2 = slot1 + 1;
+            if(slot1<2 && slot1>21)
+            {
+              printf("\nReadConfigFile: Wrong slot number %d\n\n",slot1);
+              return(-1);
+            }
+          }
+          else if(!strcmp(str2,"all"))
+          {
+            slot1 = 0;
+            slot2 = VSCM_MAX_BOARDS+1;
+          }
+          else
+          {
+            printf("\nReadConfigFile: Wrong slot >%s<, must be 'all' or actual slot number\n\n",str2);
             return(-1);
           }
         }
-        else if(!strcmp(str2,"all"))
+
+        else if(active && (!strcmp(keyword,"VSCM_CLOCK_INTERNAL")))
         {
-          slot1 = 0;
-          slot2 = VSCM_MAX_BOARDS+1;
+          for(slot=slot1; slot<slot2; slot++) conf[slot].clock_int_ext = 0;
         }
+
+        else if(active && (!strcmp(keyword,"VSCM_CLOCK_EXTERNAL")))
+        {
+          for(slot=slot1; slot<slot2; slot++) conf[slot].clock_int_ext = 1;
+        }
+
+        else if(!strcmp(keyword,"VSCM_BCO_FREQ"))
+        {
+          sscanf(str_tmp,"%*s %3s",charval[0]);
+          nval = 1;        
+          VAL_DECODER;
+          for(slot=slot1; slot<slot2; slot++) conf[slot].bco_freq = val[0];
+        }
+
+        else if(active && (!strcmp(keyword,"VSCM_TRIG_WINDOW")))
+        {
+          sscanf(str_tmp,"%*s %4s %4s %4s",charval[0],charval[1],charval[2]);
+          nval = 3;
+          VAL_DECODER;
+          for(slot=slot1; slot<slot2; slot++) 
+          {
+            conf[slot].window_width = val[0];
+            conf[slot].window_offset = val[1];
+            conf[slot].window_bco = val[2];
+          }
+        }
+
+        else if(active && (!strcmp(keyword,"VCSM_FSSR_GOTHIT_CFG")))
+        {
+          sscanf(str_tmp,"%*s %4s %4s",charval[0],charval[1]);
+          nval = 2;
+          VAL_DECODER;
+          for(slot=slot1; slot<slot2; slot++)
+          {
+            conf[slot].fssr_gothit_en_mask = val[0];
+            conf[slot].fssr_gothit_trig_width = val[1];
+          }
+        }
+
+        else if(active && (!strcmp(keyword,"FSSR_ADDR_REG_DISC_THR")))
+        {
+          sscanf(str_tmp,"%*s %1s %1s %3s",charval[0], charval[1], charval[2]);
+          nval = 3;        
+          VAL_DECODER;
+          for(slot=slot1; slot<slot2; slot++) conf[slot].fssr_addr_reg_disc_threshold[val[0]][val[1]] = val[2];
+        }
+
+        else if(active && (!strcmp(keyword,"FSSR_ADDR_REG_DCR")))
+        {
+          sscanf(str_tmp,"%*s %1s %4s",charval[0],charval[1]);
+          nval = 2;        
+          VAL_DECODER;
+          for(slot=slot1; slot<slot2; slot++) conf[slot].fssr_addr_reg_dcr[val[0]] = val[1];
+        }
+
+        else if(active && (!strcmp(keyword,"FSSR_ADDR_REG_KILL_STRIP")))
+        {
+          sscanf(str_tmp,"%*s %d %d",&i1,&i2);
+          if( (i1 < 0) || (i1 > 7) || (i2 < 0) || (i2 > 127) )
+          {
+            printf("%s: %s error %d %d\n", __func__, keyword, i1, i2);
+            exit(1);
+          }
+          for(slot=slot1; slot<slot2; slot++) 
+          {
+            int reg, bit;
+            i2 = 127-i2;
+            reg = i2/32;
+            bit = i2%32;
+            printf("FSSR_ADDR_REG_KILL_STRIP reg=%d,bit=%d\n", reg, bit);
+            conf[slot].fssr_addr_reg_kill_mask[i1][reg] |= 1<<bit;
+          }
+        }
+
+        else if(active && (!strcmp(keyword,"FSSR_ADDR_REG_KILL")))
+        {
+          sscanf(str_tmp,"%*s %1s %10s %10s %10s %10s",charval[0], charval[1], charval[2],charval[3], charval[4]);
+          nval = 5;        
+          VAL_DECODER;
+          for(slot=slot1; slot<slot2; slot++) 
+          {
+            conf[slot].fssr_addr_reg_kill_mask[val[0]][0] = val[1];
+            conf[slot].fssr_addr_reg_kill_mask[val[0]][1] = val[2];
+            conf[slot].fssr_addr_reg_kill_mask[val[0]][2] = val[3];
+            conf[slot].fssr_addr_reg_kill_mask[val[0]][3] = val[4];
+          }
+        }
+
+        else if(active && (!strcmp(keyword,"FSSR_ADDR_REG_INJECT")))
+        {
+          sscanf(str_tmp,"%*s %1s %10s %10s %10s %10s", keyword,charval[0], charval[1], charval[2], charval[3], charval[4]);
+          nval = 5;        
+          VAL_DECODER;
+          for(slot=slot1; slot<slot2; slot++) 
+          {
+            conf[slot].fssr_addr_reg_inject_mask[val[0]][0] = val[1];
+            conf[slot].fssr_addr_reg_inject_mask[val[0]][1] = val[2];
+            conf[slot].fssr_addr_reg_inject_mask[val[0]][2] = val[3];
+            conf[slot].fssr_addr_reg_inject_mask[val[0]][3] = val[4];
+          }
+        }
+
         else
         {
-          printf("\nReadConfigFile: Wrong slot >%s<, must be 'all' or actual slot number\n\n",str2);
-          return(-1);
+          ; /* unknown key - do nothing */
+    /*
+          printf("vscmReadConfigFile: Unknown Field or Missed Field in\n");
+          printf("   %s \n", fname);
+          printf("   str_tmp=%s", str_tmp);
+          printf("   keyword=%s \n\n", keyword);
+          return(-10);
+    */
         }
-	  }
-
-      else if(active && (!strcmp(keyword,"VSCM_CLOCK_INTERNAL")))
-      {
-        for(slot=slot1; slot<slot2; slot++) conf[slot].clock_int_ext = 0;
       }
+    } /* end of while */
 
-      else if(active && (!strcmp(keyword,"VSCM_CLOCK_EXTERNAL")))
-      {
-        for(slot=slot1; slot<slot2; slot++) conf[slot].clock_int_ext = 1;
-      }
-
-      else if(!strcmp(keyword,"VSCM_BCO_FREQ"))
-      {
-        sscanf(str_tmp,"%*s %3s",charval[0]);
-        nval = 1;        
-        VAL_DECODER;
-		for(slot=slot1; slot<slot2; slot++) conf[slot].bco_freq = val[0];
-      }
-
-      else if(active && (!strcmp(keyword,"VSCM_TRIG_WINDOW")))
-      {
-        sscanf(str_tmp,"%*s %4s %4s %4s",charval[0],charval[1],charval[2]);
-        nval = 3;
-        VAL_DECODER;
-        for(slot=slot1; slot<slot2; slot++) 
-		{
-          conf[slot].window_width = val[0];
-          conf[slot].window_offset = val[1];
-          conf[slot].window_bco = val[2];
-		}
-      }
-
-      else if(active && (!strcmp(keyword,"VCSM_FSSR_GOTHIT_CFG")))
-      {
-        sscanf(str_tmp,"%*s %4s %4s",charval[0],charval[1]);
-        nval = 2;
-        VAL_DECODER;
-        for(slot=slot1; slot<slot2; slot++)
-                {
-          conf[slot].fssr_gothit_en_mask = val[0];
-          conf[slot].fssr_gothit_trig_width = val[1];
-                }
-      }
-
-      else if(active && (!strcmp(keyword,"FSSR_ADDR_REG_DISC_THR")))
-      {
-        sscanf(str_tmp,"%*s %1s %1s %3s",charval[0], charval[1], charval[2]);
-        nval = 3;        
-        VAL_DECODER;
-        for(slot=slot1; slot<slot2; slot++) conf[slot].fssr_addr_reg_disc_threshold[val[0]][val[1]] = val[2];
-      }
-
-      else if(active && (!strcmp(keyword,"FSSR_ADDR_REG_DCR")))
-      {
-        sscanf(str_tmp,"%*s %1s %4s",charval[0],charval[1]);
-        nval = 2;        
-        VAL_DECODER;
-        for(slot=slot1; slot<slot2; slot++) conf[slot].fssr_addr_reg_dcr[val[0]] = val[1];
-      }
-
-      else if(active && (!strcmp(keyword,"FSSR_ADDR_REG_KILL")))
-      {
-        sscanf(str_tmp,"%*s %1s %10s %10s %10s %10s",charval[0], charval[1], charval[2],charval[3], charval[4]);
-        nval = 5;        
-        VAL_DECODER;
-        for(slot=slot1; slot<slot2; slot++) 
-		{
-          conf[slot].fssr_addr_reg_kill_mask[val[0]][0] = val[1];
-          conf[slot].fssr_addr_reg_kill_mask[val[0]][1] = val[2];
-          conf[slot].fssr_addr_reg_kill_mask[val[0]][2] = val[3];
-          conf[slot].fssr_addr_reg_kill_mask[val[0]][3] = val[4];
-		}
-      }
-
-      else if(active && (!strcmp(keyword,"FSSR_ADDR_REG_INJECT")))
-      {
-        sscanf(str_tmp,"%*s %1s %10s %10s %10s %10s", keyword,charval[0], charval[1], charval[2], charval[3], charval[4]);
-        nval = 5;        
-        VAL_DECODER;
-        for(slot=slot1; slot<slot2; slot++) 
-		{
-          conf[slot].fssr_addr_reg_inject_mask[val[0]][0] = val[1];
-          conf[slot].fssr_addr_reg_inject_mask[val[0]][1] = val[2];
-          conf[slot].fssr_addr_reg_inject_mask[val[0]][2] = val[3];
-          conf[slot].fssr_addr_reg_inject_mask[val[0]][3] = val[4];
-		}
-      }
-
-      else
-      {
-        ; /* unknown key - do nothing */
-		/*
-        printf("vscmReadConfigFile: Unknown Field or Missed Field in\n");
-        printf("   %s \n", fname);
-        printf("   str_tmp=%s", str_tmp);
-        printf("   keyword=%s \n\n", keyword);
-        return(-10);
-		*/
-      }
-
-    }
-  } /* end of while */
-
-  fclose(fd);
+    fclose(fd);
+  }
 
   return(0);
 }
@@ -3079,7 +3289,10 @@ vscmDownloadAll()
 
   for(id=0; id<nvscm; id++)
   {
+    //Ignore SWB Sync during register configuration
     slot = vscmSlot(id);
+
+    vmeWrite32(&VSCMpr[slot]->Sync, IO_MUX_0);
 
     vscmSetClockSource(slot, conf[slot].clock_int_ext);
 
@@ -3094,20 +3307,20 @@ vscmDownloadAll()
     for(ii=0;ii<8;ii++) fssrSetControl(slot,ii,conf[slot].fssr_addr_reg_dcr[ii]);
 
     for(ii=0;ii<8;ii++)
-	{
+  {
       ret = fssrSetMask(slot,ii,FSSR_ADDR_REG_KILL,(uint32_t *)&conf[slot].fssr_addr_reg_kill_mask[ii][0]);
 #ifdef DEBUG
       if(ret) printf("ERROR: %s: %d/%u Mask Reg# %d not set correctly\n",__func__,slot,ii,FSSR_ADDR_REG_KILL); 
 #endif
-	}
+  }
 
     for(ii=0;ii<8;ii++)
-	{
+  {
       ret = fssrSetMask(slot,ii,FSSR_ADDR_REG_INJECT,(uint32_t *)&conf[slot].fssr_addr_reg_inject_mask[ii][0]);
 #ifdef DEBUG
       if(ret) printf("ERROR: %s: %d/%u Mask Reg# %d not set correctly\n",__func__,slot,ii,FSSR_ADDR_REG_INJECT); 
 #endif
-	}
+  }
 
     for(ii=0; ii<8; ii++)
     {
@@ -3116,6 +3329,9 @@ vscmDownloadAll()
       fssrSCR(slot, ii);
       fssrSendData(slot, ii, 1);
     }
+
+    //Enable SWB Sync after register configuration
+    vmeWrite32(&VSCMpr[slot]->Sync, IO_MUX_SWB_SYNC);
   }
 
   return(0);
@@ -3207,7 +3423,7 @@ vscmUploadAll(char *string, int length)
       ADD_TO_STRING;
 
       if(conf[slot].clock_int_ext==0)      {sprintf(sss,"VSCM_CLOCK_INTERNAL\n");ADD_TO_STRING;}
-	  else if(conf[slot].clock_int_ext==1) {sprintf(sss,"VSCM_CLOCK_EXTERNAL\n");ADD_TO_STRING;}
+    else if(conf[slot].clock_int_ext==1) {sprintf(sss,"VSCM_CLOCK_EXTERNAL\n");ADD_TO_STRING;}
 
       sprintf(sss,"VSCM_BCO_FREQ %d\n",conf[slot].bco_freq); ADD_TO_STRING;
 
@@ -3216,37 +3432,37 @@ vscmUploadAll(char *string, int length)
       sprintf(sss,"VCSM_FSSR_GOTHIT_CFG 0x%02X %d\n",conf[slot].fssr_gothit_en_mask,conf[slot].fssr_gothit_trig_width); ADD_TO_STRING;
 
       for(jj=0;jj<8;jj++)
-	  {
+    {
         for(ii=0;ii<8;ii++)
-	    {
-		  sprintf(sss,"FSSR_ADDR_REG_DISC_THR %d %d %d\n",ii,jj,conf[slot].fssr_addr_reg_disc_threshold[ii][jj]); ADD_TO_STRING;
-	    }
-	  }
+      {
+      sprintf(sss,"FSSR_ADDR_REG_DISC_THR %d %d %d\n",ii,jj,conf[slot].fssr_addr_reg_disc_threshold[ii][jj]); ADD_TO_STRING;
+      }
+    }
 
       for(ii=0;ii<8;ii++)
-	  {
+    {
         sprintf(sss,"FSSR_ADDR_REG_DCR %d %d\n",ii,conf[slot].fssr_addr_reg_dcr[ii]); ADD_TO_STRING;
-	  }
+    }
 
       for(ii=0;ii<8;ii++)
-	  {
+    {
         sprintf(sss,"FSSR_ADDR_REG_KILL %d 0x%08x 0x%08x 0x%08x 0x%08x\n",ii,
                 conf[slot].fssr_addr_reg_kill_mask[ii][0],
-			    conf[slot].fssr_addr_reg_kill_mask[ii][1],
-			    conf[slot].fssr_addr_reg_kill_mask[ii][2],
-			    conf[slot].fssr_addr_reg_kill_mask[ii][3]);
+          conf[slot].fssr_addr_reg_kill_mask[ii][1],
+          conf[slot].fssr_addr_reg_kill_mask[ii][2],
+          conf[slot].fssr_addr_reg_kill_mask[ii][3]);
         ADD_TO_STRING;
-	  }
+    }
 
       for(ii=0;ii<8;ii++)
-	  {
+    {
         sprintf(sss,"FSSR_ADDR_REG_INJECT %d 0x%08x 0x%08x 0x%08x 0x%08x\n",ii,
                 conf[slot].fssr_addr_reg_inject_mask[ii][0],
-			    conf[slot].fssr_addr_reg_inject_mask[ii][1],
-			    conf[slot].fssr_addr_reg_inject_mask[ii][2],
-			    conf[slot].fssr_addr_reg_inject_mask[ii][3]);
+          conf[slot].fssr_addr_reg_inject_mask[ii][1],
+          conf[slot].fssr_addr_reg_inject_mask[ii][2],
+          conf[slot].fssr_addr_reg_inject_mask[ii][3]);
         ADD_TO_STRING;
-	  }
+    }
     }
 
     CLOSE_STRING;

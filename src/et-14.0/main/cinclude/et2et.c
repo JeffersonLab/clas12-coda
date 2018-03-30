@@ -141,7 +141,7 @@ ssipc_thread (void *arg)
 
 
 int
-main(int argc,char **argv)
+main(int argc, char **argv)
 {
 #ifdef CODASSIPC
   SSTHREAD ssarg;
@@ -297,7 +297,8 @@ main(int argc,char **argv)
 
 
 
-
+  et_open_config_addbroadcast(openconfig,"129.57.167.255");
+  et_open_config_addbroadcast(openconfig,"129.57.176.255");
 
 
   /*sergey: increase tcp buffersize 
@@ -355,6 +356,8 @@ main(int argc,char **argv)
 
 
 
+  et_open_config_addbroadcast(openconfig,"129.57.167.255");
+  et_open_config_addbroadcast(openconfig,"129.57.176.255");
 
 
   /*sergey: increase tcp buffersize 
@@ -408,14 +411,16 @@ printf("11\n");fflush(stdout);
  
 printf("12\n");fflush(stdout);
 
-  /* ET system "all" mode */
+  /* ET system "all" mode 
   et_station_config_setselect(sconfig, ET_STATION_SELECT_ALL);
   et_station_config_setblock(sconfig, ET_STATION_BLOCKING);
+*/
 
-  /* ET system "on req" mode 
+  /* ET system "on req" mode */
   et_station_config_setselect(sconfig, ET_STATION_SELECT_ALL);
   et_station_config_setblock(sconfig, ET_STATION_NONBLOCKING);
-  */
+
+
   /* ET system "condition" mode 
   et_station_config_setselect(sconfig, ET_STATION_SELECT_MATCH);
   et_station_config_setblock(sconfig, ET_STATION_BLOCKING);

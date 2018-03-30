@@ -22,8 +22,11 @@
 //   run control source
 //
 //
+
 #include <daqSubSystem.h>
 #include "configurer.h"
+
+#define _TRACE_OBJECTS
 
 configurer::configurer (daqSystem* system)
 :transitioner (system)
@@ -51,6 +54,15 @@ configurer::transitionFinished (int fstate, int successState)
   printf("configurer::transitionFinished reached, returns (%d == %d)\n",fstate,successState);
 #endif
 
+
+
+
+
+
+
+  return(fstate == successState);
+
+#if 0
 #ifdef NEW_STUFF
   /*sergey: do the same as transitioner::transitionFinished */
   return(fstate == successState);
@@ -59,6 +71,8 @@ configurer::transitionFinished (int fstate, int successState)
     return 1;
   return 0;
 #endif
+#endif
+
 }
 
 
@@ -66,7 +80,7 @@ int
 configurer::action (void)
 {
 #ifdef _TRACE_OBJECTS
-  printf("configurer::action\n");
+  printf("configurer::action\n");fflush(stdout);
 #endif
   return CODA_CONFIGURE_ACTION;
 }
@@ -77,7 +91,20 @@ configurer::executeItem (daqSubSystem* subsys)
 #ifdef _TRACE_OBJECTS
   printf("configurer::executeItem reached\n");fflush(stdout);
 #endif
-  subsys->configure ();
+  subsys->configure (); /* calls daqSubSystem::configure() ????????????? */
+
+  /*
+netComponent::configure reached
+codaCompClnt::codaDaCompConfigure reached (name >ROC85<)
+
+   and after loop over all components:
+
+netComponent::state() reached
+netComponent::state: Component ROC85 at state 4
+configurer::successState (CODA_CONFIGURED)
+configurer::transitionFinished reached, returns (4 == 4)
+   */
+
 }
 
 int
@@ -93,7 +120,7 @@ int
 configurer::successState (void)
 {
 #ifdef _TRACE_OBJECTS
-  printf("configurer::successState (CODA_CONFIGURED)\n");
+  printf("configurer::successState (always returns CODA_CONFIGURED)\n");
 #endif
   return CODA_CONFIGURED;
 }
@@ -104,5 +131,8 @@ configurer::transitionState (void)
 #ifdef _TRACE_OBJECTS
   printf("configurer::transitionState\n");
 #endif
+
+  /* sergey: return CODA_BOOTED triggers Download button to show up, CODA_DORMANT does not */
   return CODA_BOOTED;
+  //return CODA_DORMANT;
 }

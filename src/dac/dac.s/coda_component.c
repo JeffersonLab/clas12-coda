@@ -697,11 +697,15 @@ signal_thread (void *arg)
   int        thr = (int) arg;
   char       *rtn;
 
+  printf("signal_thread 1\n");fflush(stdout);
+
   if (global_env_depth[thr]>0)
   {
     global_env_depth[thr]--;
   }
+  printf("signal_thread 2\n");fflush(stdout);
   rtn = global_routine[global_env_depth[thr]][thr];
+  printf("signal_thread 3\n");fflush(stdout);
   
   sigemptyset(&signal_set);
   sigaddset(&signal_set, SIGSEGV);
@@ -712,7 +716,9 @@ signal_thread (void *arg)
   sigaddset(&signal_set, SIGINT);
   sigaddset(&signal_set, SIGTERM);
   sigaddset(&signal_set, SIGHUP);
-  
+
+  printf("signal_thread 4\n");fflush(stdout);
+
   while (1)
   {
     sigwait(&signal_set, &sig_number);
@@ -720,18 +726,18 @@ signal_thread (void *arg)
     switch (sig_number)
     {
       case SIGSEGV:
-        printf ("ERROR Segmentation fault - presumed fatal in %s\n", rtn);
+        printf ("ERROR Segmentation fault - presumed fatal in %s\n", rtn);fflush(stdout);
         fprintf (stdout, "ERROR Segmentation fault - presumed fatal in %s\n", rtn);
         break;
     
 		/* we are here when xterm closed, exit gracefully */
       case SIGHUP:
-        printf ("SIGHUP in %s (xterm probably closed)\n", rtn);
+        printf ("SIGHUP in %s (xterm probably closed)\n", rtn);fflush(stdout);
 	    exit(0);
         break;
 
       case SIGBUS:
-        printf ("ERROR Bus error in %s - presumed fatal\n", rtn);
+        printf ("ERROR Bus error in %s - presumed fatal\n", rtn);fflush(stdout);
         break;
 		/*
       case SIGILL:
@@ -740,15 +746,15 @@ signal_thread (void *arg)
         break;
 		*/
       case SIGFPE:
-        printf ("ERROR Math error (probably 1/0) in %s\n", rtn);
+        printf ("ERROR Math error (probably 1/0) in %s\n", rtn);fflush(stdout);
         break;
     
       case SIGTRAP:
-        printf ("ERROR Math error (probably 1/0) in %s\n", rtn);
+        printf ("ERROR Math error (probably 1/0) in %s\n", rtn);fflush(stdout);
         break;
          
       case SIGINT:
-        printf ("ERROR got SIGINT\n");
+        printf ("ERROR got SIGINT\n");fflush(stdout);
 	    exit(0);
 
       case SIGTERM:
@@ -756,21 +762,27 @@ signal_thread (void *arg)
         debug_printf (2,"killed by: %s", Tcl_SignalMsg (sig_number));
         Tk_doneFlag__ = 1;
 		*/
+        printf ("ERROR got SIGTERM\n");fflush(stdout);
         exit(0);/*return;*/
         break;
         
       default:
-        printf ("ERROR Unknown signal %d in %s\n", sig_number, rtn);
+        printf ("ERROR Unknown signal %d in %s\n", sig_number, rtn);fflush(stdout);
         return;
     }
+
+    printf("signal_thread 5\n");fflush(stdout);
 
 #ifdef Linux_vme
 	bb_dma_free();
 #endif
 
-    fflush(stdout);
+    printf("signal_thread 6\n");fflush(stdout);
+
     global_code[thr] = sig_number; 
+    printf("signal_thread 7\n");fflush(stdout);
     siglongjmp(global_env[global_env_depth[thr]][thr],sig_number);
+    printf("signal_thread 8\n");fflush(stdout);
   }
 }
 
@@ -778,6 +790,8 @@ signal_thread (void *arg)
 void
 Recover_Init ()
 {
+  printf("\nRecover_Init reached\n");fflush(stdout);
+
 #if !defined(Darwin)
   pthread_t  id;
   sigset_t   signal_set;
@@ -791,9 +805,28 @@ Recover_Init ()
     fprintf (stderr, "Recover_Init: error in setting signal mask, %d\n", status);
     exit (3);
   }
+  else
+  {
+    printf("Recover_Init: set signals, status=%d\n\n",status);fflush(stdout);
+  }
 
-  pthread_create(&id, NULL, signal_thread, (void *) thr);
+  printf("\nRecover_Init 1\n");fflush(stdout);
+
+  status = pthread_create(&id, NULL, signal_thread, (void *) thr); /*sergey: last par ??? */
+  /*status = pthread_create(&id, NULL, signal_thread, NULL);*/
+  if(status!=0)
+  {
+    printf("Recover_Init: ERROR: pthread_create returned %d - exit\n",status);fflush(stdout);
+    exit(0); 
+  }
+  else
+  {
+    printf("Recover_Init: pthread_create succeeded\n");fflush(stdout);
+  }
+
+  printf("\nRecover_Init 2\n");fflush(stdout);
   bzero(global_env_depth, sizeof(global_env_depth));
+  printf("\nRecover_Init 3\n");fflush(stdout);
 #endif
 }
 
@@ -1015,7 +1048,8 @@ CODA_Init(int argc, char **argv)
   /* ET name */
   if (et_filename == NULL)
   {
-    sprintf(et_name, "%s%s", "/tmp/et_sys_", session);
+    /*sergey sprintf(et_name, "%s%s", "/tmp/et_sys_", session);*/
+    sprintf(et_name, "/et/%s",session);
   }
   else
   {
@@ -1160,7 +1194,16 @@ CODA_Execute ()
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
 
-    pthread_create(&id, &attr, CODAtcpServer, NULL);
+    status = pthread_create(&id, &attr, CODAtcpServer, NULL);
+    if(status!=0)
+    {
+      printf("CODA_Execute: ERROR: pthread_create returned %d - exit\n",status);fflush(stdout);
+      exit(0); 
+    }
+    else
+    {
+      printf("CODA_Execute: pthread_create succeeded\n");fflush(stdout);
+    }
   }
 
   /*
@@ -1987,9 +2030,16 @@ UDP_start()
 
     res = pthread_create( (unsigned int *) &thread1, &detached_attr,
 		   (void *(*)(void *)) UDP_loop, (void *) NULL);
-
-    printf("UDP_start: pthread_create returned %d\n",res);fflush(stdout);
-    perror("UDP_start: pthread_create");
+    if(res!=0)
+    {
+      printf("UDP_start: ERROR: pthread_create returned %d - exit\n",res);fflush(stdout);
+      perror("UDP_start: pthread_create");
+      exit(0); 
+    }
+    else
+    {
+      printf("UDP_start: pthread_create succeeded\n");fflush(stdout);
+    }
 
 
     while((udp_loop_ready==0) && (iii>0))
@@ -2630,6 +2680,11 @@ codaExecute(char *command)
   {
     printf("codaExecute: 'exit' transition\n");
     codaExit();
+  }
+  else if( !strncmp(message, "alive", 5) )
+  {
+    printf("codaExecute: 'alive' request - do nothing for now\n");
+    /*UDP_standard_request(localobject->name,localobject->state);*/
   }
   else
   {

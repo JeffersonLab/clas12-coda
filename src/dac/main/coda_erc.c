@@ -130,6 +130,9 @@ int listSplit1(char *list, int flag,
 #define MAXBUF 100000
 static unsigned int hpsbuf[MAXBUF];
 
+
+#define BUFFERSIZE 4194304 /* evio buffer size, like bs in 'dd if=/dev/zero of=/data/stage_in/out.1 bs=16M count=2000 oflag=direct' */
+
 /****************************************************************************/
 /***************************** tcpServer functions **************************/
 
@@ -469,6 +472,8 @@ CODA_open_file(ERp erp)
     tmp=1;
     evIoctl(erp->fd,"d",&tmp);
     */
+    tmp = BUFFERSIZE;
+    evIoctl(erp->fd,"B",&tmp);
   }
 
   return(ER_OK);
@@ -576,6 +581,8 @@ outputEvents(ERp erp, et_event **pe, int start, int stop)
       tmp = 2047;
       evIoctl(erp->fd,"s",&tmp);
       */
+      tmp = BUFFERSIZE;
+      evIoctl(erp->fd,"B",&tmp);
 	}
 
   }

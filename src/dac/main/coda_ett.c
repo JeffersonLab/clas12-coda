@@ -278,7 +278,8 @@ ettStart()
      not using 'ET66' names here, just 'ctof1' as hostname; 'et_from'
      will be set using session name */
   strcpy(etp->host_from,(ch+1));
-  sprintf(etp->et_from,"/tmp/et_sys_%s",session);
+  /*sprintf(etp->et_from,"/tmp/et_sys_%s",session);*/
+  sprintf(etp->et_from,"/et/%s",session);
   printf("host_from >%s<, et_from >%s<\n",etp->host_from,etp->et_from);
 
 
@@ -304,7 +305,8 @@ ettStart()
   }
   ch[0] = '\0'; /* replace ':' by the end of string */
   strcpy(etp->host_to,(ch+1));
-  sprintf(etp->et_to,"/tmp/et_sys_%s",session);
+  /*sprintf(etp->et_to,"/tmp/et_sys_%s",session);*/
+  sprintf(etp->et_to,"/et/%s",session);
   printf("host_to >%s<, et_to >%s<\n",etp->host_to,etp->et_to);
 
 

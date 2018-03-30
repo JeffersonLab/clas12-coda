@@ -174,16 +174,15 @@ rcRunDInfoPanel::init (void)
   ac = 0;
   XmStringFree (t);
 
+
+
+
   ac = 0;
 
-
-
-
   /* This little widget is the pull down menu of all possible sources from which the event number can be read */
-
   compOption_ = new rcRepCompOption (evnbForm, "compOption", "Read From:", netHandler_, this);
-
   compOption_->init ();
+
   XtSetArg (arg[ac], XmNtopOffset, 10); ac++;
   XtSetArg (arg[ac], XmNbottomOffset, 10); ac++;
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
@@ -194,12 +193,9 @@ rcRunDInfoPanel::init (void)
   //XtSetArg (arg[ac], XmNleftWidget, evnbFrame2); ac++;
   XtSetValues (compOption_->baseWidget(), arg, ac);
 
-  /*sergey: trying to make several columns in dropdown component menu*/
-  XtSetArg(arg[ac], XmNpacking, XmPACK_COLUMN); ac++;
-  XtSetArg(arg[ac], XmNnumColumns, 2/*ncols*/); ac++;
-  /*sergey: trying to make several columns in dropdown component menu*/
-
   XtManageChild ( compOption_->baseWidget());
+
+
   // create a seperator
   ac = 0;
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_WIDGET); ac++;

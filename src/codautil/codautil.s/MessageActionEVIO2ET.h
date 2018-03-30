@@ -146,7 +146,7 @@ class MessageActionEVIO2ET : public MessageAction {
       et_ok=0;
 
       // create et file name
-      sprintf(et_filename,"/tmp/et_sys_%s",session);
+      sprintf(et_filename,"/et/%s",session);
       et_open_config_init(&openconfig);
 
 #ifdef REMOTE_ET

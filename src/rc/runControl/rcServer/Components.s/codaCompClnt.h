@@ -71,6 +71,7 @@ extern int codaDaBoot (char* name);
 extern int codaDaCompSetState  (char* name, int state);
 extern int codaAskComponent (char *command, char **res);
 #endif
+extern int codaDaCheckConnection(char *name);
 
 extern int compTimeOut;
 

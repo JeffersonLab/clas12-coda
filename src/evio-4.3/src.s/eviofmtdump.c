@@ -53,13 +53,15 @@ typedef struct
 
 #define PRINT
 
-#undef DEBUG
+//#define DEBUG
 
+#define NWORDS 1000000
+static int iarr[NWORDS+10];
 
 int
-eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, char *xml)
+eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, char *xml)
 {
-  int imt, ncnf, kcnf, lev, iterm;
+  int i, imt, ncnf, kcnf, lev, iterm;
   long long *b64, *b64end;
   int *b32, *b32end;
   short *b16, *b16end;
@@ -67,7 +69,14 @@ eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes,
   LV lv[10];
   int xml1 = xml;
 
-  if(nwrd <= 0 || nfmt<=0) return(0);
+
+  if(nwrd <= 0 || nfmt<=0 || nwrd>NWORDS)
+  {
+    printf("ERROR in eviofmtdump: nwrd=%d, nfmt=%d, nwrd=%d\n",nwrd,nfmt,NWORDS);
+    return(0);
+  }
+  for(i=0; i<nwrd; i++) iarr[i] = arr[i]; /* do not modify original buffer ! */
+
 
   imt = 0;   /* ifmt[] index */
   ncnf = 0;  /* how many times must repeat a format */
@@ -79,6 +88,7 @@ eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes,
 
 #ifdef DEBUG
   printf("\n======== eviofmtdump start (xml=0x%08x) ==========\n",xml);
+  printf("iarr[0]=0x%08x, nwrd=%d\n",iarr[0],nwrd);
 #endif
 
 #ifdef PRINT
@@ -87,19 +97,22 @@ eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes,
   while(b8 < b8end)
   {
 #ifdef DEBUG
-    printf("+++ 0x%08x 0x%08x\n",b8,b8end);
+    printf("+++ 0x%08x 0x%08x - geting next format code\n",b8,b8end);
 #endif
     while(1) /* get next format code */
     {
       imt++;
+#ifdef DEBUG
+      printf("imt=%d, nfmt=%d\n",imt,nfmt);
+#endif
       if(imt > nfmt) /* end of format statement reached, back to iterm - last parenthesis or format begining */
       {
         imt = 0/*iterm*/; /* Sergey: always start from the beginning of the format for now, will think about it ...*/
 #ifdef PRINT
-          xml += sprintf(xml,"         </row>\n");
-          xml += sprintf(xml,"         <row>\n");
+        xml += sprintf(xml,"         </row>\n");
+        xml += sprintf(xml,"         <row>\n");
 #endif
-#ifdef PRINTTTTTTT
+#ifdef DEBUG
         printf("======================= end of format statement reached, set imt=%d\n",imt);
 #endif
 #ifdef DEBUG
@@ -119,7 +132,7 @@ eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes,
           xml += sprintf(xml,"          )\n");
 #endif
 #ifdef DEBUG
-          printf("2\n");
+          printf("meet right parenthesis\n");
 #endif
         }
         else /* go for another round of processing by setting 'imt' to the left parenthesis */
@@ -129,7 +142,7 @@ eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes,
           xml += sprintf(xml,"\n");
 #endif
 #ifdef DEBUG
-          printf("3\n");
+          printf("go for another round of processing by setting 'imt' to the left parenthesis\n");
 #endif
         }
       }
@@ -160,7 +173,7 @@ eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes,
           lv[lev].irepeat = 0; /* cleanup place for the right parenthesis (do not get it yet) */
           lev++; /* increase parenthesis level */
 #ifdef DEBUG
-          printf("4\n");
+          printf("left parenthesis - set new lv[]\n");
 #endif
         }
         else /* format F or I or ... */
@@ -168,21 +181,21 @@ eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes,
           if(lev == 0) /* there are no parenthesis, just simple format, go to processing */
           {
 #ifdef DEBUG
-            printf("51\n");
+            printf("there are no parenthesis, just simple format, go to processing\n");
 #endif
             break;
           }
           else if(imt != (nfmt-1)) /* have parenthesis, NOT the pre-last format element (last assumed ')' ?) */
           {
 #ifdef DEBUG
-            printf("52: %d %d\n",imt,nfmt-1);
+            printf("have parenthesis, NOT the pre-last format element: %d %d\n",imt,nfmt-1);
 #endif
             break;
           }
           else if(imt != lv[lev-1].left+1) /* have parenthesis, NOT the first format after the left parenthesis */
           {
 #ifdef DEBUG
-            printf("53: %d %d\n",imt,nfmt-1);
+            printf("have parenthesis, NOT the first format after the left parenthesis: %d %d\n",imt,nfmt-1);
 #endif
             break;
           }
@@ -191,7 +204,7 @@ eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes,
             /* if none of above, we are in the end of format */
             ncnf = 999999999; /* set format repeat to the big number */
 #ifdef DEBUG
-            printf("54\n");
+            printf("none of above, we are in the end of format\n");
 #endif
             break;
           }
@@ -232,7 +245,9 @@ eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes,
 	  {
 #ifdef PRINT
         xml += sprintf(xml,"             64bit: 0x%llx(%lld)\n",*b64,*b64);
-        /*printf("64bit: 0x%llx(%lld)\n",*b64,*b64);*/
+#endif
+#ifdef DEBUG
+        printf("64bit: 0x%llx(%lld)\n",*b64,*b64);
 #endif
         *b64++ = SWAP64(*b64);
 	  }
@@ -250,7 +265,9 @@ eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes,
 	  {
 #ifdef PRINT
         xml += sprintf(xml,"             32bit: 0x%08x(%d)\n",*b32,*b32);
-        /*printf("32bit: 0x%08x(%d)\n",*b32,*b32);*/
+#endif
+#ifdef DEBUG
+        printf("32bit: 0x%08x(%d)\n",*b32,*b32);
 #endif
         *b32++ = SWAP32(*b32);
 	  }
@@ -266,19 +283,25 @@ eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes,
       if(b16end > (short *)b8end) b16end = (short *)b8end;
 #ifdef PRINT
       xml += sprintf(xml,"             16bit:");
-      /*printf("16bit:");*/
+#endif
+#ifdef DEBUG
+      printf("16bit:");
 #endif
       while(b16 < b16end)
 	  {
 #ifdef PRINT
         xml += sprintf(xml," 0x%04x(%d)",(unsigned short)*b16,*b16);
-        /*printf(" 0x%04x(%d)",*b16,*b16);*/
+#endif
+#ifdef DEBUG
+        printf(" 0x%04x(%d)",*b16,*b16);
 #endif
         *b16++ = SWAP16(*b16);
 	  }
 #ifdef PRINT
       xml += sprintf(xml,"\n");
-      /*printf("\n");*/
+#ifdef DEBUG
+      printf("\n");
+#endif
 #endif
       b8 = (char *)b16;
 #ifdef DEBUG
@@ -290,14 +313,20 @@ eviofmtdump(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes,
 #ifdef PRINT
       {
         int jjj;
-        /*printf("08b:");*/
+#ifdef DEBUG
+        printf("08b:");
+#endif
         xml += sprintf(xml,"             08bit:");
         for(jjj=0; jjj<ncnf; jjj++)
 		{
-          /*printf(" 0x%02x(%d)",b8[jjj],b8[jjj]);*/
+#ifdef DEBUG
+          printf(" 0x%02x(%d)",b8[jjj],b8[jjj]);
+#endif
           xml += sprintf(xml," 0x%02x(uchar=%u char=%d)",((unsigned char *)b8)[jjj],((unsigned char *)b8)[jjj],b8[jjj]);
 		}
-        /*printf("\n");*/
+#ifdef DEBUG
+        printf("\n");
+#endif
         xml += sprintf(xml,"\n");
 	  }
 #endif

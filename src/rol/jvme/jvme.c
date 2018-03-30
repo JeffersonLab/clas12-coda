@@ -247,9 +247,13 @@ vmeCloseDefaultWindows()
 {
   int status;
 
+  printf("vmeCloseDefaultWindows called\n");
+
 #ifdef GEFANUC
   status = (int)jlabgefCloseDefaultWindows();
 #endif
+
+  printf("vmeCloseDefaultWindows done, status=0x%08x\n",status);
 
 #ifdef VXWORKS
   status = OK;

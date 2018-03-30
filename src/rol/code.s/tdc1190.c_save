@@ -27,6 +27,8 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <pthread.h>
 #ifdef VXWORKS
@@ -143,7 +145,7 @@ static int nbytes_save[21];
 /*Sergey*/
 
 /*S.P.*/
-static TDC1290_CONF tdc[NBOARD];
+static TDC1290_CONF tdc[NBOARD]; /*index in that array is slot number */
 /*S.P.*/
 
 
@@ -164,7 +166,7 @@ tdc1190Init(UINT32 addr, UINT32 addr_inc, int ntdc, int iFlag)
   int boardID = 0;
   unsigned int laddr;
   volatile struct v1190_ROM_struct *rp;
-  char boardmodel[2][6] = {"v1190","v1290"};
+  char boardmodel[3][7] = {"v1190","v1290","v1290N"};
 
   /* Check for valid address */
   if(addr==0) 
@@ -274,6 +276,7 @@ tdc1190CommonInit(int itdc, UINT32 laddr)
   int ii, res=0, errFlag = 0;
   unsigned short rdata=0;
   int boardID = 0;
+  int boardVersion = 0;
   volatile struct v1190_ROM_struct *rp;
 
   c1190p[itdc] = (struct v1190_struct *)(laddr);
@@ -298,6 +301,7 @@ tdc1190CommonInit(int itdc, UINT32 laddr)
   {
     /* Check if this is a Model 1190/1290 */
     rp = (struct v1190_ROM_struct *)((UINT32)c1190p[itdc] + V1190_ROM_OFFSET);
+    boardVersion = vmeRead16(&(rp->vers)) & 0xff;
     boardID = ((vmeRead16(&(rp->board2))&(0xff))<<16) +
 	  ((vmeRead16(&(rp->board1))&(0xff))<<8) +
 	  (vmeRead16(&(rp->board0))&(0xff));
@@ -309,23 +313,36 @@ tdc1190CommonInit(int itdc, UINT32 laddr)
 	}
     else
 	{
-      printf(">>> Found board with BOARD_ID=0x%08x\n",boardID);
+      printf(">>> Found board with BOARD_ID=0x%08x, firmware=0x%08x\n",boardID,rdata);
 	}
 
     /* Check if this is the firmware we expect V1190_FIRMWARE_REV or V1190_FIRMWARE_REV+1 */
-    if( (rdata != V1190_FIRMWARE_REV) && (rdata != (V1190_FIRMWARE_REV+1)) )
+    if( (rdata != V1190_FIRMWARE_REV) && (rdata != (V1190_FIRMWARE_REV+1)) && (rdata != 0xc) && (rdata != 0x11) )
 	{
 	  printf("WARN: Firmware does not match: 0x%08x (expected 0x%08x) (laddr=0x%08x)\n",
 			 rdata,V1190_FIRMWARE_REV, laddr);
       return ERROR;
 	} 
   }
-  if((boardID&0xffff) == V1190_BOARD_ID)  use1190[itdc] = 1;  /* 1 for v1190 */
-  else                                    use1190[itdc] = 2;  /* 2 for v1290 */
+
+  if((boardID&0xffff)==V1190_BOARD_ID)                             use1190[itdc] = 1;  /* 1 for v1190 */
+  else if(((boardID&0xffff)==V1290_BOARD_ID) && (boardVersion==0)) use1190[itdc] = 2;  /* 2 for v1290 */
+  else if(((boardID&0xffff)==V1290_BOARD_ID) && (boardVersion==2)) use1190[itdc] = 3;  /* 3 for v1290N */
 
   return OK;
 }
 
+UINT32
+tdc1190ScanMask()
+{
+  int itdc=0;
+  UINT32 rval=0;
+
+  for(itdc=0; itdc<Nc1190; itdc++)
+    rval |= 1<<itdc;
+
+  return rval;
+}
 
 
 /*Sergey start*/
@@ -345,365 +362,6 @@ tdc1190SetDefaultWindowOffset(int offset)
   return;
 }
 
-
-STATUS
-tdc1190Config(char *fname)
-{
-  return(tdc1290Config(fname));
-}
-
-
-
-STATUS
-tdc1190Config_obsolete(int options)
-{
-  int ii, ifull;
-  unsigned short value, value0, value1, array0[32], array1[32], data16;
-  unsigned short dat16[21][10];
-  short tmp[5], tdata;
-  unsigned int ww, wm, wr;
-  int wo;
-
-  /* get DMA settings */
-  usrVmeDmaGetConfig(&a24_a32, &sngl_blt_mblt, &sst_rate);
-
-  /* unpack options */
-  berr_fifo = (options)&0xFF;
-  cblt_not = 0x0;
-
-  if(sngl_blt_mblt==0x01)
-  {
-    printf("  D32 single word readout\n");
-  }
-  else if(sngl_blt_mblt==0x02)
-  {
-    printf("  D32 DMA (BLT) readout\n");
-  }
-  else if(sngl_blt_mblt==0x03)
-  {
-    printf("  D64 DMA (MBLT) readout\n");
-  }
-  else if(sngl_blt_mblt==0x04)
-  {
-    printf("  D64 DMA (2eVME) readout\n");
-  }
-  else if(sngl_blt_mblt==0x05)
-  {
-    printf("  D64 DMA (2eSST) readout\n");
-  }
-  else
-  {
-    printf("  unknown readout mode, use D32 single word readout\n");
-    sngl_blt_mblt = 0x01;
-  }
-
-  if(berr_fifo==0x00)
-  {
-    printf("  DMA Nwords method: use VME BUS error\n");
-  }
-  else if(berr_fifo==0x01)
-  {
-    printf("  DMA Nwords method: use event fifo\n");
-  }
-  else
-  {
-    printf("  unknown DMA Nwords method, use VME BUS error\n");
-    berr_fifo = 0x00;
-  }
-
-  printf("start v1190/v1290 initialization\n");
-
-  /* general initialization */
-  /*for(ii=0; ii<Nc1190; ii++) tdc1190Init(ii,0,1,0);*/
-  for(ii=0; ii<Nc1190; ii++) tdc1190Clear(ii);
-  for(ii=0; ii<Nc1190; ii++) tdc1190Reset(ii);
-
-  /* Program TDC for trigger matching mode */
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    tdc1190SetTriggerMatchingMode(ii);
-  }
-
-
-  /*tdc1190ReadAcquisitionMode(ii,&data16);*/
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    tdc1190WriteMicro(ii,0x0200);
-  }
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    tdc1190ReadMicro(ii,&value,1);
-    value &= 0x1;
-    if(value==0)
-      printf("Acquisition Mode: Continuous Storage\n");
-    else
-      printf("Acquisition Mode: Trigger Matching\n");
-  }
-
-
-
-
-
-  /* Set Trigger Window Width (ns) */
-  ww = window_width;
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    /*tdc1190SetWindowWidth(ii, ww);*/
-    tdc1190WriteMicro(ii,0x1000);
-  }
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    if(ww < 25)         value = 1;
-    else if(ww > 51175) value = 0x7FF;
-    else                value = ww/25;
-    printf("Set Window Width to %d ns\n",value*25);
-    tdc1190WriteMicro(ii,value);
-  }
-
-
-
-
-
-  /* Set Trigger Window Offset (ns) */
-  wo = window_offset;;
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    /*tdc1190SetWindowOffset(ii, wo);*/
-    tdc1190WriteMicro(ii,0x1100);
-  }
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    if(wo < -800000) tdata = -32000;
-    else             tdata = wo/25;
-    printf("Set Window Offset to %d ns\n",tdata*25);
-    tdc1190WriteMicro(ii,tdata);
-  }
-
-
-
-  /* extra search margin (after window) (ns) */
-  wm = 25;
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    /*tdc1190SetExtraSearchMargin(ii, wm);*/
-    tdc1190WriteMicro(ii,0x1200);
-  }
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    if(wm < 0)         value = 0;
-    else if(wm > 1250) value = 50;
-    else               value = wm/25;
-    printf("Set Extra Search Margin to %d ns\n",value*25);
-    tdc1190WriteMicro(ii,value);
-  }
-
-
-
-  /* reject margin (before window) (ns) */
-  wr = 50;
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    /*tdc1190SetRejectMargin(ii, wr);*/
-    tdc1190WriteMicro(ii,0x1300);
-  }
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    if(wr < 0)         value = 0;
-    else if(wr > 1250) value = 50;
-    else               value = wr/25;
-    printf("Set Reject Margin to %d ns\n",value*25);
-    tdc1190WriteMicro(ii,value);
-  }
-
-
-
-  /* Enable subtraction of trigger time */
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    tdc1190EnableTriggerTimeSubtraction(ii);
-  }
-
-
-
-
-  /*tdc1190ReadTriggerConfiguration(ii);*/
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    tdc1190WriteMicro(ii,0x1600);
-  }
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    /*tdc1190ReadMicro(ii,tmp,5);*/
-    tdc1190ReadMicro(ii,&tmp[0],1);
-    tdc1190ReadMicro(ii,&tmp[1],1);
-    tdc1190ReadMicro(ii,&tmp[2],1);
-    tdc1190ReadMicro(ii,&tmp[3],1);
-    tdc1190ReadMicro(ii,&tmp[4],1);
-    printf("  Window Width              = %6d ns\n",tmp[0]*25);
-    printf("  Window Offset             = %6d ns\n",tmp[1]*25);
-    printf("  Extra Seach Margin        = %6d ns\n",tmp[2]*25);
-    printf("  Reject Margin             = %6d ns\n",tmp[3]*25);
-    printf("  Trigger Time Subtruction = %6d\n",tmp[4]);
-  }
-
-
-
-
-  /* edge detection: */
-  /* 0-pair, 1-trailing, 2-leading, 3-both leading and trailing */
-  value1=2;
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    /*tdc1190SetEdgeDetectionConfig(ii, value1);*/
-    value = value1 & 0x3;
-    printf("SetEdgeDetectionConfig: ");
-    if(value==0x0)
-      printf("set pair mode\n");
-    else if(value==0x1)
-      printf("set trailing edge only\n");
-    else if(value==0x2)
-      printf("set leading edge only\n");
-    else
-      printf("set both leading and trailing edges\n");
-    tdc1190WriteMicro(ii,0x2200);
-  }
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    tdc1190WriteMicro(ii,value);
-  }
-
-
-
-
-    /* get edge detection configuration */
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    /*tdc1190ReadEdgeDetectionConfig(ii,&data16);*/
-    tdc1190WriteMicro(ii,0x2300);
-  }
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    tdc1190ReadMicro(ii,&value,1);
-    value &= 0x3;
-    printf("ReadEdgeDetectionConfig: value=%d (0x%x)\n",value,value);
-    if(value==0)
-      printf("ReadEdgeDetectionConfig: paired measurement\n");
-    else if(value==1)
-      printf("ReadEdgeDetectionConfig: trailing edge\n");
-    else if(value==2)
-      printf("ReadEdgeDetectionConfig: leading edge\n");
-    else if(value==3)
-      printf("ReadEdgeDetectionConfig: both leading and trailing\n");
-    else
-    {
-      printf("ReadEdgeDetectionConfig: ERROR, value=%d (0x%x)\n",value,value);
-    }
-  }
-
-
-
-  /********************/
-  /* readout settings */
-
-  if(berr_fifo == 0x01)
-  {
-    /* enable event fifo */
-    for(ii=0; ii<Nc1190; ii++)
-    {
-      tdc1190EventFifo(ii,1);
-    }
-  }
-  else
-  {
-    /* disable event fifo */
-    for(ii=0; ii<Nc1190; ii++)
-    {
-      tdc1190EventFifo(ii,0);
-    }
-  }
-
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    ifull = tdc1190StatusFull(ii);
-    printf("ifull=%d\n",ifull);
-
-    printf("end v1190\n");
-  }
-
-
-  /* if using event fifo, disable bus error on BLT finish */
-  if(berr_fifo == 0x01)
-  {
-    printf("disable VME BUS error for event fifo readout\n");
-    for(ii=0; ii<Nc1190; ii++)
-    {
-      tdc1190BusError(ii,0);
-	}
-  }
-  else
-  {
-    printf("enable VME BUS error\n");
-    for(ii=0; ii<Nc1190; ii++)
-    {
-      tdc1190BusError(ii,1);
-    }
-  }
-
-  /* enable 64-bit alignment */
-  /* NOTE: 64-bit alignment must be enabled for any DMA readout,
-  not only for MBLT(D64) but for BLT(D32) as well; some DMA engines
-  (for example the one on mv5100) will cut off last 32-bit word if
-  it is not even, for example if event size is equal to 137 D32 words,
-  only 136 D32 words will be transfered */
-  /* in addition universe library contains check for 64-bit alignment
-	 in dmastart procedure, it will return error if ... */
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    tdc1190Align64(ii,1);
-  }
-
-  /* set BLT Event Number Register */
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    tdata = 1;
-    tdc1190SetBLTEventNumber(ii, tdata);
-    tdata = tdc1190GetBLTEventNumber(ii);
-    printf("BLT Event Number set to %d\n",tdata);
-  }
-
-
-  /* set maximum number of hits per event */
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    tdata = 64;
-    tdc1190SetMaxNumberOfHitsPerEvent(ii, tdata);
-    tdata = tdc1190GetMaxNumberOfHitsPerEvent(ii);
-  }
-  
-
-  /* reset MCST flag in every board in case if it was set before */
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    tdc1190ResetMCST(ii);
-  }
-
-  /* set 'almost full' level and program output connector to signal on it */
-  for(ii=0; ii<Nc1190; ii++)
-  {
-    tdc1190SetAlmostFullLevel(ii, 16384/*8*//*32735*/); /* default is 64 words, max is 32735 words */
-    tdata = tdc1190GetAlmostFullLevel(ii);
-
-    tdc1190SetOutProg(ii,2);/*0-data ready,1-full,2-almost full,3-err*/
-    tdata = tdc1190GetOutProg(ii);
-  }
-
-  /*
-  fflush(stdout);
-  taskDelay(10);
-  */
-
-  return;
-}
 
 /*Sergey end*/
 
@@ -832,28 +490,51 @@ tdc1190PrintROM(UINT32 addr_add, int loop)
   UNLOCK_1190;
 }
 
-/* channel_mask[0] - low 16 channels */
+/* channels[0] - low 16 channels */
 STATUS
-tdc1290EnableChannels(int id, UINT16 channel_mask[2])
+tdc1290EnableChannels(int id, UINT16 channels[2])
 {
+  int i, nnn=2;
   CHECKID(id);
   tdc1190WriteMicro(id,0x4400);
-  tdc1190WriteMicro(id,channel_mask[0]);
-  tdc1190WriteMicro(id,channel_mask[1]);
+  if(use1190[id]==3) nnn=1;
+  for(i=0; i<nnn; i++) tdc1190WriteMicro(id,channels[i]);
   return(OK);
 }
 
 STATUS
 tdc1290GetChannels(int id, UINT16 channels[2])
 {
-  int i;
+  int i, nnn=2;
   CHECKID(id);
   tdc1190WriteMicro(id,0x4500);
-  for(i=0; i<2; i++) tdc1190ReadMicro(id,&channels[i],1);
+  if(use1190[id]==3) nnn=1;
+  for(i=0; i<nnn; i++) tdc1190ReadMicro(id,&channels[i],1);
   return(OK);
 }
 
+
+
+
+
+
+
+
 /*****************************************************************************/
+
+static char *expid= NULL;
+
+void
+tdc1190SetExpid(char *string)
+{
+  tdc1290SetExpid(string);
+}
+
+void
+tdc1290SetExpid(char *string)
+{
+  expid = strdup(string);
+}
 
 void
 tdc1290InitGlobals()
@@ -875,18 +556,14 @@ tdc1290InitGlobals()
 
   for(ii=0; ii<NBOARD; ii++)
   {
-    tdc[ii].group = 0;
-    tdc[ii].edge  = 2;
+    /*tdc[ii].group = 0;*/
+    tdc[ii].edge = 2;
+    tdc[ii].compensation = 1;
     for(jj=0; jj<8; jj++) tdc[ii].mask[jj] = 0xffff;
   }
 
   /* obtain CPU DMA setting information */
   usrVmeDmaGetConfig(&a24_a32, &sngl_blt_mblt, &sst_rate);
-  /*
-  a24_a32       = 2;
-  sngl_blt_mblt = 3;
-  sst_rate      = 0;
-  */
 
   return;
 }
@@ -894,7 +571,7 @@ tdc1290InitGlobals()
 
 #define SCAN_MSK \
 	args = sscanf (str_tmp, "%*s %d %d %d %d %d %d %d %d   \
-                                     %d %d %d %d %d %d %d %d", \
+                                 %d %d %d %d %d %d %d %d", \
 		       &msk[ 0], &msk[ 1], &msk[ 2], &msk[ 3], \
 		       &msk[ 4], &msk[ 5], &msk[ 6], &msk[ 7], \
 		       &msk[ 8], &msk[ 9], &msk[10], &msk[11], \
@@ -909,16 +586,26 @@ tdc1290ReadConfigFile(char *filename)
   int    ii, jj, ch, gr;
   char   str_tmp[STRLEN], keyword[ROCLEN];
   char   host[ROCLEN], ROC_name[ROCLEN];
-  char   str2[2];
+  char   str2[STRLEN];
   int    args, i1, msk[NCHAN];
-  int    slot, chan;
+  int    slot, slot1, slot2, chan;
   unsigned int  ui1, ui2;
   char *getenv();
   char *clonparms;
-  char *expid;
 
+  gethostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
-  expid = getenv("EXPID");
+
+  if(expid==NULL)
+  {
+    expid = getenv("EXPID");
+    printf("\nNOTE: use EXPID=>%s< from environment\n",expid);
+  }
+  else
+  {
+    printf("\nNOTE: use EXPID=>%s< from CODA\n",expid);
+  }
+
   if(strlen(filename)!=0) /* filename specified */
   {
     if ( filename[0]=='/' || (filename[0]=='.' && filename[1]=='/') )
@@ -938,8 +625,6 @@ tdc1290ReadConfigFile(char *filename)
   }
   else /* filename does not specified */
   {
-    /* obtain our hostname */
-    gethostname(host,ROCLEN);
     sprintf(fname, "%s/tdc1190/%s.cnf", clonparms, host);
     if((fd=fopen(fname,"r")) == NULL)
     {
@@ -955,8 +640,15 @@ tdc1290ReadConfigFile(char *filename)
   printf("\nReadConfigFile: Using configuration file >%s<\n",fname);
 
   /* Parsing of config file */
+
   active = 0;
   gr = 0;
+
+  /* by default apply settings for all slots */
+  slot1 = tdc1190Slot(0);
+  slot2 = tdc1190Slot(Nc1190-1) + 1;
+  printf("\nReadConfigFile: use by default slot1=%d, slot2=%d\n",slot1,slot2);
+
   while ((ch = getc(fd)) != EOF)
   {
     if ( ch == '#' || ch == ' ' || ch == '\t' )
@@ -991,129 +683,117 @@ tdc1290ReadConfigFile(char *filename)
 		}
       }
 
-      else if(active && ((strcmp(keyword,"TDC1190_ALLSLOTS")==0)||(strcmp(keyword,"TDC1290_ALLSLOTS")==0)))
-      {
-	    gr++;
-	    for(ii=0; ii<NBOARD; ii++)  tdc[ii].group = gr;
-      }
 
-      else if(active && ((strcmp(keyword,"TDC1190_SLOT")==0)||(strcmp(keyword,"TDC1290_SLOT")==0)||
-			   (strcmp(keyword,"TDC1190_SLOTS")==0)||(strcmp(keyword,"TDC1290_SLOTS")==0)))
+      else if(active && ((strcmp(keyword,"TDC1190_SLOT")==0)||(strcmp(keyword,"TDC1290_SLOT")==0)))
       {
-	    gr++;
-	    SCAN_MSK;
-	    printf("\nReadConfigFile: gr = %d     args = %d \n",gr,args);
+        gr++;
+        sscanf (str_tmp, "%*s %s", str2);
+        printf("nReadConfigFile: str2>%s<\n",str2);
+        if(isdigit(str2[0]))
+        {
+          slot1 = atoi(str2);
+          slot2 = slot1 + 1;
+          if( slot1<tdc1190Slot(0) || slot1>tdc1190Slot(Nc1190-1) )
+          {
+            printf("\nReadConfigFile: Wrong slot number %d\n\n",slot1);
+            return(-4);
+          }
+        }
+        else if(!strcmp(str2,"all"))
+        {
+          slot1 = tdc1190Slot(0);
+          slot2 = tdc1190Slot(Nc1190-1) + 1;
+        }
+        else
+        {
+          printf("\nReadConfigFile: Wrong slot >%s<, must be 'all' or actual slot number\n\n",str2);
+          return(-4);
+        }
+        printf("\nReadConfigFile: slot1=%d slot2=%d\n",slot1,slot2);
+	  }
 
-	    for(ii=0; ii<args; ii++)
-	    {
-	      slot = msk[ii];
-	      if(slot<1 || slot>21)
-	      {
-	        printf("\nReadConfigFile: Wrong slot number %d, %s\n",slot,str_tmp);
-	        return(-4);
-	      }
-	      tdc[slot].group = gr;
-	    }
-      }
 
-      else if(active && ((strcmp(keyword,"TDC1190_A24_A32")==0)||(strcmp(keyword,"TDC1290_A24_A32")==0)))
-      {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    if(i1!=1 && i1!=2)
-	    {
-	      printf("\nReadConfigFile: Wrong DMA addrType %d, %s\n",i1,str_tmp);
-	      return(-5);
-	    }
-	    a24_a32 = i1;
-      }
-
-      else if(active && ((strcmp(keyword,"TDC1190_SNGL_BLT")==0)||(strcmp(keyword,"TDC1290_SNGL_BLT")==0)))
-      {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    if(i1<1 && i1>5)
-	    {
-	      printf("\nReadConfigFile: Wrong DMA dataType %d, %s\n",i1,str_tmp);
-	      return(-6);
-	    }
-	    sngl_blt_mblt = i1;
-      }
-
-      else if(active && ((strcmp(keyword,"TDC1190_SST_RATE")==0)||(strcmp(keyword,"TDC1290_SST_RATE")==0)))
-      {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    if(i1!=0 && i1!=1)
-	    {
-	      printf("\nReadConfigFile: Wrong DMA sstMode %d, %s\n",i1,str_tmp);
-	      return(-7);
-	    }
-	    sst_rate = i1;
-      }
 
       else if(active && ((strcmp(keyword,"TDC1190_BERR_FIFO")==0)||(strcmp(keyword,"TDC1290_BERR_FIFO")==0)))
       {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    if(i1!=0 && i1!=1)
+        sscanf (str_tmp, "%*s %d", &i1);
+	    if(i1<0||i1>1)
 	    {
 	      printf("\nReadConfigFile: Wrong DMA Nwords method %d, %s\n",i1,str_tmp);
 	      return(-8);
 	    }
 	    berr_fifo = i1;
+        printf("\nReadConfigFile: berr_fifo=%d\n",berr_fifo);
       }
 
       else if(active && ((strcmp(keyword,"TDC1190_BLT_EVENTS")==0)||(strcmp(keyword,"TDC1290_BLT_EVENTS")==0)))
       {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    blt_Events= i1;
+        sscanf (str_tmp, "%*s %d", &i1);
+	    blt_Events = i1;
+        printf("\nReadConfigFile: blt_Events=%d\n",blt_Events);
       }
 
       else if(active && ((strcmp(keyword,"TDC1190_N_HITS")==0)||(strcmp(keyword,"TDC1290_N_HITS")==0)))
       {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    n_Hits= i1;
+        sscanf (str_tmp, "%*s %d", &i1);
+	    n_Hits = i1;
+        printf("\nReadConfigFile: n_Hits=%d\n",n_Hits);
       }
 
       else if(active && ((strcmp(keyword,"TDC1190_ALMOSTFULL")==0)||(strcmp(keyword,"TDC1290_ALMOSTFULL")==0)))
       {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    almostFullLevel= i1;
+        sscanf (str_tmp, "%*s %d", &i1);
+	    almostFullLevel = i1;
+        printf("\nReadConfigFile: almostFullLevel=%d\n",almostFullLevel);
       }
 
       else if(active && ((strcmp(keyword,"TDC1190_OUT_PROG")==0)||(strcmp(keyword,"TDC1290_OUT_PROG")==0)))
       {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    outProgControl= i1;
+        sscanf (str_tmp, "%*s %d", &i1);
+	    outProgControl = i1;
+        printf("\nReadConfigFile: outProgControl=%d\n",outProgControl);
       }
 
 	  else if(active && ((strcmp(keyword,"TDC1190_W_WIDTH")==0)||(strcmp(keyword,"TDC1290_W_WIDTH")==0)))
       {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    window_width= i1;
+        sscanf (str_tmp, "%*s %d", &i1);
+	    window_width = i1;
+        printf("\nReadConfigFile: window_width=%d\n",window_width);
       }
 
       else if(active && ((strcmp(keyword,"TDC1190_W_OFFSET")==0)||(strcmp(keyword,"TDC1290_W_OFFSET")==0)))
       {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    window_offset= i1;
+        sscanf (str_tmp, "%*s %d", &i1);
+	    window_offset = i1;
+        printf("\nReadConfigFile: window_offset=%d\n",window_offset);
       }
 
       else if(active && ((strcmp(keyword,"TDC1190_W_EXTRA")==0)||(strcmp(keyword,"TDC1290_W_EXTRA")==0)))
       {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    window_extra= i1;
+        sscanf (str_tmp, "%*s %d", &i1);
+	    window_extra = i1;
+        printf("\nReadConfigFile: window_extra=%d\n",window_extra);
       }
 
       else if(active && ((strcmp(keyword,"TDC1190_W_REJECT")==0)||(strcmp(keyword,"TDC1290_W_REJECT")==0)))
       {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    window_reject= i1;
+        sscanf (str_tmp, "%*s %d", &i1);
+	    window_reject = i1;
+        printf("\nReadConfigFile: window_reject=%d\n",window_reject);
       }
 
       else if(active && ((strcmp(keyword,"TDC1190_EDGE")==0)||(strcmp(keyword,"TDC1290_EDGE")==0)))
       {
-        sscanf (str_tmp, "%*s %d %d", &i1);
-	    for(ii=0; ii<NBOARD; ii++)  if(tdc[ii].group == gr)  tdc[ii].edge = i1 & 0x3;
+        sscanf (str_tmp, "%*s %d", &i1);
+	    for(slot=slot1; slot<slot2; slot++)  tdc[slot].edge = i1 & 0x3;
       }
-
+	  
+      else if(active && ((strcmp(keyword,"TDC1190_COMPENSATION")==0)||(strcmp(keyword,"TDC1290_COMPENSATION")==0)))
+      {
+        sscanf (str_tmp, "%*s %d", &i1);
+	    for(slot=slot1; slot<slot2; slot++)  tdc[slot].compensation = i1 & 0x1;
+      }
+	  
       else if(active && ((strncmp(keyword,"TDC1190_MASK",12) == 0)||(strncmp(keyword,"TDC1290_MASK",12) == 0)))
       {
 	    SCAN_MSK;
@@ -1135,14 +815,11 @@ tdc1290ReadConfigFile(char *filename)
           printf("ERROR: mask jj = %d, must be between 0 and 7\n",jj);
           return(-9);
 		}
-        printf("mask jj = %d\n",jj);
-	    for(ii=0; ii<NBOARD; ii++)
+        /*printf("mask jj = %d\n",jj);*/
+	    for(slot=slot1; slot<slot2; slot++)
 		{
-	      if(tdc[ii].group == gr)
-		  {
-	        tdc[ii].mask[jj] = ui1;
-            printf("boardid=%d, mask[%d] = %d\n",ii,jj,tdc[ii].mask[jj]);
-		  }
+	        tdc[slot].mask[jj] = ui1;
+            /*printf("slot=%d, mask[%d] = %d\n",slot,jj,tdc[slot].mask[jj]);*/
 		}
 	  }
       else
@@ -1162,8 +839,7 @@ tdc1290ReadConfigFile(char *filename)
 
   fclose(fd);
 
-  gr--;
-  return(gr);
+  return(0/*gr*/);
 }
 
 
@@ -1174,37 +850,154 @@ tdc1290ReadConfigFile(char *filename)
 int
 tdc1290DownloadAll()
 {
-  int ii;
-
-  printf("tdc1290DownloadAll reached, Nc1190=%d\n",Nc1190);
+  int ii, jj, nnn;
+  unsigned short value;
+  short tdata;
 
   for(ii=0; ii<Nc1190; ii++) tdc1190Clear(ii);
   for(ii=0; ii<Nc1190; ii++) tdc1190Reset(ii);
+
+
+  /* set Trigger Window Width (ns) */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    /*tdc1190SetWindowWidth(ii, window_width);*/
+    tdc1190WriteMicro(ii,0x1000);
+  }
+  if(window_width < 25)         value = 1;
+  else if(window_width > 51175) value = 0x7FF;
+  else                          value = window_width/25;
+  printf("Set Window Width to %d ns\n",value*25);
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    tdc1190WriteMicro(ii,value);
+  }
+
+  /* set Trigger Window Offset (ns) */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    /*tdc1190SetWindowOffset(ii, window_offset);*/
+    tdc1190WriteMicro(ii,0x1100);
+  }
+  if(window_offset < -800000) tdata = -32000;
+  else                        tdata = window_offset/25;
+  value = (unsigned short)tdata;
+  printf("Set Window Offset to %d ns, tdata=0x%04x, value=0x%04x\n",tdata*25,tdata,value);
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    tdc1190WriteMicro(ii,/*tdata*/value);
+  }
+
+  /* set Extra Search Margin (after window) (ns) */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    /*tdc1190SetExtraSearchMargin(ii, window_extra);*/
+    tdc1190WriteMicro(ii,0x1200);
+  }
+  if(window_extra < 0)         value = 0;
+  else if(window_extra > 1250) value = 50;
+  else                         value = window_extra/25;
+  printf("Set Extra Search Margin to %d ns\n",value*25);
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    tdc1190WriteMicro(ii,value);
+  }
+
+  /* set Reject Margin (before window) (ns) */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    /*tdc1190SetRejectMargin(ii, window_reject);*/
+    tdc1190WriteMicro(ii,0x1300);
+  }
+  if(window_reject < 0)         value = 0;
+  else if(window_reject > 1250) value = 50;
+  else                          value = window_reject/25;
+  printf("Set Reject Margin to %d ns\n",value*25);
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    tdc1190WriteMicro(ii,value);
+  }
+
+  /* set Edge Detection */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    /*tdc1190SetEdgeDetectionConfig(ii, tdc[tdc1190Slot(ii)].edge);*/
+    tdc1190WriteMicro(ii,0x2200);
+  }
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    value = tdc[tdc1190Slot(ii)].edge & 0x3;
+    printf("SetEdgeDetectionConfig: ");
+    if(value==0x0)      printf("set pair mode\n");
+    else if(value==0x1) printf("set trailing edge only\n");
+    else if(value==0x2) printf("set leading edge only\n");
+    else                printf("set both leading and trailing edges\n");
+    tdc1190WriteMicro(ii,value);
+  }
+
+  /* set compensation */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    tdc1190Compensation(ii, tdc[tdc1190Slot(ii)].compensation);
+  }
+
+  /* set Channels Enable Mask */
+  /*
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    if(use1190[ii]==1) tdc1190EnableChannels(ii, tdc[tdc1190Slot(ii)].mask);
+    else               tdc1290EnableChannels(ii, tdc[tdc1190Slot(ii)].mask);
+  }
+  */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    tdc1190WriteMicro(ii,0x4400);
+  }
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    if(use1190[ii]==1)      nnn = 8;
+    else if(use1190[ii]==2) nnn = 2;
+    else                    nnn = 1;
+    for(jj=0; jj<nnn; jj++) tdc1190WriteMicro(ii,tdc[tdc1190Slot(ii)].mask[jj]);
+  }
+
+  /* set Max Number of Hits per Event */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    /*tdc1190SetMaxNumberOfHitsPerEvent(ii, n_Hits);*/
+    tdc1190WriteMicro(ii,0x3300);
+  }
+  if(n_Hits==0)        tdata = 0;
+  else if(n_Hits==1)   tdata = 1;
+  else if(n_Hits==2)   tdata = 2;
+  else if(n_Hits==4)   tdata = 3;
+  else if(n_Hits==8)   tdata = 4;
+  else if(n_Hits==16)  tdata = 5;
+  else if(n_Hits==32)  tdata = 6;
+  else if(n_Hits==64)  tdata = 7;
+  else if(n_Hits==128) tdata = 8;
+  else                 tdata = 9;
+  if(tdata==9)
+    printf("%s(%d): Set Unlimited Number Of Hits Per Event\n",__FUNCTION__,ii);
+  else
+    printf("%s(%d): Set Maximum Number Of Hits Per Event to %d\n",__FUNCTION__,ii,n_Hits);
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    tdc1190WriteMicro(ii,tdata);
+  }
+
+
+
+
+
+
   for(ii=0; ii<Nc1190; ii++)
   {
     /* program TDC for trigger matching mode */
     tdc1190SetTriggerMatchingMode(ii);
 
-    /* set Trigger Window Width (ns) */
-    tdc1190SetWindowWidth(ii, window_width);
-
-    /* set Trigger Window Offset (ns) */
-    tdc1190SetWindowOffset(ii, window_offset);
-
-    /* set Extra Search Margin (after window) (ns) */
-    tdc1190SetExtraSearchMargin(ii, window_extra);
-
-    /* set Reject Margin (before window) (ns) */
-    tdc1190SetRejectMargin(ii, window_reject);
-
     /* enable subtraction of trigger time */
     tdc1190EnableTriggerTimeSubtraction(ii);
-
-    /* set Edge Detection */
-    tdc1190SetEdgeDetectionConfig(ii, tdc[ii].edge);
-
-    /* set Channels Enable Mask */
-    tdc1290EnableChannels(ii, tdc[ii].mask);
 
     /* set Readout settings */
     tdc1190EventFifo(ii, berr_fifo);
@@ -1223,9 +1016,6 @@ tdc1290DownloadAll()
     /* set BLT Event Number Register */
     tdc1190SetBLTEventNumber(ii, blt_Events);
 
-    /* set Max Number of Hits per Event */
-    tdc1190SetMaxNumberOfHitsPerEvent(ii, n_Hits);
-
     /* reset MCST flag in every board in case if it was set before */
     tdc1190ResetMCST(ii);
 
@@ -1236,9 +1026,16 @@ tdc1290DownloadAll()
     tdc1190SetOutProg(ii, outProgControl);
   }
 
-  printf("tdc1290DownloadAll finished, Nc1190=%d\n",Nc1190);
-
   return(0);
+}
+
+
+
+
+int
+tdc1190DownloadAll()
+{
+  tdc1290DownloadAll();
 }
 
 
@@ -1267,7 +1064,11 @@ tdc1290Config(char *fname)
   }
 
   /* read config file */
-  if( (res = tdc1290ReadConfigFile(fname)) < 0 ) return(res);
+  if( (res = tdc1290ReadConfigFile(fname)) < 0 )
+  {
+    printf("tdc1290Config ERROR: res=%d, nothing will be downloaded !!!!!!!!!!\n",res);
+    return(res);
+  }
 
   /* download to all boards */
   tdc1290DownloadAll();
@@ -1275,11 +1076,13 @@ tdc1290Config(char *fname)
   return(0);
 }
 
-void
-tdc1190Mon(int slot)
+int
+tdc1190Config(char *fname)
 {
-  tdc1290Mon(slot);
+  return(tdc1290Config(fname));
 }
+
+
 
 void
 tdc1290Mon(int slot)
@@ -1324,8 +1127,25 @@ tdc1290Mon(int slot)
     printf("  Board Revision      = 0x%08x\n", tdc119GetBoardRev(ii));
     printf("  Board Serial Number = %04d\n",  tdc119GetSerialNumber(ii));
 
-    tdc1290GetChannels(ii,channels[2]);
-    printf("  Channel Mask        = 0x%04x%04x\n", channels[1],channels[0]);
+    if(use1190[ii]==1) tdc1190GetChannels(ii, channels);
+    else               tdc1290GetChannels(ii, channels);
+
+    if(use1190[ii] == 1)
+	{
+      printf("  Channel Mask = 0x%04x 0x%04x 0x%04x 0x%04x 0x%04x 0x%04x 0x%04x 0x%04x\n",
+        channels[7],channels[6],channels[5],channels[4],channels[3],channels[2],channels[1],channels[0]);
+	}
+    else if(use1190[ii] == 2)
+	{
+      printf("  Channel Mask = 0x%04x 0x%04x\n",
+        channels[1],channels[0]);
+	}
+    else
+	{
+      printf("  Channel Mask = 0x%04x\n",
+        channels[0]);
+	}
+
     printf("\n");
 
     tdc1290PrintDMABerrFifo(berr_fifo);
@@ -1353,6 +1173,11 @@ tdc1290Mon(int slot)
   }
 }
 
+void
+tdc1190Mon(int slot)
+{
+  tdc1290Mon(slot);
+}
 
 
 
@@ -1363,89 +1188,189 @@ int
 tdc1290UploadAll(char *string, int length)
 {
   int slot, i, ii, jj, kk, nnn, len1, len2;
-  char *str, sss[1024];
+  char tdcname[8], *str, sss[1024];
   unsigned int tmp, val[NCHAN], val1[NCHAN];
   unsigned short sval[NCHAN];
   unsigned short bypMask;
   unsigned short channels[8];
+  short temp[5];
+  int ww[NBOARD],wo[NBOARD],esm[NBOARD],rm[NBOARD],tts[NBOARD], nh[NBOARD];
+  short tdata;
 
-
-  for(kk=0; kk<Nc1190; kk++)
+  /* read trigger configuration */
+  for(ii=0; ii<Nc1190; ii++)
   {
-	berr_fifo = tdc1190GetEventFifo(kk);
-	blt_Events = tdc1190GetBLTEventNumber(kk);
+    tdc1190WriteMicro(ii,0x1600);
+  }
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    tdc1190ReadMicro(ii,temp,5);
+	/*
+    tdc1190ReadMicro(ii,&temp[0],1);
+    tdc1190ReadMicro(ii,&temp[1],1);
+    tdc1190ReadMicro(ii,&temp[2],1);
+    tdc1190ReadMicro(ii,&temp[3],1);
+    tdc1190ReadMicro(ii,&temp[4],1);
+	*/
+    ww[ii]  = temp[0]*25; /*Window Width (ns)*/
+    wo[ii]  = temp[1]*25; /*Window Offset (ns)*/
+    esm[ii] = temp[2]*25; /*Extra Seach Margin (ns)*/
+    rm[ii]  = temp[3]*25; /*Reject Margin (ns)*/
+    tts[ii] = temp[4];    /*Trigger Time Subtruction*/
+	/*
+    printf("tdc1290UploadAll  Window Width             = %6d ns\n",ww[ii]);
+    printf("tdc1290UploadAll  Window Offset            = %6d ns\n",wo[ii]);
+    printf("tdc1290UploadAll  Extra Seach Margin       = %6d ns\n",esm[ii]);
+    printf("tdc1290UploadAll  Reject Margin            = %6d ns\n",rm[ii]);
+    printf("tdc1290UploadAll  Trigger Time Subtruction = %6d\n",tts[ii]);
+	*/
+  }
 
-	n_Hits = tdc1190GetMaxNumberOfHitsPerEvent(kk);
+  /* read max number of hits per event */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+	/*n_Hits = tdc1190GetMaxNumberOfHitsPerEvent(ii);*/
+    tdc1190WriteMicro(ii,0x3400);
+  }
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    tdc1190ReadMicro(ii,&tdata,1);
+    tdata &= 0xF;
+    if(tdata==0)      nh[ii] = 0;
+    else if(tdata==1) nh[ii] = 1;
+    else if(tdata==2) nh[ii] = 2;
+    else if(tdata==3) nh[ii] = 4;
+    else if(tdata==4) nh[ii] = 8;
+    else if(tdata==5) nh[ii] = 16;
+    else if(tdata==6) nh[ii] = 32;
+    else if(tdata==7) nh[ii] = 64;
+    else if(tdata==8) nh[ii] = 128;
+    else if(tdata==9) nh[ii] = 9999;
+    else printf("%s(%d): ERROR: tdata=%d (0x%x)\n",__FUNCTION__,ii,tdata,tdata);
+  }
 
-	almostFullLevel = tdc1190GetAlmostFullLevel(kk);
-	outProgControl = tdc1190GetOutProg(kk);
-	tdc[kk].edge = tdc1190ReadEdgeDetectionConfig(kk);
-
-    tdc1190GetChannels(kk, channels);
-    if(use1190[kk] == 1) nnn = 8;
-    else                 nnn = 2;
-    for(ii=0; ii<nnn; ii++)
-	{
-	  tdc[kk].mask[ii] = channels[ii];
+  /* read edge detection configuration */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+	/*tdc[tdc1190Slot(ii)].edge = tdc1190ReadEdgeDetectionConfig(ii);*/
+    tdc1190WriteMicro(ii,0x2300);
+  }
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    tdc1190ReadMicro(ii,&tdata,1);
+    tdata &= 0x3;
+    if(tdata<3)
+    {
 	  /*
-      for(jj=0; jj<16; jj++)
-	  {
-		tdc[kk].mask[ii] = (channels[ii]>>jj)&0x1;
-	  }
+      printf(" %s(%d): Mode =",__FUNCTION__,ii);
+      if(tdata==0) printf(" pair mode\n");
+      else if(tdata==1) printf(" trailing edge\n");
+      else if(tdata==2) printf(" leading edge\n");
+      else if(tdata==3) printf(" both leading and trailing\n");
 	  */
+      tdc[tdc1190Slot(ii)].edge = tdata;
+    }
+    else printf("%s(%d) ERROR: tdata=%d (0x%x)\n",__FUNCTION__,ii,tdata,tdata);
+  }
+
+  /* read compensation configuration */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    tdc[tdc1190Slot(ii)].compensation = tdc1190GetCompensation(ii);
+  }
+
+  /* read channel mask */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    /*if(use1190[ii]==1) tdc1190GetChannels(ii, channels);
+	else               tdc1290GetChannels(ii, channels);*/
+    tdc1190WriteMicro(ii,0x4500);
+  }
+  for(ii=0; ii<Nc1190; ii++)
+  {
+    if(use1190[ii] == 1)      nnn = 8;
+    else if(use1190[ii] == 2) nnn = 2;
+    else                      nnn = 1;
+	/*
+    for(jj=0; jj<nnn; jj++) tdc1190ReadMicro(ii,&channels[jj],1);
+	*/
+    tdc1190ReadMicro(ii,tdc[tdc1190Slot(ii)].mask,nnn);
+	/*
+    for(jj=0; jj<nnn; jj++)
+	{
+	  tdc[tdc1190Slot(ii)].mask[jj] = channels[jj];
 	}
+	*/
+  }
+
+
+  /* read the rest of configuration */
+  for(ii=0; ii<Nc1190; ii++)
+  {
+	berr_fifo = tdc1190GetEventFifo(ii);
+	blt_Events = tdc1190GetBLTEventNumber(ii);
+	almostFullLevel = tdc1190GetAlmostFullLevel(ii);
+	outProgControl = tdc1190GetOutProg(ii);
   }
 
   if(length)
   {
     str = string;
     str[0] = '\0';
-    for(kk=0; kk<Nc1190; kk++)
+    for(ii=0; ii<Nc1190; ii++)
     {
-      slot = tdc1190Slot(kk);
+      slot = tdc1190Slot(ii);
 
-      sprintf(sss,"TDC1190_SLOT %d\n",slot);
+      if(use1190[ii] == 1)      sprintf(tdcname,"TDC1190");
+      else if(use1190[ii] == 2) sprintf(tdcname,"TDC1290");
+      else                      sprintf(tdcname,"TDC1290");
+
+      sprintf(sss,"%s_SLOT %d\n",tdcname,slot);
       ADD_TO_STRING;
 
-      sprintf(sss,"TDC1190_BERR_FIFO %d\n",berr_fifo);
+      sprintf(sss,"%s_BERR_FIFO %d\n",tdcname,berr_fifo);
       ADD_TO_STRING;
 
-      sprintf(sss,"TDC1190_BLT_EVENTS %d\n",blt_Events);
+      sprintf(sss,"%s_BLT_EVENTS %d\n",tdcname,blt_Events);
       ADD_TO_STRING;
 
-      sprintf(sss,"TDC1190_N_HITS %d\n",n_Hits);
+      sprintf(sss,"%s_N_HITS %d\n",tdcname,n_Hits);
       ADD_TO_STRING;
 
-      sprintf(sss,"TDC1190_ALMOSTFULL %d\n",almostFullLevel);
+      sprintf(sss,"%s_ALMOSTFULL %d\n",tdcname,almostFullLevel);
       ADD_TO_STRING;
 
-      sprintf(sss,"TDC1190_OUT_PROG %d\n",outProgControl);
+      sprintf(sss,"%s_OUT_PROG %d\n",tdcname,outProgControl);
       ADD_TO_STRING;
 
-      sprintf(sss,"TDC1190_W_WIDTH %d # not from hardware\n",window_width);
+      sprintf(sss,"%s_W_WIDTH %d\n",tdcname,ww[ii]);
       ADD_TO_STRING;
 
-      sprintf(sss,"TDC1190_W_OFFSET %d # not from hardware\n",window_offset);
+      sprintf(sss,"%s_W_OFFSET %d\n",tdcname,wo[ii]);
       ADD_TO_STRING;
 
-      sprintf(sss,"TDC1190_W_EXTRA %d # not from hardware\n",window_extra);
+      sprintf(sss,"%s_W_EXTRA %d\n",tdcname,esm[ii]);
       ADD_TO_STRING;
 
-      sprintf(sss,"TDC1190_W_REJECT %d # not from hardware\n",window_reject);
+      sprintf(sss,"%s_W_REJECT %d\n",tdcname,rm[ii]);
       ADD_TO_STRING;
 
-      sprintf(sss,"TDC1190_EDGE %d\n",tdc[kk].edge);
+      sprintf(sss,"%s_EDGE %d\n",tdcname,tdc[slot].edge);
       ADD_TO_STRING;
 
-      if(use1190[kk] == 1) nnn = 8;
-      else                 nnn = 2;
-      for(ii=0; ii<nnn; ii++)
+      sprintf(sss,"%s_COMPENSATION %d\n",tdcname,tdc[slot].compensation);
+      ADD_TO_STRING;
+
+      if(use1190[ii] == 1)      nnn = 8;
+      else if(use1190[ii] == 2) nnn = 2;
+      else                      nnn = 1;
+      for(jj=0; jj<nnn; jj++)
 	  {
-        sprintf(sss,"TDC1190_MASK%1d",ii+1);
+        sprintf(sss,"%s_MASK%1d",tdcname,jj+1);
         ADD_TO_STRING;
-        for(jj=0; jj<16; jj++)
+        for(kk=0; kk<16; kk++)
 	    {
-          sprintf(sss," %d",(tdc[kk].mask[ii]>>jj)&0x1); /* NEET CHECK !!!!!!!!!!!!!!!!!! */
+          sprintf(sss," %d",(tdc[slot].mask[jj]>>kk)&0x1);
           ADD_TO_STRING;
 	    }
         sprintf(sss,"\n");
@@ -1456,10 +1381,6 @@ tdc1290UploadAll(char *string, int length)
     CLOSE_STRING;
   }
 }
-
-
-
-
 
 
 int
@@ -1568,6 +1489,7 @@ tdc1190Status(int id)
 
   CHECKID(id);
   if(use1190[id]==2) sprintf(tdcname, "%s", "v1290");
+  if(use1190[id]==3) sprintf(tdcname, "%s", "v1290N");
 
   /* read various registers */
   LOCK_1190;
@@ -1606,7 +1528,8 @@ tdc1190Status(int id)
 #endif
   printf("---------------------------------------------- \n");
 
-  if(iLvl>0) {
+  if(iLvl>0)
+  {
     printf(" Interrupts Enabled - Request level = %d words\n",afullLevel);
     printf(" VME Interrupt Level: %d   Vector: 0x%x \n",iLvl,iVec);
   } else {
@@ -1616,13 +1539,20 @@ tdc1190Status(int id)
 
   printf("  Data Status \n");
   printf("    Events to transfer via BLT  = 0x%04x\n",bltEvents);
-  if(bfull) {
+  if(bfull)
+  {
     printf("    Status        = 0x%04x (Buffer Full)\n",statReg);
-  } else if(afull) {
+  }
+  else if(afull)
+  {
     printf("    Status        = 0x%04x (Almost Full)\n",statReg);
-  }else if(drdy) {
+  }
+  else if(drdy)
+  {
     printf("    Status        = 0x%04x (Data Ready )\n",statReg);
-  }else {
+  }
+  else
+  {
     printf("    Status        = 0x%04x (No Data)\n",statReg);
   }
   
@@ -1666,6 +1596,296 @@ tdc1190Status(int id)
   return OK;
 }
 
+STATUS
+tdc1190GStatus(int mcFlag)
+{
+  int itdc;
+  TDC1190 *st;
+  unsigned int addr[V1190_MAX_MODULES+1];
+  /* 02xx */ UINT16 acq_mode[V1190_MAX_MODULES+1];
+  /* 16xx */ UINT16 trig_config[V1190_MAX_MODULES+1][5];
+  /* 23xx */ UINT16 edge_detection[V1190_MAX_MODULES+1];
+  /* 26xx */ UINT16 resolution[V1190_MAX_MODULES+1];
+  /* 29xx */ UINT16 doublehit_resolution[V1190_MAX_MODULES+1];
+  /* 32xx */ UINT16 tdc_headtrail_status[V1190_MAX_MODULES+1];
+  /* 34xx */ UINT16 maxhits[V1190_MAX_MODULES+1];
+  /* 3axx */ UINT16 errtype_enable[V1190_MAX_MODULES+1];
+  /* 3cxx */ UINT16 fifo_size[V1190_MAX_MODULES+1];
+  /* 45xx */ UINT32 chanenable_mask[V1190_MAX_MODULES+1];
+
+  st = (TDC1190 *)malloc((V1190_MAX_MODULES+1)*sizeof(TDC1190));
+
+  if(!st)
+    {
+      printf("%s: ERROR: Cannot allocate memory for memory structures.\n",
+	     __func__);
+      return ERROR;
+    }
+
+  LOCK_1190;
+  for(itdc=0; itdc<Nc1190; itdc++)
+    {
+      addr[itdc] = (UINT32)c1190p[itdc] - tdcAddrOffset;
+      st[itdc].control  = vmeRead16(&c1190p[itdc]->control);
+      st[itdc].status   = vmeRead16(&c1190p[itdc]->status);
+      st[itdc].geoAddr  = vmeRead16(&c1190p[itdc]->geoAddr);
+      st[itdc].mcstBaseAddr  = vmeRead16(&c1190p[itdc]->mcstBaseAddr);
+      st[itdc].mcstCtrl  = vmeRead16(&c1190p[itdc]->mcstCtrl);
+      st[itdc].evCount  = vmeRead32(&c1190p[itdc]->evCount);
+      st[itdc].evStored  = vmeRead16(&c1190p[itdc]->evStored);
+      st[itdc].almostFullLevel  = vmeRead16(&c1190p[itdc]->almostFullLevel);
+      st[itdc].bltEventNumber  = vmeRead16(&c1190p[itdc]->bltEventNumber);
+      st[itdc].firmwareRev  = vmeRead16(&c1190p[itdc]->firmwareRev);
+      st[itdc].fifo_stored  = vmeRead16(&c1190p[itdc]->fifo_stored);
+      st[itdc].fifo_status  = vmeRead16(&c1190p[itdc]->fifo_status);
+    }
+  UNLOCK_1190;
+  if(mcFlag)
+    {
+      tdc1190GReadAcquisitionMode(acq_mode);
+      tdc1190GReadTriggerConfiguration((UINT16 *)trig_config);
+      tdc1190GReadEdgeDetectionConfig(edge_detection);
+      tdc1190GGetEdgeResolution(resolution);
+      tdc1190GGetDoubleHitResolution(doublehit_resolution);
+      tdc1190GGetTDCHeaderAndTrailer(tdc_headtrail_status);
+      tdc1190GGetMaxNumberOfHitsPerEvent(maxhits);
+      tdc1190GGetTDCErrorType(errtype_enable);
+      tdc1190GGetEffectiveSizeOfReadoutFIFO(fifo_size);
+      tdc1190GGetChannels(chanenable_mask);
+    }
+
+  printf("\n");
+  /* Parameters from Registers */
+  printf("                    CAEN1x90 TDC Module Configuration Summary\n\n");
+  printf("            Firmware                                        TDC Error Status\n");
+  printf("  #  GEO    Revision     Address      CBLT/MCST Address     0    1    2    3\n");
+  printf("--------------------------------------------------------------------------------\n");
+
+  for(itdc=0; itdc<Nc1190; itdc++)
+    {
+      printf(" %2d  ",itdc);
+
+      printf("%2d     ",st[itdc].geoAddr & V1190_GEOADDR_MASK);
+
+      printf("0x%02x         ",st[itdc].firmwareRev & 0xFF);
+
+      printf("0x%08x   ",addr[itdc]);
+
+      printf("0x%08x - ", (st[itdc].mcstBaseAddr)<<24);
+
+      printf("%s ",
+	     (st[itdc].mcstCtrl&0x3)==0?"DISABLED":
+	     (st[itdc].mcstCtrl&0x3)==1?"LAST    ":
+	     (st[itdc].mcstCtrl&0x3)==2?"FIRST   ":
+	     (st[itdc].mcstCtrl&0x3)==3?"MIDDLE  ":
+	     "        ");
+
+      printf("%s %s %s %s",
+	     (st[itdc].status & V1190_STATUS_ERROR_0)?"ERR ":"GOOD",
+	     (st[itdc].status & V1190_STATUS_ERROR_1)?"ERR ":"GOOD",
+	     (st[itdc].status & V1190_STATUS_ERROR_2)?"ERR ":"GOOD",
+	     (st[itdc].status & V1190_STATUS_ERROR_3)?"ERR ":"GOOD");
+
+      printf("\n");
+    }
+
+  printf("--------------------------------------------------------------------------------\n");
+
+  printf("\n");
+  printf("                              Readout Configuration\n\n");
+  printf("     Block       Res  INL               Bus      Event    Extended TDC Headers+\n"); 
+  printf("  #  Level  Mode [ps] Comp     Align64  Errors   FIFO     TrigTime Trailers\n");
+  printf("--------------------------------------------------------------------------------\n");
+
+  for(itdc=0; itdc<Nc1190; itdc++)
+    {
+      printf(" %2d  ",itdc);
+
+      // BL
+      printf("%3d    ",st[itdc].bltEventNumber & V1190_BLTEVNUM_MASK);
+
+      // Mode
+      printf("%s   ",
+	     (st[itdc].status & V1190_STATUS_TRIG_MATCH)?"TM":"CS");
+
+      // Res
+      printf("%3d  ",
+	     ((st[itdc].status & 0x3000)>>12)==0?800:
+	     ((st[itdc].status & 0x3000)>>12)==1?200:
+	     ((st[itdc].status & 0x3000)>>12)==2?100:
+	     ((st[itdc].status & 0x3000)>>12)==3?25:0);
+
+      printf("%s ",
+	     (st[itdc].control & V1190_COMPENSATION_ENABLE)?"ENABLED ":"disabled");
+
+      printf("%s ",
+	     (st[itdc].control & V1190_ALIGN64)?"ENABLED ":"disabled");
+
+      printf("%s ",
+	     (st[itdc].control & V1190_BUSERROR_ENABLE)?"ENABLED ":"disabled");
+
+      printf("%s ",
+	     (st[itdc].control & V1190_EVENT_FIFO_ENABLE)?"ENABLED ":"disabled");
+
+      printf("%s ",
+	     (st[itdc].control & V1190_EXT_TRIG_TIME_TAG_ENABLE)?"ENABLED ":"disabled");
+
+      printf("%s",
+	     (st[itdc].status & (1<<4))?"ENABLED ":"disabled");
+
+      printf("\n");
+    }
+  printf("--------------------------------------------------------------------------------\n");
+  printf("\n");
+
+  printf("                                 Data Status\n\n");
+  printf("     Output      Events    -----Event FIFO----        Event\n");
+  printf("  #  Buffer      Stored    Status        Count        Counter  \n");
+  printf("--------------------------------------------------------------------------------\n");
+
+  for(itdc=0; itdc<Nc1190; itdc++)
+    {
+      printf(" %2d  ",itdc);
+
+      printf("%s  ",
+	     ((st[itdc].status & 0x4)>>2)==1?"FULL      ":
+	     ((st[itdc].status & 0x2)>>1)==0?"Not Full  ":
+	     ((st[itdc].status & 0x2)>>1)==1?"AlmostFull":
+	     "");
+
+      printf("%5d     ",st[itdc].evStored);
+
+      printf("%s    ",
+	     ((st[itdc].fifo_status & 0x2)>>1)==1?"FULL      ":
+	     ((st[itdc].fifo_status & 0x1)>>0)==1?"Data Ready":
+	     "Empty     ");
+
+      printf("%4d         ",st[itdc].fifo_stored & 0x7ff);
+
+      printf("%10d",st[itdc].evCount);
+
+      printf("\n");
+    }
+
+  printf("--------------------------------------------------------------------------------\n");
+  printf("\n");
+
+  if(mcFlag)
+    {
+      /* Parameters from MicroController */
+
+      printf("                       MicroController Parameters\n\n");
+      printf("           TriggerTime  Edge                    Channel   TDC Headers+\n");
+      printf("  #  Mode  Subtraction  Detection   Resolution  Deadtime  Trailers\n");
+      printf("--------------------------------------------------------------------------------\n");
+
+      for(itdc=0; itdc<Nc1190; itdc++)
+	{
+	  printf(" %2d  ",itdc);
+
+	  printf("%s    ",
+		 (acq_mode[itdc] & 0x1)?"TM":"CS");
+
+	  printf("%s     ",
+		 (trig_config[itdc][4] & 0x1)?"Enabled ":"Disabled");
+
+	  printf("%s    ",
+		 (edge_detection[itdc] & 0x3)==0?"Pair    ":
+		 (edge_detection[itdc] & 0x3)==1?"Trailing":
+		 (edge_detection[itdc] & 0x3)==2?"Leading ":
+		 (edge_detection[itdc] & 0x3)==3?"Both    ":"        ");
+
+	  printf("%3dps       ",
+		 (resolution[itdc] & 0x3)==0?800:
+		 (resolution[itdc] & 0x3)==1?200:
+		 (resolution[itdc] & 0x3)==2?100:
+		 (resolution[itdc] & 0x3)==3?25:0);
+
+	  printf("%3dns     ",
+		 (doublehit_resolution[itdc] & 0x3)==0?5:
+		 (doublehit_resolution[itdc] & 0x3)==1?10:
+		 (doublehit_resolution[itdc] & 0x3)==2?30:
+		 (doublehit_resolution[itdc] & 0x3)==3?100:0);
+
+	  printf("%s",
+		 (tdc_headtrail_status[itdc] & 0x1)?"Enabled ":"Disabled");
+
+	  printf("\n");
+	}
+
+      printf("--------------------------------------------------------------------------------\n");
+      printf("\n");
+
+      printf("                              Window Parameters\n\n");
+      printf("                                           Extra Search       Reject\n");
+      printf("  #  Width              Offset             Width              Margin\n");
+      printf("--------------------------------------------------------------------------------\n");
+
+      for(itdc=0; itdc<Nc1190; itdc++)
+	{
+	  printf(" %2d  ",itdc);
+
+	  printf("%6dns (0x%03x)   ",
+		 (trig_config[itdc][0] & 0xFFF)*25,
+		 (trig_config[itdc][0] & 0xFFF));
+
+	  printf("%4dns (0x%04x)   ",
+		 ((trig_config[itdc][1] & 0x7FF) - ((trig_config[itdc][1]&0x800)?2048:0))*25,
+		 (trig_config[itdc][1] & 0xFFFF));
+
+	  printf("%6dns (0x%03x)   ",
+		 (trig_config[itdc][2] & 0xFFF)*25,
+		 (trig_config[itdc][2] & 0xFFF));
+
+	  printf("%6dns (0x%03x)",
+		 (trig_config[itdc][3] & 0xFFF)*25,
+		 (trig_config[itdc][3] & 0xFFF));
+
+	  printf("\n");
+	}
+
+      printf("--------------------------------------------------------------------------------\n");
+      printf("\n");
+
+      printf("     MaxHits    TDC Error Types  FIFO        Channel\n");
+      printf("  #  PerEvent   Enabled Mask     Size        Enabled Mask\n");
+      printf("--------------------------------------------------------------------------------\n");
+
+      for(itdc=0; itdc<Nc1190; itdc++)
+	{
+	  printf(" %2d  ",itdc);
+
+	  if(maxhits[itdc]==9)
+	    printf("No Limit   ");
+	  else if (maxhits[itdc]<8)
+	    {
+	      printf("%3d        ",1<<(maxhits[itdc] & 0xF));
+	    }
+	  else
+	    printf("UNKNOWN    ");
+
+	  printf("0x%03x            ",errtype_enable[itdc] & 0x7ff);
+
+	  printf("%3d         ",2<<fifo_size[itdc]);
+
+	  printf("0x%08x",chanenable_mask[itdc]);
+
+	  printf("\n");
+	}
+
+
+      printf("\n");
+      printf("--------------------------------------------------------------------------------\n");
+    }
+
+  printf("\n");
+  printf("\n");
+
+  if(st)
+    free(st);
+
+  return OK;
+}
 
 
 /*******************************************************************************
@@ -1729,10 +1949,70 @@ retry:
   }
 
   if(kk > 10) printf("-> ReadMicro: kk=%d\n",kk);
+
   UNLOCK_1190;
+
   return(OK);
 }
 
+STATUS
+tdc1190GReadMicro(UINT16 *data, int nwords_per_module)
+{
+  int id=0, ntries=0, iword=0;
+  volatile UINT32 mstatus=0;
+  UINT32 scanmask=0;
+
+  LOCK_1190;
+
+  scanmask = tdc1190ScanMask();
+
+  while((mstatus!=scanmask) && (ntries<20))
+    {
+      for(id=0; id<Nc1190; id++)
+	{
+	  if(mstatus & (1<<id)) continue; /* Skip if already ready */
+
+	  if(vmeRead16(&c1190p[id]->microHandshake) & V1190_MICRO_READOK)
+	    mstatus |= 1<<id;
+	}
+      ntries++;
+      taskDelay(10);
+    }
+
+
+  if(mstatus==scanmask)
+    {
+      for(id=0; id<Nc1190; id++)
+	{
+	  for(iword=0; iword<nwords_per_module; iword++)
+	    {
+	      ntries=0;
+	      while(!(vmeRead16(&(c1190p[id]->microHandshake)) & V1190_MICRO_READOK))
+		{
+		  ntries++;
+		  if(ntries>20)
+		    {
+		      logMsg("tdc1190GReadMicro: ERROR: Read Status from id=%d not OK (read %d)\n",
+			     id, iword,0,0,0,0);
+		      UNLOCK_1190;
+		      return(ERROR);
+		    }
+		}
+	      data[iword+id*nwords_per_module] = vmeRead16(&(c1190p[id]->microReg));
+	    }
+	}
+    }
+  else
+    {
+      logMsg("tdc1190GReadMicro: ERROR2: Read Status not OK (0x%x != 0x%x)\n",mstatus,scanmask,0,0,0,0);
+      UNLOCK_1190;
+      return(ERROR);
+    }
+
+  if(ntries > 10) logMsg("tdc1190GReadMicro: ntries=%d\n",ntries,2,3,4,5,6);
+  UNLOCK_1190;
+  return(OK);
+}
 
 
 /*******************************************************************************
@@ -1780,6 +2060,50 @@ retry:
   if(kk > 10) printf("-> WriteMicro: kk=%d\n",kk);
   return(OK);
 }
+
+
+STATUS
+tdc1190GWriteMicro(UINT16 data)
+{
+  int id=0, ntries=0;
+  volatile UINT32 mstatus=0;
+  UINT32 scanmask=0;
+
+  LOCK_1190;
+  scanmask = tdc1190ScanMask();
+
+  while((mstatus!=scanmask) || (ntries>=20))
+    {
+      for(id=0; id<Nc1190; id++)
+	{
+	  if(mstatus & (1<<id)) continue; /* Skip if it's already ready */
+	  mstatus |= ((vmeRead16(&(c1190p[id]->microHandshake)) & V1190_MICRO_WRITEOK)?1:0)<<id;
+	}
+      ntries++;
+      taskDelay(10);
+    }
+
+  if(mstatus==scanmask)
+    {
+      for(id=0; id<Nc1190; id++)
+	{
+	  vmeWrite16(&(c1190p[id]->microReg),data);
+	}
+    }
+  else
+    {
+      logMsg("tdc1190GWriteMicro: ERROR: Write Status not OK (0x%x != 0x%x)\n",mstatus,scanmask,0,0,0,0);
+      UNLOCK_1190;
+      return(ERROR);
+    }
+
+  UNLOCK_1190;
+
+  if(ntries > 10) logMsg("tdc1190GWriteMicro: ntries=%d\n",ntries,2,3,4,5,6);
+
+  return(OK);
+}
+
 
 /*******************************************************************************
  *
@@ -2007,6 +2331,208 @@ tdc1190Dready(int id)
   }
 }
 
+uint32_t
+tdc1190GDready(int blocklevel)
+{
+  uint32_t rval=0;
+  int id;
+
+  LOCK_1190;
+  for(id=0; id<Nc1190; id++)
+  {
+    if(vmeRead16(&(c1190p[id]->evStored))>=blocklevel)
+	rval |= 1<<id;
+  }
+  UNLOCK_1190;
+
+  return(rval);
+
+}
+
+
+
+/******************************************************************************
+ *
+ * tdc1190Compensation - Set the status of the compensation of the INL
+ *                flag = 1 : enable compensation
+ *                       0 : disable compensation
+ *
+ *
+ * RETURNS: 0 if successful, ERROR otherwise.
+ */
+
+int
+tdc1190Compensation(int id, UINT32 flag)
+{
+
+  CHECKID(id);
+
+  if(use1190[id]==0) 
+    return ERROR; 
+
+  if(flag>1)
+    {
+      printf("%s: ERROR: Invalid flag = %d",
+	     __FUNCTION__, flag);
+      return ERROR;
+    }
+
+  printf("tdc1190Compensation reached, flag=%d\n",flag);fflush(stdout);
+
+  LOCK_1190;
+  if(flag == 1)
+    vmeWrite16(&(c1190p[id]->control),
+	       vmeRead16(&(c1190p[id]->control)) | V1190_COMPENSATION_ENABLE);
+  else if(flag == 0)
+    vmeWrite16(&(c1190p[id]->control),
+	       vmeRead16(&(c1190p[id]->control)) & ~V1190_COMPENSATION_ENABLE);
+
+  UNLOCK_1190;
+
+  return(0);
+}
+
+int
+tdc1190GetCompensation(int id)
+{
+  unsigned short reg;
+  int flag;
+
+  printf("tdc1190GetCompensation reached\n");fflush(stdout);
+
+  CHECKID(id);
+
+  if(use1190[id]==0) 
+    return ERROR; 
+
+
+  LOCK_1190;
+  reg = vmeRead16(&(c1190p[id]->control));
+  reg = reg & V1190_COMPENSATION_ENABLE;
+  UNLOCK_1190;
+
+  if(reg) flag = 1;
+  else    flag = 0;
+  printf("tdc1190GetCompensation returns %d\n",flag);fflush(stdout);
+
+  return(flag);
+}
+
+int
+tdc1190GCompensation(UINT32 flag)
+{
+  int itdc=0;
+
+  if(flag>1)
+    {
+      printf("%s: ERROR: Invalid flag = %d",
+	     __FUNCTION__, flag);
+      return ERROR;
+    }
+
+  LOCK_1190;
+  for(itdc=0; itdc<Nc1190; itdc++)
+    {
+      if(use1190[itdc]==0) continue;
+      if(flag == 1)
+	vmeWrite16(&(c1190p[itdc]->control),
+		   vmeRead16(&(c1190p[itdc]->control)) | V1190_COMPENSATION_ENABLE);
+      else if(flag == 0)
+	vmeWrite16(&(c1190p[itdc]->control),
+		   vmeRead16(&(c1190p[itdc]->control)) & ~V1190_COMPENSATION_ENABLE);
+    }
+  UNLOCK_1190;
+
+  return(0);
+
+}
+
+/******************************************************************************
+ *
+ * tdc1190ReadCompensation - Set the readback of the compensation of the INL
+ *                flag = 1 : enable compensation readback
+ *                       0 : disable compensation readback
+ *
+ *
+ * RETURNS: 0 if successful, ERROR otherwise.
+ */
+
+int
+tdc1190ReadCompensation(int id, UINT32 flag)
+{
+
+  CHECKID(id);
+
+  if(use1190[id]==0) 
+    return ERROR; 
+
+  if(flag>1)
+    {
+      printf("%s: ERROR: Invalid flag = %d",
+	     __FUNCTION__, flag);
+      return ERROR;
+    }
+
+  LOCK_1190;
+  if(flag == 1)
+    vmeWrite16(&(c1190p[id]->control),
+	       vmeRead16(&(c1190p[id]->control)) | V1190_READ_COMP_SRAM_ENABLE);
+  else if(flag == 0)
+    vmeWrite16(&(c1190p[id]->control),
+	       vmeRead16(&(c1190p[id]->control)) & ~V1190_READ_COMP_SRAM_ENABLE);
+
+  UNLOCK_1190;
+
+  return(0);
+}
+
+int
+tdc1190GReadCompensation(UINT32 flag)
+{
+  int itdc=0;
+
+  if(flag>1)
+    {
+      printf("%s: ERROR: Invalid flag = %d",
+	     __FUNCTION__, flag);
+      return ERROR;
+    }
+
+  LOCK_1190;
+  for(itdc=0; itdc<Nc1190; itdc++)
+    {
+      if(use1190[itdc]==0) continue;
+      if(flag == 1)
+	vmeWrite16(&(c1190p[itdc]->control),
+		   vmeRead16(&(c1190p[itdc]->control)) | V1190_READ_COMP_SRAM_ENABLE);
+      else if(flag == 0)
+	vmeWrite16(&(c1190p[itdc]->control),
+		   vmeRead16(&(c1190p[itdc]->control)) & ~V1190_READ_COMP_SRAM_ENABLE);
+    }
+  UNLOCK_1190;
+
+  return(0);
+
+}
+
+
+int
+tdc1190GetReadCompensation(int id)
+{
+  int rval = 0;
+  CHECKID(id);
+
+  LOCK_1190;
+  rval = (vmeRead16(&c1190p[id]->control) & V1190_READ_COMP_SRAM_ENABLE) ? 1 : 0;
+  UNLOCK_1190;
+
+  return rval;
+}
+
+
+
+
+
 /******************************************************************************
  *
  * tdc1190EventFifo - Set the status of the event fifo
@@ -2066,7 +2592,7 @@ tdc1190GetEventFifo(int id)
   reg = vmeRead16(&(c1190p[id]->control));
   UNLOCK_1190;
 
-  return(reg & V1190_EVENT_FIFO_ENABLE);
+  return((reg&V1190_EVENT_FIFO_ENABLE)>>8);
 }
 
 
@@ -2272,7 +2798,7 @@ tdc1190ReadBoardDmaStart(int ib, UINT32 *tdata)
   }
   else
   {
-    ndata_save = V1190_MAX_WORDS_PER_BOARD;
+    ndata_save = V1190_MAX_WORDS_PER_BOARD * blt_Events;
     mdata = 0;
     /*
     logMsg("tdc1190ReadBoardDmaStart: INFO: trying to DMA %d words\n",
@@ -2909,6 +3435,17 @@ tdc1190ReadAcquisitionMode(int id)
 }
 
 STATUS
+tdc1190GReadAcquisitionMode(UINT16 *acqmode)
+{
+  STATUS status;
+
+  tdc1190GWriteMicro(0x0200);
+  status = tdc1190GReadMicro(acqmode, 1);
+
+  return status;
+}
+
+STATUS
 tdc1190SetKeepToken(int id)
 {
   CHECKID(id);
@@ -2997,6 +3534,9 @@ tdc1190SetWindowWidth(int id, UINT32 window_width)
   return tdc1190WriteMicro(id,tdata);
 }
 
+
+/* window offset can be set from -2048 (0xF800) to +40 (0x0028) */
+/* default: tdata=0xFFD8 means -1 millisec (0xFFFF-0xFFD8=39, 39*25=975ns) */
 STATUS
 tdc1190SetWindowOffset(int id, INT32 window_offset)
 {
@@ -3010,7 +3550,7 @@ tdc1190SetWindowOffset(int id, INT32 window_offset)
   else             
     tdata = window_offset/25;
 
-  printf("%s(%d): Set Window Offset to %d ns\n",__FUNCTION__,id,tdata*25);
+  printf("%s(%d): Set Window Offset to %d ns (tdata=0x%04x)\n",__FUNCTION__,id,tdata*25,(unsigned short)tdata);
 
   return tdc1190WriteMicro(id,tdata);
 
@@ -3103,6 +3643,16 @@ tdc1190ReadTriggerConfiguration(int id)
   return(OK);
 }
 
+STATUS
+tdc1190GReadTriggerConfiguration(UINT16 *trigcfg)
+{
+  STATUS status;
+  tdc1190GWriteMicro(0x1600);
+  status = tdc1190GReadMicro(trigcfg,5);
+
+  return(status);
+}
+
 /******************************************************************************
  * EDGE DETECTION AND RESOLUTION OPCODES Routines
  *
@@ -3191,6 +3741,17 @@ tdc1190ReadEdgeDetectionConfig(int id)
 }
 
 STATUS
+tdc1190GReadEdgeDetectionConfig(UINT16 *edgedetect)
+{
+  STATUS status;
+
+  tdc1190GWriteMicro(0x2300);
+  status = tdc1190GReadMicro(edgedetect,1);
+
+  return status;
+}
+
+STATUS
 tdc1190SetEdgeResolution(int id, UINT16 edge_res)
 {
   UINT16 tdata;
@@ -3228,26 +3789,38 @@ tdc1190GetEdgeResolution(int id)
   tdc1190WriteMicro(id,0x2600);
   tdc1190ReadMicro(id,&tdata,1);
 
-  tdata &= 0x3;
-  if(tdata==0)
-    rval = 800;
-  else if(tdata==1)
-    rval = 200;
-  else if(tdata==2)
-    rval = 100;
-  else
+  if(use1190[id]==1)
+  {
+    tdata &= 0x3;
+    if(tdata==0)      rval = 800;
+    else if(tdata==1) rval = 200;
+    else if(tdata==2) rval = 100;
+    else
     {
-      if(use1190[id]==2) rval = 25;
-      else {
-	printf("%s(%d): ERROR: tdata=%d (0x%x)\n",__FUNCTION__,id,tdata,tdata);
-	return(ERROR);
-      }
+	  printf("%s(%d): ERROR: tdata=%d (0x%x)\n",__FUNCTION__,id,tdata,tdata);
+	  return(ERROR);
     }
+  }
+  else
+  {
+    rval = 25;
+  }
   /*
   printf("%s(%d): Edge Resolution is %d ps\n",__FUNCTION__,id,rval);
   */
 
   return(rval);
+}
+
+STATUS
+tdc1190GGetEdgeResolution(UINT16 *res)
+{
+  STATUS status;
+
+  tdc1190GWriteMicro(0x2600);
+  status = tdc1190GReadMicro(res,1);
+
+  return status;
 }
 
 STATUS
@@ -3402,6 +3975,17 @@ tdc1190GetDoubleHitResolution(int id)
   return(rval);
 }
 
+STATUS
+tdc1190GGetDoubleHitResolution(UINT16 *double_res)
+{
+  STATUS status;
+
+  tdc1190GWriteMicro(0x2900);
+  status = tdc1190GReadMicro(double_res,1);
+
+  return status;
+}
+
 /******************************************************************************
  * TDC READOUT OPCODES Routines
  *
@@ -3457,6 +4041,17 @@ tdc1190GetTDCHeaderAndTrailer(int id)
     printf("%s(%d): TDC Header/Trailer enabled\n",__FUNCTION__,id);
 
   return(tdata);
+}
+
+STATUS
+tdc1190GGetTDCHeaderAndTrailer(UINT16 *headtrl)
+{
+  STATUS status;
+
+  tdc1190GWriteMicro(0x3200);
+  status = tdc1190GReadMicro(headtrl,1);
+
+  return status;
 }
 
 STATUS
@@ -3517,6 +4112,17 @@ tdc1190GetMaxNumberOfHitsPerEvent(int id)
     }
 
   return(rval);
+}
+
+STATUS
+tdc1190GGetMaxNumberOfHitsPerEvent(UINT16 *maxhits)
+{
+  STATUS status;
+
+  tdc1190GWriteMicro(0x3400);
+  status = tdc1190GReadMicro(maxhits,1);
+
+  return status;
 }
 
 STATUS
@@ -3598,6 +4204,17 @@ tdc1190GetTDCErrorType(int id)
 }
 
 STATUS
+tdc1190GGetTDCErrorType(UINT16 *errortype)
+{
+  STATUS status;
+
+  tdc1190GWriteMicro(0x3A00);
+  status = tdc1190GReadMicro(errortype,1);
+
+  return status;
+}
+
+STATUS
 tdc1190SetEffectiveSizeOfReadoutFIFO(int id, UINT32 nwords)
 {
   UINT16 tdata;
@@ -3653,6 +4270,17 @@ tdc1190GetEffectiveSizeOfReadoutFIFO(int id)
   return(tdata);
 }
 
+STATUS
+tdc1190GGetEffectiveSizeOfReadoutFIFO(UINT16 *fifosize)
+{
+  STATUS status;
+
+  tdc1190GWriteMicro(0x3C00);
+  status = tdc1190GReadMicro(fifosize,1);
+
+  return status;
+}
+
 /******************************************************************************
  * CHANNEL ENABLE OPCODES Routines
  *
@@ -3703,6 +4331,7 @@ tdc1190DisableAllChannels(int id)
   return(OK);
 }
 
+/* channels[0] - low 16 channels */
 STATUS
 tdc1190EnableChannels(int id, UINT16 channels[8])
 {
@@ -3725,6 +4354,21 @@ tdc1190GetChannels(int id, UINT16 channels[8])
   return(OK);
 }
 
+STATUS
+tdc1190GGetChannels(UINT32 *chanenable_mask)
+{
+  STATUS status;
+  UINT16 read[V1190_MAX_MODULES+1][2];
+  int itdc;
+
+  tdc1190GWriteMicro(0x4500);
+  status = tdc1190GReadMicro((UINT16 *)read,2);
+
+  for(itdc=0; itdc<Nc1190; itdc++)
+    chanenable_mask[itdc] = read[itdc][0] | (read[itdc][1]<<16);
+
+  return status;
+}
 
 
 /******************************************************************************
@@ -3805,13 +4449,12 @@ tdc1190InitMCST(UINT32 *vmeaddress)
   /* Loop through use1190/c1190p array to set mcstBaseAddr
      and set First/intermediate/Last boards */
   for(ii=0; ii<V1190_MAX_MODULES; ii++)
-    {
-      if(use1190[ii] == 0)
-	continue;
+  {
+    if(use1190[ii] == 0) continue;
 
-      vmeWrite16(&(c1190p[ii]->mcstBaseAddr),(baseadrs & V1190_MCSTBASEADDR_MASK));
+    vmeWrite16(&(c1190p[ii]->mcstBaseAddr),(baseadrs & V1190_MCSTBASEADDR_MASK));
 
-      if(ii==tdcMinSlot)
+    if(ii==tdcMinSlot)
 	{
 	  vmeWrite16(&(c1190p[ii]->mcstCtrl),2); /* active first */
 	  printf("\tFirst  board at 0x%08x\n",(UINT32)c1190p[ii]);
@@ -3826,7 +4469,7 @@ tdc1190InitMCST(UINT32 *vmeaddress)
 	  vmeWrite16(&(c1190p[ii]->mcstCtrl),3); /* active intermediate */
 	  printf("\tMiddle board at 0x%08x\n",(UINT32)c1190p[ii]);
 	}
-    }
+  }
 
   return(OK);
 }
@@ -3928,7 +4571,7 @@ tdc1190GetAlmostFullLevel(int id)
   CHECKID(id);
   LOCK_1190;
   rval = vmeRead16(&(c1190p[id]->almostFullLevel));
-  printf(" Almost Full Level set to %d (0x%04x) words\n",rval,rval);
+  /*printf(" Almost Full Level set to %d (0x%04x) words\n",rval,rval);*/
   UNLOCK_1190;
   return rval;
 }
@@ -4045,6 +4688,384 @@ tdc1190GetBLTEventNumber(int id)
   UNLOCK_1190;
   return rval;
 }
+
+
+
+
+
+/* new from Bryan */
+
+
+
+STATUS
+tdc1190SetRCadjust(int id, int tdc, int adjust)
+{
+  CHECKID(id);
+
+  if((tdc<0) || (tdc>3))
+    {
+      printf("%s: ERROR: Invalid tdc (%d)\n",
+	     __FUNCTION__,tdc);
+      return ERROR;
+    }
+
+  if((adjust<0) || (adjust>0xFFF))
+    {
+      printf("%s: ERROR: Invalid adjust (0x%x)\n",
+	     __FUNCTION__,adjust);
+      return ERROR;
+    }
+  
+  tdc1190WriteMicro(id, 0x5400 + tdc);
+  tdc1190WriteMicro(id, adjust);
+
+  return OK;
+}
+
+STATUS
+tdc1190GSetRCadjust(int tdc, int adjust)
+{
+  if((tdc<0) || (tdc>3))
+    {
+      printf("%s: ERROR: Invalid tdc (%d)\n",
+	     __FUNCTION__,tdc);
+      return ERROR;
+    }
+
+  if((adjust<0) || (adjust>0xFFF))
+    {
+      printf("%s: ERROR: Invalid adjust (0x%x)\n",
+	     __FUNCTION__,adjust);
+      return ERROR;
+    }
+  
+  tdc1190GWriteMicro(0x5400 + tdc);
+  tdc1190GWriteMicro(adjust);
+
+  return OK;
+}
+
+int
+tdc1190GetRCadjust(int id, int tdc)
+{
+  int rval=0;
+  unsigned short tmp = 0;
+
+  CHECKID(id);
+
+  if((tdc<0) || (tdc>3))
+    {
+      printf("%s: ERROR: Invalid tdc (%d)\n",
+	     __FUNCTION__,tdc);
+      return ERROR;
+    }
+
+  tdc1190WriteMicro(id, 0x5500 + tdc);
+  tdc1190ReadMicro(id, &tmp, 1);
+
+  rval = (int) ( tmp & 0xFFF );
+
+  printf("tdc1190GetRCadjust[id=%d][tdc=%d] returns %d\n",id,tdc,rval);
+
+  return rval;
+}
+
+
+int
+tdc1190SaveRCadjust(int id)
+{
+  CHECKID(id);
+
+  tdc1190WriteMicro(id, 0x5600);
+
+  return OK;
+}
+
+int
+tdc1190GSaveRCadjust()
+{
+  tdc1190GWriteMicro(0x5600);
+
+  return OK;
+}
+
+
+
+int
+tdc1190WriteFlashPage(int id, unsigned char *page, unsigned long pagenum)
+{
+  unsigned int flash_addr, data;
+  unsigned char addr0, addr1, addr2;
+  unsigned short i;
+
+  CHECKID(id);
+
+  flash_addr = pagenum << 9;
+
+  addr0 = (unsigned char) flash_addr;
+  addr1 = (unsigned char) (flash_addr >> 8);
+  addr2 = (unsigned char) (flash_addr >> 16);
+
+  LOCK_1190;
+  /* enable flash (NCS = 0) */
+  data = 0;
+  vmeWrite16(&c1190p[id]->selflash, data);
+
+  /* write opcode */
+  data = V1190_MAIN_MEM_PAGE_PROG_TH_BUF1;
+  vmeWrite16(&c1190p[id]->flash, data);
+
+  /* write address */
+  data = addr2;
+  vmeWrite16(&c1190p[id]->flash, data);
+  data = addr1;
+  vmeWrite16(&c1190p[id]->flash, data);
+  data = addr0;
+  vmeWrite16(&c1190p[id]->flash, data);
+
+  /* write flash page (264 bytes for page, 256 used) */
+  for (i = 0; i < 264; i++)
+    {
+      data = page[i];
+      vmeWrite16(&c1190p[id]->flash, data);
+    }
+
+  /* disable flash (NCS = 1) */
+  data = 1;
+  vmeWrite16(&c1190p[id]->selflash, data);
+
+  /* wait 20ms (max time required by the flash to complete the writing) */
+  taskDelay(20);
+  UNLOCK_1190;
+
+  return OK;
+}
+
+static int
+tdc1190EraseFlashPage(int id, unsigned long pagenum)
+{
+  unsigned int flash_addr, data;
+  unsigned char addr0, addr1, addr2;
+
+  CHECKID(id);
+
+  flash_addr = pagenum << 9;
+
+  addr0 = (unsigned char) flash_addr;
+  addr1 = (unsigned char) (flash_addr >> 8);
+  addr2 = (unsigned char) (flash_addr >> 16);
+
+  LOCK_1190;
+  /* enable flash (NCS = 0) */
+  data = 0;
+  vmeWrite16(&c1190p[id]->selflash, data);
+
+  /* write opcode */
+  data = V1190_PAGE_ERASE;
+  vmeWrite16(&c1190p[id]->flash, data);
+
+  /* write address */
+  data = addr2;
+  vmeWrite16(&c1190p[id]->flash, data);
+  data = addr1;
+  vmeWrite16(&c1190p[id]->flash, data);
+  data = addr0;
+  vmeWrite16(&c1190p[id]->flash, data);
+
+  /* disable flash (NCS = 1) */
+  data = 1;
+  vmeWrite16(&c1190p[id]->selflash, data);
+
+  /* wait 20ms (max time required by the flash to complete the writing) */
+  taskDelay(20);
+  UNLOCK_1190;
+
+  return OK;
+}
+
+int
+tdc1190ReadFlashPage(int id, unsigned char *page, unsigned long pagenum)
+{
+  unsigned int flash_addr, data;
+  unsigned char addr0, addr1, addr2;
+  unsigned short i;
+
+  CHECKID(id);
+
+  flash_addr = pagenum << 9;
+  addr0 = (unsigned char) flash_addr;
+  addr1 = (unsigned char) (flash_addr >> 8);
+  addr2 = (unsigned char) (flash_addr >> 16);
+
+  LOCK_1190;
+  /* enable flash (NCS = 0) */
+  data = 0;
+  vmeWrite16(&c1190p[id]->selflash, data);
+
+  /* write opcode */
+  data = V1190_MAIN_MEM_PAGE_READ;
+  vmeWrite16(&c1190p[id]->flash, data);
+
+  /* write address */
+  data = addr2;
+  vmeWrite16(&c1190p[id]->flash, data);
+  data = addr1;
+  vmeWrite16(&c1190p[id]->flash, data);
+  data = addr0;
+  vmeWrite16(&c1190p[id]->flash, data);
+
+  /* additional don't care bytes */
+  data = 0;
+  for (i = 0; i < 4; i++)
+    {
+      vmeWrite16(&c1190p[id]->flash, data);
+    }
+
+  /* read flash page (264 bytes for page, 256 used) */
+  for (i = 0; i < 264; i++)
+    {
+      data = vmeRead16(&c1190p[id]->flash);
+      page[i] = data;
+    }
+
+  /* disable flash (NCS = 1) */
+  data = 1;
+  vmeWrite16(&c1190p[id]->selflash, data);
+
+  UNLOCK_1190;
+
+  return OK;
+}
+
+
+
+int
+tdc1190WriteChannelCompensation(int id, int channel, unsigned char *table)
+{
+  int pagenum_0 = 0, ipage = 0;
+  int rval = OK;
+  CHECKID(id);
+
+  if((channel < 0) || (channel > 31))
+    {
+      printf("%s: ERROR: Invalid channel (%d)\n",
+	     __FUNCTION__,
+	     channel);
+      return ERROR;
+    }
+
+  /* Calculate starting page number */
+  pagenum_0 = channel * 4;
+
+  for(ipage = 0; ipage < 4; ipage++)
+    {
+      if(tdc1190EraseFlashPage(id, pagenum_0 + ipage) == ERROR)
+	{
+	  rval = ERROR;
+	  printf("%s(%d, %d, *table): ERROR erasing Flash Page %d\n",
+		 __FUNCTION__, id, channel, pagenum_0 + ipage);
+	  
+	}
+      else
+	{
+	  if(tdc1190WriteFlashPage(id, (unsigned char *)&table[ipage*256],
+				   pagenum_0 + ipage) == ERROR)
+	    {
+	      rval = ERROR;
+	      printf("%s(%d, %d, *table): ERROR writing to Flash Page %d\n",
+		     __FUNCTION__, id, channel, pagenum_0 + ipage);
+	    }
+	}
+    }
+  
+  return rval;
+}
+
+int
+tdc1190ReadCompensationSramPage(int id, unsigned char *page, unsigned long pagenum)
+{
+  int ibin = 0, nbin = 256;
+  CHECKID(id);
+
+  if((pagenum < 0) || (pagenum > 255))
+    {
+      printf("%s: ERROR: Invalid pagenum (%ld)\n",
+	     __FUNCTION__, pagenum);
+      return ERROR;
+    }
+  
+  LOCK_1190;
+  vmeWrite16(&c1190p[id]->compensationSRAMpage, pagenum);
+
+  for(ibin = 0; ibin < nbin; ibin++)
+    {
+      page[ibin] = vmeRead16(&c1190p[id]->sram[ibin]) & 0xFF;
+    }
+				   
+  
+  UNLOCK_1190;
+
+  return OK;
+}
+
+unsigned char
+tdc1190Float2TCInt(float in_float)
+{
+  unsigned char rval = 0;
+
+  if((in_float >= 127.5) || (in_float <= -128.5))
+    {
+      printf("%s: WARN: Float (%lf) out of bounds.",
+  	     __FUNCTION__, in_float);
+      if(in_float >= 127.5) in_float = 127.;
+      if(in_float <= -128.5) in_float = -128.;
+      printf(" Truncated to %lf\n", in_float);
+    }
+  
+  rval = ((unsigned char) (rintf(-1 * in_float)) & 0xff);
+
+  rval = (~(rval) & 0xff) + 1;
+
+  return rval;
+}
+
+float
+tdc1190TCInt2Float(unsigned char in_tcint)
+{
+  int rval = 0;
+
+  if(in_tcint & 0x80)
+    {
+      rval = -1 * ((~(in_tcint - 1)) & 0xff);
+    }
+  else
+    rval = in_tcint;
+  
+  return (float)rval;
+}
+
+void
+tdc1190ConvertTable_Float2TCInt(float *in_table, unsigned char *out_table, int n)
+{
+  int i = 0;
+
+  for(i = 0; i < n; i++)
+    out_table[i] = tdc1190Float2TCInt(in_table[i]);
+
+}
+
+void
+tdc1190ConvertTable_TCInt2Float(unsigned char *in_table, float *out_table, int n)
+{
+  int i = 0;
+
+  for(i = 0; i < n; i++)
+    out_table[i] = tdc1190TCInt2Float(in_table[i]);
+
+}
+
+
+
 
 
 

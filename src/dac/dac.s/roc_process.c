@@ -445,6 +445,9 @@ printf("=== PROC1: %d %d %d %d 0x%08x\n",bigbufout[0],bigbufout[1],bigbufout[2],
 
     } /* finish processing input buffer*/
 
+
+
+
     /* always release output buffer if input buffer number equal to -1 (special events) */
 
     /* SERGEY: ALWAYS release output buffer after it processed !!!??? */

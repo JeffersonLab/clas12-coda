@@ -33,7 +33,12 @@
 //
 #include <stdio.h>
 #include <time.h>
+#include <unistd.h>
 #include "daqTarget.h"
+
+/*
+#define _TRACE_OBJECTS
+*/
 
 daqTarget::daqTarget (char *title)
 :target (title), state_ (CODA_DORMANT),
@@ -55,6 +60,7 @@ daqTarget::~daqTarget (void)
   // empty
 }
 
+
 /* called by portHandler every time message 'STA:' from particular component arrives */
 void
 daqTarget::setState (int newst)
@@ -68,10 +74,12 @@ daqTarget::setState (int newst)
 
   prevtime_ = time(0);
 #ifdef _TRACE_OBJECTS
-  printf("daqTarget::setState: set state of %s to %d\n",title_, newst);
+  printf("--> daqTarget::setState: set state of %s to %d\n",title_, newst);
+  //sleep(3);
 #endif
   overrideState_ = CODA_DISCONNECTED;
 }
+
 
 int
 daqTarget::state (void)

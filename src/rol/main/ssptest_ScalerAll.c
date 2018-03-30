@@ -12,7 +12,17 @@
 #define NAMESCALER "ssprich_scaler_138.txt" // if you modify this, please modify below accordingly
 
 
+#define RICH_IN_THRESHOLDS   "/home/clasrun/rich/suite/maps/threshold.txt";
+#define RICH_IN_GAINS        "/home/clasrun/rich/suite/maps/gain.txt";
+#define RICH_OUT_TEMPERATURE "/home/clasrun/rich/suite/data/temperature/ssprich_Temperatures.txt";
+
+int  sspRich_ReadTemperature(int slot,int fiber);
 int  sspRich_InitMarocReg(int slot,int fiber,int asic,int threshold,int gain);
+int GetThreshold(int slot,int fiber,int asic);
+int ResetGains();
+int LoadGains();
+
+int gmap[8][32][3][64];// slot, fiber, asic, channel
 
 
 //----------------------------------------
@@ -44,17 +54,23 @@ int main(int argc, char *argv[]){
   int skipSSPRichinit;
   int printscreen=0;
 
+
+
   /* Checks Arguments*/
   printf("argc is %d\n",argc);
-  if(argc==4)
+  if(argc==5)
   {
     threshold = atoi(argv[1]);
-    ctestAmplitude = atoi(argv[2]);
-    duration = atoi(argv[3]);
+    gain = atoi(argv[2]);
+    ctestAmplitude = atoi(argv[3]);
+    duration = atoi(argv[4]);
+   // printscreen=atoi(argv[5]);
+
   }
   else
   {
-    printf("\nUsage: ssptest [TDC threshold] [CTEST Amplitude] [Scaler Duration]\n");
+    printf("\nUsage: ssptest [threshold; 0 to enable map] [gain; 0 to enable map] [CTEST Amplitude] [Scaler Duration]\n");
+    printf("\nExample: ssptest 230 64 0 1\n");
     exit(0);
   }
 
@@ -150,7 +166,10 @@ int main(int argc, char *argv[]){
 }// end of SSPRICHinit
 
 
- printf("Configuring %d MAROC boards",nmarocs);
+  printf("Configuring MAROC boards ");
+  ResetGains();
+  LoadGains();
+
   //  TILES setup
   for(i=0;i<nssp;i++)
   {
@@ -196,7 +215,7 @@ int main(int argc, char *argv[]){
     {
       if(fibers & (1<<j))
       {
-        if(sspRich_IsAsicInvalid(slot,j)<=0) continue;
+        if(sspRich_IsAsicInvalid(slot,j)) continue;
 
         // dummy read to reset scalers
         sspRich_ReadScalers(slot, j, &ref, maroc);
@@ -205,12 +224,10 @@ int main(int argc, char *argv[]){
     }
   }
 
-
   printf("Counting... %d  seconds at thr %d\n",duration, threshold);
   sleep(duration);
 
   // READ SCALER
-
   for(i=0;i<nssp;i++){
     slot = sspSlot(i);
     sspRich_GetConnectedFibers(slot, &fibers);
@@ -234,18 +251,22 @@ int main(int argc, char *argv[]){
         sspRich_ReadScalers(slot, j, &ref, maroc);
            
         if(printscreen){
+
          // print screen
-          printf("\nScaler Print:\n");
-          printf("THR %d\n", threshold);
-          printf("GAIN %d\n", gain);
-          printf("Ref = %u\n", ref);
-          printf("Pulser = %d [Hz]\n", pulserFrequency);
+   //       printf("\nScaler Print:\n");
+          printf("Slot % d Fiber %2d: ",slot,j);
+
+          printf("THR %d ", threshold);
+//          printf("GAIN %d\n", gain);
+          printf("Ref = %10u ", ref);
+          printf("Elapsed Time  = %6.3lf\n",1/(125E6/ref));
+//          printf("Pulser = %d [Hz]\n", pulserFrequency);
           for(ch = 0; ch < 64; ch++){
-            printf("Slot % d Fiber %2d Ch%2d:",slot,j, ch);
+           // printf("Slot % d Fiber %2d Ch%2d:",slot,j, ch);
             for(asic = 0; asic < 3; asic++){
-              printf(" %10u", maroc[asic*64+ch]);
+           //   printf(" %10u", maroc[asic*64+ch]);
             }
-            printf("\n");
+          //  printf("\n");
           }
         }
         // export txt
@@ -264,8 +285,145 @@ int main(int argc, char *argv[]){
     }
   }// slot
 
+  for(i=0;i<nssp;i++){
+    slot = sspSlot(i);
+    sspRich_GetConnectedFibers(slot, &fibers);
+    for(j=0; j < 32; j++)
+      if(fibers & (1<<j))
+        sspRich_ReadTemperature(slot,j);
+  }
+
+
   return 0;
 }
+
+
+//----------------------------------------
+int  sspRich_ReadTemperature(int slot,int fiber){
+//----------------------------------------
+
+  float tFPGA = 0.0;
+  double limit = 70.0; // Celsius
+  sspRich_Monitor mon;
+  FILE * fmon;
+  const char * fmonName = RICH_OUT_TEMPERATURE;
+
+  fmon=fopen(fmonName,"a");
+  if(!fmon){
+    printf("Error in %s: cannot open file %s\n",__FUNCTION__,fmonName);
+    exit(0);
+  }
+
+  sspRich_ReadMonitor(slot, fiber, &mon);
+
+  fprintf(fmon,"%d ",(int)time(NULL));
+  fprintf(fmon,"%d %2d ",slot, fiber);
+  fprintf(fmon,"%.3f ",(float)mon.temps.fpga / 1000.0f);
+  fprintf(fmon,"%.3f ",(float)mon.temps.regulator[0] / 1000.0f);
+  fprintf(fmon,"%.3f ",(float)mon.temps.regulator[1] / 1000.0f);
+  fprintf(fmon,"\n");
+  fclose(fmon);
+
+  tFPGA = (float)mon.temps.fpga / 1000.0f;
+  if(tFPGA>=limit){
+    printf("TIME %d ",(int)time(NULL));
+    printf("SLOT %d  FIBER %d ",slot, fiber);
+    printf("FPGA %6.3f ",(float)mon.temps.fpga / 1000.0f);
+    printf("REG1 %6.3f ",(float)mon.temps.regulator[0] / 1000.0f);
+    printf("REG2 %6.3f ",(float)mon.temps.regulator[1] / 1000.0f);
+    printf("[Celsius]");
+    printf("Attention: Temperature too warm!");
+    printf("\n");
+  }
+  return 0;
+}
+
+//----------------------------------------
+int GetThreshold(int slot,int fiber,int asic){
+//----------------------------------------
+
+  FILE *  fin;
+  int var[4];
+  int pri = 0;
+  int thr;
+  int thr_default = 230;
+  const char * filename =  RICH_IN_THRESHOLDS;
+
+  thr = thr_default;
+
+  fin = fopen(filename,"r");
+  if(!fin)
+  {
+   printf("Threshold file %s not found...use default value %d DAC units\n",thr_default);
+  }
+  else
+  {
+    while(fscanf(fin,"%d %d %d %d \n",var,var+1,var+2,var+3)!=EOF) // slot, fiber, asic, threshold
+    {
+     if(pri) printf("%d %3d %d %4d\n",var[0],var[1],var[2],var[3]);
+      if(var[0]==slot && var[1]==fiber && var[2]==asic){
+        thr = var[3];
+        break;
+      }
+    }
+    fclose(fin);
+  }
+  return thr;
+}
+
+//----------------------------------------
+int ResetGains(){
+//----------------------------------------
+
+ int slot, fiber, asic, channel;
+ int gain_default=64;
+ for(slot=3;slot<=7;slot++)
+   for(fiber=0;fiber<=31;fiber++)
+     for(asic=0;asic<=2;asic++)
+       for(channel=0;channel<=63;channel++)
+         gmap[slot][fiber][asic][channel]= gain_default;
+
+  return 0;
+}
+
+//----------------------------------------
+int LoadGains(){
+//----------------------------------------
+  FILE *  fin;
+  int var[4];
+  int slot, fiber,asic, channel, gain;
+
+  const char * filename = RICH_IN_GAINS;
+
+  fin = fopen(filename,"r");
+  if(!fin)
+  {
+    printf("Gain file %s not found...\n",filename);
+  }
+  else
+  {
+    while(fscanf(fin,"%d %d %d %d\n",var,var+1,var+2,var+3)!=EOF)  // slot, fiber, channel [0,191], gain
+    {
+      //printf("%d %3d %d %4d\n",var[0],var[1],var[2],var[3]);
+      slot   = var[0];
+      fiber  = var[1];
+      asic   = var[2]/64;
+      channel= var[2]%64;
+      gain   = var[3];
+      gmap[slot][fiber][asic][channel]= gain;
+    }
+    fclose(fin);
+  }
+  return 0;
+}
+
+//----------------------------------------
+int GetGain(int slot,int fiber,int asic,int channel){
+//----------------------------------------
+
+  return gmap[slot][fiber][asic][channel];
+}
+
 
 
 //----------------------------------------
@@ -273,6 +431,10 @@ int  sspRich_InitMarocReg(int slot,int fiber,int asic,int threshold,int gain){
 //----------------------------------------
 
     int i;
+    int gain_choice=gain;
+    double gain_mean = 0;
+
+    if(threshold==0) threshold = GetThreshold(slot,fiber,asic);
 
     sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSU, 0, 1);
     sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_SS, 0, 1);
@@ -320,11 +482,15 @@ int  sspRich_InitMarocReg(int slot,int fiber,int asic,int threshold,int gain){
 
     for(i = 0; i < 64; i++)
     {
+      if(gain_choice==0) gain=GetGain(slot,fiber,asic,i);
+      gain_mean+=gain;
+      //printf("slot %d fiber %d asic %d channel %2d gain %3d\n",slot,fiber,asic,i,gain);
       sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_GAIN, i, gain);
       sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SUM, i, 0);
       sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CTEST, i, 1);
       sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_MASKOR, i, 0);
     }
+//  printf("slot %d fiber %d asic %d threshold %3d gain mean %6.3lf\n",slot,fiber,asic,threshold,gain_mean/64.);
 
   return 0;
 }

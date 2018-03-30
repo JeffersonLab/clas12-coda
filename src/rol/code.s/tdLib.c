@@ -996,7 +996,9 @@ tdPrintPortNames()
  *   - 2:  Port Info only
  *
  */
-void
+/*sergey: change type to 'int'; if pflag >0, it will use it as desired block_level;
+ if at least one ROC has different one it will return (-1), otherwise return (0) */
+int
 tdGStatus(int pflag)
 {
   int itd=0, id=0, iport=0, ifiber=0, iblock=0;
@@ -1009,15 +1011,17 @@ tdGStatus(int pflag)
   unsigned int hfbr_tiID[TD_MAX_VME_SLOTS][8];
   unsigned int fibermask;
   int slaveCount=0;
+  int ret = 0;
+  int block_level;
 
+  /*
   if((pflag<0)|(pflag>2))
     {
-/*sergey
       printf("%s: ERROR: Invalid pflag (%d)\n",__FUNCTION__,pflag);
       return;
-*/
     pflag = 0;
     }
+  */
 
   /* Grab all of the register info we need */
   TDLOCK;
@@ -1050,7 +1054,7 @@ tdGStatus(int pflag)
 
   printf("\n");
 
-  if((pflag==0) || (pflag==1))
+  /*if((pflag==0) || (pflag==1))*/
     {
       printf("TD Module Status Summary\n");
 
@@ -1137,7 +1141,7 @@ tdGStatus(int pflag)
       printf("\n");
     }
 
-  if((pflag==0) || (pflag==2))
+	/*if((pflag==0) || (pflag==2))*/
     {
       printf("TD Port STATUS Summary\n");
       printf("                                                      Block Status      Block  Buffer\n");
@@ -1195,11 +1199,23 @@ tdGStatus(int pflag)
 		}
 	      printf("   %3d / %3d",nblocksReady, nblocksNeedAck);
 	  
+          block_level = (hfbr_tiID[id][iport-1]&TD_ID_BLOCKLEVEL_MASK)>>16;
 	      printf("         %3d",
-		     (hfbr_tiID[id][iport-1]&TD_ID_BLOCKLEVEL_MASK)>>16);
-	      
-	      printf("     %3d",
+		     block_level);
+
+          if((pflag>0)&&(pflag!=block_level))
+		  {
+            ret = -1;
+            printf("<-");
+		  }
+          else
+		  {
+            printf("  ");
+		  }
+
+	      printf("   %3d",
 		     (hfbr_tiID[id][iport-1]&TD_ID_BLOCK_BUFFERLEVEL_MASK)>>24);
+
 	      printf("\n");
 	      slaveCount++;
 	    }
@@ -1211,6 +1227,8 @@ tdGStatus(int pflag)
 
   printf("--------------------------------------------------------------------------------\n");
   printf("\n");
+
+  return(ret);
 }
 
 
@@ -2842,6 +2860,83 @@ tdPrintBusyCounters(int id)
   return OK;
 }
 
+int
+tdGFiberBusyStatus(int nsec)
+{
+  unsigned int counter[TD_MAX_VME_SLOTS][8];
+  int enabled[TD_MAX_VME_SLOTS][8];
+  int itd, id, ifiber, icounter;
+
+  memset((char *)counter, 0, sizeof(counter));
+
+  TDLOCK;
+  for(itd=0; itd<nTD; itd++)
+    {
+      id = tdSlot(itd);
+      for(ifiber = 0; ifiber < 8; ifiber++)
+	{
+	  icounter = ifiber + 1;
+
+	  counter[id][ifiber] = vmeRead32(&TDp[id]->busy_scaler2[icounter]);
+
+	  enabled[id][ifiber] =
+	    (vmeRead32(&TDp[id]->busy) & (1 << (8 + ifiber))) ? 1 : 0;
+	}
+    }
+
+  if(nsec > 0)
+    {
+      sleep(nsec);
+      for(itd=0; itd<nTD; itd++)
+	{
+	  id = tdSlot(itd);
+	  for(ifiber = 0; ifiber < 8; ifiber++)
+	    {
+	      icounter = ifiber + 1;
+	      counter[id][ifiber] =
+		vmeRead32(&TDp[id]->busy_scaler2[icounter]) - counter[id][ifiber];
+	    }
+	}
+    }
+  TDUNLOCK;
+
+  printf("\n\n");
+  printf("                        -----  TD Fiber Busy Counters -----\n");
+  if(nsec > 0)
+    printf("                             (counted over %d seconds)", nsec);
+
+  printf("\n\n");
+
+  printf("Slot     1        2        3        4        5        6        7        8\n");
+  printf("--------------------------------------------------------------------------------\n");
+
+  for(itd=0; itd<nTD; itd++)
+    {
+      id = tdSlot(itd);
+
+      /* Slot */
+      printf(" %2d  ",id);
+
+      for(ifiber = 0; ifiber < 8; ifiber++)
+	{
+	  if(enabled[id][ifiber])
+	    {
+	      printf("%8X ", counter[id][ifiber]);
+	    }
+	  else
+	    {
+	      printf("-------- ");
+	    }
+	}
+      printf("\n");
+
+      printf("--------------------------------------------------------------------------------\n");
+    }
+  printf("\n");
+
+  return OK;
+}
+
 /**
  * @ingroup Status
  * @brief Read the fiber fifo from the TD 
@@ -2944,10 +3039,31 @@ tdPrintFiberFifo(int id, int fiber)
 {
   volatile unsigned int *data;
   int maxwords = 256, iword, rwords = 0;
+  struct td_fiber_word
+  {
+    unsigned int undef:3;              // bits(2:0)
+    unsigned int readout_ack:1;        // 3
+    unsigned int block_received:1;     // 4
+    unsigned int trig2_ack:1;          // 5
+    unsigned int trig1_ack:1;          // 6
+    unsigned int busy2:1;              // 7
+    unsigned int not_sync_reset_req:1; // 8
+    unsigned int sync_reset_req:1;     // 9
+    unsigned int trg_ack:1;            // 10
+    unsigned int busy:1;               // 11
+    unsigned int header:4;             // bits(15:12)
+    unsigned int timestamp:16;         // bits(31:16)
+  };
+
+  union td_fiber_data_word
+  {
+    struct td_fiber_word bf1;
+    unsigned int raw;
+  } uni;
 
   if(id==0) id=tdID[0];
 
-  if(TDp[id] == NULL) 
+  if(TDp[id] == NULL)
     {
       printf("%s: ERROR: TD in slot %d not initialized\n",__FUNCTION__,id);
       return ERROR;
@@ -2959,7 +3075,7 @@ tdPrintFiberFifo(int id, int fiber)
 	     __func__, fiber);
       return ERROR;
     }
-  
+
   data = (volatile unsigned int *)malloc(maxwords * sizeof(unsigned int));
   if(!data)
     {
@@ -2982,25 +3098,38 @@ tdPrintFiberFifo(int id, int fiber)
 	     __func__);
       return ERROR;
     }
-  
+
   printf(" TD %2d Fiber %d fifo (%d words)\n",
 	 id,
 	 fiber, rwords);
-  printf("      Timestamp     Data\n");
-  printf("----------------------------\n");
+  printf("                              Blk  2   1  Bsy !Sy Syn Trg\n");
+  printf("      Timestamp     Data  RO  Rec Ack Ack  2  Req Req Ack Bsy Header\n");
+  printf("---------------------------------------------------------------------\n");
   for(iword = 0; iword < rwords; iword++)
     {
-      printf("%3d:    0x%04x     0x%04x\n",
+      uni.raw = data[iword];
+      printf("%3d:    0x%04x     0x%04x  %d   %d   %d   %d   %d   %d   %d   %d   %d   %0x01x\n",
 	     iword,
-	     (data[iword] & 0xFFFF0000)>>16,
-	     (data[iword] & 0xFFFF));
+	     uni.bf1.timestamp,
+	     (uni.raw & 0xFFFF),
+	     uni.bf1.readout_ack,    // 1
+	     uni.bf1.block_received,
+	     uni.bf1.trig2_ack,
+	     uni.bf1.trig1_ack,
+	     uni.bf1.busy2,          // 5
+	     uni.bf1.not_sync_reset_req,
+	     uni.bf1.sync_reset_req,
+	     uni.bf1.trg_ack,
+	     uni.bf1.busy,           // 9
+	     uni.bf1.header
+	     );
     }
   printf("----------------------------\n");
   printf("\n");
-  
+
   if(data)
     free((void *)data);
-  
+
   return OK;
 }
 
@@ -3067,6 +3196,114 @@ tdGetNtds()
 {
   return(nTD);
 }
+
+
+
+
+
+
+/***************************************************/
+/* ---------------- FROM ALEX SOMOV -------------- */
+
+/**
+  * @ingroup Status
+  * @brief Return BUSY counter for specified Busy Source
+  * @param id Slot number
+  * @return busy counters:
+      data[0]  -  data[7] -  Fiber,
+      data[8]  -  Loopback
+      data[9]  -  Livetime
+      data[10] -  Busytime
+  */
+#define DEFAULT_BUSY 0
+unsigned int
+tdReadScalers(int id, volatile unsigned int *data)
+{
+   int busy_stat = 0;
+   int nwrds  =  0;
+
+   if(id==0) id=tdID[0];
+
+   if(TDp[id] == NULL) {
+     printf("%s: ERROR: TD in slot %d not initialized\n",__FUNCTION__,id);
+     return ERROR;
+   }
+
+
+
+   TDLOCK;
+
+   /* Latch Timers */
+   vmeWrite32(&TDp[id]->reset, TD_RESET_LATCH_TIMERS);
+
+   busy_stat = vmeRead32(&TDp[id]->busy);
+
+
+   if(busy_stat & TD_BUSY_HFBR1)
+     data[nwrds]  =  vmeRead32(&TDp[id]->busy_scaler2[1]);
+   else data[nwrds] = DEFAULT_BUSY;
+   nwrds++;
+
+   if(busy_stat & TD_BUSY_HFBR2)
+     data[nwrds]  =  vmeRead32(&TDp[id]->busy_scaler2[2]);
+   else data[nwrds] = DEFAULT_BUSY;
+   nwrds++;
+
+   if(busy_stat & TD_BUSY_HFBR3)
+     data[nwrds]  =  vmeRead32(&TDp[id]->busy_scaler2[3]);
+   else data[nwrds] = DEFAULT_BUSY;
+   nwrds++;
+
+   if(busy_stat & TD_BUSY_HFBR4)
+     data[nwrds]  =  vmeRead32(&TDp[id]->busy_scaler2[4]);
+   else data[nwrds] = DEFAULT_BUSY;
+   nwrds++;
+
+   if(busy_stat & TD_BUSY_HFBR5)
+     data[nwrds]  =  vmeRead32(&TDp[id]->busy_scaler2[5]);
+   else data[nwrds] = DEFAULT_BUSY;
+   nwrds++;
+
+   if(busy_stat & TD_BUSY_HFBR6)
+     data[nwrds]  =  vmeRead32(&TDp[id]->busy_scaler2[6]);
+   else data[nwrds] = DEFAULT_BUSY;
+   nwrds++;
+
+   if(busy_stat & TD_BUSY_HFBR7)
+     data[nwrds]  =  vmeRead32(&TDp[id]->busy_scaler2[7]);
+   else data[nwrds] = DEFAULT_BUSY;
+   nwrds++;
+
+   if(busy_stat & TD_BUSY_HFBR8)
+     data[nwrds]  =  vmeRead32(&TDp[id]->busy_scaler2[8]);
+   else data[nwrds] = DEFAULT_BUSY;
+   nwrds++;
+
+
+
+   // Loopback
+   data[nwrds]  =  vmeRead32(&TDp[id]->busy_scaler2[0]);
+   nwrds++;
+
+
+   data[nwrds] = vmeRead32(&TDp[id]->livetime);
+   nwrds++;
+
+   data[nwrds] = vmeRead32(&TDp[id]->busytime);
+   nwrds++;
+
+   TDUNLOCK;
+
+   return nwrds;
+}
+
+
+/* ---------------- FROM ALEX SOMOV -------------- */
+/***************************************************/
+
+
+
+
 
 #else /* dummy version*/
 

@@ -303,6 +303,7 @@ void vscmSWSync(int id);
 void fssrMasterReset(int id);
 char *readNormalizedScaler(char *buf, char *prefix, \
                                 uint32_t ref, uint32_t scaler);
+int  vscmGSendScalers();
 
 void fssrStatusAll();
 void fssrStatus(int id, int chip);

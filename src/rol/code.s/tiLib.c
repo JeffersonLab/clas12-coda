@@ -264,7 +264,7 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
   unsigned int firmwareInfo;
   int stat;
   int noBoardInit=0, noFirmwareCheck=0;
-
+  int fiberMeasFailed = 0; /*sergey*/
 
   /* Check VME address */
   if(tAddr<0 || tAddr>0xffffff)
@@ -569,14 +569,14 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
 
   /* Setup some Other Library Defaults */
   if(tiMaster!=1)
-    {
-      if(FiberMeas() == ERROR)
+  {
+    if(FiberMeas() == ERROR)
 	{
 	  printf("%s: Fiber Measurement failure.  Check fiber and/or fiber port,\n",
 		 __FUNCTION__);
-	  /*return ERROR;sergey*/
+	  fiberMeasFailed = 1; /*sergey*/
+	  /*return ERROR; sergey*/
 	}
-
       vmeWrite32(&TIp->syncWidth, 0x24);
       // TI IODELAY reset
       vmeWrite32(&TIp->reset,TI_RESET_IODELAY);
@@ -674,6 +674,8 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
 
   /* Disable all TS Inputs */
   tiDisableTSInput(TI_TSINPUT_ALL);
+
+  if(fiberMeasFailed) return(ERROR);
 
   return OK;
 }
@@ -5130,7 +5132,7 @@ tiSetFiberDelay(unsigned int delay, unsigned int offset)
 }
 
 
-#if 0
+#if 1
 /*sergey: add function*/
 unsigned int
 tiGetFiberDelay()
@@ -5146,6 +5148,7 @@ tiGetFiberDelay()
   TILOCK;
 
   syncDelay_write = vmeRead32(&TIp->fiberSyncDelay);
+  printf("tiGetFiberDelay: fiberSyncDelay=0x%08x(%d)\n",syncDelay_write,syncDelay_write);
 
   TIUNLOCK;
 
@@ -8310,6 +8313,7 @@ tiPrintBusyCounters()
 
   return OK;
 }
+
 
 /*sergey: add function (easy to remember, used as often as tiStatus) */
 int

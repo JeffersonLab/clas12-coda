@@ -27,9 +27,9 @@
 
 #include "bigbuf.h"
 
-
-#undef DEBUG
-
+/*
+#define DEBUG
+*/
 
 /* returns pool id */
 
@@ -433,8 +433,8 @@ bb_init(BIGBUF **bbh)
 
 
 
-/* write method: gets free buffer from the 'pool' for writing */
-/* waits for available buffer and returns buffer pointer */
+/* write method: gets free buffer from the 'pool' for writing; */
+/* it waits for available buffer and returns buffer pointer */
 
 unsigned int *
 bb_write_(BIGBUF **bbh, int flag)
@@ -521,8 +521,9 @@ bb_write_current(BIGBUF **bbh)
 
   if((bbh == NULL)||(*bbh == NULL)) return(NULL);
 
+  
   BB_LOCK;
-
+  
 #ifdef DEBUG
   printf("[%d] bb_write_current (in):  write=%d read=%d\n",bbp->id,bbp->write,bbp->read);fflush(stdout);
 #endif
@@ -532,9 +533,9 @@ bb_write_current(BIGBUF **bbh)
 #ifdef DEBUG
   printf("[%d] bb_write_current (out): write=%d read=%d\n",bbp->id,bbp->write,bbp->read);fflush(stdout);
 #endif
-
+  
   BB_UNLOCK;
-
+  
   return(bbp->data[icb]);
 }
 
@@ -549,8 +550,8 @@ bb_write_current(BIGBUF **bbh)
 
 
 
-/* read method: gets full buffer from the 'pool' for reading */
-/* waits for available buffer and returns buffer pointer */
+/* read method: gets full buffer from the 'pool' for reading; */
+/* it waits for available buffer and returns buffer pointer */
 
 unsigned int *
 bb_read(BIGBUF **bbh)

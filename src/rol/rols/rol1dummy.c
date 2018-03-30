@@ -69,7 +69,8 @@ getTdcSlotNumbers(int *slotnumbers)
 static int input_handle;
 //static char *input_filename = "/tmp/pradfb_000350.evio.0";
 //static char *input_filename = "/home/clasrun/PRad/GemView/db/physics_online1586.dat";
-static char *input_filename = "/work/boiarino/data/TCS_1_.evio.0";
+//static char *input_filename = "/work/boiarino/data/TCS_1_.evio.0";
+static char *input_filename = "/tmp/clas_002229.evio.0";
 static unsigned int buf[MAXEVIOBUF];
 #endif
 
@@ -208,8 +209,16 @@ usrtrig(unsigned long EVTYPE, unsigned long EVSOURCE)
   CEOPEN(EVTYPE, BT_BANKS);
 
   /*usleep(500);*/
-  /*sleep(1);*/
+  sleep(1);
   
+
+  /* do nothing 
+  while(1) sleep(1);
+  */
+
+
+
+
 #ifdef USE_GEM
 
 reopened:
@@ -272,7 +281,7 @@ reopened:
 
 #endif
 
-  /*
+  
   BANKOPEN(0xe1FF,1,rol->pid);
   len = 20;
   for(ii=0; ii<len; ii++)
@@ -280,7 +289,7 @@ reopened:
     *rol->dabufp++ = ii;
   }
   BANKCLOSE;
-  */
+  
 
   CECLOSE;
 

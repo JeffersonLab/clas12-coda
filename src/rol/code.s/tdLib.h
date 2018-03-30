@@ -389,7 +389,7 @@ int    tdGetPortName(int id, int iport, char **name);
 int    tdSavePortNames(char *filename);
 int    tdLoadPortNames(char *filename);
 void   tdPrintPortNames();
-void   tdGStatus(int pflag);
+int    tdGStatus(int pflag);
 int    tdSetBlockLevel(int id, unsigned int blockLevel);
 int    tdGSetBlockLevel(unsigned int blockLevel);
 int    tdSetBlockBufferLevel(int id, unsigned int level);
