@@ -136,6 +136,10 @@ typedef struct
   int ft_cluster_nmin;
   int ft_cluster_width;
 
+  int ft_cluster_mult_en;
+  int ft_cluster_mult_min;
+  int ft_cluster_mult_width;
+
   int ft_esum_en;
   int ft_esum_emin;
   int ft_esum_width;

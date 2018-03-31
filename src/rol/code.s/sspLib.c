@@ -4377,10 +4377,6 @@ int sspGtc_SetTrigger_Enable(int id, int trg, int en_mask)
     return ERROR;
   }
 
-  printf("%s(%d,%d,%d)\n", __func__, id, trg, en_mask);
-  printf("&pSSP[id]->Cfg.BoardId @ 0x%08X\n", &pSSP[id]->Cfg.BoardId);
-  printf("&pSSP[id]->gtc.ctrigger[trg].Ctrl @ 0x%08X\n", &pSSP[id]->gtc.ctrigger[trg].Ctrl);
- 
   SSPLOCK(); 
   sspWriteReg(&pSSP[id]->gtc.ctrigger[trg].Ctrl, en_mask);
   SSPUNLOCK(); 
@@ -4646,6 +4642,77 @@ int sspGtc_GetTrigger_FtClusterWidth(int id, int trg)
   SSPUNLOCK(); 
  
   return rval*4;
+}
+
+int sspGtc_SetTrigger_FtClusterMultWidth(int id, int trg, int val)
+{
+  int rval;
+  
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGTC))
+    return ERROR;
+
+  if( (val < 0) || (val > 63*4) )
+  {
+    printf("%s: ERROR: val is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+ 
+  val/=4;
+  SSPLOCK(); 
+  rval = sspReadReg(&pSSP[id]->gtc.ctrigger[trg].FtCtrl_ClusterMult);
+  rval = (val<<16) | (rval & ~GTC_CTRG_FT_CLUSTER_MULT_WIDTH_MASK);
+  sspWriteReg(&pSSP[id]->gtc.ctrigger[trg].FtCtrl_ClusterMult, rval);
+  SSPUNLOCK(); 
+ 
+  return OK;
+}
+
+int sspGtc_GetTrigger_FtClusterMultWidth(int id, int trg)
+{
+  int rval;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGTC))
+    return ERROR;
+
+  SSPLOCK(); 
+  rval = (sspReadReg(&pSSP[id]->gtc.ctrigger[trg].FtCtrl_ClusterMult) & GTC_CTRG_FT_CLUSTER_MULT_WIDTH_MASK)>>16;
+  SSPUNLOCK(); 
+ 
+  return rval*4;
+}
+
+int sspGtc_SetTrigger_FtClusterMult(int id, int trg, int val)
+{
+  int rval;
+  
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGTC))
+    return ERROR;
+
+  if( (val < 0) || (val > 15) )
+  {
+    printf("%s: ERROR: val is outside acceptable range.\n",__FUNCTION__);
+    return ERROR;
+  }
+ 
+  SSPLOCK(); 
+  rval = sspReadReg(&pSSP[id]->gtc.ctrigger[trg].FtCtrl_ClusterMult);
+  rval = (val<<0) | (rval & ~GTC_CTRG_FT_CLUSTER_MULT_MASK);
+  sspWriteReg(&pSSP[id]->gtc.ctrigger[trg].FtCtrl_ClusterMult, rval);
+  SSPUNLOCK(); 
+ 
+  return OK;
+}
+
+int sspGtc_GetTrigger_FtClusterMult(int id, int trg)
+{
+  int rval;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGTC))
+    return ERROR;
+
+  SSPLOCK(); 
+  rval = (sspReadReg(&pSSP[id]->gtc.ctrigger[trg].FtCtrl_ClusterMult) & GTC_CTRG_FT_CLUSTER_MULT_MASK)>>0;
+  SSPUNLOCK(); 
+ 
+  return rval;
 }
 
 int sspGtc_SetFanout_EnableMask(int id, int en_mask)
@@ -6063,7 +6130,16 @@ void sspPrintGtcConfig(int id)
   printf("         Emax                      = %d\n", sspGtc_GetTrigger_FtClusterEmax(id, trg));
   printf("         Nmin                      = %d\n", sspGtc_GetTrigger_FtClusterNmin(id, trg));
   printf("         HodoLayerMin              = %d\n", sspGtc_GetTrigger_FtClusterHodoNmin(id, trg));
-  printf("         Coindidence Width         = %dns\n", sspGtc_GetTrigger_FtClusterWidth(id, trg));
+  printf("         TriggerPulseWidth         = %dns\n", sspGtc_GetTrigger_FtClusterWidth(id, trg));
+  printf("      *** FTCal Cluster Multiplicity ***\n");
+  printf("         Require                   = %d\n", (val&GTC_CTRG_CTRL_FTCLUSTER_MULT_EN) ? 1:0);
+  printf("         Emin                      = %d\n", sspGtc_GetTrigger_FtClusterEmin(id, trg));
+  printf("         Emax                      = %d\n", sspGtc_GetTrigger_FtClusterEmax(id, trg));
+  printf("         Nmin                      = %d\n", sspGtc_GetTrigger_FtClusterNmin(id, trg));
+  printf("         HodoLayerMin              = %d\n", sspGtc_GetTrigger_FtClusterHodoNmin(id, trg));
+  printf("         TriggerPulseWidth         = %dns\n", sspGtc_GetTrigger_FtClusterWidth(id, trg));
+  printf("         ClusterMultMin            = %d\n", sspGtc_GetTrigger_FtClusterMult(id, trg));
+  printf("         ClusterMultCoincidence    = %dns\n", sspGtc_GetTrigger_FtClusterMultWidth(id, trg));
   printf("\n");
   }
 }

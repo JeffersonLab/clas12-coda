@@ -376,6 +376,9 @@ sspInitGlobals()
       ssp[jj].gtc.ctrg[ii].ft_cluster_hodo_nmin = 0;
       ssp[jj].gtc.ctrg[ii].ft_cluster_nmin = 0;
       ssp[jj].gtc.ctrg[ii].ft_cluster_width = 0;
+      ssp[jj].gtc.ctrg[ii].ft_cluster_mult_en = 0;
+      ssp[jj].gtc.ctrg[ii].ft_cluster_mult_min = 0;
+      ssp[jj].gtc.ctrg[ii].ft_cluster_mult_width = 0;
       ssp[jj].gtc.ctrg[ii].ft_esum_en = 0;
       ssp[jj].gtc.ctrg[ii].ft_esum_emin = 0;
       ssp[jj].gtc.ctrg[ii].ft_esum_width = 0;
@@ -1199,6 +1202,21 @@ sspReadConfigFile(char *filename_in)
           sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.ctrg[ctrg_bit].ft_cluster_width = i1;
         }
+        else if(!strcmp(keyword,"SSP_GTC_CTRG_FT_CLUSTER_MULT_COINCIDENCE"))
+        {        
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.ctrg[ctrg_bit].ft_cluster_mult_width = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GTC_CTRG_FT_CLUSTER_MULT_MIN"))
+        {        
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.ctrg[ctrg_bit].ft_cluster_mult_min = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GTC_CTRG_FT_CLUSTER_MULT_EN"))
+        {        
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.ctrg[ctrg_bit].ft_cluster_mult_en = i1;
+        }
         else if(!strcmp(keyword,"SSP_GTC_CTRG_FT_ESUM_EN"))
         {        
           sscanf (str_tmp, "%*s %d", &i1);
@@ -2005,7 +2023,8 @@ sspDownloadAll()
         sspGtc_SetTrigger_Enable(slot, jj,
                                 (ssp[slot].gtc.ctrg[jj].en<<0) |
                                 (ssp[slot].gtc.ctrg[jj].ft_esum_en<<1) |
-                                (ssp[slot].gtc.ctrg[jj].ft_cluster_en<<2)
+                                (ssp[slot].gtc.ctrg[jj].ft_cluster_en<<2) |
+                                (ssp[slot].gtc.ctrg[jj].ft_cluster_mult_en<<3)
                                );
 
         sspGtc_SetTrigger_FtEsumEmin(slot, jj, ssp[slot].gtc.ctrg[jj].ft_esum_emin);
@@ -2015,6 +2034,8 @@ sspDownloadAll()
         sspGtc_SetTrigger_FtClusterHodoNmin(slot, jj, ssp[slot].gtc.ctrg[jj].ft_cluster_hodo_nmin);
         sspGtc_SetTrigger_FtClusterNmin(slot, jj, ssp[slot].gtc.ctrg[jj].ft_cluster_nmin); 
         sspGtc_SetTrigger_FtClusterWidth(slot, jj, ssp[slot].gtc.ctrg[jj].ft_cluster_width);
+        sspGtc_SetTrigger_FtClusterMultWidth(slot, jj, ssp[slot].gtc.ctrg[jj].ft_cluster_mult_width);
+        sspGtc_SetTrigger_FtClusterMult(slot, jj, ssp[slot].gtc.ctrg[jj].ft_cluster_mult_min);
       }
     }
     /******************************************/
@@ -2326,9 +2347,10 @@ sspUploadAll(char *string, int length)
       for(i=0; i<4; i++)
       {
         ival = sspGtc_GetTrigger_Enable(slot, i);
-        ssp[slot].gtc.ctrg[i].en            = (ival & 0x001) ? 1 : 0;
-        ssp[slot].gtc.ctrg[i].ft_cluster_en = (ival & 0x002) ? 1 : 0;
-        ssp[slot].gtc.ctrg[i].ft_esum_en    = (ival & 0x004) ? 1 : 0;
+        ssp[slot].gtc.ctrg[i].en                 = (ival & 0x001) ? 1 : 0;
+        ssp[slot].gtc.ctrg[i].ft_cluster_en      = (ival & 0x002) ? 1 : 0;
+        ssp[slot].gtc.ctrg[i].ft_esum_en         = (ival & 0x004) ? 1 : 0;
+        ssp[slot].gtc.ctrg[i].ft_cluster_mult_en = (ival & 0x008) ? 1 : 0;
 
         ssp[slot].gtc.ctrg[i].ft_esum_emin = sspGtc_GetTrigger_FtEsumEmin(slot, i);
         ssp[slot].gtc.ctrg[i].ft_esum_width = sspGtc_GetTrigger_FtEsumWidth(slot, i);
@@ -2337,6 +2359,8 @@ sspUploadAll(char *string, int length)
         ssp[slot].gtc.ctrg[i].ft_cluster_hodo_nmin = sspGtc_GetTrigger_FtClusterHodoNmin(slot, i);
         ssp[slot].gtc.ctrg[i].ft_cluster_nmin = sspGtc_GetTrigger_FtClusterNmin(slot, i); 
         ssp[slot].gtc.ctrg[i].ft_cluster_width = sspGtc_GetTrigger_FtClusterWidth(slot, i);
+        ssp[slot].gtc.ctrg[i].ft_cluster_mult_width = sspGtc_GetTrigger_FtClusterMultWidth(slot, i);
+        ssp[slot].gtc.ctrg[i].ft_cluster_mult_min = sspGtc_GetTrigger_FtClusterMult(slot, i);
       }
     }
     /******************************************/
@@ -2633,16 +2657,19 @@ sspUploadAll(char *string, int length)
         {
           sprintf(sss,"SSP_GTC_CTRG %d\n",                       i);                                           ADD_TO_STRING;
 
-          sprintf(sss,"SSP_GTC_CTRG_EN %d\n",                    ssp[slot].gtc.ctrg[i].en);                    ADD_TO_STRING;
-          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_EN %d\n",         ssp[slot].gtc.ctrg[i].ft_cluster_en);         ADD_TO_STRING;
-          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_EMIN %d\n",       ssp[slot].gtc.ctrg[i].ft_cluster_emin);       ADD_TO_STRING;
-          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_EMAX %d\n",       ssp[slot].gtc.ctrg[i].ft_cluster_emax);       ADD_TO_STRING;
-          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_HODO_NMIN %d\n",  ssp[slot].gtc.ctrg[i].ft_cluster_hodo_nmin);  ADD_TO_STRING;
-          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_NMIN %d\n",       ssp[slot].gtc.ctrg[i].ft_cluster_nmin);       ADD_TO_STRING;
-          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_WIDTH %d\n",      ssp[slot].gtc.ctrg[i].ft_cluster_width);      ADD_TO_STRING;
-          sprintf(sss,"SSP_GTC_CTRG_FT_ESUM_EN %d\n",            ssp[slot].gtc.ctrg[i].ft_esum_en);            ADD_TO_STRING;
-          sprintf(sss,"SSP_GTC_CTRG_FT_ESUM_EMIN %d\n",          ssp[slot].gtc.ctrg[i].ft_esum_emin);          ADD_TO_STRING;
-          sprintf(sss,"SSP_GTC_CTRG_FT_ESUM_WIDTH %d\n",         ssp[slot].gtc.ctrg[i].ft_esum_width);         ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_EN %d\n",                         ssp[slot].gtc.ctrg[i].en);                    ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_EN %d\n",              ssp[slot].gtc.ctrg[i].ft_cluster_en);         ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_EMIN %d\n",            ssp[slot].gtc.ctrg[i].ft_cluster_emin);       ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_EMAX %d\n",            ssp[slot].gtc.ctrg[i].ft_cluster_emax);       ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_HODO_NMIN %d\n",       ssp[slot].gtc.ctrg[i].ft_cluster_hodo_nmin);  ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_NMIN %d\n",            ssp[slot].gtc.ctrg[i].ft_cluster_nmin);       ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_WIDTH %d\n",           ssp[slot].gtc.ctrg[i].ft_cluster_width);      ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_FT_ESUM_EN %d\n",                 ssp[slot].gtc.ctrg[i].ft_esum_en);            ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_FT_ESUM_EMIN %d\n",               ssp[slot].gtc.ctrg[i].ft_esum_emin);          ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_FT_ESUM_WIDTH %d\n",              ssp[slot].gtc.ctrg[i].ft_esum_width);         ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_MULT_COINCIDENCE %d\n",ssp[slot].gtc.ctrg[i].ft_cluster_mult_width); ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_MULT_MIN %d\n",        ssp[slot].gtc.ctrg[i].ft_cluster_mult_min);   ADD_TO_STRING;
+          sprintf(sss,"SSP_GTC_CTRG_FT_CLUSTER_MULT_EN %d\n",         ssp[slot].gtc.ctrg[i].ft_cluster_mult_en);    ADD_TO_STRING;
         }
       }
       /******************************************/

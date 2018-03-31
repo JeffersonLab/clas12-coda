@@ -404,6 +404,7 @@ typedef struct
 #define GTC_CTRG_CTRL_EN                          0x00000001
 #define GTC_CTRG_CTRL_FTESUM_EMIN_EN              0x00000002
 #define GTC_CTRG_CTRL_FTCLUSTER_EN                0x00000004
+#define GTC_CTRG_CTRL_FTCLUSTER_MULT_EN           0x00000008
 
 #define GTC_CTRG_FT_ESUM_CTRL_EMIN_MASK           0x00003FFF
 #define GTC_CTRG_FT_ESUM_CTRL_WIDTH_MASK          0x00FF0000
@@ -415,6 +416,9 @@ typedef struct
 #define GTC_CTRG_FT_CLUSTER_CTRL1_NMIN_MASK       0x00000F00
 #define GTC_CTRG_FT_CLUSTER_CTRL1_WIDTH_MASK      0x00FF0000
 
+#define GTC_CTRG_FT_CLUSTER_MULT_MASK             0x0000000F
+#define GTC_CTRG_FT_CLUSTER_MULT_WIDTH_MASK       0x003F0000
+
 /* GTC central trigger */
 typedef struct
 {
@@ -422,7 +426,8 @@ typedef struct
   /* 0x0004-0x0007 */ volatile unsigned int FtCtrl_esum;
   /* 0x0008-0x000B */ volatile unsigned int FtCtrl_Cluster0;
   /* 0x000C-0x000F */ volatile unsigned int FtCtrl_Cluster1;
-  /* 0x0010-0x007F */ BLANK[(0x0080-0x0010)/4];
+  /* 0x0010-0x0013 */ volatile unsigned int FtCtrl_ClusterMult;
+  /* 0x0014-0x007F */ BLANK[(0x0080-0x0014)/4];
   /* 0x0080-0x0083 */ volatile unsigned int Scaler_trigger;
   /* 0x0084-0x00FF */ BLANK[(0x0100-0x0084)/4];
 } GTC_ctrg_regs;
@@ -916,6 +921,10 @@ int sspGtc_SetTrigger_FtClusterWidth(int id, int trg, int val);
 int sspGtc_GetTrigger_FtClusterWidth(int id, int trg);
 int sspGtc_SetFanout_EnableMask(int id, int en_mask);
 int sspGtc_GetFanout_EnableMask(int id);
+int sspGtc_SetTrigger_FtClusterMultWidth(int id, int trg, int val);
+int sspGtc_GetTrigger_FtClusterMultWidth(int id, int trg);
+int sspGtc_SetTrigger_FtClusterMult(int id, int trg, int val);
+int sspGtc_GetTrigger_FtClusterMult(int id, int trg);
 
 void sspPrintGtcConfig(int id);
 
