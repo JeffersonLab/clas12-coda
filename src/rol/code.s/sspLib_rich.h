@@ -363,6 +363,10 @@ typedef struct
 int sspRich_IsFiberInvalid(int id, int fiber, const char *func);
 int sspRich_ScanFibers(int id);
 int sspRich_ScanFibers_NoInit(int id);
+int sspRich_SetFiberEbDisable(int id, int mask);
+int sspRich_GetFiberEbDisable(int id, int *mask);
+int sspRich_SetFiberDisable(int id, int mask);
+int sspRich_GetFiberDisable(int id, int *mask);
 
 int sspRich_GetConnectedFibers(int id, int *fibers);
 int sspRich_ReadScalers(int id, int fiber, unsigned int *ref, unsigned int maroc[RICH_CHAN_NUM]);

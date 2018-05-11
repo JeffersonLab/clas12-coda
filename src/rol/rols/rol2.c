@@ -379,6 +379,7 @@ rol2trig(int a, int b)
   int a_event_number_l, a_timestamp_l, a_event_number_h, a_timestamp_h, a_bitpattern;
   int a_clusterN, a_clusterE, a_clusterY, a_clusterX, a_clusterT, a_type, a_data, a_time;
   int a_instance, a_view, a_coord, a_energy, a_coordU, a_coordV, a_coordW, a_lane;
+  int a_hitmask0, a_hitmask1,a_hitmask2;
   int a_h1tag, a_h2tag, a_nhits, a_coordX, a_coordY;
   long long timestamp, latency, latency_offset;
 
@@ -1877,7 +1878,7 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
 	      printf("[%3d] TRIG_(INST,LANE,TIME) %d %d %d\n",ii,a_instance,a_lane,a_time);
 #endif
 	      ii++;
-		}
+		    }
 
 
         else if( ((datain[ii]>>27)&0x1F) == 0x17) /*FT cluster*/
@@ -1912,6 +1913,67 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
         }
 
 
+        else if( ((datain[ii]>>27)&0x1F) == 0x18) /*FTOF hits*/
+        {
+          a_time = ((datain[ii]>>16)&0x3FF);
+          ii++;
+
+          if( ((datain[ii]>>31)&0x1) == 0 && ii<lenin ) a_hitmask0 = datain[ii++];
+
+          if( ((datain[ii]>>31)&0x1) == 0 && ii<lenin ) a_hitmask1 = datain[ii++];
+
+#ifdef DEBUG7
+         printf("[%3d] FTOFHIT: t=%d 0x%08X_%08X\n",ii,a_time,a_hitmask0,a_hitmask1);
+#endif
+
+          while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
+	      {
+            printf("ERROR2 in VTP:FTOF pass1 = 0x%08X\n",datain[ii]); 
+            ii++;
+	      }
+        }
+
+
+        else if( ((datain[ii]>>27)&0x1F) == 0x1B) /*PCU hits*/
+        {
+          a_time     = ((datain[ii]>>16)&0x3FF);
+          a_hitmask0 = ((datain[ii]>>0)&0x3F);
+          ii++;
+
+          if( ((datain[ii]>>31)&0x1) == 0 && ii<lenin ) a_hitmask1 =  datain[ii++];
+
+          if( ((datain[ii]>>31)&0x1) == 0 && ii<lenin ) a_hitmask2 =  datain[ii++];
+
+#ifdef DEBUG7
+         printf("[%3d] PCUHIT: t=%d 0x%08X_%08X_%08X\n",ii,a_time,a_hitmask0,a_hitmask1,a_hitmask2);
+#endif
+
+          while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
+	      {
+            printf("ERROR2 in VTP:PCU pass1 = 0x%08X\n",datain[ii]); 
+            ii++;
+	      }
+        }
+
+
+        else if( ((datain[ii]>>27)&0x1F) == 0x1D) /*GT trigger*/
+        {
+          a_time     = ((datain[ii]>>16)&0x3FF);
+          a_hitmask0 = ((datain[ii]>>0)&0xFFFF);
+          ii++;
+
+          if( ((datain[ii]>>31)&0x1) == 0 && ii<lenin ) a_hitmask1 =  ((datain[ii++]>>0)&0xFFFF);
+
+#ifdef DEBUG7
+         printf("[%3d] GTHIT: t=%d 0x%08X\n",ii,a_time,a_hitmask0|(a_hitmask1<<16));
+#endif
+
+          while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
+	      {
+            printf("ERROR2 in VTP:GT pass1 = 0x%08X\n",datain[ii]); 
+            ii++;
+	      }
+        }
 
 
 
@@ -2873,6 +2935,7 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
     {
 
       datain = bankdata[jj];
+      lenin = banknw[jj]; /* for error print */
 
 #ifdef DEBUG
       printf("iev=%d jj=%d nB=%d\n",iev,jj,nB[jj]);
@@ -4029,6 +4092,7 @@ if(a_pulsenumber == 0)
 
       else if(banktag[jj] == 0xe122) /* VTP hardware format */
 	  {
+        error = 0;
 
         banknum = iev; /*rol->pid;*/
 
@@ -4193,32 +4257,80 @@ if(a_pulsenumber == 0)
 
 
 
-            else if( ((datain[ii]>>27)&0x1F) == 0x18) /*???*/
+            else if( ((datain[ii]>>27)&0x1F) == 0x18) /*FTOF*/
             {
-              printf("VTP UNKNOWN data18: [%3d] 0x%08x\n",ii,datain[ii]);
-              ii++;
+              a_time =   ((datain[ii]>>16)&0x3FF);
+
+              *dataout ++ = datain[ii];
+              b08 += 4;
+	          ii++;
+
+              a_hitmask0 =  datain[ii];
+
+              *dataout ++ = datain[ii];
+              b08 += 4;
+	          ii++;
+
+              a_hitmask1 =  datain[ii];
+
+              *dataout ++ = datain[ii];
+              b08 += 4;
+	          ii++;
+
+#ifdef DEBUG7
+	          printf("[%3d] FTOFHIT_(MASK0,MASK1,TIME) %d %d %d\n",ii,a_hitmask0,a_hitmask1,a_time);
+#endif
 			}
+
+
             else if( ((datain[ii]>>27)&0x1F) == 0x19) /*???*/
             {
-              printf("VTP UNKNOWN data19: [%3d] 0x%08x\n",ii,datain[ii]);
+              printf("ERROR: VTP UNKNOWN data19: [%3d] 0x%08x\n",ii,datain[ii]);
+              error = 1;
               ii++;
 			}
             else if( ((datain[ii]>>27)&0x1F) == 0x1A) /*???*/
             {
-              printf("VTP UNKNOWN data1A: [%3d] 0x%08x\n",ii,datain[ii]);
+              printf("ERROR: VTP UNKNOWN data1A: [%3d] 0x%08x\n",ii,datain[ii]);
+              error = 1;
               ii++;
 			}
-            else if( ((datain[ii]>>27)&0x1F) == 0x1B) /*???*/
+
+
+            else if( ((datain[ii]>>27)&0x1F) == 0x1B) /*PCU*/
             {
-              printf("VTP UNKNOWN data1B: [%3d] 0x%08x\n",ii,datain[ii]);
-              ii++;
+              a_time =     ((datain[ii]>>16)&0x3FF);
+              a_hitmask0 = ((datain[ii]>>0)&0x3F);
+
+              *dataout ++ = datain[ii];
+              b08 += 4;
+	          ii++;
+
+              a_hitmask1 =  datain[ii];
+
+              *dataout ++ = datain[ii];
+              b08 += 4;
+	          ii++;
+
+              a_hitmask2 =  datain[ii];
+
+              *dataout ++ = datain[ii];
+              b08 += 4;
+	          ii++;
+
+#ifdef DEBUG7
+	          printf("[%3d] PCUHIT_(MASK0,MASK1,MASK2,TIME) %d %d %d\n",ii,a_hitmask0,a_hitmask1,a_hitmask2,a_time);
+#endif
 			}
+
+
             else if( ((datain[ii]>>27)&0x1F) == 0x1C) /*???*/
             {
-              printf("VTP UNKNOWN data1C: [%3d] 0x%08x\n",ii,datain[ii]);
+              printf("ERROR: VTP UNKNOWN data1C: [%3d] 0x%08x\n",ii,datain[ii]);
+              error = 1;
               ii++;
 			}
-            else if( ((datain[ii]>>27)&0x1F) == 0x1D) /*???trig2?????*/
+            else if( ((datain[ii]>>27)&0x1F) == 0x1D) /* GT trigger */
             {
 			  /*
 			  a_h2tag = ((datain[ii]>>15)&0x1);
@@ -4268,7 +4380,8 @@ if(a_pulsenumber == 0)
             }
             else
 		    {
-              printf("VTP UNKNOWN data2: [%3d] 0x%08x\n",ii,datain[ii]);
+              printf("ERROR: VTP UNKNOWN data2: [%3d] 0x%08x\n",ii,datain[ii]);
+              error = 1;
               ii++;
 		    }
 
@@ -4277,6 +4390,34 @@ if(a_pulsenumber == 0)
           CPCLOSE;
 
         } /* loop over blocks */
+
+		/* in case of error, print entire buffer */
+        if(error)
+		{
+          int jjj;
+		  for(jjj=0; jjj<lenin; jjj++)
+          {
+            printf("ERRRR: [%5d] 0x%08x\n",jjj,datain[jjj]);
+          }
+
+#if 0
+          for(ibl=0; ibl<nB[jj]; ibl++) /*loop over blocks*/
+          {
+            printf("\nERROR 0xe122: Block %d, Event %2d, event index %2d, event lenght %2d\n",
+              ibl,iev,iE[jj][ibl][iev],lenE[jj][ibl][iev]);
+            a_slot = sB[jj][ibl];
+            ii = iE[jj][ibl][iev];
+            rlen = ii + lenE[jj][ibl][iev];
+            printf("  ERROR 0xe122: a_slot=%d, ii=%d, rlen=%d\n",a_slot,ii,rlen);
+            while(ii<rlen)
+            {
+              printf("    ERROR 0xe122: [%5d] 0x%08x\n",ii,datain[ii]);
+		      ii++;
+		    }
+		  }
+#endif
+          error = 0;
+		}
 
 	  } /* VTP hardware format */
 

@@ -1248,6 +1248,7 @@ vmeBusUnlock();
     for(id=0; id<nssp; id++)
     {
       SSP_SLOT = sspSlot(id);      /* Grab the current module's slot number */
+
       sspSlotMask |= (1<<SSP_SLOT); /* Add it to the mask */
       printf("=======================> sspSlotMask=0x%08x\n",sspSlotMask);
 

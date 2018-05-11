@@ -86,14 +86,8 @@ else ifeq ("$(OSTYPE_MACHINE)","Linux_nios2")
   LIBNAMES += $(CODA)/Linux_nios2/lib/libevio.a
 else
 
-#?????????? for TT_Go etc
-###LIBNAMES += $(globallib)/libcodatt.a 
-############  LIBNAMES += $(CODA)/src/codatt/$(OSTYPE_MACHINE)/lib/libcodatt.a 
 
-##################  LIBNAMES += $(globallib)/libbosio.a 
   LIBNAMES += $(globallib)/libcreg.a
-
-
 
 
 # do it for VME as well ???????????????
@@ -101,9 +95,6 @@ else
 ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
 endif
-
-
-
 
   LIBNAMES += $(globallib)/libmysql4.1.20.a # the rest of mysql (our stuff)
 
@@ -116,6 +107,30 @@ endif
 
   LIBNAMES += $(CODA)/src/et-14.0/$(OSTYPE_MACHINE)/lib/libet.a
 ##  LIBNAMES += $(globallib)/libet.a
+
+
+
+#
+# IPC library
+#
+  LIBNAMES += -L/usr/lib64 -lstdc++
+  LIBNAMES += $(CODA)/src/ipc/$(OSTYPE_MACHINE)/lib/libipc.a
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += /usr/local/lib/libapr-1.so
+  LIBNAMES += -luuid -lrt -lcrypt -lssl -lcrypto -ldl -lz
+  LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
+else
+  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += -lapr-1
+  LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
+  LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
+endif
+
+
+
+
+
 
 endif
 

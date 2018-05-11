@@ -180,10 +180,10 @@ ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
     CFLAGS = -g
 endif
 
-FFLAGS = -g
-CFLAGS = -g
-#FFLAGS = -O2
-#CFLAGS = -O2
+##FFLAGS = -g
+##CFLAGS = -g
+FFLAGS = -O2
+CFLAGS = -O2
 
     FC = g77
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
@@ -202,8 +202,10 @@ endif
     CC = gcc
     CXX = g++ -g
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-    CC = /apps/gcc/4.9.4/bin/gcc
-    CXX = /apps/gcc/4.9.4/bin/g++ -g
+    ##CC = /apps/gcc/4.9.4/bin/gcc
+    ##CXX = /apps/gcc/4.9.4/bin/g++ -g
+    CC = /apps/gcc/4.9.4/bin/gcc -O2
+    CXX = /apps/gcc/4.9.4/bin/g++ -O2
 endif
 ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
     CC = /apps/gcc/4.9.4/bin/gcc

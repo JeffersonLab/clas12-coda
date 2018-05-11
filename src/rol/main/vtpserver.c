@@ -77,7 +77,7 @@ int load_firmware()
 int
 main(int argc, char *argv[])
 {
-  int stat;
+  int stat, count;
   pthread_t gScalerThread;
 
   if(signal(SIGINT, sig_handler) == SIG_ERR)
@@ -111,10 +111,13 @@ main(int argc, char *argv[])
   epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");
   printf("done.\n");
 
+  count = 0;
   while(1)
   {
+    count ++;
     sleep(1);
     vtpSendScalers();
+    if((count%10)==0) vtpSendSerdes();
   }
 
 CLOSE:

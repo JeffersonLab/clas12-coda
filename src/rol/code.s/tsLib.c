@@ -2688,11 +2688,11 @@ tsPrintScalers(int choice)
       break;
 
     case 2: /* FP */
-      printf("FP Scalers:\n");
+      printf("low connector Scalers:\n");
       break;
 
     case 3: /* Ext */
-      printf("Ext Scalers:\n");
+      printf("FP Scalers:\n");
       break;
 
     }

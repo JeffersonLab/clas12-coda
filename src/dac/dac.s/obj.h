@@ -155,7 +155,7 @@ typedef struct classStruct
   char    *name;			/* name of this object */
   char    *state;			/* name of this state */
   int32_t  codaid;			/* id number of object */
-  int32_t  nlongs;			/* number of data words processed */
+  int64_t  nlongs;			/* number of data words processed */
   int32_t  nevents;			/* number of events processed */
 
   char    *rolNames;

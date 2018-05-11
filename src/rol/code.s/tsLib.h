@@ -50,9 +50,9 @@ int intLockKeya;
 
 struct ScalerStruct
 {
-  /* 0x00n80 */ volatile unsigned int fp[4];
-  /* 0x00n90 */ volatile unsigned int GTP[8];
-  /* 0x00nB0 */ volatile unsigned int gen[8];
+  /* 0x00n80 */ volatile unsigned int fp[4];  /* very bottom connector - obsolete */
+  /* 0x00n90 */ volatile unsigned int GTP[8]; /* GTP inputs */
+  /* 0x00nB0 */ volatile unsigned int gen[8]; /* FP inputs */
   /* 0x00nD0 */ volatile unsigned int blank[(0x334-0x1D0)/4];
 };
 

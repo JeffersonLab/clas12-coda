@@ -66,6 +66,7 @@ extern "C" {
 #define ET_MULTICAST_PORT  11111 /* udp multicast port */
 #define ET_BROADCAST_PORT  11111 /* udp broadcast port */
 #define ET_SERVER_PORT     11111 /* tcp server port */
+#define ET_UDP_PORT        11111
 
 #define ET_MULTICAST_ADDR  "239.200.0.0"    /* random multicast addr */
 #define ET_BROADCAST_ADDR  "129.57.29.255"  /* jlab daq group subnet */

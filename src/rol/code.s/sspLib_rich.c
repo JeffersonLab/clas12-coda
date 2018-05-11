@@ -11,6 +11,8 @@ int sspRichConnectedFibers[MAX_VME_SLOTS+1];            /* array of SSPs valid f
 MAROC_Regs sspRich_MAROC_Regs[MAX_VME_SLOTS+1][RICH_FIBER_NUM][3]; /* array of MAROC ASIC configurations */
 MAROC_Regs sspRich_MAROC_Regs_Rd[MAX_VME_SLOTS+1][RICH_FIBER_NUM][3]; /* array of MAROC ASIC configurations */
 int sspRichConnectedAsic[MAX_VME_SLOTS+1][RICH_FIBER_NUM];   /* array of valid MAROC ASIC */
+int sspRichFiberDisableMask[MAX_VME_SLOTS+1] = {0};
+int sspRichFiberEbDisableMask[MAX_VME_SLOTS+1] = {0};
 
 int sspRich_SaveConfig(const char * filename){
   printf("%s\n",__FUNCTION__);
@@ -443,7 +445,7 @@ int sspRich_ScanFibers(int id)
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
     return ERROR;
   
-  if(printFlag)printf("ScanFibers with init: fiber=0x%08x 0x%08x\n",&pSSP[id]->rich.fiber[0],pSSP[id]);
+  if(printFlag)printf("ScanFibers with init(dis fiber=%08X,dis eb=%08X): fiber=0x%08x 0x%08x\n",sspRichFiberDisableMask[id],sspRichFiberEbDisableMask[id],&pSSP[id]->rich.fiber[0],pSSP[id]);
   SSPLOCK();
 
   for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
@@ -454,8 +456,8 @@ int sspRich_ScanFibers(int id)
   for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
     sspWriteReg(&pSSP[id]->rich.fiber[fiber].GtxCtrl, 0x0);
   SSPUNLOCK();
-  
- // usleep(100000);
+
+
   usleep(2000000);
 
   SSPLOCK();
@@ -479,12 +481,6 @@ int sspRich_ScanFibers(int id)
  
   for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
   {
-//if( (id == 6) 
-//{
-//      sspWriteReg(&pSSP[id]->rich.fiber[fiber].EbCtrl, 0x0);
-//}
-//else
-//{
     if(!(channelsUp & (1<<fiber)))
     {
 //      sspWriteReg(&pSSP[id]->rich.fiber[fiber].GtxCtrl, 0x3);
@@ -492,7 +488,6 @@ int sspRich_ScanFibers(int id)
     }
     else
       sspWriteReg(&pSSP[id]->rich.fiber[fiber].EbCtrl, 0x1); //enable this to readout RICH
-//}
   }
   SSPUNLOCK();
   
@@ -1987,6 +1982,66 @@ int sspRich_TestRead(int id, int fiber, int n)
   }
 }
 
+int sspRich_SetFiberEbDisable(int id, int mask)
+{
+  int fiber;
+
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
+    return ERROR;
+
+  for(fiber=0; fiber<32; fiber++)
+  {
+    if(mask & (1<<fiber))
+      sspWriteReg(&pSSP[id]->rich.fiber[fiber].EbCtrl, 0x0);
+  }
+
+  sspRichFiberEbDisableMask[id] = mask;
+  return OK;
+}
+
+int sspRich_GetFiberEbDisable(int id, int *mask)
+{
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
+    return ERROR;
+
+  return sspRichFiberEbDisableMask[id];
+}
+
+int sspRich_SetFiberDisable(int id, int mask)
+{
+  int asic, fiber;
+
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
+    return ERROR;
+
+  for(fiber=0; fiber<32; fiber++)
+  {
+    if(mask & (1<<fiber))
+    {
+      sspWriteReg(&pSSP[id]->rich.fiber[fiber].GtxCtrl, 0x7);
+      sspWriteReg(&pSSP[id]->rich.fiber[fiber].EbCtrl, 0x0);
+      for(asic=0; asic<3; asic++)
+      {
+        memset(&sspRich_MAROC_Regs[id][fiber][asic], 0, sizeof(MAROC_Regs));
+        memset(&sspRich_MAROC_Regs_Rd[id][fiber][asic], 0, sizeof(MAROC_Regs));
+      }
+      sspRichConnectedAsic[id][fiber] = 0;
+      sspRichConnectedFibers[id] &= ~mask;
+    }
+  }
+
+  sspRichFiberDisableMask[id] = mask;
+  return OK;
+}
+
+int sspRich_GetFiberDisable(int id, int *mask)
+{
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
+    return ERROR;
+
+  return sspRichFiberDisableMask[id];
+}
+
 int sspRich_Init(int id)
 {
   int fiber, asic, tries,success;
@@ -2004,20 +2059,8 @@ int sspRich_Init(int id)
     sspRichConnectedAsic[id][fiber] = 0;
   }
 
-
   sspSetIOSrc(id, SD_SRC_TRIG2, SD_SRC_SEL_0);
-/*
-  sspRich_ScanFibers(id);
-  for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
-  {
-    if(sspRichConnectedFibers[id] & (1<<fiber))
-    {
-      sspRich_Reboot(id,fiber);
-    }
-  }
 
-  sleep(5);
-*/
   sspRich_ScanFibers(id);
   for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
   {

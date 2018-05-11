@@ -242,7 +242,11 @@ TIMERL_START;
   
 #if 1
   len = vtpEbTiReadEvent(buf, MAXBUFSIZE);
-  /*for(ii=0; ii<len; ii++) printf("vtpti[%2d] = 0x%08x\n",ii,buf[ii]);*/
+  if(len>1000)
+  {
+    printf("LEN1=%d\n",len);
+    for(ii=0; ii<len; ii++) printf("vtpti[%2d] = 0x%08x\n",ii,buf[ii]);
+  }
   BANKOPEN(0xe10A,1,rol->pid);
   for(ii=0; ii<len; ii++)
   {
@@ -254,7 +258,11 @@ TIMERL_START;
 
 #if 1
   len = vtpEbReadEvent(buf, MAXBUFSIZE);
-  /*for(ii=0; ii<len; ii++) printf("vtp[%2d] = 0x%08x\n",ii,buf[ii]);*/
+  if(len>1000)
+  {
+    printf("LEN2=%d\n",len);
+    for(ii=0; ii<len; ii++) printf("vtp[%2d] = 0x%08x\n",ii,buf[ii]);
+  }
   BANKOPEN(0xe122,1,rol->pid);
   for(ii=0; ii<len; ii++)
   {

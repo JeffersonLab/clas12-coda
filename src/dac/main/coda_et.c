@@ -214,7 +214,7 @@ etStart()
   etp->nevents = 4000;      /* total number of events */
   etp->event_size = 500000; /* size of event in bytes */
 
-  etp->serverPort = 11111;  /* server port number, unique for every ET system on the same machine */
+  etp->serverPort = 11112;  /* server port number, unique for every ET system on the same machine */
                             /* will NOT use that value, will get free port and put it into database */
 
   etp->udpPort = 0;

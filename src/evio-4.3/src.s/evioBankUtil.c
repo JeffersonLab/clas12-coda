@@ -376,3 +376,10 @@ evOpenEvent(unsigned int *buf, int eventtag)
 #endif
   return(ind);
 }
+
+
+int
+evGarbageCollection(unsigned int *buf)
+{
+  return(0);
+}

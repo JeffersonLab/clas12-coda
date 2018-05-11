@@ -391,6 +391,8 @@ sspInitGlobals()
     ssp[jj].gtc.gtpif_latency = 0;
 
     // CLAS12 RICH
+    ssp[jj].rich.disable_evtbuild = 0;
+    ssp[jj].rich.disable_fiber = 0;
     for(fiber=0; fiber<32; fiber++)
     {
       ssp[jj].rich.fiber[fiber].ctest_dac = 0;
@@ -1863,6 +1865,24 @@ sspReadConfigFile(char *filename_in)
           for(fiber=fiber1; fiber<fiber2; fiber++)
             ssp[slot].rich.fiber[fiber].window_offset = i1;
         }
+        else if(!strcmp(keyword,"SSP_RICH_FIBER_EB_DISABLE"))
+        {
+          argc = sscanf (str_tmp, "%*s 0x%X", &ui[0]);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+            ssp[slot].rich.disable_evtbuild = ui[0];
+        }
+        else if(!strcmp(keyword,"SSP_RICH_FIBER_DISABLE"))
+        {
+          argc = sscanf (str_tmp, "%*s 0x%X", &ui[0]);
+          if(error = sspReadConfigFile_CheckArgs(argc, 1, keyword)) return error;
+          
+          for(slot=slot1; slot<slot2; slot++)
+          for(fiber=fiber1; fiber<fiber2; fiber++)
+            ssp[slot].rich.disable_fiber = ui[0];
+        }
         else
         {
           ; /* unknown key - do nothing */
@@ -2097,8 +2117,10 @@ sspDownloadAll()
     /******************************************/
     if(ssp[slot].fw_type == SSP_CFG_SSPTYPE_HALLBRICH)
     {
-      sspRich_GetConnectedFibers(slot, &connectedfibers);
+      sspRich_SetFiberEbDisable(slot, ssp[slot].rich.disable_evtbuild);
+      sspRich_SetFiberDisable(slot, ssp[slot].rich.disable_fiber);
 
+      sspRich_GetConnectedFibers(slot, &connectedfibers);
       for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
       {
         if(connectedfibers & (1<<fiber))
@@ -2202,6 +2224,7 @@ sspDownloadAll()
           
           sspRich_SetLookback(slot, fiber, ssp[slot].rich.fiber[fiber].window_offset);
           sspRich_SetWindow(slot, fiber, ssp[slot].rich.fiber[fiber].window_width);
+
         }
       }
     }
@@ -2420,8 +2443,10 @@ sspUploadAll(char *string, int length)
     /******************************************/
     if(ssp[slot].fw_type == SSP_CFG_SSPTYPE_HALLBRICH)
     {
+      sspRich_GetFiberEbDisable(slot, &ssp[slot].rich.disable_evtbuild);
+      sspRich_GetFiberDisable(slot, &ssp[slot].rich.disable_fiber);
+
       sspRich_GetConnectedFibers(slot, &connectedfibers);
-      
       for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
       {
         if(connectedfibers & (1<<fiber))
@@ -2724,6 +2749,9 @@ sspUploadAll(char *string, int length)
       /******************************************/
       if(ssp[slot].fw_type == SSP_CFG_SSPTYPE_HALLBRICH)
       {
+        sprintf(sss, "SSP_RICH_FIBER_EB_DISABLE 0x%08X\n", ssp[slot].rich.disable_evtbuild); ADD_TO_STRING;
+        sprintf(sss, "SSP_RICH_FIBER_DISABLE 0x%08X\n", ssp[slot].rich.disable_fiber); ADD_TO_STRING;
+
         sspRich_GetConnectedFibers(slot, &connectedfibers);
       
         for(fiber=0; fiber<32; fiber++)
@@ -2827,6 +2855,7 @@ sspUploadAll(char *string, int length)
 
             sprintf(sss, "SSP_RICH_W_WIDTH %d\n", ssp[slot].rich.fiber[fiber].window_width); ADD_TO_STRING;
             sprintf(sss, "SSP_RICH_W_OFFSET %d\n", ssp[slot].rich.fiber[fiber].window_offset); ADD_TO_STRING;
+
           }
         }
       }

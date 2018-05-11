@@ -151,7 +151,7 @@ eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, 
         ncnf = ifmt[imt-1]/16; /* how many times to repeat format code */
         kcnf = ifmt[imt-1]-16*ncnf; /* format code */
 
-        if(kcnf==15) /* left parenthesis, SPECIAL case: #repeats must be taken from data */
+        if(kcnf==15) /* left parenthesis, SPECIAL case: #repeats must be taken from int32 data */
         {
           kcnf = 0; /* set it to regular left parenthesis code */
           b32 = (int *)b8;
@@ -162,7 +162,21 @@ eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, 
 #endif
           b8 += 4;
 #ifdef DEBUG
-          printf("ncnf from data = %d\n",ncnf);
+          printf("ncnf from data = %d (code 15)\n",ncnf);
+#endif
+        }
+
+        if(kcnf==14) /* left parenthesis, SPECIAL case: #repeats must be taken from int8 data */
+        {
+          kcnf = 0; /* set it to regular left parenthesis code */
+          ncnf = *((int *)b8); /* get #repeats from data */
+#ifdef PRINT
+          xml += sprintf(xml,"          %d(\n",ncnf);
+          /*printf("ncnf(: %d\n",ncnf);*/
+#endif
+          b8 ++;
+#ifdef DEBUG
+          printf("ncnf from data = %d (code 14)\n",ncnf);
 #endif
         }
 

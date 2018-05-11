@@ -41,7 +41,9 @@ typedef int 		(*FUNCPTR) ();	   /* ptr to function returning int */
 typedef void 		(*VOIDFUNCPTR) (); /* ptr to function returning void */
 #endif			/* _cplusplus */
 
-
+#ifdef Linux_vme
+#include "ipc.h"
+#endif
 
 #include "rc.h"
 #include "da.h"
@@ -102,7 +104,7 @@ static char ObjectsClass[80];
 static char    *debugString = NULL;
 FUNCPTR         process_poll_proc = NULL;
 unsigned int *eventNumber;
-unsigned int *dataSent;
+uint64_t *dataSent;
 
 int            rcdebug_level__;
 int             global_code[32];
@@ -846,7 +848,7 @@ coda_constructor()
 printf("\n\ncoda_constructor reached\n");fflush(stdout);
 
   /* Allocate storage for local class information */
- localobject = (objClass) calloc (sizeof (objClassStore),1);
+  localobject = (objClass) calloc (sizeof (objClassStore),1);
   bzero ((char *) localobject, sizeof (objClassStore));
 
   localobject->name = (char *) calloc(81,1);
@@ -893,6 +895,7 @@ printf("\n\ncoda_constructor reached\n");fflush(stdout);
 }
 
 
+/*never called ???*/
 int
 coda_destructor()
 {
@@ -905,6 +908,12 @@ coda_destructor()
 	("database query \"UPDATE process SET inuse='no',state='down' WHERE name='",localobject->name)
 	*/
   }
+
+#ifdef Linux_vme
+  /* disconnect from IPC server */
+  epics_json_msg_close();
+#endif
+
   return CODA_OK;
 }
 
@@ -1058,6 +1067,12 @@ CODA_Init(int argc, char **argv)
   }
 
 
+#ifdef Linux_vme
+  printf("CODA_Init: Connecting to IPC server ..\n");
+  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
+  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
+  printf(".. done connecting to IPC server.\n");
+#endif
 
 
   dbsock = dbConnect(mysql_host, expid);
@@ -1159,7 +1174,7 @@ CODA_Init(int argc, char **argv)
 
 
 printf("CODA_Init 13: coda_constructor starts\n");fflush(stdout);
- coda_constructor();
+      coda_constructor();
 printf("CODA_Init 14: coda_constructor ends\n");fflush(stdout);
     }
   }
@@ -1248,7 +1263,7 @@ CODA_Execute ()
  *-------------------------------------------------------------------------*
  */
 int
-CODA_bswap(int32_t *cbuf, int32_t nlongs)
+CODA_bswap(int32_t *cbuf, int32_t ndata)
 {
     int ii, jj, ix;
     int tlen, blen, dtype;
@@ -1260,7 +1275,7 @@ CODA_bswap(int32_t *cbuf, int32_t nlongs)
     int *lp;
 
     ii = 0;
-    while (ii<nlongs) {
+    while (ii<ndata) {
       lp = (int *)&cbuf[ii];
       blen = cbuf[ii] - 1;
       dtype = ((cbuf[ii+1])&0xff00)>>8;
@@ -1683,10 +1698,14 @@ int
 UDP_send(int socket)
 {
   char tmp[1000], tmpp[1000];
-  int i, nevents, nlongs, eventdiff;
+  char name[100];
+  int i, nevents, eventdiff;
+  int64_t nlongs;
   time_t newtime, timediff;
   float event_rate, data_rate;
-  static int oldevents, oldlongs;
+  float data[4];
+  static int oldevents;
+  static int64_t oldlongs;
   static time_t oldtime;
   int nbytes, cc, rembytes;
   char *buffer2;
@@ -1726,14 +1745,14 @@ UDP_send(int socket)
           oldtime = newtime;
 
 	      strcpy(tmp,udpstr[i].message);
-          sprintf(tmpp," %d %9.3f %d %12.3f",nevents,event_rate,nlongs,data_rate);
+          sprintf(tmpp," %d %9.3f %lld %12.3f",nevents,event_rate,nlongs,data_rate);
 	      /*printf("UDP_send[%d]: %d %9.3f %d %12.3f\n",i,nevents,event_rate,nlongs,data_rate);*/
           strcat(tmp,tmpp);
 		}
         else if(timediff>=3) /* if 3 seconds without rate, send message with zero rates: */
 		{                    /* have to send something to make runcontrol happy          */
 	      strcpy(tmp,udpstr[i].message);
-          sprintf(tmpp," %d %9.3f %d %12.3f",nevents,event_rate,nlongs,data_rate);
+          sprintf(tmpp," %d %9.3f %lld %12.3f",nevents,event_rate,nlongs,data_rate);
 	      /*printf("UDP_send[%d]: %d %9.3f %d %12.3f\n",i,nevents,event_rate,nlongs,data_rate);*/
           strcat(tmp,tmpp);
 		}
@@ -1747,6 +1766,15 @@ UDP_send(int socket)
         tmp[0] = '\0'; /* do not send anything */
 	  }
 
+#ifdef Linux_vme
+      /* send AMQ message */
+      sprintf(name,"STA:%s",localobject->name);
+      data[0] = (float)nevents;
+      data[1] = event_rate;
+      data[2] = (float)((nlongs*4)/1048576);
+      data[3] = data_rate/1048576;
+      epics_json_msg_send(name, "float", 4, data);
+#endif
     }
     else
     {

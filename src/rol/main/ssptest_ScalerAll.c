@@ -12,9 +12,9 @@
 #define NAMESCALER "ssprich_scaler_138.txt" // if you modify this, please modify below accordingly
 
 
-#define RICH_IN_THRESHOLDS   "/home/clasrun/rich/suite/maps/threshold.txt";
-#define RICH_IN_GAINS        "/home/clasrun/rich/suite/maps/gain.txt";
-#define RICH_OUT_TEMPERATURE "/home/clasrun/rich/suite/data/temperature/ssprich_Temperatures.txt";
+//#define RICH_IN_THRESHOLDS   "/home/clasrun/rich/suite1.0/maps/threshold.txt";
+//#define RICH_IN_GAINS        "/home/clasrun/rich/suite1.0/maps/gain.txt";
+//#define RICH_OUT_TEMPERATURE "/home/clasrun/rich/suite1.0/data/temperature/ssprich_Temperatures.txt";
 
 int  sspRich_ReadTemperature(int slot,int fiber);
 int  sspRich_InitMarocReg(int slot,int fiber,int asic,int threshold,int gain);
@@ -306,7 +306,9 @@ int  sspRich_ReadTemperature(int slot,int fiber){
   double limit = 70.0; // Celsius
   sspRich_Monitor mon;
   FILE * fmon;
-  const char * fmonName = RICH_OUT_TEMPERATURE;
+  //const char * fmonName = RICH_OUT_TEMPERATURE;
+  char fmonName[200];
+  sprintf(fmonName, "%s/data/temperature/ssprich_Temperatures.txt", getenv("RICH_SUITE"));
 
   fmon=fopen(fmonName,"a");
   if(!fmon){
@@ -347,14 +349,17 @@ int GetThreshold(int slot,int fiber,int asic){
   int pri = 0;
   int thr;
   int thr_default = 230;
-  const char * filename =  RICH_IN_THRESHOLDS;
+  //const char * filename =  RICH_IN_THRESHOLDS;
+  char filename[200];
+  sprintf(filename, "%s/maps/threshold.txt", getenv("RICH_SUITE"));
 
   thr = thr_default;
 
   fin = fopen(filename,"r");
   if(!fin)
   {
-   printf("Threshold file %s not found...use default value %d DAC units\n",thr_default);
+   printf("Threshold file %s not found...\n");
+   exit(1);
   }
   else
   {
@@ -393,12 +398,15 @@ int LoadGains(){
   int var[4];
   int slot, fiber,asic, channel, gain;
 
-  const char * filename = RICH_IN_GAINS;
+  //const char * filename = RICH_IN_GAINS;
+  char filename[200];
+  sprintf(filename, "%s/maps/gain.txt", getenv("RICH_SUITE"));
 
   fin = fopen(filename,"r");
   if(!fin)
   {
     printf("Gain file %s not found...\n",filename);
+    exit(1);
   }
   else
   {
@@ -490,7 +498,7 @@ int  sspRich_InitMarocReg(int slot,int fiber,int asic,int threshold,int gain){
       sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CTEST, i, 1);
       sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_MASKOR, i, 0);
     }
-//  printf("slot %d fiber %d asic %d threshold %3d gain mean %6.3lf\n",slot,fiber,asic,threshold,gain_mean/64.);
+  printf("slot %d fiber %d asic %d threshold %3d gain mean %6.3lf\n",slot,fiber,asic,threshold,gain_mean/64.);
 
   return 0;
 }

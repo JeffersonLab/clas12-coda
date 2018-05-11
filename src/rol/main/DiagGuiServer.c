@@ -146,6 +146,8 @@ static pthread_mutex_t vmescalers_lock;
 
 
 static int nfadc, ndsc2_tcp, nvscm, nssp, ntd, rflag, rmode;
+static int mssp, mvscm;
+
 static unsigned int  vmescalersmap[MAXBOARDS+1];  /* crate map */
 
 static unsigned int  vmescalerslen[MAXBOARDS];  /*scalers space (the number of words) */
@@ -251,7 +253,12 @@ vmeBusUnlock();
     }
     else if(itype == SCALER_TYPE_SSP)    /* ssp scalers */
 	{
-      for(id=0; id<nssp; id++)
+
+
+      /*for(id=0; id<nssp; id++)*/
+      if(nssp>0)
+	  {
+      for(id=mssp; id<=mssp; id++)
       {
         unsigned int fibermask;
         slot = sspSlot(id);
@@ -296,6 +303,12 @@ vmeBusUnlock();
         for(ii=0; ii<nw; ii++) vmescalers[slot][ii] = sspbuf[ii];
 		/*printf("vmeScalersRead: nw=%d, vmescalers[slot][nw-2]=%d, vmescalers[slot][nw-1]=%d\n",nw,vmescalers[slot][nw-2],vmescalers[slot][nw-1]);*/
       }
+
+	  /* set board id to be read on next itteration */
+      mssp++;
+      if(mssp>=nssp) mssp = 0;
+	  }
+
     }
     else if(itype == SCALER_TYPE_TD)    /* td scalers */
 	{
@@ -690,7 +703,8 @@ faSetA32BaseAddress(fadcA32Address);
   iFlag  = SSP_INIT_MODE_DISABLED; /* Disabled, initially */
   iFlag |= SSP_INIT_SKIP_FIRMWARE_CHECK;
   iFlag |= SSP_INIT_MODE_VXS;
-  nssp=0;
+  nssp = 0;
+  mssp = 0; /* board to read */
 
   nssp = sspInit(0,0,0,iFlag);
   sspConfig ("");

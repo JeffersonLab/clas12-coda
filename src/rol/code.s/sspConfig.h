@@ -296,6 +296,8 @@ typedef struct {
   struct
   {
     rich_fiber fiber[RICH_FIBER_NUM];
+    int disable_evtbuild;
+    int disable_fiber;
   } rich;
   
 } SSP_CONF;
