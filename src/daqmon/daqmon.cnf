@@ -1,0 +1,26 @@
+#
+# config file for CMViewer class
+#
+#    format:
+#
+# HIST <histogram #> <horizontal pad #> <vertical pad #> <prompt(1=yes/0=no)>
+#
+# TMLN <histogram #> <horizontal pad #> <vertical pad #> <time interval (sec)>
+# GRAF <histogram #> <bin# (from 1) to plot> <min> <max> <alarm> <norm. bin#>
+# CMON_PAD <histo name, in form host:..> <pad number> <dimensions> <log?> <stat?> 
+#
+##########################
+# first set of histograms
+##########################
+CMON_TAB Tab1 2 3
+CMON_PAD clondaq6:fadcpulse_001 1 2 1 1
+CMON_PAD clondaq6:fadcped_001 2 2 1 1
+CMON_PAD clondaq6:fadcadc_001 3 2 1 1
+#
+CMON_TAB Tab2 2 3
+CMON_PAD clondaq6:adcft1vtp_VTPFT_CLUSTERPOSITION 1 2 1 1
+CMON_PAD clondaq6:adcft2vtp_VTPFT_CLUSTERPOSITION 1 2 1 1
+#CMON_PAD clonpc0:test4 2 2 1 1
+#
+# end
+#

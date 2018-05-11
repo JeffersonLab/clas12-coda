@@ -1,0 +1,57 @@
+#!/bin/tcsh -f
+#
+#  clonfarm0_start
+#
+set hh = `echo $HOST | cut -c 1-9 `
+
+if ($hh != "clonfarm0") then
+  echo ""
+  echo " You should be logged into clonfarm0"
+  echo ""
+  exit (1)
+endif
+
+set xpos  = 10
+set ypos  = 0
+set yinc  = 210
+set lines = 12
+set color = "-bg blue -fg white -sb -sl 5000"
+set geom  = "-geometry 70x$lines+$xpos+"
+
+set ET_t     = "-T ET_clonfarm0"
+set ET2ET_t  = "-T ET2ET_clonfarm0"
+set ETMON_t  = "-T ETMON_clonfarm0"
+
+set ET      = daq_comp.tcl
+set ET2ET   = daq_comp.tcl
+set ETMON   = daq_comp.tcl
+
+set ET_comp     = 'et_start -n 1000 -s 1100000 -f /tmp/et_sys_clasprod'
+set ET2ET_comp  = 'et_2_et clondaq6:/tmp/et_sys_clasprod clonfarm0:/tmp/et_sys_clasprod ET2FARM0'
+set ETMON_comp  = 'et_monitor -f /tmp/et_sys_clasprod'
+
+
+echo ""
+echo " Start ET"
+set tmp   = `xterm $ET_t $color $geom$ypos -e $ET $ET_comp >& /dev/null &`
+
+sleep 7
+
+echo ""
+echo " Start ET2ET"
+set ypos  = `expr $ypos + $yinc`
+set tmp   = `xterm $ET2ET_t $color $geom$ypos -e $ET2ET $ET2ET_comp >& /dev/null &`
+
+echo ""
+echo " Start ETMON"
+set ypos  = `expr $ypos + $yinc`
+set tmp   = `xterm $ETMON_t $color $geom$ypos -e $ETMON $ETMON_comp >& /dev/null &`
+
+
+
+echo ""
+echo " clonfarm0_start done"
+echo ""
+
+
+exit

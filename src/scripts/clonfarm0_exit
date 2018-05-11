@@ -1,0 +1,51 @@
+#!/bin/csh -f
+#
+#  clonfarm0_exit
+#
+
+set host_name  = "clonfarm0"
+
+set hh = `echo $HOST | cut -c 1-9 `
+
+if ($hh != "clonfarm0") then
+  echo ""
+  echo " You should be logged into clonfarm0"
+  echo ""
+  exit (1)
+endif
+
+
+echo " Stop ETMON"
+stop_proc -n $host_name -p et_monitor -match "clasprod" -s 0
+
+echo " Stop ET2ET"
+stop_proc -n $host_name -p et_2_et -match "clasprod" -s 0
+
+echo " Stop ET"
+stop_proc -n $host_name -p et_start -match "clasprod" -s 0
+
+echo " Remove ET system file"
+sleep 3
+rm -f /tmp/et_sys_clasprod
+
+
+echo ""
+echo " Kill terminals:"
+
+stop_proc -n $host_name -p xterm -match "ET_clonfarm0" -s 0
+echo "                 ET_clonfarm0 done"
+
+stop_proc -n $host_name -p xterm -match "ET2ET_clonfarm0" -s 0
+echo "                 ET2ET_clonfarm0 done"
+
+stop_proc -n $host_name -p xterm -match "ETMON_clonfarm0" -s 0
+echo "                 ETMON_clonfarm0 done"
+
+
+
+echo ""
+echo " clonfarm0_exit done"
+echo ""
+
+
+exit

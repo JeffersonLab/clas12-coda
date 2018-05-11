@@ -1,0 +1,47 @@
+#
+# config file for CMViewer class
+#
+#    format:
+#
+# HIST <histogram #> <horizontal pad #> <vertical pad #> <prompt(1=yes/0=no)>
+#
+# TMLN <histogram #> <horizontal pad #> <vertical pad #> <time interval (sec)>
+# GRAF <histogram #> <bin# (from 1) to plot> <min> <max> <alarm> <norm. bin#>
+# CMON_PAD <histo name, in form host:..> <pad number> <dimensions> <log?> <stat?> 
+#
+##########################
+# first set of histograms
+##########################
+#CMON_TAB Tab1 2 3
+#CMON_PAD clondaq6:fadcpulse_001 1 1 1 1
+#CMON_PAD clondaq6:fadcped_001 2 1 1 1
+#CMON_PAD clondaq6:fadcadc_001 3 1 1 1
+#
+CMON_TAB Tab2 2 3
+CMON_PAD clondaq6:VTPFT_CLUSTERPOSITION 1 2 0 0
+CMON_PAD clondaq6:VTPFT_CLUSTERPOSITION_HODO 2 2 0 0
+CMON_PAD clondaq6:adcft1vtp_VTPFT_CLUSTERENERGY 3 1 1 1
+CMON_PAD clondaq6:adcft2vtp_VTPFT_CLUSTERENERGY 3 1 1 1
+CMON_PAD clondaq6:adcft1vtp_VTPFT_CLUSTERENERGY_HODO 4 1 1 1
+CMON_PAD clondaq6:adcft2vtp_VTPFT_CLUSTERENERGY_HODO 4 1 1 1
+CMON_PAD clondaq6:adcft1vtp_VTPFT_CLUSTERHITS 5 1 1 1
+CMON_PAD clondaq6:adcft2vtp_VTPFT_CLUSTERHITS 5 1 1 1
+CMON_PAD clondaq6:adcft1vtp_VTPFT_CLUSTERNHITS_HODO 6 1 1 1
+CMON_PAD clondaq6:adcft2vtp_VTPFT_CLUSTERNHITS_HODO 6 1 1 0
+CMON_TAB Tab3 2 2
+CMON_PAD clondaq6:adcft1vtp_VTPFT_HODOSCALERS 1 1 0 1
+CMON_PAD clondaq6:adcft2vtp_VTPFT_HODOSCALERS 2 1 0 1
+CMON_PAD clondaq6:adcft3vtp_VTPFT_HODOSCALERS 3 1 0 1
+#CMON_PAD clondaq6:adc11vtp_VTPFT_HODOSCALERS   4 1 0 1
+
+CMON_TAB Tab4 2 2
+CMON_PAD clondaq6:adcft1vtp_VTPFT_CLUSTERENERGY 1 1 1 1
+CMON_PAD clondaq6:adcft1vtp_VTPFT_CLUSTERENERGY_HODO 1 1 1 1
+CMON_PAD clondaq6:adcft1vtp_VTPFT_CLUSTERENERGY 2 1 1 1
+CMON_PAD clondaq6:adcft1vtp_VTPFT_CLUSTERENERGY_HODO 2 1 1 1
+
+
+#CMON_PAD clondaq6:adcft2vtp_VTPFT_CLUSTERENERGY 5 1 1 1
+#
+# end 
+#
