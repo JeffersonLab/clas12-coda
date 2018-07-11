@@ -1298,9 +1298,9 @@ tsGetSerialNumber(char **rSN)
   rval = vmeRead32(&TSp->JTAGPROMBase[(0x1f1c)>>2]);
   TSUNLOCK;
 
+  sprintf(retSN,"TS-%d",rval&0xfff); /* sergey: took it out from following 'if' */
   if(rSN!=NULL)
     {
-      sprintf(retSN,"TS-%d",rval&0xfff);
       strcpy((char *)rSN,retSN);
     }
 
@@ -2687,11 +2687,11 @@ tsPrintScalers(int choice)
       printf("GTP Scalers:\n");
       break;
 
-    case 2: /* FP */
+    case 2: /* Ext */
       printf("low connector Scalers:\n");
       break;
 
-    case 3: /* Ext */
+    case 3: /* FP */
       printf("FP Scalers:\n");
       break;
 

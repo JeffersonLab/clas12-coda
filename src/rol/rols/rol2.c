@@ -36,7 +36,7 @@ static char ssname[80];
 #include "circbuf.h"
 
 
-/*#define DEBUG*/
+/*#define DEBUG*/ /*FADC*/
 /*#define DEBUG1*/ /*TI*/
 /*#define DEBUG2*/ /*TDC*/
 /*#define DEBUG3*/ /*SSP*/

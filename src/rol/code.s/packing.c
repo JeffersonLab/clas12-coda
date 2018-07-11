@@ -41,13 +41,16 @@ pack16(const char *raw, int position, const char *encoded, int epos)
   uint8_t   *enc     = (uint8_t *)  &encoded[0];
   uint16_t  *ped     = (uint16_t *) &encoded[epos];
 
+  /* set output index on 3rd byte */
   result = epos+2;
 
+  /* find minimum sample and put it in first 2 bytes */
   uint16_t min = pointer[0];
   for(i = 0; i < 16; i++) if(pointer[i]<min) min = pointer[i];
   ped[0] = (uint16_t) (min&0x0FFF);
-  //printf("position = %d , min = %d pedestal = %X\n", position,min,ped[0]);
+  printf("position = %d , min = %d pedestal = %X\n", position,min,ped[0]);
 
+  /* record low bits only for every sample, regardless of anything - 8 bytes, 4bits per sample */
   for(i = 0; i < 8; i++)
   {
     high[i*2  ] = ((pointer[ i*2  ] - min)>>4)&0xFF;
@@ -62,22 +65,33 @@ pack16(const char *raw, int position, const char *encoded, int epos)
     result++;
   }
 
+  /* count the number of samples with zero high part, starting from first sample; if 16 - return */
   leading_zeros = 0;
   j = 0;
   while(j<16&&high[j]==0) j++;
   leading_zeros = j;
   //printf("leading zeros = %d\n",leading_zeros);
   if(leading_zeros>=15) return result;
+
+  /* count the number of samples with zero high part, starting from last sample going backward */
   j = 15;
   while(j>=0&&high[j]==0) j--;
   trailing_zeros = j;
+
+  /* calculate how many samples with non-zero high part */
   highBitsCount = trailing_zeros - leading_zeros + 1;
+
+  /* add '0x2000' to min sample value (first 2 bytes in output array) */
   ped[0] = (uint16_t) ((min&0x0FFF)|(0x2000));
+  printf("ped[0]=0x%0x\n",ped[0]);
   //printf(" leading = %d trailing = %d  count = %d\n",
   // leading_zeros, trailing_zeros, highBitsCount);
 
+  /* record the number of leading zeros and the number of samples with non-zero high part */
   enc[result] = (uint8_t) ((leading_zeros<<4)|highBitsCount);
   result++;
+
+  /* record high parts of samples with non-zero high part */
   for(i = 0; i < highBitsCount; i++)
   {
     enc[result] = high[leading_zeros+i];

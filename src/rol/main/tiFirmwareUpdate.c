@@ -30,14 +30,16 @@
      tiFirmwareUpdate(0x00A80000,"fpgareload.svf")
 
   UNIX:
+     killall DiagGuiServer
      cd $CLON_PARMS/firmwares
      tiFirmwareUpdate 0x00A80000 tip32.svf - old
      (PRAD: tiFirmwareUpdate 0x00100000 tip43.svf)
 
-     tiFirmwareUpdate 0x00A80000 tip76.svf
+     #tiFirmwareUpdate 0x00A80000 tip76.svf
+     tiFirmwareUpdate 0x00A80000 tip81.svf
 
   serial number upgrade
-     tiFirmwareUpdate 0x00A80000 tip76.svf 203
+     #tiFirmwareUpdate 0x00A80000 tip81.svf 203
 
 
 

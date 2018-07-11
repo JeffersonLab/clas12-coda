@@ -1,10 +1,12 @@
 
 /* coda_er.c - CODA event recorder */
 
-/*
+
+/* take data from ET, do not send 
 #define DO_NOT_OUTPUT
 */
-/*
+
+/* take data from ET, send to writing thread(s), do not write 
 #define DO_NOT_WRITE
 */
 
@@ -124,7 +126,7 @@ coda_er()
 #define FALSE 0
 #endif
 
-#define MAXTHREAD 8
+#define MAXTHREAD 4
 
 typedef int (*IFUNCPTR) ();
 
@@ -1405,6 +1407,11 @@ erDaqCmd(char *param)
 
     for(i=0; i<MAXTHREAD; i++)
 	{
+      /*HACK
+      if(i%2) strcpy(erp->filename,"/data1/stage_in/test");
+      else    strcpy(erp->filename,"/data2/stage_in/test");
+	  HACK*/
+
       strcpy(biger[i].filename,erp->filename);
       biger[i].runNumber = object->runNumber;
       biger[i].glargein = glargeBUF; /* every 'biger[]' contains pointer to the same 'glargeBUF' */

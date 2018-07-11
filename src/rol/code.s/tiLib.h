@@ -138,7 +138,7 @@ struct TI_A24RegStruct
 #define TI_READOUT_TS_POLL    3
 
 /* Supported firmware version */
-#define TI_SUPPORTED_FIRMWARE 0x076
+#define TI_SUPPORTED_FIRMWARE 0x081
 #define TI_SUPPORTED_TYPE     3
 
 /* Firmware Masks */
@@ -574,7 +574,8 @@ struct TI_A24RegStruct
 
 /* Some pre-initialization routine prototypes */
 int  tiSetFiberLatencyOffset_preInit(int flo);
-int  tiSetCrateID_prIinit(int cid);
+int  tiSetCrateID_preInit(int cid);
+int  tiSetFiberIn_preInit(int port);
 
 /* Function prototypes */
 int  tiInit(unsigned int tAddr, unsigned int mode, int force);
@@ -652,6 +653,7 @@ int  tiGetReadoutEvents();
 int  tiEnableVXSSignals();
 int  tiDisableVXSSignals();
 int  tiSetBlockBufferLevel(unsigned int level);
+int  tiGetBlockBufferLevel();
 int  tiGetBroadcastBlockBufferLevel();
 int  tiBusyOnBufferLevel(int enable);
 int  tiUseBroadcastBufferLevel(int enable);
@@ -660,7 +662,9 @@ int  tiDisableTSInput(unsigned int inpMask);
 int  tiSetOutputPort(unsigned int set1, unsigned int set2, unsigned int set3, unsigned int set4);
 int  tiSetClockSource(unsigned int source);
 int  tiGetClockSource();
-void  tiSetFiberDelay(unsigned int delay, unsigned int offset);
+void tiSetFiberDelay(unsigned int delay, unsigned int offset);
+void tiSetFiberSyncDelay(unsigned int syncDelay);
+int  tiGetFiberDelay();
 int  tiAddSlave(unsigned int fiber);
 int  tiSetTriggerHoldoff(int rule, unsigned int value, int timestep);
 int  tiGetTriggerHoldoff(int rule);
@@ -750,13 +754,14 @@ int  tiSetEvTypeScalers(int enable);
 void tiClearEvTypeScalers();
 int  tiScanAndFillEvTypeScalers(volatile unsigned int *data, int nwords);
 void tiPrintEvTypeScalers();
+void tiUnload(int pflag);
 
 
 /*sergey*/
 int tiGetRandomTriggerSetting(int trigger);
 int tiGetRandomTriggerEnable(int trigger);
 int tiTrigDisable();
-unsigned int tiGetBlockBufferLevel();
+/*unsigned int tiGetBlockBufferLevel();added by Bryan*/
 int tiGetTSInputMask();
 int tiGetSlaveMask();
 int tiBusy();

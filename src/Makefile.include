@@ -782,7 +782,9 @@ TMP = $(subst main,$(localbin),$(SOURCE_FILES_PROG))
 TMP1 = $(subst .cc,,$(TMP))
 TMP2 = $(subst .c,,$(TMP1))
 BIN_FILES_PROG = $(subst .F,,$(TMP2))
+
 ###BIN_FILES_PROG >./SunOS_sun4u/bin/runcontrol ./SunOS_sun4u/bin/rrr ./SunOS_sun4u/bin/fff<
+
 
 #----------------------------
 # the same for readout lists

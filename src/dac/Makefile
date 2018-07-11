@@ -90,13 +90,21 @@ else
   LIBNAMES += $(globallib)/libcreg.a
 
 
-# do it for VME as well ???????????????
+
 #use system mysql, and then remaining calls from our mysql
 ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
 endif
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
+  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+endif
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+endif
 
   LIBNAMES += $(globallib)/libmysql4.1.20.a # the rest of mysql (our stuff)
+
+
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
   LIBNAMES += $(CODA)/src/rol/jvme/libjvme.so

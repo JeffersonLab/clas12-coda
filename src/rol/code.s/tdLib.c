@@ -1979,11 +1979,11 @@ tdGetSerialNumber(int id, char **rSN)
   rval = vmeRead32(&TDp[id]->JTAGPROMBase[(0x1f1c)>>2]);
   TDUNLOCK;
 
-   sprintf(retSN,"TD-%d",rval&0xfff);
-   if(rSN!=NULL)
-    {
-      strcpy((char *)rSN,retSN);
-    }
+  sprintf(retSN,"TD-%d",rval&0xfff);
+  if(rSN!=NULL)
+  {
+    strcpy((char *)rSN,retSN);
+  }
 
 
   printf("%s: TD in slot %2d Serial Number is %s (0x%08x)\n", 
@@ -3189,6 +3189,11 @@ tdClearFiberFifo(int id, int fiber)
 
   return rwords;
 }
+
+
+
+
+
 
 /*sergey*/
 int

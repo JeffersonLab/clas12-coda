@@ -119,14 +119,16 @@ main(int argc, char *argv[])
   for(i=0;i<32;i++)
     vtpSetGtTriggerBit(i,0,0,0,0,0,0,0.0E6);
 
-  vtpSetWindow(4000, 400);
+//  vtpSetWindow(4000, 400);
+  vtpSetWindow(4000,4);
 
   vtpEbResetFifo(1);
   vtpEbResetFifo(0);
 
   usleep(50);
 
-  for(i=0;i<40*8*10;i++)
+//  for(i=0;i<40*8*10;i++)
+  for(i=0;i<515;i++)
   {
     vtpSetTrig1Source(VTP_SD_TRIG1SEL_1);
     vtpSetTrig1Source(VTP_SD_TRIG1SEL_0);

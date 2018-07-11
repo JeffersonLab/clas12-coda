@@ -264,7 +264,7 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
   unsigned int firmwareInfo;
   int stat;
   int noBoardInit=0, noFirmwareCheck=0;
-  int fiberMeasFailed = 0; /*sergey*/
+
 
   /* Check VME address */
   if(tAddr<0 || tAddr>0xffffff)
@@ -384,8 +384,10 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
 
   /* Check to see if we're in a VXS Crate */
   if((boardID==20) || (boardID==21))
-    { /* It's possible... now check for valid i2c to SWB (SD) */
-      i2cread = vmeRead32(&TIp->SWB[(0x3C7C/4)]) & 0xFFFF; /* Device 1, Address 0x1F */
+    {
+      /* Try reading the 'version' register in the SD */
+      i2cread = vmeRead32(&TIp->SWB[(0x3C7C)/4]) & 0xFFFF; /* Device 1, Address 0x1F */
+
       if((i2cread!=0) && (i2cread!=0xffff))
 	{ /* Valid response */
 	  vmeSetMaximumVMESlots(boardID);
@@ -398,33 +400,6 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
     }
   else
     tiNoVXS=1;
-
-
-  if(!noBoardInit)
-    {
-      /* Reset global library variables */
-      tiBlockLevel=1;
-      tiNextBlockLevel=1;
-      tiBlockBufferLevel=1;
-
-      tiIntCount = 0; tiAckCount = 0; tiDaqCount = 0;
-      tiDoAck = 0; tiNeedAck = 0;
-
-      tiReadoutEnabled = 1;
-
-      tiSyncEventFlag = 0; tiSyncEventReceived = 0;
-      tiNReadoutEvents = 0; tiDoSyncResetRequest = 0;
-
-      if(tiMaster==0) /* Reload only on the TI Slaves */
-	{
-	  tiReload();
-	  taskDelay(60);
-	}
-      tiDisableTriggerSource(0);
-      tiDisableVXSSignals();
-    }
-
-  tiSlaveMask = 0; /*sergey: not sure */
 
   /* Get the Firmware Information and print out some details */
   firmwareInfo = tiGetFirmwareVersion();
@@ -486,11 +461,39 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
       return OK;
     }
 
+
+  /* Reset global library variables */
+  tiBlockLevel=1;
+  tiNextBlockLevel=1;
+  tiBlockBufferLevel=1;
+
+  tiIntCount = 0; tiAckCount = 0; tiDaqCount = 0;
+  tiDoAck = 0; tiNeedAck = 0;
+
+  tiReadoutEnabled = 1;
+
+  tiSyncEventFlag = 0; tiSyncEventReceived = 0;
+  tiNReadoutEvents = 0; tiDoSyncResetRequest = 0;
+
+  if(tiMaster==0) /* Reload only on the TI Slaves */
+    {
+      if(tiReload() == ERROR)
+	{
+	  printf("%s: ERROR returned from tiReload\n",
+		 __func__);
+	  return -1;
+	}
+    }
+
+  tiDisableTriggerSource(0);
+  tiDisableVXSSignals();
+
   /* Perform Soft Reset */
   tiReset();
 
   /* Set some defaults, dependent on Master/Slave status */
   tiReadoutMode = mode;
+
   switch(mode)
     {
     case TI_READOUT_EXT_INT:
@@ -503,14 +506,10 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
       tiSlaveMask = 0;
 
       /* BUSY from Loopback and Switch Slot B */
-
-	  /*sergey: do it in ROL1
       if(tiNoVXS==1)
 	tiSetBusySource(TI_BUSY_LOOPBACK,1);
       else
 	tiSetBusySource(TI_BUSY_LOOPBACK | TI_BUSY_SWB,1);
-	  */
-
       /* Onboard Clock Source */
       tiSetClockSource(TI_CLOCK_INTERNAL);
       /* Loopback Sync Source */
@@ -522,16 +521,11 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
       printf("... Configure as TI Slave...\n");
       /* Slave Configuration: takes in triggers from the Master (supervisor) */
       tiMaster = 0;
-
       /* BUSY from Switch Slot B */
-
-	  /* sergey: do it in ROL1
       if(tiNoVXS==1)
 	tiSetBusySource(0,1);
       else
 	tiSetBusySource(TI_BUSY_SWB,1);
-	  */
-
       if(tiSlaveFiberIn==1)
 	{
 	  /* Enable HFBR#1 */
@@ -541,9 +535,7 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
 	  /* HFBR#1 Sync Source */
 	  tiSetSyncSource(TI_SYNC_HFBR1);
 	  /* HFBR#1 Trigger Source */
-
-      /*sergey: add TI_SYNC_USER_SYNCRESET_ENABLED*/
-	  tiSetTriggerSource(TI_TRIGGER_HFBR1 /*| TI_SYNC_USER_SYNCRESET_ENABLED*/);
+	  tiSetTriggerSource(TI_TRIGGER_HFBR1);
 	}
       else if(tiSlaveFiberIn==5)
 	{
@@ -554,9 +546,7 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
 	  /* HFBR#5 Sync Source */
 	  tiSetSyncSource(TI_SYNC_HFBR5);
 	  /* HFBR#5 Trigger Source */
-
-      /*sergey: add TI_SYNC_USER_SYNCRESET_ENABLED*/
-	  tiSetTriggerSource(TI_TRIGGER_HFBR5 /*| TI_SYNC_USER_SYNCRESET_ENABLED*/);
+	  tiSetTriggerSource(TI_TRIGGER_HFBR5);
 	}
       break;
 
@@ -565,80 +555,20 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
 	     __FUNCTION__,mode);
       return ERROR;
     }
-  tiReadoutMode = mode;
 
   /* Setup some Other Library Defaults */
-  if(tiMaster!=1)
-  {
-    if(FiberMeas() == ERROR)
-	{
-	  printf("%s: Fiber Measurement failure.  Check fiber and/or fiber port,\n",
-		 __FUNCTION__);
-	  fiberMeasFailed = 1; /*sergey*/
-	  /*return ERROR; sergey*/
-	}
-      vmeWrite32(&TIp->syncWidth, 0x24);
-      // TI IODELAY reset
-      vmeWrite32(&TIp->reset,TI_RESET_IODELAY);
-      taskDelay(1);
-
-      // TI Sync auto alignment
-      if(tiSlaveFiberIn==1)
-	vmeWrite32(&TIp->reset,TI_RESET_AUTOALIGN_HFBR1_SYNC);
-      else
-	vmeWrite32(&TIp->reset,TI_RESET_AUTOALIGN_HFBR5_SYNC);
-      taskDelay(1);
-
-      // TI auto fiber delay measurement
-      vmeWrite32(&TIp->reset,TI_RESET_MEASURE_LATENCY);
-      taskDelay(1);
-
-      // TI auto alignement fiber delay
-      vmeWrite32(&TIp->reset,TI_RESET_FIBER_AUTO_ALIGN);
-      taskDelay(1);
-    }
-  else
-    {
-
-#if 0
-	  /*sergey: NEW place*/
-    /* Setup a default Sync Delay and Pulse width */
-      tiSetSyncDelayWidth(0x52, 0x2f, 0);/* changed delay from 0x54->0x52 to align sync/trig1 properly */
-    /* Set default sync delay (fiber compensation) */
-      vmeWrite32(&TIp->fiberSyncDelay,
-	       (tiFiberLatencyOffset<<16)&TI_FIBERSYNCDELAY_LOOPBACK_SYNCDELAY_MASK);
-      printf("tiInit: writing 0x%08x to fiberSyncDelay\n",(tiFiberLatencyOffset<<16)&TI_FIBERSYNCDELAY_LOOPBACK_SYNCDELAY_MASK);
-      /*sergey: new place*/
-#endif
-
-      // TI IODELAY reset
-      vmeWrite32(&TIp->reset,TI_RESET_IODELAY);
-      taskDelay(1);
-
-      // TI Sync auto alignment
-      vmeWrite32(&TIp->reset,TI_RESET_AUTOALIGN_HFBR1_SYNC);
-      taskDelay(1);
-
-      // Perform a trigger link reset
-      tiTrigLinkReset();
-      taskDelay(1);
-    }
 
   /* Reset I2C engine */
   vmeWrite32(&TIp->reset,TI_RESET_I2C);
 
-#if 1
-  /*sergey: OLD place */
-    /* Setup a default Sync Delay and Pulse width */
-    if(tiMaster==1)
-      tiSetSyncDelayWidth(0x54, 0x2f, 0);/* changed delay from 0x54->0x52 to align sync/trig1 properly */
-    /* Set default sync delay (fiber compensation) */
-    if(tiMaster==1)
-      vmeWrite32(&TIp->fiberSyncDelay,
-	       (tiFiberLatencyOffset<<16)&TI_FIBERSYNCDELAY_LOOPBACK_SYNCDELAY_MASK);
-  /*sergey: OLD place */
-#endif
+  /* Setup a default Sync Delay and Pulse width */
+  if(tiMaster==1)
+    tiSetSyncDelayWidth(0x54, 0x2f, 0);
 
+  /* Set default sync delay (fiber compensation) */
+  if(tiMaster==1)
+    vmeWrite32(&TIp->fiberSyncDelay,
+	       (tiFiberLatencyOffset<<16)&TI_FIBERSYNCDELAY_LOOPBACK_SYNCDELAY_MASK);
 
   /* Set Default Block Level to 1, and default crateID */
   if(tiMaster==1)
@@ -647,8 +577,7 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
   tiSetCrateID(tiCrateID);
 
   /* Set Event format for CODA 3.0 */
-  if(tiMaster==1) tiSetEventFormat(4); /*sergey: 3 without bitpattern, 4 - with it */
-  else            tiSetEventFormat(3);
+  tiSetEventFormat(3);
 
   /* Set Default Trig1 and Trig2 delay=16ns (0+1)*16ns, width=64ns (15+1)*4ns */
   tiSetTriggerPulse(1,0,15,0);
@@ -664,7 +593,7 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
   tiEnableBusError();
 
   /* MGT reset */
-  /*if(tiMaster==1) sergey*/
+  if(tiMaster==1)
     {
       tiResetMGT();
     }
@@ -675,10 +604,33 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
   /* Disable all TS Inputs */
   tiDisableTSInput(TI_TSINPUT_ALL);
 
-  if(fiberMeasFailed) return(ERROR);
+  if(tiMaster!=1)
+    {
+      if(FiberMeas() == ERROR)
+	{
+	  printf("%s: Fiber Measurement failure.  Check fiber and/or fiber port,\n",
+		 __FUNCTION__);
+	  return -2;
+	}
+    }
+  else
+    {
+      // TI IODELAY reset
+      vmeWrite32(&TIp->reset,TI_RESET_IODELAY);
+      taskDelay(20);
+
+      // TI Sync auto alignment
+      vmeWrite32(&TIp->reset,TI_RESET_AUTOALIGN_HFBR1_SYNC);
+      taskDelay(1);
+
+      // Perform a trigger link reset
+      tiTrigLinkReset();
+      taskDelay(1);
+    }
 
   return OK;
 }
+
 
 /**
  *  @ingroup Config
@@ -1370,7 +1322,7 @@ tiSetSlavePort(int port)
       /* HFBR#1 Sync Source */
       tiSetSyncSource(TI_SYNC_HFBR1);
       /* HFBR#1 Trigger Source */
-      tiSetTriggerSource(TI_TRIGGER_HFBR1 /*| TI_SYNC_USER_SYNCRESET_ENABLED*/); /*sergey: add TI_SYNC_USER_SYNCRESET_ENABLED*/
+      tiSetTriggerSource(TI_TRIGGER_HFBR1);
     }
   else if(tiSlaveFiberIn==5)
     {
@@ -1381,7 +1333,7 @@ tiSetSlavePort(int port)
       /* HFBR#5 Sync Source */
       tiSetSyncSource(TI_SYNC_HFBR5);
       /* HFBR#5 Trigger Source */
-      tiSetTriggerSource(TI_TRIGGER_HFBR5 /*| TI_SYNC_USER_SYNCRESET_ENABLED*/); /*sergey: add TI_SYNC_USER_SYNCRESET_ENABLED*/
+      tiSetTriggerSource(TI_TRIGGER_HFBR5);
     }
 
   /* Measure and apply fiber compensation */
@@ -1394,7 +1346,7 @@ tiSetSlavePort(int port)
   /* TI IODELAY reset */
   TILOCK;
   vmeWrite32(&TIp->reset,TI_RESET_IODELAY);
-  taskDelay(1);
+  taskDelay(20);
 
   /* TI Sync auto alignment */
   if(tiSlaveFiberIn==1)
@@ -1625,23 +1577,52 @@ tiGetFirmwareVersion()
 int
 tiReload()
 {
+  int rval = OK, iwait = 0, reg = 0, Locked = 0;
+
   if(TIp==NULL)
     {
       printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
       return ERROR;
     }
 
+  printf ("%s: \n FPGA Re-Load ! \n",__FUNCTION__);
   TILOCK;
   vmeWrite32(&TIp->reset,TI_RESET_JTAG);
   vmeWrite32(&TIp->JTAGPROMBase[(0x3c)>>2],0);
   vmeWrite32(&TIp->JTAGPROMBase[(0xf2c)>>2],0xEE);
 
-  taskDelay(6); /* on William's advise, must be >40ms */
+  taskDelay(2 * 60);
+
+  /* Wait for FPGA Ready / Clock DCM locked */
+  while(iwait < 100)
+    {
+      reg = vmeRead32(&TIp->GTPtriggerBufferLength);
+      Locked = (reg >> 29) & 0x7;
+
+      if(Locked == 0x7)
+	break;
+
+      taskDelay(50);
+      iwait ++;
+    }
 
   TIUNLOCK;
 
-  printf ("%s: \n FPGA Re-Load ! \n",__FUNCTION__);
-  return OK;
+  if(Locked < 0x7)
+    {
+      printf("%s: ERROR: FPGA is not yet ready.\n",
+	     __func__);
+      printf("   CLK250 DCM: %s\n", (Locked & (1 << 0)) ? "Locked" :
+	     "*** Not Locked ***");
+      printf("   CLK125 DCM: %s\n", (Locked & (1 << 1)) ? "Locked" :
+	     "*** Not Locked ***");
+      printf("   VMECLK DCM: %s\n", (Locked & (1 << 2)) ? "Locked" :
+	     "*** Not Locked ***");
+
+      rval = ERROR;
+    }
+
+  return rval;
 
 }
 
@@ -3102,7 +3083,7 @@ tiReadTriggerBlock(volatile unsigned int *data)
     }
 
   /* Determine the maximum number of words to expect, from the block level */
-  nwrds = (5*tiBlockLevel) + 8;
+  nwrds = (8*tiBlockLevel) + 8;
 
   /* Optimize the transfer type based on the blocklevel */
   if(tiBlockLevel>2)
@@ -3164,6 +3145,19 @@ tiReadTriggerBlock(volatile unsigned int *data)
     {
       logMsg("tiReadTriggerBlock: ERROR: Failed to find TI Block Header\n",
 	     1,2,3,4,5,6);
+
+/* #define DEBUGDATA */
+#ifdef DEBUGDATA
+      int idbg;
+      static int out = 0;
+      if(out == 0)
+	{
+	  for(idbg = 0; idbg < rval; idbg++)
+	    printf("%3d: 0x%08x\n",
+		   idbg, LSWAP(data[iword]));
+	}
+      out = 1;
+#endif
 
       if(tiFakeTriggerBank)
 	return tiGenerateTriggerBank(data);
@@ -4090,29 +4084,6 @@ tiSetSyncDelayWidth(unsigned int delay, unsigned int width, int widthstep)
 }
 
 
-#if 0
-/*sergey: add function*/
-unsigned int
-tiGetSyncDelay()
-{
-  unsigned int delay;
-
-  if(TIp == NULL)
-  {
-    printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
-    return;
-  }
-
-  TILOCK;
-
-  delay = vmeRead32(&TIp->syncDelay);
-
-  TIUNLOCK;
-
-  return(delay);
-}
-#endif
-
 
 
 /**
@@ -4753,27 +4724,38 @@ tiSetBlockBufferLevel(unsigned int level)
   return OK;
 }
 
-/*sergey: add function*/
-unsigned int
+
+/**
+ *  @ingroup Status
+ *  @brief Get the block buffer level, as programmed or broadcasted from the TS
+ *
+ * @return Block buffer level if successful, otherwise ERROR
+ */
+
+int
 tiGetBlockBufferLevel()
 {
-  unsigned int level;
+  int rval = 0;
 
-  if(TIp == NULL) 
+  if(TIp == NULL)
     {
       printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
       return ERROR;
     }
 
   TILOCK;
-  level = vmeRead32(&TIp->blockBuffer) & TI_BLOCKBUFFER_BUFFERLEVEL_MASK;
+  if(vmeRead32(&TIp->vmeControl) & TI_VMECONTROL_USE_LOCAL_BUFFERLEVEL)
+    {
+      rval = vmeRead32(&TIp->blockBuffer) & TI_BLOCKBUFFER_BUFFERLEVEL_MASK;
+    }
+  else
+    {
+      rval = (vmeRead32(&TIp->dataFormat) & TI_DATAFORMAT_BCAST_BUFFERLEVEL_MASK) >> 24;
+    }
   TIUNLOCK;
 
-  /*printf("%s: INFO: Block buffer level set to %d\n",__FUNCTION__,level);*/
-
-  return(level);
+  return rval;
 }
-
 
 
 /**
@@ -4993,7 +4975,6 @@ tiSetOutputPort(unsigned int set1, unsigned int set2, unsigned int set3, unsigne
 }
 
 
-
 /**
  * @ingroup Config
  * @brief Set the clock to the specified source.
@@ -5008,7 +4989,7 @@ tiSetOutputPort(unsigned int set1, unsigned int set2, unsigned int set3, unsigne
 int
 tiSetClockSource(unsigned int source)
 {
-  int rval=OK;
+  int rval=OK, iwait = 0, reg = 0, Locked = 0;
   unsigned int clkset=0;
   unsigned int clkread=0;
   char sClock[20] = "";
@@ -5043,17 +5024,45 @@ tiSetClockSource(unsigned int source)
 
   TILOCK;
   vmeWrite32(&TIp->clock, clkset);
+  taskDelay(10);
   /* Reset DCM (Digital Clock Manager) - 250/200MHz */
   vmeWrite32(&TIp->reset,TI_RESET_CLK250);
-  taskDelay(1);
+  taskDelay(10);
   /* Reset DCM (Digital Clock Manager) - 125MHz */
   vmeWrite32(&TIp->reset,TI_RESET_CLK125);
-  taskDelay(1);
+  taskDelay(10);
+
+  /* Wait for FPGA Ready / Clock DCM locked */
+  while(iwait < 100)
+    {
+      reg = vmeRead32(&TIp->GTPtriggerBufferLength);
+      Locked = (reg >> 29) & 0x7;
+
+      if(Locked == 0x7)
+	break;
+
+      taskDelay(50);
+      iwait ++;
+    }
+
+  if(Locked < 0x7)
+    {
+      printf("%s: ERROR: FPGA is not yet ready.\n",
+	     __func__);
+      printf("   CLK250 DCM: %s\n", (Locked & (1 << 0)) ? "Locked" :
+	     "*** Not Locked ***");
+      printf("   CLK125 DCM: %s\n", (Locked & (1 << 1)) ? "Locked" :
+	     "*** Not Locked ***");
+      printf("   VMECLK DCM: %s\n", (Locked & (1 << 2)) ? "Locked" :
+	     "*** Not Locked ***");
+
+      rval = ERROR;
+    }
 
   if(source==1) /* Turn on running mode for External Clock verification */
     {
       vmeWrite32(&TIp->runningMode,TI_RUNNINGMODE_ENABLE);
-      taskDelay(1);
+      taskDelay(5);
       clkread = vmeRead32(&TIp->clock) & TI_CLOCK_MASK;
       if(clkread != clkset)
 	{
@@ -5063,10 +5072,12 @@ tiSetClockSource(unsigned int source)
 	}
       vmeWrite32(&TIp->runningMode,TI_RUNNINGMODE_DISABLE);
     }
+
   TIUNLOCK;
 
   return rval;
 }
+
 
 /**
  * @ingroup Status
@@ -5098,7 +5109,7 @@ tiGetClockSource()
 void
 tiSetFiberDelay(unsigned int delay, unsigned int offset)
 {
-  unsigned int syncDelay=0, syncDelay_write=0, syncDelay_read=0;
+  unsigned int syncDelay=0, syncDelay_write=0;
   if(TIp == NULL)
     {
       printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
@@ -5118,43 +5129,107 @@ tiSetFiberDelay(unsigned int delay, unsigned int offset)
       syncDelay = (offset-(delay));
     }
 
-  /*sergey: add () in 3 places*/
-  syncDelay_write = ((syncDelay&0xff)<<8) | ((syncDelay&0xff)<<16) | ((syncDelay&0xff)<<24);  /* set the sync delay according to the fiber latency */
+  /* set the sync delay according to the fiber latency */
+  syncDelay_write = ((syncDelay & 0xff) << 8) |
+    ((syncDelay & 0xff) << 16) | ((syncDelay & 0xff) << 24);
 
-  vmeWrite32(&TIp->fiberSyncDelay,syncDelay_write);
-  taskDelay(1);
-  syncDelay_read = vmeRead32(&TIp->fiberSyncDelay);
+  vmeWrite32(&TIp->fiberSyncDelay, syncDelay_write);
 
   TIUNLOCK;
 
-  printf("%s: Wrote 0x%08x to fiberSyncDelay, read back 0x%08x\n",__FUNCTION__,syncDelay_write,syncDelay_read);
+  printf("%s: Wrote 0x%08x to fiberSyncDelay\n",
+	 __FUNCTION__, syncDelay_write);
 
 }
 
 
-#if 1
-/*sergey: add function*/
-unsigned int
-tiGetFiberDelay()
+/**
+ * @ingroup Config
+ * @brief Set the fiber delay required to align the sync and triggers for all crates.
+ */
+void
+tiSetFiberSyncDelay(unsigned int syncDelay)
 {
-  unsigned int syncDelay_write;
-
+  unsigned int syncDelay_write=0;
   if(TIp == NULL)
-  {
-    printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
-    return;
-  }
+    {
+      printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+      return;
+    }
+
+  if(syncDelay > 0xFF)
+    {
+      printf("%s: ERROR: Invalid syncDelay (0x%x)\n",
+	     __func__, syncDelay);
+      return;
+    }
 
   TILOCK;
 
-  syncDelay_write = vmeRead32(&TIp->fiberSyncDelay);
-  printf("tiGetFiberDelay: fiberSyncDelay=0x%08x(%d)\n",syncDelay_write,syncDelay_write);
+  /* set the sync delay according to the fiber latency */
+  syncDelay_write = ((syncDelay & 0xff) << 8) |
+    ((syncDelay & 0xff) << 16) | ((syncDelay & 0xff) << 24);
+
+  vmeWrite32(&TIp->fiberSyncDelay, syncDelay_write);
 
   TIUNLOCK;
 
-  return(syncDelay_write);
+  printf("%s: Wrote 0x%08x to fiberSyncDelay\n",
+	 __FUNCTION__, syncDelay_write);
+
 }
-#endif
+
+/**
+ * @ingroup Status
+ * @brief Get the fiber delay required to align the sync and triggers for all crates.
+ * @return Current fiber delay setting
+ */
+int
+tiGetFiberDelay()
+{
+  int rval = 0;
+
+  if(TIp == NULL)
+    {
+      printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+      return ERROR;
+    }
+
+  TILOCK;
+
+  rval = vmeRead32(&TIp->fiberSyncDelay);
+
+  if (tiMaster)
+    {
+      rval = (rval & TI_FIBERSYNCDELAY_LOOPBACK_SYNCDELAY_MASK) >> 16;
+    }
+  else
+    {
+      if (tiSlaveFiberIn == 1)
+	{
+	  rval = (rval & TI_FIBERSYNCDELAY_HFBR1_SYNCDELAY_MASK) >> 8;
+	}
+      else if (tiSlaveFiberIn == 5)
+	{
+	  rval = (rval & TI_FIBERSYNCDELAY_HFBR5_SYNCDELAY_MASK) >> 24;
+	}
+      else
+	{
+	  rval = ERROR;
+	}
+    }
+
+  TIUNLOCK;
+
+  if (rval == ERROR)
+    {
+      printf("%s: ERROR: Invalid value for tiSlaveFiberIn (%d)\n",
+	     __func__, tiSlaveFiberIn);
+    }
+
+  return rval;
+}
+
 
 /**
  * @ingroup MasterConfig
@@ -6555,14 +6630,43 @@ tiBlockStatus(int fiber, int pflag)
   return rval;
 }
 
+
+
+
+unsigned char *measurement;
+int maxCount = 0, maxIndex = 0;
+int FiberMeasMaxCount()
+{
+  return maxCount;
+}
+
+int FiberMeasMaxIndex()
+{
+  return maxIndex;
+}
+
+void FiberMeasHisto()
+{
+  int imeas;
+  for(imeas = 0; imeas < 256; imeas++)
+    {
+      printf("%s: %2d: measurement = %d  %s\n",
+	     __func__, imeas, measurement[imeas],
+	     (imeas==maxIndex)?"***":"");
+    }
+}
+
 static int
 FiberMeas()
 {
-  int clksrc=0, itry = 0, ntries = 2;
+  int clksrc=0, imeas = 0, ntries = 5;
   unsigned int defaultDelay=0x1f1f1f00, fiberLatency=0, syncDelay=0, syncDelay_write=0;
-  unsigned int firstMeas = 0;
+  int index = 0;
   int failed = 0;
   int rval = OK;
+
+  measurement = (unsigned char *)malloc(256*sizeof(unsigned char));
+  memset((void *)measurement, 0, 256*sizeof(unsigned char));
 
   clksrc = tiGetClockSource();
   /* Check to be sure the TI has external HFBR1/5 clock enabled */
@@ -6577,23 +6681,25 @@ FiberMeas()
       vmeWrite32(&TIp->fiberSyncDelay,defaultDelay);
       TIUNLOCK;
 
+      free(measurement);
       return ERROR;
     }
 
   TILOCK;
-  for(itry = 0; itry < ntries; itry++)
+  for(imeas = 0; imeas < ntries; imeas++)
     {
+#ifdef SKIPIODELAY
       /* Reset the IODELAY */
       vmeWrite32(&TIp->reset,TI_RESET_IODELAY);
-      taskDelay(10);
-
+      taskDelay(20);
+#endif
       /* Auto adjust the return signal phase */
       vmeWrite32(&TIp->reset,TI_RESET_FIBER_AUTO_ALIGN);
-      taskDelay(10);
+      taskDelay(20);
 
       /* Measure the fiber latency */
       vmeWrite32(&TIp->reset,TI_RESET_MEASURE_LATENCY);
-      taskDelay(1);
+      taskDelay(2);
 
       /* Get the fiber latency measurement result */
       if(tiSlaveFiberIn==1)
@@ -6625,41 +6731,34 @@ FiberMeas()
 	fiberLatency = vmeRead32(&TIp->fiberAlignment);
 
       /* Divide by two to get the one way trip */
-      tiFiberLatencyMeasurement =
-	((fiberLatency & TI_FIBERLATENCYMEASUREMENT_DATA_MASK)>>23)>>1;
+      index = ((fiberLatency& TI_FIBERLATENCYMEASUREMENT_DATA_MASK)>>23)>>1;
+      measurement[index]++;
 
-      if(itry == 0)
-	firstMeas = tiFiberLatencyMeasurement;
-      else
-	{
-	  if(abs(firstMeas - tiFiberLatencyMeasurement) > 1)
-	    failed = 1;
-	  else if (abs(firstMeas - tiFiberLatencyMeasurement) == 1)
-	    {
-	      /* Allow for a clock tick of slop */
-	      printf("\n");
-	      printf("%s: WARN: From TI Fiber Measurement "
-		     "\n\tFirst Measurement != Second Measurement (%d != %d)\n",
-		     __FUNCTION__,
-		     firstMeas, tiFiberLatencyMeasurement);
+      taskDelay(1);
 
-	      /* Use the smaller of the two */
-	      tiFiberLatencyMeasurement =
-		((firstMeas - tiFiberLatencyMeasurement) > 1) ?
-		tiFiberLatencyMeasurement :
-		firstMeas;
-
-	      printf("\tUsing %d\n\n", tiFiberLatencyMeasurement);
-	    }
-	}
     }
 
-  syncDelay = (tiFiberLatencyOffset - (((fiberLatency >> 23) & 0x1ff) >> 1));
+  /* Loop through measurements to find the most common */
+  for(imeas = 0; imeas < 256; imeas++)
+    {
+      if(measurement[imeas] >= maxCount)
+	{
+	  maxCount = measurement[imeas];
+	  maxIndex = imeas;
+	}
+/* #define DEBUGMEAS */
+#ifdef DEBUGMEAS
+      printf("%s: %2d: measurement = %d  %s\n",
+	     __func__, imeas, measurement[imeas],
+	     (imeas==maxIndex)?"***":"");
+#endif
+    }
+  tiFiberLatencyMeasurement = maxIndex;
+
+  syncDelay = (tiFiberLatencyOffset - tiFiberLatencyMeasurement);
 
   syncDelay_write = (syncDelay & 0xFF) << 8 |
     (syncDelay & 0xFF) << 16 | (syncDelay & 0xFF) << 24;
-
-  taskDelay(1);
 
   vmeWrite32(&TIp->fiberSyncDelay,syncDelay_write);
   taskDelay(1);
@@ -6667,17 +6766,17 @@ FiberMeas()
   TIUNLOCK;
 
 #ifdef DEBUGFIBERMEAS
-  printf (" \n The fiber latency of 0xA0 is: 0x%08x\n", fiberLatency);
-  printf (" \n The sync latency of 0x50 is: 0x%08x\n",syncDelay);
+  printf (" \n The fiber latency of 0xA0 is: 0x%08x, ", fiberLatency);
+  printf (" The sync latency of 0x50 is: 0x%08x\n",syncDelay);
 #endif /* DEBUGFIBERMEAS */
 
   if(failed == 1)
     {
       printf("\n");
-      printf("%s: ERROR: TI Fiber Measurement failed!"
-	     "\n\tFirst Measurement != Second Measurement (%d != %d)\n\n",
-	     __FUNCTION__,
-	     firstMeas, tiFiberLatencyMeasurement);
+      /* printf("%s: ERROR: TI Fiber Measurement failed!" */
+      /* 	     "\n\tFirst Measurement != Second Measurement (%d != %d)\n\n", */
+      /* 	     __FUNCTION__, */
+      /* 	     firstMeas, tiFiberLatencyMeasurement); */
       tiFiberLatencyMeasurement = 0;
       rval = ERROR;
     }
@@ -6700,6 +6799,7 @@ FiberMeas()
       rval = OK;
     }
 
+  free(measurement);
   return rval;
 }
 
@@ -8878,6 +8978,16 @@ tiPrintEvTypeScalers()
 
 }
 
+void
+tiUnload(int pflag)
+{
+  TILOCK;
+  TIp = NULL;
+  TIUNLOCK;
+
+  if(pflag)
+    printf("%s: INFO: TI pointer set to NULL\n",__func__);
+}
 
 
 /*sergey: add function*/

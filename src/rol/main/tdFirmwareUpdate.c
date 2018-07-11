@@ -34,21 +34,21 @@ slot 10: TD-101
 slot 13: TD-104
 
      cd $CLON_PARMS/firmwares
-     tdFirmwareUpdate 0 tdp31.svf
+     tdFirmwareUpdate 0 tdp73.svf
         - to obtain all TD boards addresses
 
-     tdFirmwareUpdate xxxxxxxx tdp31.svf
+     tdFirmwareUpdate xxxxxxxx tdp73.svf
         - for every TD board found:
 
-     tdFirmwareUpdate 0x00180000 tdp73.svf
-     tdFirmwareUpdate 0x00200000 tdp73.svf
-     tdFirmwareUpdate 0x00280000 tdp73.svf
-     tdFirmwareUpdate 0x00300000 tdp73.svf
-     tdFirmwareUpdate 0x00380000 tdp73.svf
-     tdFirmwareUpdate 0x00400000 tdp73.svf
-     tdFirmwareUpdate 0x00480000 tdp73.svf
-     tdFirmwareUpdate 0x00500000 tdp73.svf
-     tdFirmwareUpdate 0x00680000 tdp73.svf
+     tdFirmwareUpdate 0x00180000 tdp81.svf
+     tdFirmwareUpdate 0x00200000 tdp81.svf
+     tdFirmwareUpdate 0x00280000 tdp81.svf
+     tdFirmwareUpdate 0x00300000 tdp81.svf
+     tdFirmwareUpdate 0x00380000 tdp81.svf
+     tdFirmwareUpdate 0x00400000 tdp81.svf
+     tdFirmwareUpdate 0x00480000 tdp81.svf
+     tdFirmwareUpdate 0x00500000 tdp81.svf
+     tdFirmwareUpdate 0x00680000 tdp81.svf
 
      (tdFirmwareUpdate xxxxxxxxx tdp73.svf)
 

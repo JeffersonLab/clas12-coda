@@ -22,6 +22,7 @@ static int nusertrig, ndone;
 #define USE_VETROC
 //#define USE_FLP
 
+
 /* if event rate goes higher then 10kHz, with random triggers we have wrong
 slot number reported in GLOBAL HEADER and/or GLOBAL TRAILER words; to work
 around that problem temporary patches were applied - until fixed (Sergey) */
@@ -295,6 +296,10 @@ static int nvscm1 = 0;
 static int VSCM_ROFLAG = 1;
 #endif
 
+
+static int sd_found = 0;
+
+
 #ifdef USE_FADC250
 
 #include "fadcLib.h"
@@ -363,9 +368,10 @@ __download()
 {
   int i1, i2, i3;
   char *ch, tmp[64];
+  int ret;
 
 #ifdef USE_FADC250
-  int ret, ii, id, isl, ichan, slot;
+  int ii, id, isl, ichan, slot;
   unsigned short iflag;
   int fadc_mode = 1, iFlag = 0;
   int ich, NSA, NSB;
@@ -481,6 +487,21 @@ if(rol->pid==18)
   /* USER code here */
 
 
+vmeBusLock();
+  ret = sdInit(1);  /* Initialize the SD library; will use 'sd_found' later */
+  if(ret >= 0)
+  {
+    sd_found = 1;
+  }
+  else
+  {
+    printf("\n\nsdInit returns %d, probably SD does not installed in that crate ..\n\n\n",ret);
+    sd_found = 0;
+  }
+vmeBusUnlock();
+
+
+
 #ifdef USE_DSC2
   printf("DSC2 Download() starts =========================\n");
 
@@ -583,11 +604,35 @@ v1190: 0x11xx0000, where xx follows the same scheme as FADCs
   iFlag = (DIST_ADDR)<<10;
   /* Sync Source */
   iFlag |= (1<<0);    /* VXS */
-  /* Trigger Source */
-  iFlag |= (1<<2);    /* VXS */
-  /* Clock Source */
-  /*iFlag |= (1<<5);*/    /* VXS */
-  iFlag |= (0<<5);  /* Internal Clock Source */
+
+
+  if(sd_found)
+  {
+    printf("Assume SD usage for FADCs\n");
+
+    /* Trigger Source */
+    iFlag |= (1<<2);    /* VXS */
+    /* Clock Source */
+    /*iFlag |= (1<<5);*/    /* VXS */
+    iFlag |= (0<<5);  /* Internal Clock Source */
+  }
+  else
+  {
+    printf("Assume SDC usage for FADCs\n");
+
+    /* Trigger Source - have to do it to make faInit() configure for SDC board */
+    iFlag |= (1<<1);    /* Front Panel */
+
+    /* Clock Source */
+    iFlag |= (1<<4);    /* Front Panel */
+    /*iFlag |= (0<<5);*/  /* Internal Clock Source */
+
+    /* SDC address */
+    iFlag |= (0xea<<8);
+  }
+
+
+
 #ifndef VXWORKS
   vmeSetQuietFlag(1); /* skip the errors associated with BUS Errors */
 #endif
@@ -608,6 +653,7 @@ vmeBusUnlock();
   if(nfadc>0)
   {
     if(nfadc==1) FADC_ROFLAG = 1; /*no chainedDMA if one board only*/
+    if(!sd_found) FADC_ROFLAG = 1; /*no chainedDMA if no SD*/
 
     if(FADC_ROFLAG==2) faEnableMultiBlock(1);
     else faDisableMultiBlock();
@@ -714,16 +760,12 @@ STATUS for FADC in slot 18 at VME (Local) base address 0x900000 (0xa16b1000)
    *   SD SETUP
    ***************************************/
 vmeBusLock();
-  ret = sdInit(1);   /* Initialize the SD library */
-  if(ret >= 0)
+  /*sd_found = sdInit(1); moved before anything else*/   /* Initialize the SD library */
+  if(sd_found)
   {
     sdSetActiveVmeSlots(fadcSlotMask); /* Use the fadcSlotMask to configure the SD */
     sdStatus();
     sdSetTrigoutLogic(0, 2); /* Enable SD trigout as OR by default */
-  }
-  else
-  {
-    printf("\n\nsdInit returns %d, probably SD does not installed in that crate ..\n\n\n",ret);
   }
 vmeBusUnlock();
 
@@ -996,7 +1038,8 @@ vmeBusUnlock();
   {
     printf("Set BUSY from SWB for FADCs\n");
 vmeBusLock();
-    tiSetBusySource(TI_BUSY_SWB,0);
+    if(sd_found) tiSetBusySource(TI_BUSY_SWB,0);
+    else tiSetBusySource(TI_BUSY_FP_FADC,0);
 vmeBusUnlock();
   }
 #endif
@@ -1169,7 +1212,8 @@ vmeBusUnlock();
   {
     FA_SLOT = faSlot(id);
 vmeBusLock();
-    faSetClockSource(FA_SLOT,2);
+    if(sd_found) faSetClockSource(FA_SLOT,2);
+    else         faSetClockSource(FA_SLOT,/*0*/1); /* 0-internal, 1-front panel*/
 vmeBusUnlock();
   }
 
@@ -1315,6 +1359,21 @@ vmeBusUnlock();
   printf("holdoff rule 2 set to %d\n",tiGetTriggerHoldoff(2));
 
 #endif
+
+
+
+#if 0
+  if(!sd_found)
+  {
+    /* added by Ben Raydo - please fix with correct SDC sync pulse...*/
+    faEnableSoftSync(0);
+    faSync(0);
+  }
+#endif
+
+
+
+
 
 /* set block level in all boards where it is needed;
    it will overwrite any previous block level settings */
@@ -1531,9 +1590,19 @@ vmeBusUnlock();
   sleep(1);
   */
 
-  
+  if(!sd_found)
+  {
+    int portMask = 0;
+
+    for(id=0; id<nfadc; id++) portMask |= (1<<id);
+    printf("Configuring SDC card with portMask=0x%08x for %d FADC boards\n",portMask,nfadc);
+
+	faSDC_Config(1, portMask);
+  }
+
   /*  Send Sync Reset to FADC */
-  /*faSDC_Sync();*/
+  /*if(!sd_found) faSDC_Sync();*/
+
 #endif
 
 #ifdef USE_V1190

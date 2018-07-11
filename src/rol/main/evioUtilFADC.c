@@ -15,9 +15,9 @@ main()
 #define _POSIX_SOURCE_ 1
 #define __EXTENSIONS__
 
-/*
+
 #define DEBUG
-*/
+
 
 #define ABS(x)      ((x) < 0 ? -(x) : (x))
 
@@ -93,7 +93,7 @@ static int output_handle;
 static int nevent         = 0;
 static int nwrite         = 0;
 static int skip_event     = 0;
-static int max_event      = 1000000;
+static int max_event      = 2;
 
 hrtime_t
 gethrtime(void)
@@ -137,7 +137,11 @@ main(int argc, char **argv)
   GET_PUT_INIT;
   TIMERL_VAR;
 
-  if(argc!=3) printf("Usage: evioUtilTest <input evio file> <output evio file>\n");
+  if(argc!=3)
+  {
+    printf("Usage: evioUtilTest <input evio file> <output evio file>\n");
+    exit(0);
+  }
   input_filename = strdup(argv[1]);
   output_filename = strdup(argv[2]);
   printf("Use >%s< as input file\n",input_filename);
@@ -253,7 +257,7 @@ TIMERL_START;
 				GET16(dat16);
 				datasaved[mm] = dat16;
 #ifdef DEBUG
-			    printf("====> [%3d] %d\n",mm,datasaved[mm]);fflush(stdout);
+			    printf("==data==> [%3d] %d (0x%2x)\n",mm,datasaved[mm],datasaved[mm]);fflush(stdout);
 #endif
 			  }
 
@@ -262,7 +266,7 @@ TIMERL_START;
 			  {
                 datasaved[mm] = datasaved[nsamples-1];
 #ifdef DEBUG
-			    printf("----> [%3d] %d\n",mm,datasaved[mm]);fflush(stdout);
+			    printf("--fill--> [%3d] %d (0x%2x)\n",mm,datasaved[mm],datasaved[mm]);fflush(stdout);
 #endif
 			  }
 

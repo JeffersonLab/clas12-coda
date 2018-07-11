@@ -678,6 +678,7 @@ fadcA32Address = maxA32Address + FA_MAX_A32_MEM;
 faSetA32BaseAddress(fadcA32Address);
   faInit((unsigned int)(3<<19),(1<<19),18,iFlag);
   nfadc = faGetNfadc();
+  fadc250Config("");
 
   /* fill map array with FADC's found */
   for(ii=0; ii<nfadc; ii++) if( (slot=faSlot(ii)) > 0) vmescalersmap[slot] = SCALER_TYPE_FADC250;

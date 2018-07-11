@@ -106,7 +106,7 @@ struct TD_A24RegStruct
 #define TD_FIRMWARE_MAJOR_VERSION_MASK   0x00000FF0
 #define TD_FIRWMARE_MINOR_VERSION_MASK   0x0000000F
 
-#define TD_SUPPORTED_FIRMWARE 0x72
+#define TD_SUPPORTED_FIRMWARE 0x81
 #define TD_SUPPORTED_TYPE     TD_FIRMWARE_TYPE_P
 
 /* 0x0 boardID bits and masks */
@@ -433,6 +433,7 @@ int    tdSetOutputPort(int id, unsigned int set1, unsigned int set2,
 unsigned int tdGetTrigCount(int id);
 unsigned int tdGetBusyCounter(int id, int busysrc);
 int    tdPrintBusyCounters(int id);
+int    tdGFiberBusyStatus(int nsec);
 int    tdReadFiberFifo(int id, int fiber, volatile unsigned int *data,
 		       int maxwords, int rflag);
 int    tdPrintFiberFifo(int id, int fiber);

@@ -78,8 +78,8 @@ set roc_name_snmp = ( dc11       dc12       dc13       dc21       \
                       dc62       dc63       tage       polar      \
                       taggermac  adccnd1    ltcc0      ioctest0   \
                       scaler1    pcal0      pretrig3   pretrig4   \
-                      croctest1  croctest2  hps2       croctest10 \
-                      roc1       halldtrg3  jlab12vme  tdcctof1      \
+                      croctest1  croctest2  hps2       test1      \
+                      roc1       halldtrg3  jlab12vme  tdcctof1   \
                       adcecal1   svt1       wolfram1   hps12      \
                       hps1       hps2       cnd1       tdcecal1   \
                       tdcpcal1   tdcftof1   adcpcal1   adcftof1   \
@@ -106,7 +106,7 @@ set ip_snmp = ( 129.57.68.184   129.57.68.179   129.57.160.200  129.57.68.183  \
                 129.57.68.180   129.57.160.201  129.57.160.137  129.57.69.33  \
                 129.57.160.138  129.57.160.151  129.57.86.47    129.57.167.83  \
                 129.57.167.85   129.57.86.175   129.57.69.32    129.57.69.47   \
-                129.57.69.30    129.57.69.28    129.57.69.40    129.57.69.29   \
+                129.57.69.30    129.57.69.28    129.57.69.40    129.57.86.122   \
                 129.57.167.104  129.57.167.47   129.57.167.56   129.57.160.158   \
                 129.57.167.80   129.57.160.197  129.57.86.34    129.57.167.20  \
                 129.57.167.164  129.57.167.165  129.57.86.53    129.57.167.52  \
