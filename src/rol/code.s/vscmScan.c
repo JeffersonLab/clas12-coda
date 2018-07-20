@@ -18,7 +18,6 @@ typedef struct {
   uint32_t hits[256];
 } threshold_scan;
 
-
 void
 fssrGainScan(int id, char *filename, \
               int beg_chip, int end_chip, \
@@ -163,11 +162,9 @@ fssrGainScan(int id, char *filename, \
           temp_start_thr = 0;
           fssrSetThreshold(id, ichip, 0, thr);
 
-          vscmDisableChipScaler(id, ichip);
+          vscmDisableScaler(id);
           vscmClearStripScalers(id, ichip);
-          vscmEnableChipScaler(id, ichip);
-          vscmDisableChipScaler(id, ichip);
-          vscmEnableChipScaler(id, ichip);
+          vscmEnableScaler(id);
 
           vscmPulserStart(id);
    
@@ -178,7 +175,7 @@ fssrGainScan(int id, char *filename, \
           nanosleep(&ts, NULL);
 #endif
 
-          vscmDisableChipScaler(id, ichip);
+          vscmDisableScaler(id);
           vscmReadStripScalers(id, ichip, scaler);
 
           for (j = 0; j < chan_mult; j++)
@@ -446,9 +443,9 @@ fssrThresholdScan(int id, char *filename, \
       while ((thr < 256) && (zero_count <= 2)) {
         fssrSetThreshold(id, ichip, 0, thr);
 
-        vscmDisableChipScaler(id, ichip);
+        vscmDisableScaler(id);
         vscmClearStripScalers(id, ichip);
-        vscmEnableChipScaler(id, ichip);
+        vscmEnableScaler(id);
 
         /* Gather data by sleeping */
 #ifdef VXWORKS
@@ -457,7 +454,7 @@ fssrThresholdScan(int id, char *filename, \
         nanosleep(&ts, NULL);
 #endif
 
-        vscmDisableChipScaler(id, ichip);
+        vscmDisableScaler(id);
         vscmReadStripScalers(id, ichip, scaler);
 
 #ifdef DEBUG
@@ -530,14 +527,14 @@ fssrChanStatus(int id, int chip, uint32_t *status)
 
     fssrSetThreshold(id, chip, 0, THR);
 
-    vscmDisableChipScaler(id, chip);
+    vscmDisableScaler(id);
     vscmClearStripScalers(id, chip);
-    vscmEnableChipScaler(id, chip);
+    vscmEnableScaler(id);
 
     /* Gather data by sleeping */
     taskDelay(1);
 
-    vscmDisableChipScaler(id, chip);
+    vscmDisableScaler(id);
     vscmReadStripScalers(id, chip, scaler);
 
     if (scaler[i] == 0) {
@@ -574,8 +571,9 @@ vscmScalerDelayTest(int id, int ticks, int loop)
   if (vscmIsNotInit(&id, __func__))
     return;
 
+	vscmDisableScaler(id);
   for (c = 0; c < loop; c++) {
-	vscmLatchScalers(id);
+    vscmEnableScaler(id);
     /* Gather data by sleeping */
 #ifdef VXWORKS
     taskDelay(ticks);
@@ -583,7 +581,7 @@ vscmScalerDelayTest(int id, int ticks, int loop)
     nanosleep(&ts, NULL);
 #endif
 
-	vscmLatchScalers(id);
+	  vscmDisableScaler(id);
     ref = vscmReadVmeClk(id);
 
     printf("%u\n", ref);
@@ -619,15 +617,15 @@ fssrChipIDTest(int id, int chip)
   printf("Chip #%d: ID ... ", chip);
   fssrMasterReset(id);
   fssrSetActiveLines(id, chip, FSSR_ALINES_1);
-  vscmEnableChipScaler(id, chip);
+  vscmDisableScaler(id);
+  vscmEnableScaler(id);
   /* Latch once to clear scalers */
-  vscmLatchChipScaler(id, chip);
 #ifdef VXWORKS
   taskDelay(ticks);
 #else
   nanosleep(&ts, NULL);
 #endif
-  vscmLatchChipScaler(id, chip);
+  vscmDisableScaler(id);
 
   /* First make sure we actually got some new status words */
   res = fssrReadScalerStatusWord(id, chip);
@@ -779,6 +777,7 @@ fssrRegisterTest(int id, int chip)
 int
 fssrDiffLineTest(int id, int chip)
 {
+  double d;
   uint32_t res, ref;
   int bad = 0;
   int tstat1 = 0, tstat2 = 0;
@@ -799,20 +798,25 @@ fssrDiffLineTest(int id, int chip)
   // Note that this could fail due to Out1 being bad
   printf("%-11s ... ", "OutClk");
   fssrSetActiveLines(id, chip, FSSR_ALINES_1);
-  vscmLatchScalers(id); 
-  vscmLatchChipScaler(id, chip);	
-  vscmEnableChipScaler(id, chip);
+  vscmDisableScaler(id);
+  vscmEnableScaler(id);
 #ifdef VXWORKS
   taskDelay(ticks);
 #else
   nanosleep(&ts, NULL);
 #endif
-  vscmDisableChipScaler(id, chip);	
+  vscmDisableScaler(id);
 
   res = fssrReadScalerWords(id, chip);
-  ref = fssrReadScalerRef(id, chip);
+  ref = fssrReadScalerRef(id);
+
+  // convert res counts to MCLK freq
+  d = res * 12.0 * VSCM_SYS_CLK / ref;
   // 70e6 = MCLK rate, 12.0 factor comes from using 1 output line
-  if ((int)(res - ((double)ref / VSCM_SYS_CLK * (70e6 / 12.0))) != 0) {
+  // VSCM Rev2 FW: 70e6     = MCLK rate
+  // VSCM Rev3 FW: 69.444e6 = MCLK rate
+//  if ((int)(res - ((double)ref / VSCM_SYS_CLK * (70e6 / 12.0))) != 0) {
+  if ( ((d < 69.4) && (d > 69.5)) && ((d < 69.9) && (d > 70.1)) ) {
     printf("%sFAIL%s {%d,%d}\n", "\x1B[1;31m", "\x1B[0m", id, chip);
     bad |= 1;
   }
@@ -837,17 +841,21 @@ fssrDiffLineTest(int id, int chip)
   // Next lower threshold slightly and inject 1000 pulses (300mV)
   // and check that both counts are within 0.5% (to allow for noise)
   printf("%-11s ... ", "GotHit");
-  vscmLatchScalers(id); 
-  vscmLatchChipScaler(id, chip);	
   fssrSetControl(id, chip, 0x1F);
   fssrSetActiveLines(id, chip, FSSR_ALINES_6);
   fssrRejectHits(id, chip, 0);
   fssrSCR(id, chip);
   fssrSendData(id, chip, 1);
-  vscmEnableChipScaler(id, chip);
-
   fssrSetThreshold(id, chip, 0, 255);
-  vscmDisableChipScaler(id, chip);
+
+  vscmDisableScaler(id);
+  vscmEnableScaler(id);
+#ifdef VXWORKS
+    taskDelay(ticks);
+#else
+    nanosleep(&ts, NULL);
+#endif
+  vscmDisableScaler(id);
   res = fssrReadScalerGotHit(id, chip); 
   if (res != 0) {
     tstat1 |= 1;
@@ -859,14 +867,15 @@ fssrDiffLineTest(int id, int chip)
     fssrSetThreshold(id, chip, 0, 200);
     vscmPulser(id, ((chip > 3) ? 2 : 1), 300, 1000);
     fssrInjectMaskEnableSingle(id, chip, 87);
-    vscmEnableChipScaler(id, chip);
+    vscmEnableScaler(id);
     vscmPulserStart(id);
 #ifdef VXWORKS
     taskDelay(ticks);
 #else
     nanosleep(&ts, NULL);
 #endif
-    vscmDisableChipScaler(id, chip);	
+
+    vscmDisableScaler(id);
     res = fssrReadScalerGotHit(id, chip); 
     if ((res > 1005 || res < 995)) {
       printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -880,17 +889,22 @@ fssrDiffLineTest(int id, int chip)
   // Now test CoreTalking in the same manner as above
   tstat1 = 0;
   printf("%-11s ... ", "CoreTalking");
-  vscmLatchScalers(id); 
-  vscmLatchChipScaler(id, chip);	
+  vscmDisableScaler(id);
   fssrSetControl(id, chip, 0x1F);
   fssrSetActiveLines(id, chip, FSSR_ALINES_6);
   fssrRejectHits(id, chip, 0);
   fssrSCR(id, chip);
   fssrSendData(id, chip, 1);
-  vscmEnableChipScaler(id, chip);
-
   fssrSetThreshold(id, chip, 0, 255);
-  vscmDisableChipScaler(id, chip);
+
+  vscmDisableScaler(id);
+  vscmEnableScaler(id);
+#ifdef VXWORKS
+    taskDelay(ticks);
+#else
+    nanosleep(&ts, NULL);
+#endif
+  vscmDisableScaler(id);
   res = fssrReadScalerCoreTalking(id, chip); 
   if (res != 0) {
     tstat1 |= 1;
@@ -902,14 +916,14 @@ fssrDiffLineTest(int id, int chip)
     fssrSetThreshold(id, chip, 0, 200);
     vscmPulser(id, ((chip > 3) ? 2 : 1), 300, 1000);
     fssrInjectMaskEnableSingle(id, chip, 87);
-    vscmEnableChipScaler(id, chip);
+    vscmEnableScaler(id);
     vscmPulserStart(id);
 #ifdef VXWORKS
     taskDelay(ticks);
 #else
     nanosleep(&ts, NULL);
 #endif
-    vscmDisableChipScaler(id, chip);	
+    vscmDisableScaler(id);
     res = fssrReadScalerCoreTalking(id, chip); 
     if ((res > 1005 || res < 995)) {
       printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -926,7 +940,8 @@ fssrDiffLineTest(int id, int chip)
   printf("%-11s ... ", "Out6");
   fssrMasterReset(id);
   fssrSetActiveLines(id, chip, FSSR_ALINES_6);
-  vscmLatchChipScaler(id, chip);
+  vscmEnableScaler(id);
+  vscmDisableScaler(id);
   res = fssrReadLastStatusWord(id, chip);
   if (((res >> 20) & 0xC) != 4) {
     tstat1 = 1;
@@ -938,7 +953,8 @@ fssrDiffLineTest(int id, int chip)
     fssrRejectHits(id, chip, 0);
     fssrSCR(id, chip);
     fssrSendData(id, chip, 1);  
-    vscmLatchChipScaler(id, chip);
+    vscmEnableScaler(id);
+    vscmDisableScaler(id);
     res = fssrReadLastStatusWord(id, chip);
     if (((res >> 20) & 0xC) != 8) {
       printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -955,7 +971,8 @@ fssrDiffLineTest(int id, int chip)
   printf("%-11s ... ", "Out5");
   fssrMasterReset(id);
   fssrSetActiveLines(id, chip, FSSR_ALINES_6);
-  vscmLatchChipScaler(id, chip);
+  vscmEnableScaler(id);
+  vscmDisableScaler(id);
   res = fssrReadLastStatusWord(id, chip);
   if (((res >> 16) & 6) != 0) {
     tstat1 = 1;
@@ -966,7 +983,8 @@ fssrDiffLineTest(int id, int chip)
   if (tstat1 == 0) {
     fssrSetControl(id, chip, (1 << 4)); // Set bit 18
     fssrInternalPulserEnable(id, chip); // Set bit 17
-    vscmLatchChipScaler(id, chip);
+    vscmEnableScaler(id);
+    vscmDisableScaler(id);
     res = fssrReadLastStatusWord(id, chip);
     if (((res >> 16) & 6) != 6) {
       printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -988,8 +1006,8 @@ fssrDiffLineTest(int id, int chip)
   printf("[4:");
   fssrMasterReset(id);
   fssrSetActiveLines(id, chip, FSSR_ALINES_4);
-  vscmLatchScalers(id);
-  vscmLatchChipScaler(id, chip);
+  vscmEnableScaler(id);
+  vscmDisableScaler(id);
   res = fssrReadLastStatusWord(id, chip);
   if (((res >> 18) & 0x31) != 16) {
     tstat1 = 1;
@@ -1002,7 +1020,8 @@ fssrDiffLineTest(int id, int chip)
     fssrSCR(id, chip);
     fssrSendData(id, chip, 1);  
     fssrSetControl(id, chip, (1 << 4));
-    vscmLatchChipScaler(id, chip);
+    vscmEnableScaler(id);
+    vscmDisableScaler(id);
     res = fssrReadLastStatusWord(id, chip);
     if (((res >> 18) & 0x31) != 33) {
       printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -1033,12 +1052,13 @@ fssrDiffLineTest(int id, int chip)
   fssrInjectMaskDisableAll(id, chip);
   fssrInjectMaskEnableSingle(id, chip, 4);
   vscmPulserStart(id);
+  vscmEnableScaler(id);
 #ifdef VXWORKS
   taskDelay(ticks);
 #else
   nanosleep(&ts, NULL);
 #endif
-  vscmLatchChipScaler(id, chip);
+  vscmDisableScaler(id);
   res = fssrReadLastDataWord(id, chip);
   if (((res >> 12) & 0x1F) != 10) {
     tstat1 = 1;
@@ -1053,12 +1073,13 @@ fssrDiffLineTest(int id, int chip)
     fssrInjectMaskDisableAll(id, chip);
     fssrInjectMaskEnableSingle(id, chip, 77);
     vscmPulserStart(id);
+    vscmEnableScaler(id);
 #ifdef VXWORKS
     taskDelay(ticks);
 #else
     nanosleep(&ts, NULL);
 #endif
-    vscmLatchChipScaler(id, chip);
+    vscmDisableScaler(id);
     res = fssrReadLastDataWord(id, chip);
     if (((res >> 12) & 0x1F) != 21) {
       printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -1080,8 +1101,8 @@ fssrDiffLineTest(int id, int chip)
   printf("[4:");
   fssrMasterReset(id);
   fssrSetActiveLines(id, chip, FSSR_ALINES_4);
-  vscmLatchScalers(id);
-  vscmLatchChipScaler(id, chip);
+  vscmEnableScaler(id);
+  vscmDisableScaler(id);
   res = fssrReadLastStatusWord(id, chip);
   if (((res >> 17) & 1) != 0) {
     tstat1 = 1;
@@ -1094,7 +1115,8 @@ fssrDiffLineTest(int id, int chip)
     fssrSCR(id, chip);
     fssrSendData(id, chip, 1);  
     fssrInternalPulserEnable(id, chip); // Set bit 17
-    vscmLatchChipScaler(id, chip);
+    vscmEnableScaler(id);
+    vscmDisableScaler(id);
     res = fssrReadLastStatusWord(id, chip);
     if (((res >> 17) & 1) != 1) {
       printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -1129,12 +1151,13 @@ fssrDiffLineTest(int id, int chip)
   // First sync to BCO 0
   vscmPulserBCOSync(id, 0, 1);
   vscmPulserStart(id);
+  vscmEnableScaler(id);
 #ifdef VXWORKS
   taskDelay(ticks);
 #else
   nanosleep(&ts, NULL);
 #endif
-  vscmLatchChipScaler(id, chip);
+  vscmDisableScaler(id);
   res = fssrReadLastDataWord(id, chip);
   if (((res >> 4) & 0xF0) != 0) {
     tstat1 = 1;
@@ -1146,12 +1169,13 @@ fssrDiffLineTest(int id, int chip)
     // Next sync to BCO 80 (0b0101xxxx)
     vscmPulserBCOSync(id, 80, 1);
     vscmPulserStart(id);
+    vscmEnableScaler(id);
 #ifdef VXWORKS
     taskDelay(ticks);
 #else
     nanosleep(&ts, NULL);
 #endif
-    vscmLatchChipScaler(id, chip);
+    vscmDisableScaler(id);
     res = fssrReadLastDataWord(id, chip);
     if (((res >> 4) & 0xF0) != 80) {
       tstat2 = 1;
@@ -1163,12 +1187,13 @@ fssrDiffLineTest(int id, int chip)
       // Finally sync to BCO 160 (0b1010xxxx)
       vscmPulserBCOSync(id, 160, 1);
       vscmPulserStart(id);
+      vscmEnableScaler(id);
 #ifdef VXWORKS
       taskDelay(ticks);
 #else
       nanosleep(&ts, NULL);
 #endif
-      vscmLatchChipScaler(id, chip);
+      vscmDisableScaler(id);
       res = fssrReadLastDataWord(id, chip);
       if (((res >> 4) & 0xF0) != 160) {
         printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -1191,8 +1216,8 @@ fssrDiffLineTest(int id, int chip)
   printf("[2:");
   fssrMasterReset(id);
   fssrSetActiveLines(id, chip, FSSR_ALINES_1);
-  vscmLatchScalers(id);
-  vscmLatchChipScaler(id, chip);
+  vscmEnableScaler(id);
+  vscmDisableScaler(id);
   res = fssrReadLastStatusWord(id, chip);
   if (((res >> 18) & 0x31) != 16) {
     tstat1 = 1;
@@ -1205,7 +1230,8 @@ fssrDiffLineTest(int id, int chip)
     fssrSCR(id, chip);
     fssrSendData(id, chip, 1);  
     fssrSetControl(id, chip, (1 << 4));
-    vscmLatchChipScaler(id, chip);
+    vscmEnableScaler(id);
+    vscmDisableScaler(id);
     res = fssrReadLastStatusWord(id, chip);
     if (((res >> 18) & 0x31) != 33) {
       printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -1240,12 +1266,13 @@ fssrDiffLineTest(int id, int chip)
   // First sync to BCO 0
   vscmPulserBCOSync(id, 0, 1);
   vscmPulserStart(id);
+  vscmEnableScaler(id);
 #ifdef VXWORKS
   taskDelay(ticks);
 #else
   nanosleep(&ts, NULL);
 #endif
-  vscmLatchChipScaler(id, chip);
+  vscmDisableScaler(id);
   res = fssrReadLastDataWord(id, chip);
   if ((((res >> 4) - 2) & 0xFC) != 0) {
     tstat1 = 1;
@@ -1257,12 +1284,13 @@ fssrDiffLineTest(int id, int chip)
     // Next sync to BCO 84 (0b010101xx)
     vscmPulserBCOSync(id, 84, 1);
     vscmPulserStart(id);
+  vscmEnableScaler(id);
 #ifdef VXWORKS
     taskDelay(ticks);
 #else
     nanosleep(&ts, NULL);
 #endif
-    vscmLatchChipScaler(id, chip);
+    vscmDisableScaler(id);
     res = fssrReadLastDataWord(id, chip);
     if ((((res >> 4) - 2) & 0xFC) != 84) {
       tstat2 = 1;
@@ -1274,12 +1302,13 @@ fssrDiffLineTest(int id, int chip)
       // Finally sync to BCO 168 (0b101010xx)
       vscmPulserBCOSync(id, 168, 1);
       vscmPulserStart(id);
+      vscmEnableScaler(id);
 #ifdef VXWORKS
       taskDelay(ticks);
 #else
       nanosleep(&ts, NULL);
 #endif
-      vscmLatchChipScaler(id, chip);
+      vscmDisableScaler(id);
       res = fssrReadLastDataWord(id, chip);
       if ((((res >> 4) - 2) & 0xFC) != 168) {
         printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -1316,12 +1345,13 @@ fssrDiffLineTest(int id, int chip)
   // First sync to BCO 0
   vscmPulserBCOSync(id, 0, 1);
   vscmPulserStart(id);
+  vscmEnableScaler(id);
 #ifdef VXWORKS
   taskDelay(ticks);
 #else
   nanosleep(&ts, NULL);
 #endif
-  vscmLatchChipScaler(id, chip);
+  vscmDisableScaler(id);
   res = fssrReadLastDataWord(id, chip);
   if ((((res >> 4) & 0xF) - 2) != 0) {
     tstat1 = 1;
@@ -1333,12 +1363,13 @@ fssrDiffLineTest(int id, int chip)
     // Next sync to BCO 5 (0bxxxx0101)
     vscmPulserBCOSync(id, 5, 1);
     vscmPulserStart(id);
+    vscmEnableScaler(id);
 #ifdef VXWORKS
     taskDelay(ticks);
 #else
     nanosleep(&ts, NULL);
 #endif
-    vscmLatchChipScaler(id, chip);
+    vscmDisableScaler(id);
     res = fssrReadLastDataWord(id, chip);
     if ((((res >> 4) & 0xF) - 2) != 5) {
       tstat2 = 1;
@@ -1350,12 +1381,13 @@ fssrDiffLineTest(int id, int chip)
       // Finally sync to BCO 10 (0bxxxx1010)
       vscmPulserBCOSync(id, 10, 1);
       vscmPulserStart(id);
+      vscmEnableScaler(id);
 #ifdef VXWORKS
       taskDelay(ticks);
 #else
       nanosleep(&ts, NULL);
 #endif
-      vscmLatchChipScaler(id, chip);
+      vscmDisableScaler(id);
       res = fssrReadLastDataWord(id, chip);
       if ((((res >> 4) & 0xF) - 2) != 10) {
         printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -1378,8 +1410,8 @@ fssrDiffLineTest(int id, int chip)
   printf("[1:");
   fssrMasterReset(id);
   fssrSetActiveLines(id, chip, FSSR_ALINES_1);
-  vscmLatchScalers(id);
-  vscmLatchChipScaler(id, chip);
+  vscmEnableScaler(id);
+  vscmDisableScaler(id);
   res = fssrReadLastStatusWord(id, chip);
   if (((res >> 18) & 0x31) != 16) {
     tstat1 = 1;
@@ -1392,7 +1424,8 @@ fssrDiffLineTest(int id, int chip)
     fssrSCR(id, chip);
     fssrSendData(id, chip, 1);  
     fssrSetControl(id, chip, (1 << 4));
-    vscmLatchChipScaler(id, chip);
+    vscmEnableScaler(id);
+    vscmDisableScaler(id);
     res = fssrReadLastStatusWord(id, chip);
     if (((res >> 18) & 0x31) != 33) {
       printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -1410,7 +1443,6 @@ fssrDiffLineTest(int id, int chip)
   fssrMasterReset(id);
   fssrSetControl(id, chip, 0x1F);
   fssrSetActiveLines(id, chip, FSSR_ALINES_2);
-  vscmLatchScalers(id);
   fssrRejectHits(id, chip, 0);
   fssrSCR(id, chip);
   fssrSendData(id, chip, 1);
@@ -1429,12 +1461,13 @@ fssrDiffLineTest(int id, int chip)
   // First sync to BCO 0
   vscmPulserBCOSync(id, 0, 1);
   vscmPulserStart(id);
+  vscmEnableScaler(id);
 #ifdef VXWORKS
   taskDelay(ticks);
 #else
   nanosleep(&ts, NULL);
 #endif
-  vscmLatchChipScaler(id, chip);
+  vscmDisableScaler(id);
   res = fssrReadLastDataWord(id, chip);
   if ((((res >> 4) & 0xFF) - 2) != 0) {
     tstat1 = 1;
@@ -1446,12 +1479,13 @@ fssrDiffLineTest(int id, int chip)
     // Next sync to BCO 85 (0b01010101)
     vscmPulserBCOSync(id, 85, 1);
     vscmPulserStart(id);
+    vscmEnableScaler(id);
 #ifdef VXWORKS
     taskDelay(ticks);
 #else
     nanosleep(&ts, NULL);
 #endif
-    vscmLatchChipScaler(id, chip);
+    vscmDisableScaler(id);
     res = fssrReadLastDataWord(id, chip);
     if ((((res >> 4) & 0xFF) - 2) != 85) {
       tstat2 = 1;
@@ -1463,12 +1497,13 @@ fssrDiffLineTest(int id, int chip)
       // Finally sync to BCO 170 (0b10101010)
       vscmPulserBCOSync(id, 170, 1);
       vscmPulserStart(id);
+      vscmEnableScaler(id);
 #ifdef VXWORKS
       taskDelay(ticks);
 #else
       nanosleep(&ts, NULL);
 #endif
-      vscmLatchChipScaler(id, chip);
+      vscmDisableScaler(id);
       res = fssrReadLastDataWord(id, chip);
       if ((((res >> 4) & 0xFF) - 2) != 170) {
         printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -1487,7 +1522,6 @@ fssrDiffLineTest(int id, int chip)
   fssrMasterReset(id);
   fssrSetControl(id, chip, 0x1F);
   fssrSetActiveLines(id, chip, FSSR_ALINES_2);
-  vscmLatchScalers(id);
   fssrRejectHits(id, chip, 0);
   fssrSCR(id, chip);
   fssrSendData(id, chip, 1);
@@ -1506,12 +1540,13 @@ fssrDiffLineTest(int id, int chip)
   // First sync to BCO 0
   vscmPulserBCOSync(id, 0, 1);
   vscmPulserStart(id);
+  vscmEnableScaler(id);
 #ifdef VXWORKS
   taskDelay(ticks);
 #else
   nanosleep(&ts, NULL);
 #endif
-  vscmLatchChipScaler(id, chip);
+  vscmDisableScaler(id);
   res = fssrReadLastDataWord(id, chip);
   if ((((res >> 4) - 2) & 0x3) != 0) {
     tstat1 = 1;
@@ -1523,12 +1558,13 @@ fssrDiffLineTest(int id, int chip)
     // Next sync to BCO 1 (0bxxxxxx01)
     vscmPulserBCOSync(id, 1, 1);
     vscmPulserStart(id);
+    vscmEnableScaler(id);
 #ifdef VXWORKS
     taskDelay(ticks);
 #else
     nanosleep(&ts, NULL);
 #endif
-    vscmLatchChipScaler(id, chip);
+    vscmDisableScaler(id);
     res = fssrReadLastDataWord(id, chip);
     if ((((res >> 4) - 2) & 0x3) != 1) {
       tstat2 = 1;
@@ -1540,12 +1576,13 @@ fssrDiffLineTest(int id, int chip)
       // Finally sync to BCO 2 (0bxxxxxx10)
       vscmPulserBCOSync(id, 2, 1);
       vscmPulserStart(id);
+      vscmEnableScaler(id);
 #ifdef VXWORKS
       taskDelay(ticks);
 #else
       nanosleep(&ts, NULL);
 #endif
-      vscmLatchChipScaler(id, chip);
+      vscmDisableScaler(id);
       res = fssrReadLastDataWord(id, chip);
       if ((((res >> 4) - 2) & 0x3) != 2) {
         printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");
@@ -1564,7 +1601,6 @@ fssrDiffLineTest(int id, int chip)
   fssrMasterReset(id);
   fssrSetControl(id, chip, 0x10);
   fssrSetActiveLines(id, chip, FSSR_ALINES_6);
-  vscmLatchScalers(id);
   fssrRejectHits(id, chip, 0);
   fssrSCR(id, chip);
   fssrSendData(id, chip, 1);
@@ -1582,12 +1618,13 @@ fssrDiffLineTest(int id, int chip)
 
   // All fADC discriminators are at 255 after reset, fADC should = 0
   vscmPulserStart(id);
+  vscmEnableScaler(id);
 #ifdef VXWORKS
   taskDelay(ticks);
 #else
   nanosleep(&ts, NULL);
-#endif
-  vscmLatchChipScaler(id, chip);
+#endif 
+  vscmDisableScaler(id);
   res = fssrReadLastDataWord(id, chip);
   if (((res >> 1) & 7) != 0) {
     tstat1 = 1;
@@ -1601,12 +1638,13 @@ fssrDiffLineTest(int id, int chip)
       fssrSetThreshold(id, chip, i, 0);
     }
     vscmPulserStart(id);
+    vscmEnableScaler(id);
   #ifdef VXWORKS
     taskDelay(ticks);
   #else
     nanosleep(&ts, NULL);
   #endif
-    vscmLatchChipScaler(id, chip);
+    vscmDisableScaler(id);
     res = fssrReadLastDataWord(id, chip);
     if (((res >> 1) & 7) != 7) {
       printf("%sFAIL%s - ", "\x1B[1;31m", "\x1B[0m");

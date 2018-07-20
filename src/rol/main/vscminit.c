@@ -17,7 +17,7 @@ main(int argc, char *argv[])
   int res, nvscm;
   char myname[256];
   unsigned int addr, laddr;
-  int slot = 0;
+  int i, slot = 0;
 
   /* Open the default VME windows */
   vmeOpenDefaultWindows();
@@ -32,10 +32,21 @@ main(int argc, char *argv[])
 
   {
 #define MAXWORDS 4096
-    int nw, slot=3, tdcbuf[MAXWORDS];
+    int nw, slot=10, tdcbuf[MAXWORDS];
     nw = vscmReadScalers(slot, tdcbuf, MAXWORDS, 0xff, 0);
 	printf("NW for scalers=%d\n",nw);
+/*
+  for(i=0;i<nw;i++)
+  {
+    if(!(i%8))
+      printf("\n0x%04X:", i);
+    printf(" %08X", tdcbuf[i]);
   }
+  printf("\n");
+*/
+  }
+
+  fssrStatusAll();
 
   exit(0);
 }

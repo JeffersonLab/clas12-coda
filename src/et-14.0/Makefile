@@ -20,7 +20,8 @@ include $(CODA)/src/Makefile.include
 #-----------------------
 
 # compile with debug option
-CFLAGS = -g -fPIC -DLinux -DLINUX
+##CFLAGS = -g -fPIC -DLinux -DLINUX
+CFLAGS = -O2 -fPIC -DLinux -DLINUX
 
 # use C++ as linker instead of CC: we'll link main *.c program with
 # SmartSocket's C++ libraries, and using CC will not resolve references

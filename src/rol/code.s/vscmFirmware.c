@@ -7,6 +7,8 @@
 #include <string.h>
 #include "vscmLib.h"
 
+#define DEBUG
+
 #define FLASH_CMD_WRPAGE      0x02
 #define FLASH_CMD_RD          0x03
 #define FLASH_CMD_GETSTATUS   0x05
@@ -20,39 +22,54 @@
 
 #define VSCM_SPI_MODE_BITBANG   0
 #define VSCM_SPI_MODE_PARALLEL  1
+#define VSCM_SPI_MODE_REV2      2
+#define VSCM_SPI_MODE_REV3      3
 
-extern volatile struct VSCM_regs *VSCMpr[VSCM_MAX_BOARDS + 1];
+extern volatile VSCM_regs *VSCMpr[VSCM_MAX_BOARDS + 1];
 
 int
 vscmGetSpiMode(int id)
 {
-  uint8_t rspID[3];
+  uint32_t fw_rev = vscmFirmwareRev(id);
+  uint32_t fw_major = fw_rev>>8;
+  int result = -1;
 
-  vmeWrite32(&VSCMpr[id]->SpiFlash, 0x104); /* Set NCS for both modes */
+  if(fw_major == 2)
+  {
+    volatile unsigned int *p = (volatile unsigned int *)(&VSCMpr[id]->Cfg.SpiRev2);
+    vmeWrite32(p, 0x104);
+    result = VSCM_SPI_MODE_REV2;
+  }
+  else if(fw_major == 3)
+  {
+    vmeWrite32(&VSCMpr[id]->Cfg.SpiCtrl, 0x100);
+    result = VSCM_SPI_MODE_REV3;
+  }
+  else
+    printf("Error - unknown VSCM SPI mode to use...\n");
 
-  vscmFlashGetID(id, rspID, VSCM_SPI_MODE_BITBANG);
-  if ((rspID[0] == FLASH_MFG_WINBOND) && \
-      (rspID[1] == (FLASH_DEVID_W25Q64 >> 8)) && \
-      (rspID[2] == (FLASH_DEVID_W25Q64 & 0xFF)))
-    return VSCM_SPI_MODE_BITBANG;
+  printf("%s: Rev=0x%04X, Using SPI mode %d\n", __func__, fw_rev, result);
 
-  return VSCM_SPI_MODE_PARALLEL;
+  return result;
 }
 
 void
 vscmSelectSpi(int id, int sel, int mode)
 {
-  if (sel) {
-    if (mode == VSCM_SPI_MODE_PARALLEL)
-      vmeWrite32(&VSCMpr[id]->SpiFlash, 0x200);
+  if(mode == VSCM_SPI_MODE_REV2)
+  {
+    volatile unsigned int *p = (volatile unsigned int *)(&VSCMpr[id]->Cfg.SpiRev2);
+    if (sel)
+      vmeWrite32(p, 0x200);
     else
-      vmeWrite32(&VSCMpr[id]->SpiFlash, 0x0);
+      vmeWrite32(p, 0x100);
   }
-  else {
-    if (mode == VSCM_SPI_MODE_PARALLEL)
-      vmeWrite32(&VSCMpr[id]->SpiFlash, 0x100);
+  else if(mode == VSCM_SPI_MODE_REV3)
+  {
+    if (sel)
+      vmeWrite32(&VSCMpr[id]->Cfg.SpiCtrl, 0x200);
     else
-      vmeWrite32(&VSCMpr[id]->SpiFlash, 0x4);
+      vmeWrite32(&VSCMpr[id]->Cfg.SpiCtrl, 0x100);
   }
 }
 
@@ -60,21 +77,25 @@ uint8_t
 vscmTransferSpi(int id, uint8_t data, int mode)
 {
   int i;
-  uint8_t rsp = 0;
+  uint32_t rsp = 0;
 
-  if (mode == VSCM_SPI_MODE_PARALLEL) {
-    vmeWrite32(&VSCMpr[id]->SpiFlash, data | 0x400);
-    rsp = vmeRead32(&VSCMpr[id]->SpiFlash);
+  if(mode == VSCM_SPI_MODE_REV2)
+  {
+    volatile unsigned int *p = (volatile unsigned int *)(&VSCMpr[id]->Cfg.SpiRev2);
+    vmeWrite32(p, data | 0x400);
+    rsp = vmeRead32(p);
   }
-  else {
-    for (i = 0; i < 8; i++) {
-      vmeWrite32(&VSCMpr[id]->SpiFlash, ((data >> 7) & 0x1));
-      rsp = (rsp << 1) | (vmeRead32(&VSCMpr[id]->SpiFlash) & 0x1);
-      vmeWrite32(&VSCMpr[id]->SpiFlash, 0x2 | ((data >> 7) & 0x1));
-      data <<= 1;
+  else if(mode == VSCM_SPI_MODE_REV3)
+  {
+    vmeWrite32(&VSCMpr[id]->Cfg.SpiCtrl, data | 0x400);
+    for(i=0;i<8;i++)
+    {
+      rsp = vmeRead32(&VSCMpr[id]->Cfg.SpiStatus);
+      if(rsp & 0x800)
+        break;
     }
   }
-  return rsp;
+  return rsp & 0xFF;
 }
 
 void
@@ -104,6 +125,7 @@ vscmFlashGetStatus(int id, int mode)
 void
 vscmReloadFirmware(int id)
 {
+#if 0
   int i;
   uint16_t reloadSequence[] = {
     0xFFFF, 0xAA99, 0x5566, 0x3261,
@@ -133,6 +155,7 @@ vscmReloadFirmware(int id)
   sleep(2);
 #endif
   printf("Finished\n");
+#endif
 }
 
 int
@@ -170,6 +193,7 @@ vscmFirmwareUpdate(int id, const char *filename)
   printf("Flash: Mfg=0x%02X, Type=0x%02X, Capacity=0x%02X\n", \
           rspID[0], rspID[1], rspID[2]);
 #endif
+
   if ((rspID[0] == FLASH_MFG_WINBOND) && \
       (rspID[1] == (FLASH_DEVID_W25Q64 >> 8)) && \
       (rspID[2] == (FLASH_DEVID_W25Q64 & 0xFF))) {
@@ -422,7 +446,7 @@ vscmFirmware(char *filename, int slot)
   int nvscm;
   int ii, id;
 
-  nvscm = vscmInit((unsigned int)(3<<19),(1<<19),20,0);
+  nvscm = vscmInit((unsigned int)(3<<19),(1<<19),20,0x80000000);
 
   if(slot<0) /* do nothing */
   {

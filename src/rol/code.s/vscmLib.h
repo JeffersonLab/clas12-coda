@@ -16,6 +16,12 @@ typedef unsigned int uintptr_t;
                          (((x) & 0xff000000) >> 24))
 #endif
 
+/* Macros to help with register spacers */
+#define MERGE_(a,b)  a##b
+#define LABEL_(a) MERGE_(uint32_t vscmblank, a)
+#define BLANK LABEL_(__LINE__)
+
+
 #define VSCM_MAX_BOARDS     20
 #define VSCM_BOARD_ID       0x5653434D
 #define VSCM_MAX_FIFO       0x800000 /* 8MB */
@@ -90,17 +96,11 @@ typedef unsigned int uintptr_t;
 #define IO_MUX_SWB_SYNC           7
 #define IO_MUX_SWB_TRIG1          8
 #define IO_MUX_SWB_TRIG2          9
-#define IO_MUX_SWA_GPIO0          10
-#define IO_MUX_SWA_GPIO1          11
-#define IO_MUX_SWB_GPIO0          12
-#define IO_MUX_SWB_GPIO1          13
 #define IO_MUX_BUSY               14
 #define IO_MUX_FSSRHIT            15
 #define IO_MUX_DACTRIGGERED       16
 #define IO_MUX_DACTRIGGERED_DLY   17
 #define IO_MUX_BCOCLK             18
-#define IO_MUX_TOKENOUT           19
-#define IO_MUX_TOKENIN            20
 #define IO_MUX_FSSRHIT_TRIG       21
 #define IO_MUX_FSSRHIT_TBAND_TRIG 22
 
@@ -116,109 +116,153 @@ typedef unsigned int uintptr_t;
 #define FNLEN     128       /* length of config. file name */
 #define ROCLEN     80       /* length of ROC_name */
 
-typedef struct {
-/* 0x0000-0x0003 */ uint32_t LastStatusWord;
-/* 0x0004-0x0007 */ uint32_t ScalerStatusWord;
-/* 0x0008-0x000B */ uint32_t ScalerEvent;
-/* 0x000C-0x000F */ uint32_t ScalerWords;
-/* 0x0010-0x0013 */ uint32_t ScalerIdle;
-/* 0x0014-0x0017 */ uint32_t ScalerAqBco;
-/* 0x0018-0x001B */ uint32_t ScalerMarkErr;
-/* 0x001C-0x001F */ uint32_t ScalerEncErr;
-/* 0x0020-0x0023 */ uint32_t ScalerChipIdErr;
-/* 0x0024-0x0027 */ uint32_t LatencyMax;
-/* 0x0028-0x002B */ uint32_t ScalerGotHit;
-/* 0x002C-0x002F */ uint32_t ScalerStrip;
-/* 0x0030-0x0033 */ uint32_t ScalerRef;
-/* 0x0034-0x0037 */ uint32_t ScalerStripRef;
-/* 0x0038-0x003B */ uint32_t ScalerCoreTalking;
-/* 0x003C-0x003F */ uint32_t LastDataWord;
-/* 0x0040-0x00FF */ uint32_t Dummy0[(0x0100-0x0040)/4];
-} FssrStatus;
+typedef struct
+{
+/* 0x0000 */ volatile uint32_t FirmwareRev;
+/* 0x0004 */ volatile uint32_t BoardID;
+/* 0x0008 */ volatile uint32_t SpiCtrl;
+/* 0x000C */ volatile uint32_t SpiStatus;
+/* 0x0010 */ BLANK[(0x14-0x10)/4];
+/* 0x0014 */ volatile uint32_t SpiRev2;
+/* 0x0018 */ BLANK[(0x20-0x18)/4];
+/* 0x0020 */ volatile uint32_t SemHeartbeatCnt;
+/* 0x0024 */ volatile uint32_t SemErrorCnt;
+/* 0x0028 */ BLANK[(0x100-0x28)/4];
+} VSCM_CFG_REGS;
 
-struct VSCM_regs {
-/* 0x0000-0x0003 */ volatile uint32_t FirmwareRev;
-/* 0x0004-0x0007 */ volatile uint32_t BoardID;
-/* 0x0008-0x000B */ volatile uint32_t Sem;
-/* 0x000C-0x000F */ volatile uint32_t Dummy0[(0x0010-0x000C)/4];
-/* 0x0010-0x0013 */ volatile uint32_t ICap;
-/* 0x0014-0x0017 */ volatile uint32_t SpiFlash;
-/* 0x0018-0x001B */ volatile uint32_t TokenInCfg;
-/* 0x001C-0x001F */ volatile uint32_t TokenOutCfg;
-/* 0x0020-0x0023 */ volatile uint32_t SdLinkCfg;
-/* 0x0024-0x0027 */ volatile uint32_t TrigOutCfg;
-/* 0x0028-0x002B */ volatile uint32_t BlockCfg;
-/* 0x002C-0x002F */ volatile uint32_t Dummy2[(0x0030-0x002C)/4];
-/* 0x0030-0x0033 */ volatile uint32_t ClockCfg;
-/* 0x0034-0x0037 */ volatile uint32_t Adr32M;
-/* 0x0038-0x003B */ volatile uint32_t TrigLatency;
-/* 0x003C-0x003F */ volatile uint32_t TrigBusyThr;
-/* 0x0040-0x0043 */ volatile uint32_t FifoBlockCnt;
-/* 0x0044-0x0047 */ volatile uint32_t AD32;
-/* 0x0048-0x004B */ volatile uint32_t Interrupt;
-/* 0x004C-0x004F */ volatile uint32_t InterruptAck;
-/* 0x0050-0x0053 */ volatile uint32_t Geo;
-/* 0x0054-0x0057 */ volatile uint32_t FifoWordCnt;
-/* 0x0058-0x005B */ volatile uint32_t FifoEventCnt;
-/* 0x005C-0x005F */ volatile uint32_t ReadoutCfg;
-/* 0x0060-0x0063 */ volatile uint32_t SramDbgAdr;
-/* 0x0064-0x0067 */ volatile uint32_t SramDbgData;
-/* 0x0068-0x006B */ volatile uint32_t Reset;
-/* 0x006C-0x006F */ volatile uint32_t FssrClkCfg;
-/* 0x0070-0x0077 */ volatile uint32_t Dummy4[(0x0078-0x0070)/4];
-/* 0x0078-0x007B */ volatile uint32_t ScalerLatch;
-/* 0x007C-0x007F */ volatile uint32_t Dummy5[(0x0080-0x007C)/4];
-/* 0x0080-0x0083 */ volatile uint32_t FssrSerCfg;
-/* 0x0084-0x0093 */ volatile uint32_t FssrSerData[4];
-/* 0x0094-0x0097 */ volatile uint32_t DacCfg;
-/* 0x0098-0x009B */ volatile uint32_t DacCh0;
-/* 0x009C-0x009F */ volatile uint32_t DacCh1;
-/* 0x00A0-0x00A3 */ volatile uint32_t FssrSerClk;
-/* 0x00A4-0x00A7 */ volatile uint32_t FssrAddrH1;
-/* 0x00A8-0x00AB */ volatile uint32_t FssrAddrH2;
-/* 0x00AC-0x00AF */ volatile uint32_t FssrHitReg;
-/* 0x00B0-0x00FF */ volatile uint32_t Dummy6[(0x0100-0x00B0)/4];
-/* 0x0100-0x0103 */ volatile uint32_t Trigger;
-/* 0x0104-0x0107 */ volatile uint32_t Sync;
-/* 0x0108-0x010B */ volatile uint32_t SwAGpio;
-/* 0x010C-0x010F */ volatile uint32_t SwBGpio;
-/* 0x0110-0x011F */ volatile uint32_t Dummy7[(0x0120-0x0110)/4];
-/* 0x0120-0x0123 */ volatile uint32_t PulserPeriod;
-/* 0x0124-0x0127 */ volatile uint32_t PulserHigh;
-/* 0x0128-0x0137 */ volatile uint32_t FpInput[4];
-/* 0x0138-0x0147 */ volatile uint32_t FpOutput[4];
-/* 0x0148-0x014B */ volatile uint32_t TriggerWindow;
-/* 0x014C-0x014F */ volatile uint32_t DACTrigger;
-/* 0x0150-0x0153 */ volatile uint32_t PulserN;
-/* 0x0154-0x0157 */ volatile uint32_t PulserStart;
-/* 0x0158-0x015B */ volatile uint32_t PulserStatus;
-/* 0x015C-0x0FBF */ volatile uint32_t Dummy8[(0x0FC0-0x015C)/4];
-/* 0x0FC0-0x0FC3 */ volatile uint32_t ScalerTrigger;
-/* 0x0FC4-0x0FC7 */ volatile uint32_t ScalerTriggerAccepted;
-/* 0x0FC8-0x0FD7 */ volatile uint32_t ScalerFpOutput[4];
-/* 0x0FD8-0x0FE7 */ volatile uint32_t ScalerFpInput[4];
-/* 0x0FE8-0x0FEB */ volatile uint32_t ScalerBusy;
-/* 0x0FEC-0x0FEF */ volatile uint32_t ScalerBusyCycles;
-/* 0x0FF0-0x0FF3 */ volatile uint32_t ScalerVmeClk;
-/* 0x0FF4-0x0FF7 */ volatile uint32_t ScalerSync;
-/* 0x0FF8-0x0FFB */ volatile uint32_t ScalerTrig1;
-/* 0x0FFC-0x0FFF */ volatile uint32_t ScalerTrig2;
-/* 0x1000-0x10FF */ volatile FssrStatus Fssr[8];
-};
+typedef struct
+{
+/* 0x0000 */ volatile uint32_t Ctrl;
+/* 0x0004 */ volatile uint32_t Status;
+/* 0x0008 */ BLANK[(0x100-0x8)/4];
+} VCSM_CLKRST_REGS;
 
-/* Declare Global Variables 
-extern int nvscm;
-extern const int vscmA32Base;
-extern int vscmA32Offset;
-extern int vscmA24Offset;
-extern int vscmA16Offset;
-extern volatile struct VSCM_regs *VSCMpr[VSCM_MAX_BOARDS + 1];
-extern volatile uintptr_t *VSCMpf[VSCM_MAX_BOARDS + 1];
-extern int vscmID[VSCM_MAX_BOARDS];
-extern int vscmInited;
-extern int minSlot;
-extern int maxSlot;
-*/
+#define VSCM_SCALER_SYSCLK50      0
+#define VSCM_SCALER_GCLK125       1
+#define VSCM_SCALER_SYNC          2
+#define VSCM_SCALER_TRIG1         3
+#define VSCM_SCALER_TRIG2         4
+#define VSCM_SCALER_TOKENIN       5
+#define VSCM_SCALER_BUSY          6
+#define VSCM_SCALER_FP_INPUT(n)   (7+n)
+#define VSCM_SCALER_FP_OUTPUT(n)  (11+n)
+
+typedef struct
+{
+/* 0x0000 */ volatile uint32_t TrgHitCtrl;
+/* 0x0004 */ volatile uint32_t DacTrigCtrl;
+/* 0x0008 */ volatile uint32_t TrigCtrl;
+/* 0x000C */ volatile uint32_t SyncCtrl;
+/* 0x0010 */ volatile uint32_t TrigoutCtrl;
+/* 0x0014 */ volatile uint32_t FpOutputCtrl[4];
+/* 0x0024 */ BLANK[(0x80-0x24)/4];
+/* 0x0080 */ volatile uint32_t PulserPeriod;
+/* 0x0084 */ volatile uint32_t PulserLowCycles;
+/* 0x0088 */ volatile uint32_t PulserNPulses;
+/* 0x008C */ volatile uint32_t PulserStart;
+/* 0x0090 */ volatile uint32_t PulserDone;
+/* 0x0094 */ BLANK[(0x100-0x94)/4];
+/* 0x0104 */ volatile uint32_t ScalerLatch;
+/* 0x0108 */ volatile uint32_t Scalers[15];
+/* 0x0140 */ BLANK[(0x200-0x140)/4];
+} VSCM_SD_REGS;
+
+/* Event Builder */
+#define VSCM_A32_ENABLE        0x00000001
+#define VSCM_AMB_ENABLE        0x02000000
+#define VSCM_A32_ADDR_MASK     0x0000ff80   /* 8 MB chunks */
+#define VSCM_AMB_MIN_MASK      0x0000ff80
+#define VSCM_AMB_MAX_MASK      0xff800000
+
+//#define DCRB_ENABLE_BLKLVL_INT      0x40000
+#define VSCM_ENABLE_BERR               0x01
+#define VSCM_ENABLE_MULTIBLOCK    0x2000000
+#define VSCM_FIRST_BOARD          0x4000000
+#define VSCM_LAST_BOARD           0x8000000
+
+typedef struct
+{
+/* 0x0000 */ volatile uint32_t Lookback;
+/* 0x0004 */ volatile uint32_t WindowWidth;
+/* 0x0008 */ volatile uint32_t BlockCfg;
+/* 0x000C */ volatile uint32_t AD32;
+/* 0x0010 */ volatile uint32_t Adr32M;
+/* 0x0014 */ volatile uint32_t Interrupt;
+/* 0x0018 */ volatile uint32_t ReadoutCfg;
+/* 0x001C */ volatile uint32_t ReadoutStatus;
+/* 0x0020 */ volatile uint32_t FifoBlockCnt;
+/* 0x0024 */ volatile uint32_t FifoWordCnt;
+/* 0x0028 */ volatile uint32_t FifoEventCnt;
+/* 0x002C */ volatile uint32_t TrigCntBusyThr;
+/* 0x0030 */ BLANK[(0x100-0x30)/4];
+} VSCM_EB_REGS;
+
+typedef struct
+{
+/* 0x0000 */ volatile uint32_t SerCtrl;
+/* 0x0004 */ volatile uint32_t AddrH1;
+/* 0x0008 */ volatile uint32_t AddrH2;
+/* 0x000C */ BLANK[(0x10-0xC)/4];
+/* 0x0010 */ volatile uint32_t SerData[4];
+/* 0x0020 */ volatile uint32_t SerClk;
+/* 0x0024 */ volatile uint32_t ClkCtrl;
+/* 0x0028 */ volatile uint32_t Status;
+/* 0x002C */ BLANK[(0x100-0x2C)/4];
+} VSCM_FSSR_CTRL_REGS;
+
+typedef struct
+{
+/* 0x0000 */ volatile uint32_t Ctrl;
+/* 0x0004 */ volatile uint32_t HistCtrl;
+/* 0x0008 */ volatile uint32_t HistCnt;
+/* 0x000C */ BLANK[(0x40-0x0C)/4];
+/* 0x0040 */ volatile uint32_t LastDataWord;
+/* 0x0044 */ volatile uint32_t LastStatusWord;
+/* 0x0048 */ volatile uint32_t ScalerStatusWord;
+/* 0x004C */ volatile uint32_t ScalerEvent;
+/* 0x0050 */ volatile uint32_t ScalerWords;
+/* 0x0054 */ volatile uint32_t ScalerIdle;
+/* 0x0058 */ volatile uint32_t ScalerAqBco;
+/* 0x005C */ volatile uint32_t ScalerMarkErr;
+/* 0x0060 */ volatile uint32_t ScalerEncErr;
+/* 0x0064 */ volatile uint32_t ScalerChipIdErr;
+/* 0x0068 */ volatile uint32_t ScalerGotHit;
+/* 0x006C */ volatile uint32_t ScalerCoreTalking;
+/* 0x0070 */ BLANK[(0x100-0x70)/4];
+} VSCM_FSSR_REGS;
+
+typedef struct
+{
+/* 0x0000 */ volatile uint32_t Ctrl;
+/* 0x0004 */ volatile uint32_t Status;
+/* 0x0008 */ volatile uint32_t Ch0;
+/* 0x000C */ volatile uint32_t Ch1;
+/* 0x0010 */ volatile uint32_t TrigCtrl;
+/* 0x0014 */ BLANK[(0x100-0x14)/4];
+} VSCM_DAC_REGS;
+
+typedef struct
+{
+/* 0x0000 */ volatile uint32_t Ctrl;
+/* 0x0004 */ volatile uint32_t DeadCycles;
+/* 0x0008 */ BLANK[(0xC-0x8)/4];
+/* 0x000C */ volatile uint32_t TrgHitWidth;
+/* 0x0010 */ BLANK[(0x100-0x10)/4];
+} VSCM_TDC_REGS;
+
+typedef struct
+{
+/* 0x0000-0x00FF */ VSCM_CFG_REGS       Cfg;
+/* 0x0100-0x01FF */ VCSM_CLKRST_REGS    Clk;
+/* 0x0200-0x03FF */ VSCM_SD_REGS        Sd;
+/* 0x0400-0x04FF */ VSCM_EB_REGS        Eb;
+/* 0x0500-0x05FF */ VSCM_FSSR_CTRL_REGS FssrCtrl;
+/* 0x0600-0x0FFF */ BLANK[(0x1000-0x0600)/4];
+/* 0x1000-0x17FF */ VSCM_FSSR_REGS      Fssr[8];
+/* 0x1800-0x1FFF */ BLANK[(0x2000-0x1800)/4];
+/* 0x2000-0x20FF */ VSCM_DAC_REGS       Dac;
+/* 0x2100-0x21FF */ VSCM_TDC_REGS       Tdc;
+} VSCM_regs;
 
 /* Firmware Function Prototypes */
 int vscmSlot(unsigned int id);
@@ -233,6 +277,7 @@ int vscmFirmwareUpdate(int id, const char *filename);
 int vscmFirmwareVerify(int id, const char *filename);
 int vscmFirmwareUpdateVerify(int id, const char *filename);
 int vscmFirmwareRead(int id, const char *filename);
+uint32_t vscmFirmwareRev(int id);
 
 int vscmInit(uintptr_t addr, uint32_t addr_inc, int numvscm, int flag);
 int vscmIsNotInit(int *id, const char *func);
@@ -284,12 +329,11 @@ uint8_t vscmSetDacCalibration(int id);
 
 /* Scaler Functions */
 int  vscmReadScalers(int id, volatile unsigned int *data, int nwrds, int rflag, int rmode);
-void vscmEnableChipScaler(int id, int chip);
-void vscmDisableChipScaler(int id, int chip);
-void vscmLatchChipScaler(int id, int chip);
+void vscmEnableScaler(int id);
+void vscmDisableScaler(int id);
 void vscmClearStripScalers(int id, int chip);
 int vscmReadStripScalers(int id, int chip, uint32_t *arr);
-void vscmLatchScalers(int id);
+void vscmLatchScalers(int id, int latch);
 uint32_t vscmReadVmeClk(int id);
 
 void vscmSetBCOFreq(int id, uint32_t freq);
@@ -319,7 +363,7 @@ uint32_t fssrReadScalerChipIdErr(int id, int chip);
 uint32_t fssrReadLatencyMax(int id, int chip);
 uint32_t fssrReadScalerGotHit(int id, int chip);
 uint32_t fssrReadScalerStrip(int id, int chip);
-uint32_t fssrReadScalerRef(int id, int chip);
+uint32_t fssrReadScalerRef(int id);
 uint32_t fssrReadScalerStripRef(int id, int chip);
 uint32_t fssrReadScalerCoreTalking(int id, int chip);
 uint32_t fssrReadLastDataWord(int id, int chip);
@@ -374,4 +418,6 @@ void fssrSCR(int id, int chip);
 void fssrInternalPulserEnable(int id, int chip);
 void fssrSetInternalPulserAmp(int id, int chip, uint8_t mask);
 uint8_t fssrGetInternalPulserAmp(int id, int chip);
+
 #endif
+

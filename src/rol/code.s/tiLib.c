@@ -4928,7 +4928,8 @@ tiGetTSInputMask()
       return ERROR;
     }
   TILOCK;
-  ret = vmeRead32(&TIp->tsInput);
+  ret = vmeRead32(&TIp->tsInput) & 0x3F; /* sergey: add 0x3f mask */
+  printf("tiGetTSInputMask: mask=0x%08x\n",ret);
   TIUNLOCK;
 
   return(ret);
