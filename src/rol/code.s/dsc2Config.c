@@ -19,6 +19,8 @@ DSC2_WIDTH  20  40   <- TDC width (ns), TRG width (ns)
 
 DSC2_TEST_INPUT 0
 
+DSC2_PULSER F  <- internal pulser frequency (0.01 to 25E6 pulser frequency in Hz)
+
 DSC2_TDCMASK  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1     <- TDC enable mask
 
 DSC2_TRGMASK  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1     <- TRG enable mask
@@ -84,6 +86,7 @@ static int dscID_tcp[DSC_MAX_BOARDS+1];        /* array of slot numbers for tcps
 static int     TDCWidth[NBOARD];
 static int     TRGWidth[NBOARD];
 static int     TestInput[NBOARD];
+static float   PulserFreq[NBOARD];
 static int     TDCThreshold[NBOARD][NCHAN];
 static int     TRGThreshold[NBOARD][NCHAN];
 static UINT32  ChannelMask[NBOARD];
@@ -236,6 +239,7 @@ dsc2InitGlobals()
     TDCWidth[ii] = 40;
     TRGWidth[ii] = 40;
     TestInput[ii] = 0;
+    PulserFreq[ii] = 0.0;
     for(jj=0; jj<NCHAN; jj++) TDCThreshold [ii][jj] = 20;
     for(jj=0; jj<NCHAN; jj++) TRGThreshold [ii][jj] = 40;
     ChannelMask[ii] = 0xffffffff;
@@ -302,6 +306,7 @@ dsc2ReadConfigFile(char *filename)
   char   host[ROCLEN], ROC_name[ROCLEN];
   int    msk[NCHAN];
   int    args, i1, i2;
+  float  f1;
   int    slot, slot1, slot2, chan;
   char fname[FNLEN] = { "" };  /* config file name */
   char *getenv();
@@ -441,6 +446,12 @@ dsc2ReadConfigFile(char *filename)
         for(slot=slot1; slot<slot2; slot++) TestInput[slot] = i1;
       }
 
+      else if(!strcmp(keyword,"DSC2_PULSER"))
+      {
+        sscanf (str_tmp, "%*s %f", &f1);
+        for(slot=slot1; slot<slot2; slot++) PulserFreq[slot] = f1;
+      }
+
       else if(active && ((strcmp(keyword,"DSC2_THRESHOLD") == 0) && (kk >= 0)))
 	  {
         sscanf (str_tmp, "%*s %d %d", &i1, &i2);
@@ -551,6 +562,7 @@ for(jj=0;jj<NCHAN;jj++) printf("!!!      chan=%2d, TDCThreshold=%d, TRGThreshold
 	printf("   TDCWidth=%d\n",TDCWidth[slot]);
 	printf("   TRGWidth=%d\n",TRGWidth[slot]);
 	printf("   TestInput=%d\n",TestInput[slot]);
+	printf("   PulserFreq=%f\n",PulserFreq[slot]);
 	printf("   ChannelMask=0x%08x\n",ChannelMask[slot]);
 	printf("   ORMask=0x%08x\n",ORMask[slot]);
     for(jj=0;jj<NCHAN;jj++)
@@ -589,6 +601,7 @@ dsc2DownloadAll()
     dsc2SetPulseWidth(slot, TDCWidth[slot], 1);
     dsc2SetPulseWidth(slot, TRGWidth[slot], 2);
     dsc2SetTestInput(slot, TestInput[slot]);
+dsc2PulserSetup(slot, PulserFreq[slot], 0.5, 0xFFFFFFFF);
     dsc2SetChannelMask(slot,  ChannelMask[slot]&0xFFFF,      1); /* set tdc mask */
     dsc2SetChannelMask(slot, (ChannelMask[slot]>>16)&0xFFFF, 2); /* set trg mask */
     dsc2SetChannelORMask(slot,  ORMask[slot]&0xFFFF,      1); /* set tdc mask */
@@ -673,6 +686,7 @@ dsc2Mon(int slot)
        dsc2GetPulseWidth(slot,2));
     printf("   TestInput=%d\n",
        dsc2GetTestInput(slot));
+    printf("   PulserFreq=%f\n",dsc2GetPulserFreq(slot));
     printf("   ChannelMask=0x%08x ORMask=0x%08x \n",
        dsc2GetChannelMask(slot, 0),
        dsc2GetChannelORMask(slot, 0));
@@ -741,6 +755,7 @@ dsc2UploadAll(char *string, int length)
 	TDCWidth[slot] = dsc2GetPulseWidth(slot,1);
     TRGWidth[slot] = dsc2GetPulseWidth(slot,2);
     TestInput[slot] = dsc2GetTestInput(slot);
+    PulserFreq[slot] = dsc2GetPulserFreq(slot);
 
     ChannelMask[slot] = dsc2GetChannelMask(slot,1),
     ChannelMask[slot] |= (dsc2GetChannelMask(slot,2) << 16),
@@ -778,6 +793,9 @@ dsc2UploadAll(char *string, int length)
       ADD_TO_STRING;
 
       sprintf(sss,"DSC2_TEST_INPUT %d\n",TestInput[slot]);
+      ADD_TO_STRING;
+
+      sprintf(sss,"DSC2_PULSER %f\n",PulserFreq[slot]);
       ADD_TO_STRING;
 
       sprintf(sss,"DSC2_TDCMASK");

@@ -183,6 +183,11 @@ CLON_FLAGS += -I./inc -I./code.s -I./mvt.s -I./sfi.s -I$(CODA)/common/include
 ifeq ("$(OSTYPE)","Linux")
   CLON_FLAGS += -I/usr/local/src/tirpci/tirpci_installation/include
   CLON_FLAGS += -I/usr/local/src/tirpci
+
+
+# evio
+  CLON_FLAGS += -I$(CODA)/src/evio-4.3/src.s
+
 endif
 
 ifeq ("$(OSTYPE)","VXWORKS")
@@ -214,6 +219,9 @@ else ifeq ("$(OSTYPE_MACHINE)","Linux_nios2")
   CLON_FLAGS += -I$(CODA)/Linux_nios2/include
   LIBNAMES +=
 else
+
+
+
 ##########  LIBNAMES += $(CODA)/src/codatt/$(OSTYPE_MACHINE)/lib/libcodatt.a
 ##########  LIBNAMES += $(CODA)/src/bosio/$(OSTYPE_MACHINE)/lib/libbosio.a
 
@@ -226,7 +234,15 @@ else
 
   LIBNAMES += $(CODA)/src/mysql4.1.20/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
 
+#cern root
+  ROOTCFLAGS   := $(shell root-config --cflags)
+  ROOTLIBS     := $(shell root-config --libs) 
+  ROOTGLIBS    := $(shell root-config --glibs)
+  CLON_FLAGS += $(ROOTCFLAGS)
+  LIBNAMES += $(ROOTLIBS) $(ROOTGLIBS)
+
   LIBNAMES += -lpthread
+  LIBNAMES += -lexpat
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
 

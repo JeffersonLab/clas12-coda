@@ -33,13 +33,16 @@ int mvtUploadAll( char *string, int length );
 int mvtConfig( char *sys_conf_params_filename, int run_number, int bec_id );
 
 int mvtGetNbrOfFeu(int id, int BeuId);
+
 int mvtGetNbrOfSamplesPerEvent(int id);
 int mvtGetNbrOfEventsPerBlock(int id);
 int mvtGetNbrOfBeu(int id);
 int mvtGetPrescale(int id);
 int mvtGetZSMode(int id);
-int mvtSetCurrentBlockLevel( int block_level );
 int mvtGetRepRawData();
+int mvtGetCmpDataFmt();
+
+int mvtSetCurrentBlockLevel( int block_level );
 int mvtStatus(int numFeu);
 int mvtStatusDump(int numFeu,  FILE *fptr);
 int mvtTiStatusDump(int pflag, FILE *fptr);

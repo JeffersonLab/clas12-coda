@@ -114,7 +114,7 @@ typedef struct dsc_struct
 #define DSC_DELAY_GRP1_MASK             0x000003ff
 
 /* 0x0094 testCtrl register bits and masks */
-#define DSC_TESTCTRL_FP_MASK        0x00000003
+#define DSC_TESTCTRL_FP_MASK        0x00000007
 #define DSC_TESTCTRL_ROUTE_IN1      (1<<0)
 #define DSC_TESTCTRL_ROUTE_IN2      (1<<1)
 #define DSC_TESTCTRL_ROUTE_PULSER   (1<<2)
@@ -270,6 +270,7 @@ int  dsc2PrintScalerRates(unsigned int id, int rflag);
 int  dsc2SetPulseWidthAll(unsigned short tdcVal, unsigned short trgVal, unsigned short trgoutVal);
 
 int  dsc2PulserSetup(int id, float freq, float duty, unsigned int npulses);
+float dsc2GetPulserFreq(int id);
 
 int dsc2SetScalerConfigRefPrescale(unsigned int id, int refprescale);
 int dsc2GetScalerConfigRefPrescale(unsigned int id);
@@ -280,3 +281,4 @@ int dsc2ResetScalersGroupA(unsigned int id);
 int dsc2ResetScalersGroupB(unsigned int id);
 
 #endif /* __DSC2__ */
+

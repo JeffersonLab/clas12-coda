@@ -47,7 +47,7 @@ int mynev; /*defined in tttrans.c */
 #define ABS(x)      ((x) < 0 ? -(x) : (x))
 
 /* open composite bank */
-#define MVT_CCOPEN(btag,fmt,bnum) \
+#define MVT_CCOPEN_NOSMPPACK(btag,fmt,bnum) \
   /*if it is first board, open bank*/ \
   if(a_slot_old==-1) \
   { \
@@ -88,6 +88,44 @@ int mynev; /*defined in tttrans.c */
     b08 += 4; \
   }
 
+/* open composite bank : with packed samples */
+#define MVT_CCOPEN_PACKSMP(btag,fmt,bnum) \
+  /*if it is first board, open bank*/ \
+  if(a_slot_old==-1) \
+  { \
+    { \
+      int len1, n1; \
+      char *ch; \
+      len1 = strlen(fmt); /* format length in bytes */ \
+      n1 = (len1+5)/4; /* format length in words */ \
+      dataout_save1 = dataout ++; /*remember '0xf' bank length location*/ \
+      *dataout++ = (btag<<16) + (0xf<<8) + bnum; /*bank header*/ \
+      /* tagsegment header following by format */ \
+      *dataout++ = (len1<<20) + (0x6<<16) + n1; \
+      ch = (char *)dataout; \
+      strncpy(ch,fmt,len1); \
+      ch[len1]='\0';ch[len1+1]='\4';ch[len1+2]='\4';ch[len1+3]='\4';ch[len1+4]='\4'; \
+      dataout += n1; \
+      /* 'internal' bank header */ \
+      dataout_save2 = dataout ++;  /*remember 'internal' bank length location*/ \
+      *dataout++ = (0<<16) + (0x0<<8) + 0; \
+    } \
+    b08 = (unsigned char *)dataout; \
+  } \
+  /*if new slot, write stuff*/ \
+  if(a_slot != a_slot_old) \
+  { \
+    a_channel_old = -1; /*for new slot, reset a_channel_old to -1*/ \
+    a_slot_old = a_slot; \
+    *b08++ = a_slot; \
+    b32 = (unsigned int *)b08; \
+    *b32++ = a_triggernumber; \
+    b08 += 4; \
+    *b32++ = a_trigtime[1]; \
+    *b32   = a_trigtime[0]; \
+    b08 += 8; \
+  }
+
 /* close composite bank */
 #define CCCLOSE \
 { \
@@ -123,6 +161,7 @@ int mynev; /*defined in tttrans.c */
 #define MVT_TYPE_FILLER    0xFAAAFAAA
 
 int MVT_ZS_MODE = -1;
+int MVT_CMP_DATA_FMT = 0;
 int MVT_PRESCALE = 0;
 int MVT_NBR_OF_BEU = 0;
 int MVT_NBR_EVENTS_PER_BLOCK = 0;
@@ -265,6 +304,7 @@ __prestart()
 			fflush( mvt_fptr_err_2);
 		}
 	}
+	MVT_CMP_DATA_FMT          = mvtGetCmpDataFmt();
 	MVT_PRESCALE              = mvtGetPrescale(rol->pid);
 	MVT_NBR_OF_BEU            = mvtGetNbrOfBeu(rol->pid);
 	MVT_NBR_EVENTS_PER_BLOCK  = mvtGetNbrOfEventsPerBlock(rol->pid);
@@ -274,7 +314,8 @@ __prestart()
 		MVT_NBR_OF_FEU[ibeu] = mvtGetNbrOfFeu(rol->pid, ibeu+1);
 	}
 
-	printf("INFO: MVT_ZS_MODE %d\n",                MVT_ZS_MODE             );
+	printf("INFO: MVT_ZS_MODE %d\n",                MVT_ZS_MODE              );
+	printf("INFO: MVT_CMP_DATA_FMT %d\n",           MVT_CMP_DATA_FMT         );
 	printf("INFO: MVT_PRESCALE %d\n",               MVT_PRESCALE             );
 	printf("INFO: MVT_NBR_OF_BEU %d\n",             MVT_NBR_OF_BEU           );
 	printf("INFO: MVT_NBR_EVENTS_PER_BLOCK %d\n",   MVT_NBR_EVENTS_PER_BLOCK );
@@ -670,7 +711,7 @@ rol2trig(int a, int b)
 
 
 //***********************************************************************************
-//***********************************************************************************
+//*********************************************MVT_ERROR_BLOCK_NUM*******************
 //***********************************************************************************
 /* newer format 27/08/2015
 F3BB BEUIDBlkNum
@@ -1299,7 +1340,9 @@ if( mvt_fptr_err_2 != (FILE *)NULL )
 }
 #endif
 
-MVT_CCOPEN(0xe11b,"c,i,l,N(s,Ns)",banknum);
+                            if( MVT_CMP_DATA_FMT == 0 ) // Unpacked data format
+                            {
+MVT_CCOPEN_NOSMPPACK(0xe11b,"c,i,l,N(s,Ns)",banknum);
 									Nchan[0] = nbchannelsFEU[jj][ibl][iev][0][i_feu];
 #ifdef DEBUG7								
 if( mvt_fptr_err_2 != (FILE *)NULL )
@@ -1388,6 +1431,135 @@ if( mvt_fptr_err_2 != (FILE *)NULL )
 #endif
 										} //loop over channels
 									} //end if ZS MODE
+                            }
+                            else // of if( MVT_CMP_DATA_FMT == 0 ) -> packed data format
+                            {
+                                MVT_CCOPEN_PACKSMP(0xe128,"c,i,l,c,s(s,c)",banknum);
+                                // set number of samples
+                                *b08 ++ = ((char)MVT_NBR_SAMPLES_PER_EVENT);
+                                // set number of channels
+                                b16 = (unsigned short *)( b08 );
+                                *b16++ = ((short)nbchannelsFEU[jj][ibl][iev][0][i_feu]);
+                                b08 += 2;
+
+#ifdef DEBUG6_MVT_2ND_PASS								
+                                if( mvt_fptr_err_2 != (FILE *)NULL )
+                                {
+                                    fprintf(mvt_fptr_err_2,"%s: SECOND PASS 0xe118, nbchannelsFEU = %d\n",
+                                        __FUNCTION__, nbchannelsFEU[jj][ibl][iev][0][i_feu]);
+                                    fflush(mvt_fptr_err_2);
+                                }
+#endif
+                                if( MVT_ZS_MODE )
+                                {
+                                    for( i_channel=0; i_channel<nbchannelsFEU[jj][ibl][iev][0][i_feu]; i_channel++ ) 
+                                    {
+                                        //OUTPUT CHANNEL NUMBER
+                                        ii = iFEU[jj][ibl][iev][0][i_feu] + 1 + 2 + i_channel;
+                                        current_channel_id = ((( datain[ ii ] ) & 0x01FF0000) >> 16 ) + 1;  
+                                        b16 = (unsigned short *)( b08 );
+                                        *b16++ = current_channel_id;
+                                        b08 += 2;
+                                        // Pack samples in unsigned integers
+                                        for( i_sample=0; i_sample<MVT_NBR_SAMPLES_PER_EVENT; i_sample++)
+                                        {		
+                                            ii = iFEU[jj][ibl][iev][i_sample][i_feu] + 1 + 2 + i_channel;
+                                            current_sample = ((( datain[ ii ] ) & 0x00000FFF) );
+                                            if( (i_sample % 2) == 0 )
+                                            {
+                                                *b08++ = ((char)( current_sample    &0xFF)); // 8 LSB-s
+                                                *b08   = ((char)((current_sample>>8)&0x0F)); // 4 MSB-s
+                                            }
+                                            else
+                                            {
+                                                *b08  |= ((char)((current_sample>>4)&0xF0)); // 4 MSB-s
+                                                 b08++;
+                                                *b08++ = ((char)( current_sample    &0xFF)); // 8 LSB-s
+                                            }
+                                        } /* loop over samples */
+                                        if( MVT_NBR_SAMPLES_PER_EVENT % 2 )
+                                        {
+                                            *b08 &= 0x0F; // force high nibble to 0
+                                            b08++;
+                                        }
+#ifdef DEBUG6_MVT_2ND_PASS								
+                                        if( mvt_fptr_err_2 != (FILE *)NULL )
+                                        {
+                                            fprintf(mvt_fptr_err_2,"%s: SECOND PASS 0xe118, LOOP OVER SAMPLES DONE \n", __FUNCTION__);
+                                            fflush( mvt_fptr_err_2);
+                                        }
+#endif
+				                            } /* loop over channels */
+                                }
+                                else
+                                {
+                                    for ( i_channel = 0; i_channel < nbchannelsFEU[jj][ibl][iev][0][i_feu] ; i_channel ++ ) 
+                                    {
+                                        //GET CURRENT DREAM ID
+                                        i_dream = i_channel >> 6 ;
+                                        // point to dream header for the current channel
+                                        ii = iFEU[jj][ibl][iev][0][i_feu] + 1 + 2 + 1 + (32 + 5)*i_dream ;
+                                        current_channel_id = ((( datain[ ii ] ) & 0x00000E00) >> 3 ) + (i_channel%64) + 1;
+
+                                        //OUTPUT CHANNEL NUMBER
+                                        b16 = (unsigned short *)( b08 );
+                                        *b16++ = current_channel_id;
+                                        b08 += 2;
+
+#ifdef DEBUG6_MVT_2ND_PASS								
+                                        if( mvt_fptr_err_2 != (FILE *)NULL )
+                                        {
+                                            fprintf
+                                            (
+                                                mvt_fptr_err_2,
+                                                "%s: SECOND PASS 0xe118, i_dream = %d i_channel = %d , data[%d]=0x%08x current_channel_id =%d MVT_NBR_SAMPLES_PER_EVENT = %d \n",
+                                                    __FUNCTION__, i_dream, i_channel, ii, datain[ ii ], current_channel_id, MVT_NBR_SAMPLES_PER_EVENT
+                                            );
+                                            fflush(mvt_fptr_err_2);
+                                        }
+#endif
+                                        for ( i_sample = 0; i_sample < MVT_NBR_SAMPLES_PER_EVENT; i_sample++)
+                                        {
+                                            // Point to the first channel of the Dream
+                                            // 1 for BEU extra word, 2 for FEU header + 2 for Dream header
+                                            ii = iFEU[jj][ibl][iev][i_sample][i_feu] + 1 + 2 + 2 + (32+5)*i_dream;
+                                            // jump to the required channel
+                                            ii += ((i_channel%64) >> 1);
+                                            if (i_channel%2)
+                                            {
+                                                current_sample = ((( datain[ ii ] ) & 0x00000FFF) );
+                                            }
+                                            else
+                                            {
+                                                current_sample = ((( datain[ ii ] ) & 0x0FFF0000)>> 16 );
+                                            }
+                                            if( (i_sample % 2) == 0 )
+                                            {
+                                                *b08++ = ((char)( current_sample    &0xFF)); // 8 LSB-s
+                                                *b08   = ((char)((current_sample>>8)&0x0F)); // 4 MSB-s
+                                            }
+                                            else
+                                            {
+                                                *b08  |= ((char)((current_sample>>4)&0xF0)); // 4 MSB-s
+                                                 b08++;
+                                                *b08++ = ((char)( current_sample    &0xFF)); // 8 LSB-s
+                                            }
+                                        } /* loop over samples */
+                                        if( MVT_NBR_SAMPLES_PER_EVENT % 2 )
+                                        {
+                                            *b08 &= 0x0F; // force high nibble to 0
+                                            b08++;
+                                        }
+#ifdef DEBUG6_MVT_2ND_PASS								
+                                        if( mvt_fptr_err_2 != (FILE *)NULL )
+                                        {
+                                            fprintf(mvt_fptr_err_2,"%s: SECOND PASS 0xe118, LOOP OVER SAMPLES DONE \n", __FUNCTION__);
+                                            fflush( mvt_fptr_err_2);
+                                        }
+#endif
+                                    } // loop over channels
+                                } // else of if( MVT_ZS_MODE )
+                            } // else of if( MVT_CMP_DATA_FMT == 0 )
 //if(b08 != NULL) CCCLOSE;
 /*
 #ifdef DEBUG7								

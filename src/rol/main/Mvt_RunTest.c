@@ -185,8 +185,8 @@ static unsigned int *StartOfEvent;
   b08 = NULL; \
 }
 
-/* open composite bank */
-#define MVT_CCOPEN(btag,fmt,bnum) \
+/* open composite bank with nonpacked samples data*/
+#define MVT_CCOPEN_NOSMPPACK(btag,fmt,bnum) \
   /*if it is first board, open bank*/ \
   if(a_slot_old==-1) \
   { \
@@ -225,6 +225,44 @@ static unsigned int *StartOfEvent;
     Nchan = (unsigned int *)b08; \
     Nchan[0] = 0; \
     b08 += 4; \
+  }
+
+/* open composite bank : with packed samples */
+#define MVT_CCOPEN_PACKSMP(btag,fmt,bnum) \
+  /*if it is first board, open bank*/ \
+  if(a_slot_old==-1) \
+  { \
+    { \
+      int len1, n1; \
+      char *ch; \
+      len1 = strlen(fmt); /* format length in bytes */ \
+      n1 = (len1+5)/4; /* format length in words */ \
+      dataout_save1 = dataout ++; /*remember '0xf' bank length location*/ \
+      *dataout++ = (btag<<16) + (0xf<<8) + bnum; /*bank header*/ \
+      /* tagsegment header following by format */ \
+      *dataout++ = (len1<<20) + (0x6<<16) + n1; \
+      ch = (char *)dataout; \
+      strncpy(ch,fmt,len1); \
+      ch[len1]='\0';ch[len1+1]='\4';ch[len1+2]='\4';ch[len1+3]='\4';ch[len1+4]='\4'; \
+      dataout += n1; \
+      /* 'internal' bank header */ \
+      dataout_save2 = dataout ++;  /*remember 'internal' bank length location*/ \
+      *dataout++ = (0<<16) + (0x0<<8) + 0; \
+    } \
+    b08 = (unsigned char *)dataout; \
+  } \
+  /*if new slot, write stuff*/ \
+  if(a_slot != a_slot_old) \
+  { \
+    a_channel_old = -1; /*for new slot, reset a_channel_old to -1*/ \
+    a_slot_old = a_slot; \
+    *b08++ = a_slot; \
+    b32 = (unsigned int *)b08; \
+    *b32++ = a_triggernumber; \
+    b08 += 4; \
+    *b32++ = a_trigtime[1]; \
+    *b32   = a_trigtime[0]; \
+    b08 += 8; \
   }
 
 /* close composite bank */
@@ -381,11 +419,12 @@ int mynev; /*defined in tttrans.c */
 
 int MVT_ZS_MODE = -1;
 int MVT_PRESCALE = 0;
+int MVT_CMP_DATA_FMT = 0;
 int MVT_NBR_OF_BEU = 0;
 int MVT_NBR_EVENTS_PER_BLOCK = 0;
 int MVT_NBR_SAMPLES_PER_EVENT = 0;
 int MVT_NBR_OF_FEU[DEF_MAX_NB_OF_BEU] = {0}; // PROBLEM WITH THIS ARRAY !!! Pour acceder au nombre de feu sur une beu, j'utilise soit un index de beu soit un beuid ...bref, je me mélange.
-					     // Il me faut une correspondance beuID numero de beu ... bref, il faut harmoniser tout cela !!			
+                                             // Il me faut une correspondance beuID numero de beu ... bref, il faut harmoniser tout cela !!			
 int mvt_event_number = 0; 
 
 FILE *mvt_fptr_err_2 = (FILE *)NULL;
@@ -1285,8 +1324,8 @@ CPOPEN0( roc_id, 0xe, bank );
 #endif
 									// OUTPUT CURRENT TRIGGER/EVNET NUMBER
 									current_event_number_low  = ((( datain[ ( iSMP[bank][ibl][iev][0] + 2 ) ] ) & 0x00000003) << 30) + 
-												    ((( datain[ ( iSMP[bank][ibl][iev][0] + 3 ) ] ) & 0x7FFF0000) >>  1) +
-												     (( datain[ ( iSMP[bank][ibl][iev][0] + 3 ) ] ) & 0x00007FFF);
+												                      ((( datain[ ( iSMP[bank][ibl][iev][0] + 3 ) ] ) & 0x7FFF0000) >>  1) +
+												                       (( datain[ ( iSMP[bank][ibl][iev][0] + 3 ) ] ) & 0x00007FFF);
 									a_triggernumber = current_event_number_low;
 #ifdef DEBUG_SP_MVT
 									if( mvt_fptr_err_2 != (FILE *)NULL )
@@ -1297,18 +1336,18 @@ CPOPEN0( roc_id, 0xe, bank );
 									}
 #endif
 									//OUTPUT CURRENT TIMESTAMP 
-									current_timestamp_low  = ((( datain[ ( iSMP[bank][ibl][iev][0] + 2 ) ] )  & 0x7FFF0000) << 1) +
- 											       (((~( datain[ ( iSMP[bank][ibl][iev][0]     ) ] )) & 0x00000800) << 5) ;
+									current_timestamp_low  = ((( datain[ ( iSMP[bank][ibl][iev][0] + 2 ) ] )    & 0x7FFF0000) << 1) +
+ 											                     (((~( datain[ ( iSMP[bank][ibl][iev][0]     ) ] )) & 0x00000800) << 5) ;
 	
 									current_timestamp_high = ((( datain[ ( iSMP[bank][ibl][iev][0] + 1 ) ] ) & 0x7FFF0000) >>  1) + 
-											         ((( datain[ ( iSMP[bank][ibl][iev][0] + 1 ) ] ) & 0x00007FFF));		
+											                     ((( datain[ ( iSMP[bank][ibl][iev][0] + 1 ) ] ) & 0x00007FFF));		
 
 									ii = iFEU[bank][ibl][iev][0][i_feu];
 									current_feu_tmstmp  = current_timestamp_low +
-										((( datain[ ii + 2] ) & 0x0FFF0000) >>  13 ) + (( datain[ ii + 2] ) & 0x00000007);
+										                    ((( datain[ ii + 2] ) & 0x0FFF0000) >>  13 ) + (( datain[ ii + 2] ) & 0x00000007);
 									current_feu_tmstmp |= ((MVT_ZS_MODE &0x1)<<15);
-							        	a_trigtime[0] = current_timestamp_high;
-             								a_trigtime[1] = current_feu_tmstmp;
+                  a_trigtime[0] = current_timestamp_high;
+                  a_trigtime[1] = current_feu_tmstmp;
 #ifdef DEBUG_SP_MVT
 									if( mvt_fptr_err_2 != (FILE *)NULL )
 									{
@@ -1317,104 +1356,234 @@ CPOPEN0( roc_id, 0xe, bank );
 										fflush(mvt_fptr_err_2);
 									}
 #endif
-									MVT_CCOPEN(0xe11b,"c,i,l,N(s,Ns)",banknum);
-									Nchan[0] = nbchannelsFEU[bank][ibl][iev][0][i_feu];
+                  if( MVT_CMP_DATA_FMT == 0 ) // Unpacked data format
+                  {
+									  MVT_CCOPEN_NOSMPPACK(0xe11b,"c,i,l,N(s,Ns)",banknum);
+									  Nchan[0] = nbchannelsFEU[bank][ibl][iev][0][i_feu];
 #ifdef DEBUG_SP_MVT
-									if( mvt_fptr_err_2 != (FILE *)NULL )
-									{
-										fprintf(mvt_fptr_err_2,"%s: 2nd PASS 0xe118, nbchannelsFEU = %d\n",
-											__FUNCTION__, nbchannelsFEU[bank][ibl][iev][0][i_feu]);
-										fflush(mvt_fptr_err_2);
-									}
+								  if( mvt_fptr_err_2 != (FILE *)NULL )
+								  {
+									  fprintf(mvt_fptr_err_2,"%s: 2nd PASS 0xe118, nbchannelsFEU = %d\n",
+										  __FUNCTION__, nbchannelsFEU[bank][ibl][iev][0][i_feu]);
+									  fflush(mvt_fptr_err_2);
+								  }
 #endif
-									if (MVT_ZS_MODE)
-									{
-										for( i_channel = 0; i_channel < nbchannelsFEU[bank][ibl][iev][0][i_feu]; i_channel++ ) 
-										{
-											//OUTPUT CHANNEL NUMBER
-											ii = iFEU[bank][ibl][iev][0][i_feu] + 1 + 2 + i_channel;
-											current_channel_id = ((( datain[ ii ] ) & 0x01FF0000) >> 16 ) + 1;  
-											b16 = (unsigned short *)( b08 );
-											*b16++ = current_channel_id;
-											b08 += 2;
-								
-											//OUTPUT  NUMBER OF SAMPLES			
-											b32 = (unsigned int *)( b08 );
-											* b32 ++ = MVT_NBR_SAMPLES_PER_EVENT;
-											b16+=2;
-											b08+=4;
+								  if (MVT_ZS_MODE)
+								  {
+									  for( i_channel = 0; i_channel < nbchannelsFEU[bank][ibl][iev][0][i_feu]; i_channel++ ) 
+									  {
+										  //OUTPUT CHANNEL NUMBER
+										  ii = iFEU[bank][ibl][iev][0][i_feu] + 1 + 2 + i_channel;
+										  current_channel_id = ((( datain[ ii ] ) & 0x01FF0000) >> 16 ) + 1;  
+										  b16 = (unsigned short *)( b08 );
+										  *b16++ = current_channel_id;
+										  b08 += 2;
+							
+										  //OUTPUT  NUMBER OF SAMPLES			
+										  b32 = (unsigned int *)( b08 );
+										  * b32 ++ = MVT_NBR_SAMPLES_PER_EVENT;
+										  b16+=2;
+										  b08+=4;
 
-											for( i_sample = 0; i_sample < MVT_NBR_SAMPLES_PER_EVENT; i_sample++ )
-											{		
-												ii = iFEU[bank][ibl][iev][i_sample][i_feu] + 1 + 2 + i_channel;
-												current_sample = ((( datain[ ii ] ) & 0x00000FFF) );
-												*b16++ = current_sample;
-												b08 += 2;
-											}/* loop over samples */
-										} /* loop over channels */
-									}
-									else
-									{
-			 							for ( i_channel = 0; i_channel < nbchannelsFEU[bank][ibl][iev][0][i_feu] ; i_channel ++ ) 
-										{
-											//GET CURRENT DREAM ID
-											i_dream = i_channel >> 6 ;
-											// point to dream header for the current channel
-											ii = iFEU[bank][ibl][iev][0][i_feu] + 1 + 2 + 1 + (32 + 5)*i_dream ;
-											current_channel_id = ((( datain[ ii ] ) & 0x00000E00) >> 3 ) + (i_channel%64) + 1;
+										  for( i_sample = 0; i_sample < MVT_NBR_SAMPLES_PER_EVENT; i_sample++ )
+										  {		
+											  ii = iFEU[bank][ibl][iev][i_sample][i_feu] + 1 + 2 + i_channel;
+											  current_sample = ((( datain[ ii ] ) & 0x00000FFF) );
+											  *b16++ = current_sample;
+											  b08 += 2;
+										  }/* loop over samples */
+									  } /* loop over channels */
+								  }
+								  else
+								  {
+		   							for ( i_channel = 0; i_channel < nbchannelsFEU[bank][ibl][iev][0][i_feu] ; i_channel ++ ) 
+									  {
+										  //GET CURRENT DREAM ID
+										  i_dream = i_channel >> 6 ;
+										  // point to dream header for the current channel
+										  ii = iFEU[bank][ibl][iev][0][i_feu] + 1 + 2 + 1 + (32 + 5)*i_dream ;
+										  current_channel_id = ((( datain[ ii ] ) & 0x00000E00) >> 3 ) + (i_channel%64) + 1;
  
-											//OUTPUT CHANNEL NUMBER
-											b16 = (unsigned short *)( b08 );
-											*b16++ = current_channel_id;
-											b08 += 2;
+										  //OUTPUT CHANNEL NUMBER
+										  b16 = (unsigned short *)( b08 );
+										  *b16++ = current_channel_id;
+										  b08 += 2;
 
-											//OUTPUT  NUMBER OF SAMPLES 							
-											b32 = (unsigned int *)( b08 );
-											*b32 ++ = MVT_NBR_SAMPLES_PER_EVENT;
-											b16+=2;
-											b08+=4;
+										  //OUTPUT  NUMBER OF SAMPLES 							
+										  b32 = (unsigned int *)( b08 );
+										  *b32 ++ = MVT_NBR_SAMPLES_PER_EVENT;
+										  b16+=2;
+										  b08+=4;
 #ifdef DEBUG_SP_MVT
-											if( mvt_fptr_err_2 != (FILE *)NULL )
-											{
-												fprintf
-												(
-													mvt_fptr_err_2,
-													"%s: 2nd PASS 0xe118, i_drm=%d i_chan=%d data[%d]=0x%08x cur_chan_id=%d SAMPLES_PER_EVENT=%d\n",
-													__FUNCTION__, i_dream, i_channel, ii, datain[ ii ], current_channel_id, MVT_NBR_SAMPLES_PER_EVENT
-												);
-												fflush(mvt_fptr_err_2);
-											}
+										  if( mvt_fptr_err_2 != (FILE *)NULL )
+										  {
+											  fprintf
+											  (
+												  mvt_fptr_err_2,
+												  "%s: 2nd PASS 0xe118, i_drm=%d i_chan=%d data[%d]=0x%08x cur_chan_id=%d SAMPLES_PER_EVENT=%d\n",
+												  __FUNCTION__, i_dream, i_channel, ii, datain[ ii ], current_channel_id, MVT_NBR_SAMPLES_PER_EVENT
+											  );
+											  fflush(mvt_fptr_err_2);
+										  }
 #endif
-											for ( i_sample = 0; i_sample < MVT_NBR_SAMPLES_PER_EVENT; i_sample++)
-											{
-												// Point to the first channel of the Dream
-												// 1 for BEU extra word, 2 for FEU header + 2 for Dream header
-												ii = iFEU[bank][ibl][iev][i_sample][i_feu] + 1 + 2 + 2 + (32+5)*i_dream;
-												// jump to the required channel
-												ii += ((i_channel%64) >> 1);
-												if (i_channel%2)
-												{
-													current_sample = ((( datain[ ii ] ) & 0x00000FFF) );
-												}
-												else
-												{
-													current_sample = ((( datain[ ii ] ) & 0x0FFF0000)>> 16 );
-												}
-												*b16++ = current_sample;
-												b08 += 2;
-											} /* loop over samples */	
+										  for ( i_sample = 0; i_sample < MVT_NBR_SAMPLES_PER_EVENT; i_sample++)
+										  {
+											  // Point to the first channel of the Dream
+											  // 1 for BEU extra word, 2 for FEU header + 2 for Dream header
+											  ii = iFEU[bank][ibl][iev][i_sample][i_feu] + 1 + 2 + 2 + (32+5)*i_dream;
+											  // jump to the required channel
+											  ii += ((i_channel%64) >> 1);
+											  if (i_channel%2)
+											  {
+												  current_sample = ((( datain[ ii ] ) & 0x00000FFF) );
+											  }
+											  else
+											  {
+												  current_sample = ((( datain[ ii ] ) & 0x0FFF0000)>> 16 );
+											  }
+											  *b16++ = current_sample;
+											  b08 += 2;
+										  } /* loop over samples */	
 #ifdef DEBUG_SP_MVT
-											if( mvt_fptr_err_2 != (FILE *)NULL )
-											{
-												fprintf(mvt_fptr_err_2,"%s: 2nd PASS 0xe118, LOOP OVER SAMPLES DONE\n", __FUNCTION__);
-												fflush(mvt_fptr_err_2);
-											}
+										  if( mvt_fptr_err_2 != (FILE *)NULL )
+										  {
+											  fprintf(mvt_fptr_err_2,"%s: 2nd PASS 0xe118, LOOP OVER SAMPLES DONE\n", __FUNCTION__);
+											  fflush(mvt_fptr_err_2);
+										  }
 #endif
-										} //loop over channels
+									  } //loop over channels
 									} //end if ZS MODE
-								} // if( nbchannelsFEU[bank][ibl][iev][0][i_feu] > 0 ) do it if the feu has fired channels
-							} // for (i_feu = 0; i_feu < MVT_NBR_OF_FEU[currentBeuId]; i_feu++) loop over feus
-						} // for(ibl=0; ibl < MVT_NBR_OF_BEU; ibl++) loop over blocks */
+                }
+                else // of if( MVT_CMP_DATA_FMT == 0 ) -> packed data format
+                {
+                  MVT_CCOPEN_PACKSMP(0xe128,"c,i,l,c,s(s,c)",banknum);
+                  // set number of samples
+                  *b08 ++ = ((char)MVT_NBR_SAMPLES_PER_EVENT);
+                  // set number of channels
+                  b16 = (unsigned short *)( b08 );
+                  *b16++ = ((short)nbchannelsFEU[bank][ibl][iev][0][i_feu]);
+                  b08 += 2;
+#ifdef DEBUG6_MVT_2ND_PASS								
+                  if( mvt_fptr_err_2 != (FILE *)NULL )
+                  {
+                    fprintf(mvt_fptr_err_2,"%s: SECOND PASS 0xe118, nbchannelsFEU = %d\n",
+                      __FUNCTION__, nbchannelsFEU[bank][ibl][iev][0][i_feu]);
+                    fflush(mvt_fptr_err_2);
+                  }
+#endif
+                  if( MVT_ZS_MODE )
+                  {
+                    for( i_channel=0; i_channel<nbchannelsFEU[bank][ibl][iev][0][i_feu]; i_channel++ ) 
+                    {
+                      //OUTPUT CHANNEL NUMBER
+                      ii = iFEU[bank][ibl][iev][0][i_feu] + 1 + 2 + i_channel;
+                      current_channel_id = ((( datain[ ii ] ) & 0x01FF0000) >> 16 ) + 1;  
+                      b16 = (unsigned short *)( b08 );
+                      *b16++ = current_channel_id;
+                      b08 += 2;
+                      // Pack samples in unsigned integers
+                      for( i_sample=0; i_sample<MVT_NBR_SAMPLES_PER_EVENT; i_sample++)
+                      {		
+                        ii = iFEU[bank][ibl][iev][i_sample][i_feu] + 1 + 2 + i_channel;
+                        current_sample = ((( datain[ ii ] ) & 0x00000FFF) );
+                        if( (i_sample % 2) == 0 )
+                        {
+                          *b08++ = ((char)( current_sample    &0xFF)); // 8 LSB-s
+                          *b08   = ((char)((current_sample>>8)&0x0F)); // 4 MSB-s
+                        }
+                        else
+                        {
+                          *b08  |= ((char)((current_sample>>4)&0xF0)); // 4 MSB-s
+                          b08++;
+                          *b08++ = ((char)( current_sample    &0xFF)); // 8 LSB-s
+                        }
+                      } /* loop over samples */
+                      if( MVT_NBR_SAMPLES_PER_EVENT % 2 )
+                      {
+                        *b08 &= 0x0F; // force high nibble to 0
+                        b08++;
+                      }
+#ifdef DEBUG6_MVT_2ND_PASS								
+                      if( mvt_fptr_err_2 != (FILE *)NULL )
+                      {
+                        fprintf(mvt_fptr_err_2,"%s: SECOND PASS 0xe118, LOOP OVER SAMPLES DONE \n", __FUNCTION__);
+                        fflush( mvt_fptr_err_2);
+                      }
+#endif
+                    } /* loop over channels */
+                  }
+                  else
+                  {
+                    for ( i_channel = 0; i_channel < nbchannelsFEU[bank][ibl][iev][0][i_feu] ; i_channel ++ ) 
+                    {
+                        //GET CURRENT DREAM ID
+                        i_dream = i_channel >> 6 ;
+                        // point to dream header for the current channel
+                        ii = iFEU[bank][ibl][iev][0][i_feu] + 1 + 2 + 1 + (32 + 5)*i_dream ;
+                        current_channel_id = ((( datain[ ii ] ) & 0x00000E00) >> 3 ) + (i_channel%64) + 1;
+
+                        //OUTPUT CHANNEL NUMBER
+                        b16 = (unsigned short *)( b08 );
+                        *b16++ = current_channel_id;
+                        b08 += 2;
+
+#ifdef DEBUG6_MVT_2ND_PASS								
+                        if( mvt_fptr_err_2 != (FILE *)NULL )
+                        {
+                          fprintf
+                          (
+                              mvt_fptr_err_2,
+                              "%s: SECOND PASS 0xe118, i_dream = %d i_channel = %d , data[%d]=0x%08x current_channel_id =%d MVT_NBR_SAMPLES_PER_EVENT = %d \n",
+                                  __FUNCTION__, i_dream, i_channel, ii, datain[ ii ], current_channel_id, MVT_NBR_SAMPLES_PER_EVENT
+                          );
+                          fflush(mvt_fptr_err_2);
+                        }
+#endif
+                        for ( i_sample = 0; i_sample < MVT_NBR_SAMPLES_PER_EVENT; i_sample++)
+                        {
+                          // Point to the first channel of the Dream
+                          // 1 for BEU extra word, 2 for FEU header + 2 for Dream header
+                          ii = iFEU[bank][ibl][iev][i_sample][i_feu] + 1 + 2 + 2 + (32+5)*i_dream;
+                          // jump to the required channel
+                          ii += ((i_channel%64) >> 1);
+                          if (i_channel%2)
+                          {
+                              current_sample = ((( datain[ ii ] ) & 0x00000FFF) );
+                          }
+                          else
+                          {
+                              current_sample = ((( datain[ ii ] ) & 0x0FFF0000)>> 16 );
+                          }
+                          if( (i_sample % 2) == 0 )
+                          {
+                              *b08++ = ((char)( current_sample    &0xFF)); // 8 LSB-s
+                              *b08   = ((char)((current_sample>>8)&0x0F)); // 4 MSB-s
+                          }
+                          else
+                          {
+                              *b08  |= ((char)((current_sample>>4)&0xF0)); // 4 MSB-s
+                               b08++;
+                              *b08++ = ((char)( current_sample    &0xFF)); // 8 LSB-s
+                          }
+                        } /* loop over samples */
+                        if( MVT_NBR_SAMPLES_PER_EVENT % 2 )
+                        {
+                          *b08 &= 0x0F; // force high nibble to 0
+                          b08++;
+                        }
+#ifdef DEBUG6_MVT_2ND_PASS								
+                        if( mvt_fptr_err_2 != (FILE *)NULL )
+                        {
+                          fprintf(mvt_fptr_err_2,"%s: SECOND PASS 0xe118, LOOP OVER SAMPLES DONE \n", __FUNCTION__);
+                          fflush( mvt_fptr_err_2);
+                        }
+#endif
+                      } // loop over channels
+                    } // else of if( MVT_ZS_MODE )
+                  } // else of if( MVT_CMP_DATA_FMT == 0 )
+							  } // if( nbchannelsFEU[bank][ibl][iev][0][i_feu] > 0 ) do it if the feu has fired channels
+						  } // for (i_feu = 0; i_feu < MVT_NBR_OF_FEU[currentBeuId]; i_feu++) loop over feus
+					  } // for(ibl=0; ibl < MVT_NBR_OF_BEU; ibl++) loop over blocks */
 						if(b08 != NULL)
 						{
 							CCCLOSE;
@@ -2286,6 +2455,7 @@ unsigned int *bptr;
 				fflush(mvt_fptr_err_2);
 			}
 		}
+		MVT_CMP_DATA_FMT          = mvtGetCmpDataFmt();
 		MVT_PRESCALE              = mvtGetPrescale(roc_id);
 		MVT_NBR_OF_BEU            = mvtGetNbrOfBeu(roc_id);
 		MVT_NBR_EVENTS_PER_BLOCK  = mvtGetNbrOfEventsPerBlock(roc_id);
@@ -2296,6 +2466,7 @@ unsigned int *bptr;
 		}
 
 		printf("INFO: MVT_ZS_MODE %d\n",                MVT_ZS_MODE              );
+		printf("INFO: MVT_CMP_DATA_FMT %d\n",           MVT_CMP_DATA_FMT         );
 		printf("INFO: MVT_PRESCALE %d\n",               MVT_PRESCALE             );
 		printf("INFO: MVT_NBR_OF_BEU %d\n",             MVT_NBR_OF_BEU           );
 		printf("INFO: MVT_NBR_EVENTS_PER_BLOCK %d\n",   MVT_NBR_EVENTS_PER_BLOCK );

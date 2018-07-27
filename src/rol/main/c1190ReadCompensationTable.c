@@ -162,7 +162,7 @@ main(int argc, char *argv[])
     int ichan;
     for(ichan = 0; ichan < 32; ichan++)
     {
-      fprintf(filep,"# Channel %d\n", ichan+1);
+      fprintf(filep,"# Channel %d\n", ichan);
 
       for(ipage = 0; ipage < 4; ipage++)
 	  {

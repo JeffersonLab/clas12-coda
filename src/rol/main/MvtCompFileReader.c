@@ -51,6 +51,7 @@ extern int   optind;
 #define DEF_ENTRY_TAG_TI          0xE10A
 #define DEF_ENTRY_TAG_MVT_RAW     0xE118
 #define DEF_ENTRY_TAG_MVT_CMP     0xE11B
+#define DEF_ENTRY_TAG_MVT_CMP_PKD 0xE128
 #define DEF_ENTRY_TAG_MVT_CFG     0xE10E
 
 #define DEF_GetEvioEntryDat( ent_type ) (((ent_type) >>  8) & 0xFF  )
@@ -2352,6 +2353,264 @@ int MvtCmpDataRead( unsigned int *buf, int buf_len, PhyEvtStat *phy_evt_stat )
 	return(rd_buf_len);
 }
 
+int MvtCmpDataRead_Pkd( unsigned int *buf, int buf_len, PhyEvtStat *phy_evt_stat )
+{
+	unsigned int *ptr;
+	int index;
+	// Evio header
+	int size;
+	unsigned int type;
+
+	// Format descriptor
+	unsigned int desc;
+	int desc_size;
+	int desc_type;
+	int desc_bytes;
+	unsigned char *desc_ptr;
+	char desc_string[16];
+
+	// Composite data
+	unsigned char  *u08ptr;
+	unsigned short *u16ptr;
+	unsigned int   *u32ptr;
+	int cmp_size;
+	unsigned int cmp_type;
+	int crate;
+	int evnt_id;
+	int tstp_lo;
+	int tstp_hi;
+
+	int beu_id;
+	int lnk_id;
+	int feu_fine_tstp;
+	int feu_tstp;
+	unsigned short beu_tstp_fn;
+	unsigned short beu_tstp_lo;
+	unsigned short beu_tstp_mi;
+	unsigned short beu_tstp_hi;
+
+	int   total_nb_of_chan;
+	int   nb_of_chan;
+	short feu_chan;
+	int   nb_of_samples;
+	int   sample;
+	unsigned short sample_value;
+	unsigned char  sample_value_lsb;
+	unsigned char  sample_value_msb;
+
+	int dream;
+	short dream_chan;
+
+	int zero_sup;
+
+	int ret;
+
+	int cur_beu = -1;
+	int cur_feu = -1;
+	int cur_drm = -1;
+
+	// Check for NULL parameters
+	if( buf == (unsigned int *)NULL )
+	{
+		fprintf( stderr, "%s: buf = NULL\n", __FUNCTION__ );
+		return -1;
+	}
+
+//fprintf( stdout, "MvtCmpBuf =0x%08x size=%d\n",   (unsigned int)buf, buf_len );
+
+	total_nb_of_chan = 0;
+
+	ptr = buf;
+	size = (int)(*ptr++);
+	type = *ptr++;
+//fprintf( stdout, " size          =0x%08x %d\n", size, size );
+//fprintf( stdout, " type          =0x%08x\n",    type );
+	// Get Format descriprot string
+	desc = *ptr++;
+//fprintf( stdout, " desc          =0x%08x\n",    desc );
+	desc_size  = desc & 0xFF;
+	desc_type  = (desc>>16) & 0xF;
+	desc_bytes = (desc>>20) & 0xF;
+	if( desc_size != 4 )
+	{
+		fprintf( stderr, "%s: wrong format descriptor 0x%08x desc_size=%d != 4\n", __FUNCTION__, desc, desc_size );
+		return -2;
+	}
+	if( desc_type != 0x6 )
+	{
+		fprintf( stderr, "%s: wrong format descriptor 0x%08x desc_type=%d != 0x6 int8\n", __FUNCTION__, desc, desc_type );
+		return -3;
+	}
+	if( desc_bytes != 14 )
+	{
+		fprintf( stderr, "%s: wrong format descriptor 0x%08x desc_bytes=%d != 14\n", __FUNCTION__, desc, desc_bytes );
+		return -3;
+	}
+	desc_ptr = (unsigned char *)ptr;
+	desc_bytes++;
+	for( index=0; index<desc_bytes; index++ )
+		desc_string[index] = (char)*desc_ptr++;
+//	fprintf( stdout, "desc_string=%s\n", desc_string );
+
+	ptr += desc_size;
+
+	cmp_size = (int)(*ptr++);
+	cmp_type = *ptr++;
+//fprintf( stdout, " cmp_size          =0x%08x %d\n", cmp_size, cmp_size );
+//getchar();
+//fprintf( stdout, " cmp_size          =0x%08x\n",    cmp_type );
+	u08ptr = (unsigned char*)ptr;
+	cmp_size *= sizeof(unsigned int);
+	while( cmp_size > (sizeof(char)+3*sizeof(int)) )
+	{
+		crate = *u08ptr;
+		u08ptr++;
+		cmp_size--;
+
+		u32ptr = (unsigned int *)u08ptr;
+		evnt_id = *u32ptr++;
+//if( ((evnt_id & 0x7FFF) == 0x7) || ((evnt_id & 0x7FFF) == 0x8) )
+//fprintf( stdout, " evnt_id=0x%08x\n", evnt_id );
+
+		u08ptr += sizeof(unsigned int);
+		cmp_size -= sizeof(unsigned int);
+
+		tstp_lo = *u32ptr++;
+		u08ptr += sizeof(unsigned int);
+		cmp_size -= sizeof(unsigned int);
+//fprintf( stdout, " tstp_lo=0x%08x\n", tstp_lo );
+		tstp_hi = *u32ptr++;
+		u08ptr += sizeof(unsigned int);
+		cmp_size -= sizeof(unsigned int);
+//fprintf( stdout, " tstp_hi=0x%08x\n", tstp_hi );
+
+		beu_id = CMP_GetBeuId( crate );
+		lnk_id = CMP_GetLnkId( crate );
+		zero_sup      =   CMP_GetFeuZs(        tstp_lo );
+//fprintf( stdout, " zero_sup=%d\n", zero_sup );
+		feu_tstp      =   CMP_GetFeuTstp(      tstp_lo );
+		feu_fine_tstp =   CMP_GetFeuFineTstp(  tstp_lo );
+		beu_tstp_lo   = ((CMP_GetBeuTstp30Msb( tstp_hi ) & 0x1) << 15) | (CMP_GetBeuTstp16Lsb( tstp_lo ) >> 1);
+//fprintf( stdout, " beu_tstp_lo=0x%08x\n", beu_tstp_lo );
+		beu_tstp_mi   =  (CMP_GetBeuTstp30Msb( tstp_hi ) >>  1 ) & 0xFFFF;
+//fprintf( stdout, " beu_tstp_mi=0x%08x\n", beu_tstp_mi );
+		beu_tstp_hi   =  (CMP_GetBeuTstp30Msb( tstp_hi ) >> 17 ) & 0x1FFF;
+//fprintf( stdout, " beu_tstp_hi=0x%08x\n", beu_tstp_hi );
+		if( ( CMP_GetBeuTstp16Lsb(  tstp_lo ) & 0x1 ) == 0 )
+			beu_tstp_fn   =   0x0700;
+		else
+			beu_tstp_fn   =   0x0F00;
+
+		if( beu_id != cur_beu )
+		{
+			phy_evt_stat->nb_of_beu++;
+			cur_beu = beu_id;
+			phy_evt_stat->beu_evid_ac[beu_id] =   evnt_id & 0x0FFF;
+			phy_evt_stat->beu_evid_lo[beu_id] =   evnt_id & 0x7FFF;
+//if( phy_evt_stat_cmp.beu_evid_lo[beu_id] == 0x27c1 )
+//fprintf( stdout, " evnt_id=0x%08x\n", evnt_id );
+
+			phy_evt_stat->beu_evid_mi[beu_id] = ( evnt_id >> 15 ) & 0x7FFF;
+			phy_evt_stat->beu_evid_hi[beu_id] = ( evnt_id >> 30 ) & 0x3;
+			phy_evt_stat->beu_tstp_hi[beu_id] = beu_tstp_hi;
+			phy_evt_stat->beu_tstp_mi[beu_id] = beu_tstp_mi;
+			phy_evt_stat->beu_tstp_lo[beu_id] = beu_tstp_lo;
+			phy_evt_stat->beu_tstp_fn[beu_id] = beu_tstp_fn;
+		}
+		if( crate != cur_feu )
+		{
+			phy_evt_stat->nb_of_feu++;
+//if( ((evnt_id & 0x7FFF) == 0x7) || ((evnt_id & 0x7FFF) == 0x8) )
+//fprintf( stdout, " phy_evt_stat->nb_of_feu=%d\n", phy_evt_stat->nb_of_feu );
+			cur_feu = crate;
+			cur_drm = -1;
+			phy_evt_stat->feu_evid[crate]   = evnt_id & 0xFFF;
+			phy_evt_stat->feu_ftstp[crate]  = feu_fine_tstp;
+			phy_evt_stat->feu_tstp[crate]   = feu_tstp;
+			phy_evt_stat->feu_beu_id[crate] = beu_id;
+		}
+//fprintf( stdout, " \n\ncrate %d; evt_id=0x%08x %d; tstp_lo=0x%08x tstp_hi=0x%08x\n", crate, evnt_id, evnt_id, tstp_lo, tstp_hi );
+//fprintf( stdout, " Beu %d Link %d\n", beu_id, lnk_id );
+//fprintf( stdout, " Feu tstp 0x%03x fine=%d\n", feu_tstp, feu_fine_tstp );
+//fprintf( stdout, " Beu tstp hi=0x%04x lo=0x%08x\n", beu_tstp_hi, beu_tstp_lo );
+
+		nb_of_samples = *u08ptr++;
+		cmp_size--;
+
+		u16ptr = (unsigned short *)u08ptr;
+		nb_of_chan = *u16ptr;
+		u08ptr += sizeof(unsigned short);
+		cmp_size -= sizeof(unsigned short);
+		total_nb_of_chan += nb_of_chan;
+
+//fprintf( stdout, " nb_of_chan = %d\n", nb_of_chan );
+		for( index=0; index<nb_of_chan; index++ )
+		{
+		  u16ptr = (unsigned short *)u08ptr;
+			feu_chan = *u16ptr;
+//fprintf( stdout, " chan(%d)", chan );
+			u08ptr += sizeof(unsigned short);
+			cmp_size -= sizeof(unsigned short);
+			dream = feu_chan / 64;
+			dream_chan = feu_chan % 64;
+			feu_chan_val[index] = feu_chan;
+
+			for( sample=0; sample<nb_of_samples; sample++ )
+			{
+ 			  sample_value_lsb = *u08ptr++;
+        cmp_size--;
+        if( (sample % 2) == 0 )
+        {
+          sample_value_msb = *u08ptr++;
+          cmp_size--;
+          sample_value = ((sample_value_msb & 0x0F) << 8) | sample_value_lsb;
+        }
+        else
+        {
+          sample_value = ((sample_value_msb & 0xF0) << 4) | sample_value_lsb;
+        }
+//fprintf( stdout, " 0x%03x", sample_value );
+				feu_smp_val[index][sample] = sample_value;
+			}
+//fprintf( stdout, "\n" );
+		} // for( index=0; index<nb_of_chan; index++ )
+//fprintf( stdout, " cmp_size =%d after beu=%d\n", cmp_size, beu_id );
+		feu_chan_num = nb_of_chan;
+		phy_evt_stat->feu_smp_num[crate] = nb_of_samples;
+		phy_evt_stat->beu_smp_num[phy_evt_stat->feu_beu_id[crate]] = nb_of_samples;
+//if( nb_of_chan*(1+2+nb_of_samples)+6 == 6124 )
+//fprintf( stdout, " nb_of_chan=%d nb_of_samples=%d evnt_id=%d feu_tstp=%d feu_fine_tstp=%d\n",
+//		nb_of_chan, nb_of_samples, evnt_id, feu_tstp, feu_fine_tstp );
+
+		Histo_Add( &(timing_histos_cmp[phy_evt_stat->roc_type].feu_smp_size_histo[crate]), 0+2+4+2+nb_of_chan*(1+2+nb_of_samples*1) );
+		if( (first_phy_blk <= evt_blk_cnt) && (evt_blk_cnt <= last_phy_blk) )
+		{
+			if( do_feu_bin_files && ( cur_feu >= 0 ) )
+				if( (ret = PhyEvtStat_SaveFdf(phy_evt_stat, cur_feu, zero_sup, rootfilename(bin_data_file_name))) < 0 )
+				{
+					fprintf( stderr, "%s: PhyEvtStat_SaveFdf failed for evt=%d feu=%d\n", __FUNCTION__, phy_evt_stat->id, cur_feu );
+					return -4;
+				}
+			if( do_disp_file && ( cur_feu >= 0 ) )
+				if( (ret = MvtPlot_Update( &mvt_event_plot, disp_type, phy_evt_stat, cur_feu, zero_sup )) < 0 )
+				{
+					fprintf( stderr, "%s: MvtPlot_Update failed for evt=%d feu=%d\n", __FUNCTION__, phy_evt_stat->id, cur_feu );
+					return -4;
+				}
+		}
+	} // while( cmp_size )
+	Histo_Add( &(timing_histos_cmp[phy_evt_stat->roc_type].mvt_evt_nb_of_chan_histo), total_nb_of_chan );
+	Histo_Add( &(timing_histos_cmp[phy_evt_stat->roc_type].mvt_evt_nb_of_feu_histo), phy_evt_stat->nb_of_feu );
+/*
+	while( cmp_size )
+	{
+//fprintf( stdout, " cmp_size=%d val=0x%1x\n", cmp_size, *u08ptr);
+//u08ptr++;
+//cmp_size--;
+	}
+*/
+	return(rd_buf_len);
+}
 
 // Read num words from file
 int ReadNoumWords( FILE *fptr, int num, unsigned int *rd_buffer )
@@ -3181,7 +3440,12 @@ int main( int argc, char* *argv )
 				}
 				else if( DEF_GetEvioEntryDat(cur_ent_type) == DEF_ENTRY_DATA_CMP )
 				{
-					if( DEF_GetEvioEntryTag(cur_ent_type) == DEF_ENTRY_TAG_MVT_CMP )
+					if
+          (
+            (DEF_GetEvioEntryTag(cur_ent_type) == DEF_ENTRY_TAG_MVT_CMP)
+					  ||
+            (DEF_GetEvioEntryTag(cur_ent_type) == DEF_ENTRY_TAG_MVT_CMP_PKD)
+          )
 					{
 						// Looks to be composite MVT data
 /*
@@ -3190,11 +3454,22 @@ if( (ti_evt_cnt == 15) || (ti_evt_cnt == 16) )
 	fprintf(stderr, "%s: MvtCmpDataRead buffer of size %d to be processed\n", __FUNCTION__, *rd_buf_ptr + 1 );
 }
 */
-						if( (ret = MvtCmpDataRead( rd_buf_ptr, (*rd_buf_ptr + 1), &(phy_evt_stat_cmp[roc_type]) ) ) <= 0 )
-						{
-							fprintf(stderr, "%s: MvtCmpDataRead failed with %d for event count %d\n", __FUNCTION__, ret, evt_blk_cnt);
-							break;
-						}
+            if( DEF_GetEvioEntryTag(cur_ent_type) == DEF_ENTRY_TAG_MVT_CMP )
+            {
+						  if( (ret = MvtCmpDataRead( rd_buf_ptr, (*rd_buf_ptr + 1), &(phy_evt_stat_cmp[roc_type]) ) ) <= 0 )
+						  {
+							  fprintf(stderr, "%s: MvtCmpDataRead failed with %d for event count %d\n", __FUNCTION__, ret, evt_blk_cnt);
+							  break;
+						  }
+            }
+            else
+            {
+ 						  if( (ret = MvtCmpDataRead_Pkd( rd_buf_ptr, (*rd_buf_ptr + 1), &(phy_evt_stat_cmp[roc_type]) ) ) <= 0 )
+						  {
+							  fprintf(stderr, "%s: MvtCmpDataRead_Pkd failed with %d for event count %d\n", __FUNCTION__, ret, evt_blk_cnt);
+							  break;
+						  }
+            }
 						phy_evt_stat_cmp[roc_type].data_type = PHY_EVT_DATA_TYPE_CMP;
 						Histo_Add( &(timing_histos_cmp[roc_type].phy_evt_blk_size_histo), phy_evt_stat_cmp[roc_type].size);
 

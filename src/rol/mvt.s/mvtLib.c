@@ -610,13 +610,14 @@ int mvtGetNbrOfFeu(int id, int BeuId)
 
 int mvtGetRepRawData()
 {
-	unsigned int activefeu = 0;
-	int bec, ii;
-	int nf=0;
-	
 	if( (sys_params_ptr->RunMode == Standalone) || (sys_params_ptr->RunMode == Expert) )
 		return(sys_params_ptr->RepRawData);
 	return(0);
+}
+
+int mvtGetCmpDataFmt()
+{
+    return(sys_params_ptr->CmpDataFmt);
 }
 
 

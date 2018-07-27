@@ -1577,7 +1577,7 @@ dsc2GetTestInput(UINT32 id)
 
   DSCLOCK;
 
-  ret = (vmeRead32(&dscp[id]->testCtrl)) & 0x3;
+  ret = (vmeRead32(&dscp[id]->testCtrl)) & DSC_TESTCTRL_FP_MASK;
 
   DSCUNLOCK;
 
@@ -3589,6 +3589,23 @@ dsc2PulserSetup(int id, float freq, float duty, unsigned int npulses)
 	 (float)50000000.0/(float)per, (float)low/(float)per); 
   DSCUNLOCK;
   
+  return(rval);
+}
+
+float
+dsc2GetPulserFreq(int id)
+{
+  float rval = 0.0;
+  unsigned int val;
+  CHECKID(id);
+
+  DSCLOCK;
+  val = vmeRead32(&dscp[id]->PulserPeriod);
+  DSCUNLOCK;
+
+  if(val)
+    rval = 50000000.0/(float)val;
+
   return(rval);
 }
 

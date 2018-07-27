@@ -40,6 +40,18 @@ void usrtrig_done();
 /* vtp readout */
 #include "VTP_source.h"
 
+#define READOUT_TI
+#define READOUT_VTP
+#define USE_DMA
+
+#ifdef USE_DMA
+  #define MAXBUFSIZE 100000
+  unsigned long gDmaBufPhys_TI;
+  unsigned long gDmaBufPhys_VTP;
+#else
+  #define MAXBUFSIZE 4000
+  unsigned int gFixedBuf[MAXBUFSIZE];
+#endif
 
 /************************/
 /************************/
@@ -128,6 +140,9 @@ __download()
   DAQ_READ_CONF_FILE;
 
   /* user code */
+#ifdef USE_DMA
+  vtpDmaMemOpen(2, MAXBUFSIZE*4);
+#endif
 
   printf("INFO: User Download 1 Executed\n");
 
@@ -160,6 +175,11 @@ __prestart()
   printf("calling VTP_READ_CONF_FILE ..\n");fflush(stdout);
 
   VTP_READ_CONF_FILE;
+
+#ifdef USE_DMA
+  vtpDmaInit(VTP_DMA_TI);
+  vtpDmaInit(VTP_DMA_VTP);
+#endif
   
   vtpSerdesCheckLinks();
 
@@ -205,6 +225,8 @@ __go()
   printf("Setting VTP block level to: %d\n", block_level);
   vtpSetBlockLevel(block_level);
 
+  vtpV7SetResetSoft(1);
+  vtpV7SetResetSoft(0);
   vtpEbResetFifo();
 
   printf("INFO: User Go 1 Enabling\n");
@@ -217,57 +239,77 @@ __go()
 
 
 
-#define MAXBUFSIZE 4000
 
 void
 usrtrig(unsigned long EVTYPE, unsigned long EVSOURCE)
 {
   int len, ii, nbytes, nwords;
   char *chptr, *chptr0;
-  unsigned int buf[MAXBUFSIZE];
+  volatile unsigned int *pBuf;
   TIMERL_VAR;
 
-  /*
-  usleep(1000);
-  */
   if(syncFlag) printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
 
   rol->dabufp = (long *) 0;
 
 TIMERL_START;
 
-
-
   CEOPEN(EVTYPE, BT_BANKS);
   
-#if 1
-  len = vtpEbTiReadEvent(buf, MAXBUFSIZE);
+#ifdef READOUT_TI
+  #ifdef USE_DMA
+    vtpDmaStart(VTP_DMA_TI, vtpDmaMemGetPhysAddress(0), MAXBUFSIZE*4);
+  #endif
+#endif
+
+#ifdef READOUT_VTP
+  #ifdef USE_DMA
+    vtpDmaStart(VTP_DMA_VTP, vtpDmaMemGetPhysAddress(1), MAXBUFSIZE*4);
+  #endif
+#endif
+
+#ifdef READOUT_TI
+  #ifdef USE_DMA
+    len = vtpDmaWaitDone(VTP_DMA_TI)>>2;
+    if(len) len--;
+    pBuf = (volatile unsigned int *)vtpDmaMemGetLocalAddress(0);
+  #else
+    len = vtpEbTiReadEvent(gpDmaBuf, MAXBUFSIZE);
+    pBuf = (volatile unsigned int *)gFixedBuf;
+  #endif
   if(len>1000)
   {
     printf("LEN1=%d\n",len);
-    for(ii=0; ii<len; ii++) printf("vtpti[%2d] = 0x%08x\n",ii,buf[ii]);
+    for(ii=0; ii<len; ii++) printf("vtpti[%2d] = 0x%08x\n",ii,pBuf[ii]);
   }
   BANKOPEN(0xe10A,1,rol->pid);
   for(ii=0; ii<len; ii++)
   {
-    /*printf("vtpti[%2d] = 0x%08x\n",ii,buf[ii]);*/
-    *rol->dabufp++ = buf[ii];
+    printf("vtpti[%2d] = 0x%08x\n",ii,pBuf[ii]);
+    *rol->dabufp++ = pBuf[ii];
   }
   BANKCLOSE;
 #endif
 
-#if 1
-  len = vtpEbReadEvent(buf, MAXBUFSIZE);
+#ifdef READOUT_VTP
+  #ifdef USE_DMA
+    len = vtpDmaWaitDone(VTP_DMA_VTP)>>2;
+    if(len) len--;
+    pBuf = (volatile unsigned int *)vtpDmaMemGetLocalAddress(1);
+  #else
+    len = vtpEbReadEvent(pBuf, MAXBUFSIZE);
+    pBuf = (volatile unsigned int *)gFixedBuf;
+  #endif
   if(len>1000)
   {
     printf("LEN2=%d\n",len);
-    for(ii=0; ii<len; ii++) printf("vtp[%2d] = 0x%08x\n",ii,buf[ii]);
+    for(ii=0; ii<len; ii++) printf("vtp[%2d] = 0x%08x\n",ii,pBuf[ii]);
   }
   BANKOPEN(0xe122,1,rol->pid);
   for(ii=0; ii<len; ii++)
   {
-    /*printf("vtp[%2d] = 0x%08x\n",ii,buf[ii]);*/
-    *rol->dabufp++ = buf[ii];
+    printf("vtp[%2d] = 0x%08x\n",ii,pBuf[ii]);
+    *rol->dabufp++ = pBuf[ii];
   }
   BANKCLOSE;
 #endif
@@ -353,7 +395,25 @@ __status()
   return;
 }  
 
+/* This routine is automatically executed just before the shared libary
+ *    is unloaded.
+ *
+ *       Clean up memory that was allocated 
+ *       */
+__attribute__((destructor)) void end (void)
+{
+  static int ended=0;
 
+  if(ended==0)
+    {
+      printf("ROC Cleanup\n");
+
+      vtpDmaMemClose();
+
+      ended=1;
+    }
+
+}
 
 #else
 

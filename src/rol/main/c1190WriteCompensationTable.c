@@ -33,6 +33,33 @@ extern int Nc1190;
 static void sig_handler(int signo);
 static void Usage();
 
+/*
+   * Slot  3:   0x11180000 <-1290
+   * Slot  4:   0x11200000
+   * Slot  5:   0x11280000
+   * Slot  6:   0x11300000 <-1290
+   * Slot  7:   0x11380000
+   * Slot  8:   0x11400000
+   * Slot  9:   0x11480000 <-1290
+   * Slot 10:   0x11500000
+   * Slot 11:   0x11580000
+   * Slot 12:   0x11600000
+   * Slot 13:   0x11680000 <-1290
+   * Slot 14:   0x11700000
+   * Slot 15:   0x11780000
+   * Slot 16:   0x11800000
+   * Slot 17:   0x11880000
+   * Slot 18:   0x11900000
+   * Slot 19:   0x11980000
+   * Slot 20:   0x11A00000
+
+c1190WriteCompensationTable 0x11180000 tdcftof2_slot3.txt 1
+c1190WriteCompensationTable 0x11300000 tdcftof2_slot6.txt 1
+c1190WriteCompensationTable 0x11480000 tdcftof2_slot9.txt 1
+c1190WriteCompensationTable 0x11680000 tdcftof2_slot13.txt 1
+
+   */
+
 int
 main(int argc, char *argv[])
 {

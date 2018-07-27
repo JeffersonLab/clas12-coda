@@ -74,7 +74,7 @@ char *SysRunMode2Str( SysRunMode mode )
 // Conversion function from ClkMode to string
 char *SysClkMode2Str( SysClkMode mode )
 {
-	if( mode == SysClkUdef )
+	     if( mode == SysClkUdef )
 		return ("SysClkUdef");
 	else if( mode == Smp48_Rd48 )
 		return ("Smp48_Rd48");
@@ -90,6 +90,19 @@ char *SysClkMode2Str( SysClkMode mode )
 		return ("Smp24_Rd48");
 	else
 		return ("Unknown   ");
+}
+
+ // Conversion function from composite data format to string
+char *SysCmpDataFmt2Str( SysCmpDataFmt fmt )
+{
+	     if( fmt == Sys_CmpDatFmt_Udef )
+		return ("Udef    ");
+	else if( fmt == Sys_CmpDatFmt_UnPacked )
+		return ("Unpacked");
+	else if( fmt == Sys_CmpDatFmt_Packed )
+		return ("Packed  ");
+	else
+		return ("Unknown ");
 }
 
 // Initialize the SysParams structure with default values
@@ -115,6 +128,7 @@ int SysParams_Init( SysParams *params )
 	params->BlockPrescale     = 1;
 	params->EventLimit        = 0;
 	params->RepRawData        = 0;
+	params->CmpDataFmt        = Sys_CmpDatFmt_UnPacked;
 	params->SelfTrigLat       = 0;
 	params->SelfTrigWin       = 0;
 
@@ -183,17 +197,18 @@ int SysParams_Sprintf( SysParams *params, char *buf  )
 	sprintf( buf, "############################\n" );
 	sprintf( buf, "%s# Global System parameters #\n", buf );
 	sprintf( buf, "%s############################\n", buf );
-	sprintf( buf, "%sSys Name             %s\n", buf, params->Name );
-	sprintf( buf, "%sSys RunMode          %s\n", buf, SysRunMode2Str( params->RunMode ) );
-	sprintf( buf, "%sSys NbOfSmpPerEvt    %d\n", buf, params->NbOfSmpPerEvt );
-	sprintf( buf, "%sSys NbOfEvtPerBlk    %d\n", buf, params->NbOfEvtPerBlk );
-	sprintf( buf, "%sSys ClkMode          %s\n", buf, SysClkMode2Str( params->ClkMode ) );
-	sprintf( buf, "%sSys SparseSmp        %d\n", buf, params->SparseSmp );
-	sprintf( buf, "%sSys BlockPrescale    %d\n", buf, params->BlockPrescale );
-	sprintf( buf, "%sSys EventLimit       %d\n", buf, params->EventLimit );
-	sprintf( buf, "%sSys BRepRawData      %d\n", buf, params->RepRawData );
-	sprintf( buf, "%sSys SelfTrigLat      %d # ns\n", buf, params->SelfTrigLat );
-	sprintf( buf, "%sSys SelfTrigWin      %d # ns\n", buf, params->SelfTrigWin );
+	sprintf( buf, "%sSys Name             %s\n",      buf,                    params->Name          );
+	sprintf( buf, "%sSys RunMode          %s\n",      buf, SysRunMode2Str(    params->RunMode )     );
+	sprintf( buf, "%sSys NbOfSmpPerEvt    %d\n",      buf,                    params->NbOfSmpPerEvt );
+	sprintf( buf, "%sSys NbOfEvtPerBlk    %d\n",      buf,                    params->NbOfEvtPerBlk );
+	sprintf( buf, "%sSys ClkMode          %s\n",      buf, SysClkMode2Str(    params->ClkMode )     );
+	sprintf( buf, "%sSys SparseSmp        %d\n",      buf,                    params->SparseSmp     );
+	sprintf( buf, "%sSys BlockPrescale    %d\n",      buf,                    params->BlockPrescale );
+	sprintf( buf, "%sSys EventLimit       %d\n",      buf,                    params->EventLimit    );
+	sprintf( buf, "%sSys RepRawData       %d\n",      buf,                    params->RepRawData    );
+	sprintf( buf, "%sSys CmpDataFmt       %s\n",      buf, SysCmpDataFmt2Str( params->CmpDataFmt )  );
+	sprintf( buf, "%sSys SelfTrigLat      %d # ns\n", buf,                    params->SelfTrigLat   );
+	sprintf( buf, "%sSys SelfTrigWin      %d # ns\n", buf,                    params->SelfTrigWin   );
 
 //fprintf( stderr, "%s: Global parameters OK\n", __FUNCTION__ );
 
@@ -485,7 +500,7 @@ int SysParams_Prop( SysParams *params )
 			sd_params->TrigMult        = bec_params->SelfTrigMult;
 			sd_params->TrigWin         = bec_params->SelfTrigWin;
 
-			// and update SD entries in the bec
+			// and updaet SD entries in the bec
 			bec_params->Sd_Id   = sd_params->Id;
 			bec_params->Sd_Slot = DEF_SD_SLOT;
 
@@ -865,6 +880,19 @@ int SysParams_Parse( SysParams *params, int line_num )
 					return D_RetCode_Err_Wrong_Param;
 				}
 			}
+			else if( strcmp( argv[1], "CmpDataFmt" ) == 0 )
+			{
+				if( strcmp( argv[2], "Unpacked" ) == 0 )
+					params->CmpDataFmt = Sys_CmpDatFmt_UnPacked;
+				else if( strcmp( argv[2], "Packed" ) == 0 )
+					params->CmpDataFmt = Sys_CmpDatFmt_Packed;
+				else
+				{
+					params->CmpDataFmt = Sys_CmpDatFmt_Udef;
+					fprintf( stderr, "%s: line %d: attempt to set unknown Sys CmpDataFmt %s\n", __FUNCTION__, line_num, argv[2] ); 
+					return D_RetCode_Err_Wrong_Param;
+				}
+			}
 			else if( strcmp( argv[1], "SelfTrigLat" ) == 0 )
 			{
 				params->SelfTrigLat = atoi( argv[2] );
@@ -893,7 +921,6 @@ int SysParams_Parse( SysParams *params, int line_num )
 		}			
 		else if( ( strcmp( argv[0], "Bec" ) == 0 ) || ( strcmp( argv[0], "MVT_Bec" ) == 0 ) || ( strcmp( argv[0], "FTT_Bec" ) == 0 ) )
 		{
-			// Get Bec ID
 			if( strcmp( argv[1], "*" ) == 0 )
 				bec = 0;
 			else

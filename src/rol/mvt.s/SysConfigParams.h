@@ -54,6 +54,15 @@ typedef enum _SysClkMode
 } SysClkMode;
 char *SysClkMode2Str( SysClkMode mode );
 
+// Define MVT clock modes
+typedef enum _SysCmpDataFmt
+{
+	Sys_CmpDatFmt_Udef     = -1,
+	Sys_CmpDatFmt_UnPacked =  0,
+	Sys_CmpDatFmt_Packed   =  1
+} SysCmpDataFmt;
+char *SysCmpDataFmt2Str( SysCmpDataFmt fmt );
+
 // System parameters structure
 typedef struct _SysParams
 {
@@ -67,6 +76,7 @@ typedef struct _SysParams
 	int  BlockPrescale;
 	int  EventLimit;
 	int  RepRawData;
+	int  CmpDataFmt;
 	int  SelfTrigLat;
 	int  SelfTrigWin;
 

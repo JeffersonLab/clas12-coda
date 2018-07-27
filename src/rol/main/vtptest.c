@@ -78,9 +78,10 @@ int load_firmware()
 int
 main(int argc, char *argv[])
 {
-  int stat, i, len, evtNum=0;
+  int stat, i, len, evtNum=0, result;
   pthread_t gScalerThread;
-  unsigned int buf[BUF_LEN];
+  volatile unsigned int *buf;
+//  unsigned int buf[BUF_LEN];
 
   if(signal(SIGINT, sig_handler) == SIG_ERR)
   {
@@ -104,17 +105,20 @@ main(int argc, char *argv[])
 */
 
   if(vtpInit(VTP_INIT_CLK_INT))
+//  if(vtpInit(VTP_INIT_SKIP))
   {
     printf("VTP Init failed - exiting...\n");
     goto CLOSE;
   }
+  vtpSetBlockLevel(1);
+  vtpDmaMemOpen(1, 0x1000);
+  vtpDmaInit(VTP_DMA_VTP);
 
   vtpSetTrig1Source(VTP_SD_TRIG1SEL_0);
 
   vtpSetSyncSource(VTP_SD_SYNCSEL_1);
   vtpSetSyncSource(VTP_SD_SYNCSEL_0);
 
-  vtpSetBlockLevel(1);
 
   for(i=0;i<32;i++)
     vtpSetGtTriggerBit(i,0,0,0,0,0,0,0.0E6);
@@ -122,23 +126,33 @@ main(int argc, char *argv[])
 //  vtpSetWindow(4000, 400);
   vtpSetWindow(4000,4);
 
-  vtpEbResetFifo(1);
-  vtpEbResetFifo(0);
+//  vtpEbResetFifo(1);
+//  vtpEbResetFifo(0);
+//
+
+  vtpEbReset();
+  buf = (volatile unsigned int *)vtpDmaMemGetLocalAddress(0);
 
   usleep(50);
-
-//  for(i=0;i<40*8*10;i++)
-  for(i=0;i<515;i++)
+  for(i=0;i<5;i++)
   {
+//    vtpEbBuildTestEvent(8);      // BUILD_TEST_LEN 32bit word test event size
     vtpSetTrig1Source(VTP_SD_TRIG1SEL_1);
     vtpSetTrig1Source(VTP_SD_TRIG1SEL_0);
     usleep(50);
   }
 
-  
   while(1)
   {
-    len = vtpEbReadEvent_test(buf, BUF_LEN);
+    printf("************ VTP event ************\n");
+    usleep(50);
+//    len = vtpEbReadEvent(buf, BUF_LEN);
+    vtpDmaStart(VTP_DMA_VTP, vtpDmaMemGetPhysAddress(0), 1000);
+    result = vtpDmaWaitDone(VTP_DMA_VTP);
+//
+    printf("result = %d\n", result);
+
+    len = result>>2;
     printf("EventNumber=%d, Len=%d\n", evtNum++, len);
     for(i=0;i<len;i++)
     {
@@ -147,7 +161,9 @@ main(int argc, char *argv[])
       printf(" %08X", buf[i]);
     }
     printf("\n");
+sleep(1);
 
+/*
     if(!len)
     {
       vtpSetTrig1Source(VTP_SD_TRIG1SEL_1);
@@ -155,28 +171,12 @@ main(int argc, char *argv[])
       usleep(1000000);
       printf(".");
     }
-  }
-
-/*
-  vtpEnableTriggerFiberMask(0xF);
-
-  vtpSetFPASel(0x00000000);
-  vtpSetFPBSel(0x00000000);
-  while(1)
-  {
-    printf("L");
-    vtpSetFPAO(0x00000000);
-    vtpSetFPBO(0x00000000);
-    usleep(1000);
-    printf("H");
-    vtpSetFPAO(0xFFFFFFFF);
-    vtpSetFPBO(0xFFFFFFFF);
-    usleep(1000);
-  }
 */
+  }
 
 CLOSE:
 
+  vtpDmaMemClose();
   vtpClose(VTP_FPGA_OPEN|VTP_I2C_OPEN|VTP_SPI_OPEN);
   printf("vtpClose'd\n");
   
@@ -186,8 +186,9 @@ CLOSE:
 void
 closeup()
 {
+  vtpDmaMemClose();
   vtpClose(VTP_FPGA_OPEN|VTP_I2C_OPEN|VTP_SPI_OPEN);
-  printf("DiagGUI server closed...\n");
+  printf("vtptest closed...\n");
 }
 
 void
