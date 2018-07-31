@@ -519,6 +519,7 @@ int disentanglement(int roc_id)
 	int current_feu_tmstmp;
 	unsigned int *Nchan;
 	int current_sample;
+  unsigned char c_number_of_bytes;
 
 	CPINIT;
 	BANKINIT;
@@ -1456,9 +1457,7 @@ CPOPEN0( roc_id, 0xe, bank );
                 }
                 else // of if( MVT_CMP_DATA_FMT == 0 ) -> packed data format
                 {
-                  MVT_CCOPEN_PACKSMP(0xe128,"c,i,l,c,s(s,c)",banknum);
-                  // set number of samples
-                  *b08 ++ = ((char)MVT_NBR_SAMPLES_PER_EVENT);
+                  MVT_CCOPEN_PACKSMP(0xe128,"c,i,l,n(s,mc)",banknum);
                   // set number of channels
                   b16 = (unsigned short *)( b08 );
                   *b16++ = ((short)nbchannelsFEU[bank][ibl][iev][0][i_feu]);
@@ -1481,6 +1480,23 @@ CPOPEN0( roc_id, 0xe, bank );
                       b16 = (unsigned short *)( b08 );
                       *b16++ = current_channel_id;
                       b08 += 2;
+                      // set number of bytes in packed byte stream
+                      c_number_of_bytes = (((MVT_NBR_SAMPLES_PER_EVENT - 1)/2)*3+1)+1;
+                      if( (MVT_NBR_SAMPLES_PER_EVENT % 2) == 0 )
+                          c_number_of_bytes++;
+                      *b08 ++ = c_number_of_bytes;
+#ifdef DEBUG6_MVT_2ND_PASS								
+                      if( mvt_fptr_err_2 != (FILE *)NULL )
+                      {
+                          fprintf
+                          (
+                              mvt_fptr_err_2,
+                              "%s: SECOND PASS 0xe128, MVT_ZS_MODE=1 current_channel_id =%d MVT_NBR_SAMPLES_PER_EVENT = %d c_number_of_bytes=%d\n",
+                                  __FUNCTION__, current_channel_id, MVT_NBR_SAMPLES_PER_EVENT, c_number_of_bytes
+                          );
+                          fflush(mvt_fptr_err_2);
+                      }
+#endif
                       // Pack samples in unsigned integers
                       for( i_sample=0; i_sample<MVT_NBR_SAMPLES_PER_EVENT; i_sample++)
                       {		
@@ -1512,7 +1528,7 @@ CPOPEN0( roc_id, 0xe, bank );
 #endif
                     } /* loop over channels */
                   }
-                  else
+                  else // of if( MVT_ZS_MODE )
                   {
                     for ( i_channel = 0; i_channel < nbchannelsFEU[bank][ibl][iev][0][i_feu] ; i_channel ++ ) 
                     {
@@ -1527,13 +1543,18 @@ CPOPEN0( roc_id, 0xe, bank );
                         *b16++ = current_channel_id;
                         b08 += 2;
 
+                        // set number of bytes in packed byte stream
+                        c_number_of_bytes = (((MVT_NBR_SAMPLES_PER_EVENT - 1)/2)*3+1)+1;
+                        if( (MVT_NBR_SAMPLES_PER_EVENT % 2) == 0 )
+                            c_number_of_bytes++;
+                        *b08 ++ = c_number_of_bytes;
 #ifdef DEBUG6_MVT_2ND_PASS								
                         if( mvt_fptr_err_2 != (FILE *)NULL )
                         {
                           fprintf
                           (
                               mvt_fptr_err_2,
-                              "%s: SECOND PASS 0xe118, i_dream = %d i_channel = %d , data[%d]=0x%08x current_channel_id =%d MVT_NBR_SAMPLES_PER_EVENT = %d \n",
+                              "%s: SECOND PASS 0xe128, MVT_ZS_MODE=0 i_dream = %d i_channel = %d , data[%d]=0x%08x current_channel_id =%d MVT_NBR_SAMPLES_PER_EVENT = %d \n",
                                   __FUNCTION__, i_dream, i_channel, ii, datain[ ii ], current_channel_id, MVT_NBR_SAMPLES_PER_EVENT
                           );
                           fflush(mvt_fptr_err_2);

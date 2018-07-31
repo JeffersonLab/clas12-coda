@@ -40,8 +40,9 @@
  *   format code bits <- format in ascii form
  *     [7:4] [3:0]
  *       #     0           #'('
- *       0    14           #'(' same as above, but have to take # from the data (8-bit)
- *       0    15           #'(' same as above, but have to take # from the data (32-bit)
+ *       0    13           #'(' same as above, but have to take # from the data (8-bit), letter 'm'
+ *       0    14           #'(' same as above, but have to take # from the data (16-bit), letter 'n'
+ *       0    15           #'(' same as above, but have to take # from the data (32-bit), letter 'N'
  *       0     0            ')'
  *       #     1           #'i'   unsigned int
  *       #     2           #'F'   floating point
@@ -63,7 +64,8 @@
  *       (FORTRAN agreement)
  *    2. The number of repeats '#' must be the number between 2 and 15;
  *       if the number of repeats is symbol 'N' instead of the number, it will be taken from data assuming 'int32' format
- *       if the number of repeats is symbol 'n' instead of the number, it will be taken from data assuming 'int8' format
+ *       if the number of repeats is symbol 'n' instead of the number, it will be taken from data assuming 'int16' format
+ *       if the number of repeats is symbol 'm' instead of the number, it will be taken from data assuming 'int8' format
  * </pre>
  * 
  *  @param fmt     null-terminated composite data format string
@@ -117,7 +119,8 @@ eviofmt(char *fmt, unsigned char *ifmt, int ifmtLen)
             if (nn == 0) /*special case: if #repeats is in data, use code '14' or '15'*/
 			{
               if(nb==4) ifmt[n++] = 15;
-              else if(nb==1) ifmt[n++] = 14;
+              else if(nb==2) ifmt[n++] = 14;
+              else if(nb==1) ifmt[n++] = 13;
               else {printf("eviofmt ERROR: unknown nb=%d\n",nb);exit(0);}
 			}
             else         ifmt[n++] = 16*MAX(nn,nr);
@@ -155,8 +158,16 @@ eviofmt(char *fmt, unsigned char *ifmt, int ifmtLen)
             printf("NN, nb=%d\n",nb);
 #endif
         }
-        /* variable length format (int8) */
+        /* variable length format (int16) */
         else if (ch == 'n') {
+            nn = 0;
+            nb = 2;
+#ifdef DEBUG
+            printf("nn, nb=%d\n",nb);
+#endif
+        }
+        /* variable length format (int8) */
+        else if (ch == 'm') {
             nn = 0;
             nb = 1;
 #ifdef DEBUG

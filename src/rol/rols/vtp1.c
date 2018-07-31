@@ -270,6 +270,7 @@ TIMERL_START;
 
 #ifdef READOUT_TI
   #ifdef USE_DMA
+//    vtpDmaStart(VTP_DMA_TI, vtpDmaMemGetPhysAddress(0), MAXBUFSIZE*4);
     len = vtpDmaWaitDone(VTP_DMA_TI)>>2;
     if(len) len--;
     pBuf = (volatile unsigned int *)vtpDmaMemGetLocalAddress(0);
@@ -285,7 +286,7 @@ TIMERL_START;
   BANKOPEN(0xe10A,1,rol->pid);
   for(ii=0; ii<len; ii++)
   {
-    printf("vtpti[%2d] = 0x%08x\n",ii,pBuf[ii]);
+//    printf("vtpti[%2d] = 0x%08x\n",ii,pBuf[ii]);
     *rol->dabufp++ = pBuf[ii];
   }
   BANKCLOSE;
@@ -293,6 +294,7 @@ TIMERL_START;
 
 #ifdef READOUT_VTP
   #ifdef USE_DMA
+//    vtpDmaStart(VTP_DMA_VTP, vtpDmaMemGetPhysAddress(1), MAXBUFSIZE*4);
     len = vtpDmaWaitDone(VTP_DMA_VTP)>>2;
     if(len) len--;
     pBuf = (volatile unsigned int *)vtpDmaMemGetLocalAddress(1);
@@ -308,14 +310,13 @@ TIMERL_START;
   BANKOPEN(0xe122,1,rol->pid);
   for(ii=0; ii<len; ii++)
   {
-    printf("vtp[%2d] = 0x%08x\n",ii,pBuf[ii]);
+//    printf("vtp[%2d] = 0x%08x\n",ii,pBuf[ii]);
     *rol->dabufp++ = pBuf[ii];
   }
   BANKCLOSE;
 #endif
 
 TIMERL_STOP(10000,1000+rol->pid);
-
 
 #if 0
   /* read boards configurations */

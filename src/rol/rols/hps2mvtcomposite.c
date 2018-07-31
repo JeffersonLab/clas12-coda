@@ -448,6 +448,7 @@ rol2trig(int a, int b)
   int a_event_number_l, a_timestamp_l, a_event_number_h, a_timestamp_h, a_bitpattern;
   int a_clusterN, a_clusterE, a_clusterY, a_clusterX, a_clusterT, a_type, a_data, a_time;
   long long timestamp, latency, latency_offset;
+  unsigned char c_number_of_bytes;
 
 	mynev ++; /* needed by ttfa.c */
 
@@ -1434,9 +1435,7 @@ if( mvt_fptr_err_2 != (FILE *)NULL )
                             }
                             else // of if( MVT_CMP_DATA_FMT == 0 ) -> packed data format
                             {
-                                MVT_CCOPEN_PACKSMP(0xe128,"c,i,l,c,s(s,c)",banknum);
-                                // set number of samples
-                                *b08 ++ = ((char)MVT_NBR_SAMPLES_PER_EVENT);
+                                MVT_CCOPEN_PACKSMP(0xe128,"c,i,l,n(s,mc)",banknum);
                                 // set number of channels
                                 b16 = (unsigned short *)( b08 );
                                 *b16++ = ((short)nbchannelsFEU[jj][ibl][iev][0][i_feu]);
@@ -1460,6 +1459,23 @@ if( mvt_fptr_err_2 != (FILE *)NULL )
                                         b16 = (unsigned short *)( b08 );
                                         *b16++ = current_channel_id;
                                         b08 += 2;
+                                        // set number of bytes in packed byte stream
+                                        c_number_of_bytes = (((MVT_NBR_SAMPLES_PER_EVENT - 1)/2)*3+1)+1;
+                                        if( (MVT_NBR_SAMPLES_PER_EVENT % 2) == 0 )
+                                            c_number_of_bytes++;
+                                        *b08 ++ = c_number_of_bytes;
+#ifdef DEBUG6_MVT_2ND_PASS								
+                                        if( mvt_fptr_err_2 != (FILE *)NULL )
+                                        {
+                                            fprintf
+                                            (
+                                                mvt_fptr_err_2,
+                                                "%s: SECOND PASS 0xe128, MVT_ZS_MODE=1 current_channel_id =%d MVT_NBR_SAMPLES_PER_EVENT = %d c_number_of_bytes=%d\n",
+                                                    __FUNCTION__, current_channel_id, MVT_NBR_SAMPLES_PER_EVENT, c_number_of_bytes
+                                            );
+                                            fflush(mvt_fptr_err_2);
+                                        }
+#endif
                                         // Pack samples in unsigned integers
                                         for( i_sample=0; i_sample<MVT_NBR_SAMPLES_PER_EVENT; i_sample++)
                                         {		
@@ -1506,14 +1522,19 @@ if( mvt_fptr_err_2 != (FILE *)NULL )
                                         *b16++ = current_channel_id;
                                         b08 += 2;
 
+                                        // set number of bytes in packed byte stream
+                                        c_number_of_bytes = (((MVT_NBR_SAMPLES_PER_EVENT - 1)/2)*3+1)+1;
+                                        if( (MVT_NBR_SAMPLES_PER_EVENT % 2) == 0 )
+                                            c_number_of_bytes++;
+                                        *b08 ++ = c_number_of_bytes;
 #ifdef DEBUG6_MVT_2ND_PASS								
                                         if( mvt_fptr_err_2 != (FILE *)NULL )
                                         {
                                             fprintf
                                             (
                                                 mvt_fptr_err_2,
-                                                "%s: SECOND PASS 0xe118, i_dream = %d i_channel = %d , data[%d]=0x%08x current_channel_id =%d MVT_NBR_SAMPLES_PER_EVENT = %d \n",
-                                                    __FUNCTION__, i_dream, i_channel, ii, datain[ ii ], current_channel_id, MVT_NBR_SAMPLES_PER_EVENT
+                                                "%s: SECOND PASS 0xe128, MVT_ZS_MODE=0 i_dream = %d i_channel = %d , data[%d]=0x%08x current_channel_id =%d MVT_NBR_SAMPLES_PER_EVENT = %d c_number_of_bytes=%d\n",
+                                                    __FUNCTION__, i_dream, i_channel, ii, datain[ ii ], current_channel_id, MVT_NBR_SAMPLES_PER_EVENT, c_number_of_bytes
                                             );
                                             fflush(mvt_fptr_err_2);
                                         }

@@ -162,15 +162,31 @@ eviofmtswap(int32_t *iarr, int nwrd, unsigned char *ifmt, int nfmt, int tolocal,
 #endif
                 }
 
-                /* left parenthesis, SPECIAL case: # of repeats must be taken from int8 data */
+                /* left parenthesis, SPECIAL case: # of repeats must be taken from int16 data */
                 if (kcnf == 14) {
+                    /* set it to regular left parenthesis code */
+                    kcnf = 0;
+                    /* get # of repeats from data (watch out for endianness) */
+                    b16 = (int16_t *)b8;
+                    if (!tolocal) ncnf = *b16;
+                    *b16 = SWAP16(*b16);
+                    if (tolocal) ncnf = *b16;
+                    b8 += 2;
+#ifdef DEBUG
+                    printf("\n*1 ncnf from data = %#10.8x, b8 = 0x%08x (code 14)\n",ncnf, b8);
+#endif
+                }
+        
+
+                /* left parenthesis, SPECIAL case: # of repeats must be taken from int8 data */
+                if (kcnf == 13) {
                     /* set it to regular left parenthesis code */
                     kcnf = 0;
                     /* get # of repeats from data (watch out for endianness) */
                     ncnf = *((int32_t *)b8);
                     b8 ++;
 #ifdef DEBUG
-                    printf("\n*1 ncnf from data = %#10.8x, b8 = 0x%08x (code 14)\n",ncnf, b8);
+                    printf("\n*1 ncnf from data = %#10.8x, b8 = 0x%08x (code 13)\n",ncnf, b8);
 #endif
                 }
         

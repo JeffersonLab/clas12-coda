@@ -36,16 +36,16 @@ static char ssname[80];
 #include "circbuf.h"
 
 
-/*#define DEBUG*/ /*FADC*/
-/*#define DEBUG1*/ /*TI*/
-/*#define DEBUG2*/ /*TDC*/
-/*#define DEBUG3*/ /*SSP*/
-/*#define DEBUG4*/ /*VSCM*/
-/*#define DEBUG5*/ /*HEAD*/
-/*#define DEBUG6*/ /*MVT*/
-/*#define DEBUG7*/ /*VTP*/
-/*#define DEBUG8*/ /*DCRB*/
-/*#define DEBUG9*/ /*SSP_RICH*/
+//#define DEBUG /*FADC*/
+//#define DEBUG1 /*TI*/
+//#define DEBUG2 /*TDC*/
+//#define DEBUG3 /*SSP*/
+//#define DEBUG4 /*VSCM*/
+//#define DEBUG5 /*HEAD*/
+//#define DEBUG6 /*MVT*/
+//#define DEBUG7 /*VTP*/
+//#define DEBUG8 /*DCRB*/
+//#define DEBUG9 /*SSP_RICH*/
 
 
 #define ROL_NAME__ "ROL2"
@@ -1949,10 +1949,41 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
 #endif
 
           while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
-	      {
+	        {
             printf("ERROR2 in VTP:PCU pass1 = 0x%08X\n",datain[ii]); 
             ii++;
-	      }
+	        }
+        }
+
+
+        else if( ((datain[ii]>>27)&0x1F) == 0x1C) /* TAG EXPANSION REGION - decode for 26:23 for tag subtypes */
+        {
+          if( ((datain[ii]>>23)&0xF) == 0x0) /* DC ROADS */
+          {
+            a_time =     ((datain[ii]>>0)&0x1FF);
+            a_hitmask0 = ((datain[ii]>>9)&0x1FF);
+            ii++;
+
+            a_hitmask1 = ((datain[ii]>>0)&0x7FFFFFFF);
+            ii++;
+
+            a_hitmask2 = ((datain[ii]>>0)&0x7FFFFFFF);
+            ii++;
+#ifdef DEBUG7
+        printf("[%3d] DCROAD_(MASK0,MASK1,MASK2,TIME) %d %d %d\n",ii,a_hitmask0,a_hitmask1,a_hitmask2,a_time);
+#endif
+            while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
+            {
+              printf("ERROR2 in VTP:DCROADS pass1 = 0x%08X\n",datain[ii]); 
+              ii++;
+            }
+          }
+          else
+          {
+            printf("ERROR2 in VTP data1C: UNKNOWN subtype: [%3d] 0x%08x\n",ii,datain[ii]);
+            error = 1;
+            ii++;
+          }
         }
 
 
@@ -4324,12 +4355,38 @@ if(a_pulsenumber == 0)
 			}
 
 
-            else if( ((datain[ii]>>27)&0x1F) == 0x1C) /*???*/
+            else if( ((datain[ii]>>27)&0x1F) == 0x1C) /*TAG EXPANSION REGION - decode for 26:23 for tag subtypes */
             {
-              printf("ERROR: VTP UNKNOWN data1C: [%3d] 0x%08x\n",ii,datain[ii]);
-              error = 1;
-              ii++;
-			}
+              if(((datain[ii]>>23)&0xF) == 0x0) /* DC ROADS */
+              {
+                a_time =     ((datain[ii]>>0)&0x1FF);
+                a_hitmask0 = ((datain[ii]>>9)&0x1FF);
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+
+                a_hitmask1 = ((datain[ii]>>0)&0x7FFFFFFF);
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+
+                a_hitmask2 = ((datain[ii]>>0)&0x7FFFFFFF);
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+#ifdef DEBUG7
+                printf("[%3d] DCROAD_(MASK0,MASK1,MASK2,TIME) %d %d %d\n",ii,a_hitmask0,a_hitmask1,a_hitmask2,a_time);
+#endif
+              }
+              else
+              {
+                printf("ERROR: VTP UNKNOWN data1C: [%3d] 0x%08x\n",ii,datain[ii]);
+                error = 1;
+                ii++;
+              }
+            }
+
+
             else if( ((datain[ii]>>27)&0x1F) == 0x1D) /* GT trigger */
             {
 			  /*

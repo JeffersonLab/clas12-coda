@@ -40,6 +40,8 @@ $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/hps1_master.so \
 	./$(OSTYPE_MACHINE)/rol/svt1_slave.so \
 	./$(OSTYPE_MACHINE)/rol/fadc1_master.so \
 	./$(OSTYPE_MACHINE)/rol/fadc1_slave.so \
+	./$(OSTYPE_MACHINE)/rol/rol1mvt_master.so \
+	./$(OSTYPE_MACHINE)/rol/rol1mvt_slave.so \
 	./$(OSTYPE_MACHINE)/rol/fadc1_1182.so
 
 #	./$(OSTYPE_MACHINE)/rol/pgem1_master.so \
@@ -51,6 +53,14 @@ $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/hps1_master.so \
 #	./$(OSTYPE_MACHINE)/rol/dcrb1_master.so \
 #	./$(OSTYPE_MACHINE)/rol/dcrb1_slave.so \
 
+
+./$(OSTYPE_MACHINE)/rol/rol1mvt_master.o : rols/rol1mvt.c
+	$(MKROLDIR)
+	$(CC) -DTI_MASTER $(CCROLOPT)
+
+./$(OSTYPE_MACHINE)/rol/rol1mvt_slave.o : rols/rol1mvt.c
+	$(MKROLDIR)
+	$(CC) -DTI_SLAVE $(CCROLOPT)
 
 ./$(OSTYPE_MACHINE)/rol/rol1_master.o : rols/rol1.c
 	$(MKROLDIR)
