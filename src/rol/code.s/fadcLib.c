@@ -1079,6 +1079,24 @@ faStatus(int id, int sflag)
       printf("  Control 2 Register = 0x%08x - Disabled\n",ctrl2);
     }
 
+
+
+  if((ctrl2&FA_CTRL_COMPRESS_MASK)==FA_CTRL_COMPRESS_DISABLE)
+    {
+      printf("  Control 2 Register = 0x%08x - Compress disabled\n",ctrl2);
+    }
+  else if((ctrl2&FA_CTRL_COMPRESS_MASK)==FA_CTRL_COMPRESS_ENABLE)
+    {
+      printf("  Control 2 Register = 0x%08x - Compress enabled\n",ctrl2);
+    }
+  else if((ctrl2&FA_CTRL_COMPRESS_MASK)==FA_CTRL_COMPRESS_VERIFY)
+    {
+      printf("  Control 2 Register = 0x%08x - Compress verify\n",ctrl2);
+    }
+  else
+      printf("  Control 2 Register = 0x%08x - Compress error\n",ctrl2);
+
+
   printf("  Internal Triggers (Live) = %d\n",itrigCnt);
   printf("  Trigger   Scaler         = %d\n",trigCnt);
   printf("  Trigger 2 Scaler         = %d\n",trig2Cnt);
@@ -2338,7 +2356,75 @@ faGetChanMask(int id)
 
 
 
+/* opt=0 - disable, 1-enable, 2-verify */
+void
+faSetCompression(int id, int opt)
+{
+  unsigned int ctrl2;
 
+  if(id==0) id=fadcID[0];
+
+  if((id<=0) || (id>21) || (FAp[id] == NULL)) 
+    {
+      logMsg("faSetCompression: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
+      return;
+    }
+
+  FALOCK;
+
+  ctrl2  = (vmeRead32(&(FAp[id]->ctrl2)))&FA_CONTROL2_MASK;
+
+  ctrl2 = ctrl2 & ~FA_CTRL_COMPRESS_MASK;
+
+  if(opt==0)
+  {
+    ;
+  }
+  else if(opt==1)
+  {
+	ctrl2 = ctrl2 | FA_CTRL_COMPRESS_ENABLE;
+  }
+  else if(opt==2)
+  {
+	ctrl2 = ctrl2 | FA_CTRL_COMPRESS_VERIFY;
+  }
+  else
+    printf("faSetCompression: illegal opt=%d\n",opt);
+
+  vmeWrite32(&(FAp[id]->ctrl2), ctrl2);
+
+  FAUNLOCK;
+}
+
+
+int
+faGetCompression(int id)
+{
+  unsigned int ctrl2;
+  int opt;
+
+  if(id==0) id=fadcID[0];
+
+  if((id<=0) || (id>21) || (FAp[id] == NULL)) 
+    {
+      logMsg("faGetCompression: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
+      return(-1);
+    }
+
+  FALOCK;
+
+  ctrl2  = (vmeRead32(&(FAp[id]->ctrl2)))&FA_CONTROL2_MASK;
+  ctrl2 = ctrl2 & FA_CTRL_COMPRESS_MASK;
+
+  if(ctrl2 == FA_CTRL_COMPRESS_DISABLE) opt = 0;
+  else if(ctrl2 == FA_CTRL_COMPRESS_ENABLE) opt = 1;
+  else if(ctrl2 == FA_CTRL_COMPRESS_VERIFY) opt = 2;
+  else opt = -2;
+
+  FAUNLOCK;
+
+  return(opt);
+}
 
 
 /* For VERSION2, bank is ignored */
@@ -2415,6 +2501,9 @@ faGDisable(int eflag)
     faDisable(fadcID[ii],eflag);
 
 }
+
+
+
 
 void
 faTrig(int id)

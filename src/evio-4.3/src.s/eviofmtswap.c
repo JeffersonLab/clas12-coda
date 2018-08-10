@@ -97,7 +97,7 @@ eviofmtswap(int32_t *iarr, int nwrd, unsigned char *ifmt, int nfmt, int tolocal,
     b8end = (int8_t *)&iarr[nwrd] - padding; /* end of data + 1 - padding*/
 
 #ifdef DEBUG
-    printf("\n======== eviofmtswap ==========\n");
+    printf("\n=== eviofmtswap start ===\n");
 #endif
 
     while (b8 < b8end) {
@@ -183,7 +183,7 @@ eviofmtswap(int32_t *iarr, int nwrd, unsigned char *ifmt, int nfmt, int tolocal,
                     /* set it to regular left parenthesis code */
                     kcnf = 0;
                     /* get # of repeats from data (watch out for endianness) */
-                    ncnf = *((int32_t *)b8);
+                    ncnf = *((int8_t *)b8);
                     b8 ++;
 #ifdef DEBUG
                     printf("\n*1 ncnf from data = %#10.8x, b8 = 0x%08x (code 13)\n",ncnf, b8);
@@ -303,6 +303,10 @@ eviofmtswap(int32_t *iarr, int nwrd, unsigned char *ifmt, int nfmt, int tolocal,
         }
 
     } /* while(b8 < b8end) */
+
+#ifdef DEBUG
+    printf("\n=== eviofmtswap end ===\n");
+#endif
 
     return(0);
 }

@@ -154,6 +154,7 @@ int mynev; /*defined in tttrans.c */
 #define VSCM_TYPE_TRGTIME   0x13
 #define VSCM_TYPE_BCOTIME   0x14
 #define VSCM_TYPE_FSSREVT   0x18
+#define VSCM_TYPE_TDCEVT    0x19
 #define VSCM_TYPE_DNV       0x1E
 #define VSCM_TYPE_FILLER    0x1F
 
@@ -357,14 +358,17 @@ rol2trig(int a, int b)
   int a_channel, a_chan1, a_chan2, a_nevents, a_blocknumber, a_triggernumber, a_module_id;
   int a_windowwidth, a_pulsenumber, a_firstsample, samplecount, a_fiber;
   int a_adc1, a_adc2, a_valid1, a_valid2, a_nwords, a_slot, a_slot2, a_slot3;
-  int a_hfcb_id, a_chip_id, a_chan;
+  int a_hfcb_id, a_chip_id, a_fssr_num, a_chan;
+  int a_len, a_n1, a_n2;
+  short a_short1;
+  int a_word1, a_word2;
   unsigned int a_bco, a_bco1;
   int a_slot_prev, sync_flag;
   int a_qualityfactor, a_pulseintegral, a_pulsetime, a_vm, a_vp;
   int a_trigtime[4];
   int a_tdc, a_edge;
   int a_slot_old;
-  int a_channel_old;
+  int a_channel_old, a_asic_old;
   int npedsamples, atleastoneslot, atleastonechannel[21];
   time_t now;
   int error, status;
@@ -373,6 +377,7 @@ rol2trig(int a, int b)
   unsigned int *StartOfBank;
   char *ch;
   unsigned int *Nchan, *Npuls, *Nsamp;
+  unsigned int *Npack;
   int islot, ichan, ii, jj, kk;
   int banknum = 0;
   int have_time_stamp, a_nevents2, a_event_type;
@@ -639,13 +644,36 @@ lenE[jj][nB][nE[nB]] - event length in words
           }
 
         }
-        else if( ((datain[ii]>>27)&0x1F) == 0x15) /*window sum: obsolete*/
+
+        else if( ((datain[ii]>>27)&0x1F) == 0x15) /*compressed*/
         {
+          a_len = ((datain[ii]>>0)&0x7);
 #ifdef DEBUG
-	      printf("[%3d] WINDOW SUM: must be obsolete\n",ii);
+	      printf("[%3d] COMPRESSED: header=0x%08x, a_len=%d\n",ii,datain[ii],a_len);
 #endif
 	      ii++;
+
+          a_word1 = datain[ii];
+#ifdef DEBUG
+	      printf("[%3d] COMPRESSED: a_word1 = 0x%08x\n",ii,datain[ii]);
+#endif
+	      ii++;
+
+          a_word2 = datain[ii];
+#ifdef DEBUG
+	      printf("[%3d] COMPRESSED: a_word2 = 0x%08x\n",ii,datain[ii]);
+#endif
+	      ii++;
+
+          for(i=0; i<a_len; i++)
+		  {
+#ifdef DEBUG
+	        printf("[%3d] COMPRESSED: data[%d] = 0x%08x\n",ii,i,datain[ii]);
+#endif
+            ii++; 
+		  }
         }
+
         else if( ((datain[ii]>>27)&0x1F) == 0x16) /*pulse raw data*/
         {
           a_channel = ((datain[ii]>>23)&0xF);
@@ -2664,6 +2692,17 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
 	      ii++;
         }
 
+        else if( ((datain[ii]>>27)&0x1F) == VSCM_TYPE_TDCEVT) /*TDC event*/
+        {
+          a_fssr_num = ((datain[ii]>>16)&0x7);
+          a_tdc = (datain[ii]&0xFFFF);
+
+#ifdef DEBUG4
+	      printf("[%3d] VSCM TDCEVT: FSSRNUM=%2u TDC=%7u \n",ii,a_fssr_num,a_tdc);
+#endif
+	      ii++;
+        }
+
         else if( ((datain[ii]>>27)&0x1F) == VSCM_TYPE_FILLER)
         {
 #ifdef DEBUG4
@@ -3030,6 +3069,11 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
                 ii++;
 	          }
             }
+
+
+
+
+
             else if( ((datain[ii]>>27)&0x1F) == 0x14) /*window raw data: remember channel#*/
             {
               a_channel = ((datain[ii]>>23)&0xF);
@@ -3182,6 +3226,9 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
 	          }
 #endif
 
+
+
+
 	          Nchan[0] ++; /* increment channel counter */
 #ifdef DEBUG
               printf("0x%08x: increment Nchan[0]=%d\n",b08,Nchan[0]);
@@ -3236,13 +3283,90 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
 #endif
 	          }
             }
-            else if( ((datain[ii]>>27)&0x1F) == 0x15) /*window sum: obsolete*/
+
+
+
+
+
+
+            else if( ((datain[ii]>>27)&0x1F) == 0x15) /*compressed*/
             {
+              a_len = ((datain[ii]>>0)&0x7);
+			  /*a_n1 = ((datain[ii]>>4)&0xF);*/ /*the number of leading 0's for upper*/
+			  /*a_n2 = ((datain[ii]>>8)&0xFFF);*/ /*offset to all samples (min adc value)*/
+			  /*
+              ((datain[ii]>>20)&0x1) overflow bit
+              ((datain[ii]>>21)&0x1) highest bit to 'the number of leading 0's' above
+			  */
+              a_channel = ((datain[ii]>>23)&0xF); /*channel number*/
+
+	          CCOPEN(0xe126,"c,i,l,N(c,Ns)",banknum);
+
+	          if(a_channel != a_channel_old)
+	          {
+                a_channel_old = a_channel;
+
+	            Nchan[0] ++; /* increment channel counter */
+
+                *b08++ = a_channel; /* channel number */
+
+                Npack = (unsigned int *)b08;
+                Npack[0] = 0;
+                b08 += 4;
+			  }
+
+              Npack[0] += (3+a_len)*2; /* (header+2words+extrawords)*2 - the number of shorts */
+
+              /*a_short1 = (a_n1<<12) + a_n2;*/
+              b32 = (unsigned int *)b08;
+              *b32 = datain[ii];
+              b08 += 4;
 #ifdef DEBUG
-	          printf("[%3d] WINDOW SUM: must be obsolete\n",ii);
+	          printf("[%3d] COMPRESSED: header=0x%08x, a_len=%d, a_short1=0x%04x\n",ii,datain[ii],a_len,a_short1);
 #endif
 	          ii++;
+
+              a_word1 = datain[ii];
+              b32 = (unsigned int *)b08;
+              *b32 = a_word1;
+              b08 += 4;
+#ifdef DEBUG
+	          printf("[%3d] COMPRESSED: a_word1 = 0x%08x\n",ii,datain[ii]);
+#endif
+	          ii++;
+
+              a_word2 = datain[ii];
+              b32 = (unsigned int *)b08;
+              *b32 = a_word2;
+              b08 += 4;
+#ifdef DEBUG
+	          printf("[%3d] COMPRESSED: a_word2 = 0x%08x\n",ii,datain[ii]);
+#endif
+	          ii++;
+
+              for(i=0; i<a_len; i++)
+		      {
+                b32 = (unsigned int *)b08;
+                *b32 = datain[ii];
+                b08 += 4;
+#ifdef DEBUG
+	            printf("[%3d] COMPRESSED: data[%d] = 0x%08x\n",ii,i,datain[ii]);
+#endif
+                ii++; 
+		      }
+
+
+
+
+
+
+
+
             }
+
+
+
+
             else if( ((datain[ii]>>27)&0x1F) == 0x16) /*pulse raw data*/
             {
               a_channel = ((datain[ii]>>23)&0xF);
@@ -4675,6 +4799,7 @@ if(a_pulsenumber == 0)
         for(ibl=0; ibl<nB[jj]; ibl++) /*loop over blocks (over vscm boards)*/
         {
           a_channel_old = -1;
+          a_asic_old = -1;
 #ifdef DEBUG4
           printf("\n\n\nVSCM: Block %d, Event %2d, event index %2d, event lenght %2d\n",
             ibl,iev,iE[jj][ibl][iev],lenE[jj][ibl][iev]);
@@ -4752,7 +4877,8 @@ if(a_pulsenumber == 0)
 #endif
 
 
-              if(a_channel != a_channel_old)
+/* Line below is incorrect - channels must be recorded for each hit */
+/*              if(a_channel != a_channel_old) */
               {
                 a_channel_old = a_channel;
 
@@ -4794,6 +4920,34 @@ if(a_pulsenumber == 0)
 
 
 
+
+
+
+
+            else if( ((datain[ii]>>27)&0x1F) == VSCM_TYPE_TDCEVT) /*TDC event*/
+            {
+              a_fssr_num = ((datain[ii]>>16)&0x7);
+              a_tdc = (datain[ii]&0xFFFF);
+
+#ifdef DEBUG4
+	          printf("[%3d] VSCM TDCEVT: FSSRNUM=%2u TDC=%7u \n",ii,a_fssr_num,a_tdc);
+#endif
+
+              CCOPEN(0xe111,"c,i,l,N(c,c,c,c)",banknum);
+#ifdef DEBUG4
+              printf("0x%08x: CCOPEN(VSCM), dataout=0x%08x\n",b08,dataout);
+#endif
+
+              /* Match composite format of VSCM_TYPE_FSSREVT.
+               * Hardcode half/chip number to 0x80 which is not possible for FSSREVT type to identify TDC data
+               */
+              Nchan[0]++;
+              *b08++ = 0x80;
+              *b08++ = a_fssr_num;
+              *b08++ = (a_tdc>>0) & 0xFF;
+              *b08++ = (a_tdc>>8) & 0xFF;
+  	          ii++;
+            }
 
 
 

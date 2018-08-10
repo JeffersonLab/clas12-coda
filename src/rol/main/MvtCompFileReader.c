@@ -2398,7 +2398,7 @@ int MvtCmpDataRead_Pkd( unsigned int *buf, int buf_len, PhyEvtStat *phy_evt_stat
 	unsigned char  sample_value_lsb;
 	unsigned char  sample_value_msb;
 
-  unsigned char c_number_of_bytes;
+  unsigned int c_number_of_bytes;
 
 	int dream;
 	short dream_chan;
@@ -2445,14 +2445,14 @@ int MvtCmpDataRead_Pkd( unsigned int *buf, int buf_len, PhyEvtStat *phy_evt_stat
 	}
 	if( desc_bytes != 13 )
 	{
-		fprintf( stderr, "%s: wrong format descriptor 0x%08x desc_bytes=%d != 14\n", __FUNCTION__, desc, desc_bytes );
+		fprintf( stderr, "%s: wrong format descriptor 0x%08x desc_bytes=%d != 13\n", __FUNCTION__, desc, desc_bytes );
 		return -3;
 	}
 	desc_ptr = (unsigned char *)ptr;
 	desc_bytes++;
 	for( index=0; index<desc_bytes; index++ )
 		desc_string[index] = (char)*desc_ptr++;
-//	fprintf( stdout, "desc_string=%s\n", desc_string );
+//fprintf( stdout, "desc_string=%s\n", desc_string );
 
 	ptr += desc_size;
 
@@ -2536,24 +2536,27 @@ int MvtCmpDataRead_Pkd( unsigned int *buf, int buf_len, PhyEvtStat *phy_evt_stat
 //fprintf( stdout, " Feu tstp 0x%03x fine=%d\n", feu_tstp, feu_fine_tstp );
 //fprintf( stdout, " Beu tstp hi=0x%04x lo=0x%08x\n", beu_tstp_hi, beu_tstp_lo );
 
-		u16ptr = (unsigned short *)u08ptr;
-		nb_of_chan = *u16ptr;
-		u08ptr += sizeof(unsigned short);
-		cmp_size -= sizeof(unsigned short);
+		nb_of_chan = *u32ptr++;
+		u08ptr += sizeof(unsigned int);
+		cmp_size -= sizeof(unsigned int);
 		total_nb_of_chan += nb_of_chan;
-
 //fprintf( stdout, " nb_of_chan = %d\n", nb_of_chan );
+
 		for( index=0; index<nb_of_chan; index++ )
 		{
 		  u16ptr = (unsigned short *)u08ptr;
 			feu_chan = *u16ptr;
-//fprintf( stdout, " chan(%d)", chan );
+//fprintf( stdout, " chan(%d)", feu_chan );
 			u08ptr += sizeof(unsigned short);
 			cmp_size -= sizeof(unsigned short);
 
-      c_number_of_bytes = *u08ptr++;
-      cmp_size--;
+
+			u32ptr = (unsigned int *)u08ptr;
+			c_number_of_bytes = *u32ptr++;
+			u08ptr += sizeof(unsigned int);
+			cmp_size -= sizeof(unsigned int);
       nb_of_samples = (c_number_of_bytes*8)/12;
+//fprintf( stdout, " bytes(%d) samples(%d) val", c_number_of_bytes, nb_of_samples );
 
 			dream = feu_chan / 64;
 			dream_chan = feu_chan % 64;

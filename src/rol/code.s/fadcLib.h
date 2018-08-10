@@ -38,7 +38,7 @@
 #define FA_VME_INT_LEVEL           3     
 #define FA_VME_INT_VEC          0xFA
 
-#define FA_SUPPORTED_CTRL_FIRMWARE 0xB0
+#define FA_SUPPORTED_CTRL_FIRMWARE 0xB1
 
 struct fadc_struct 
 {
@@ -255,12 +255,18 @@ struct fadc_sdc_struct {
 #define FA_SOURCE_MASK        0x30
 
 /* Define Control2 Bits */
-#define FA_CTRL_GO               0x1
-#define FA_CTRL_ENABLE_TRIG      0x2
-#define FA_CTRL_ENABLE_SRESET    0x4
-#define FA_CTRL_ENABLE_INT_TRIG  0x8
-#define FA_CTRL_ENABLE_MASK      0x7
-#define FA_CTRL_ENABLED          0x7
+#define FA_CTRL_GO               0x01
+#define FA_CTRL_ENABLE_TRIG      0x02
+#define FA_CTRL_ENABLE_SRESET    0x04
+#define FA_CTRL_ENABLE_INT_TRIG  0x08
+#define FA_CTRL_ENABLE_MASK      0x07
+#define FA_CTRL_ENABLED          0x07
+
+#define FA_CTRL_COMPRESS_DISABLE 0x000
+#define FA_CTRL_COMPRESS_VERIFY  0x240
+#define FA_CTRL_COMPRESS_ENABLE  0x280
+#define FA_CTRL_COMPRESS_MASK    0x2C0
+
 
 /* Define CTRL1 Bits */
 #define FA_REF_CLK_INTERNAL        0x0
@@ -349,7 +355,7 @@ struct fadc_sdc_struct {
 #define FA_BOARD_MASK          0xffff0000
 #define FA_CSR_MASK            0x0fffffff
 #define FA_CONTROL_MASK        0xffffffff
-#define FA_CONTROL2_MASK       0xc000303f
+#define FA_CONTROL2_MASK       0xc00032ff
 #define FA_EVENT_COUNT_MASK    0xffffff
 #define FA_BLOCK_COUNT_MASK    0xfffff
 #define FA_BLOCK_LEVEL_MASK    0xffff
@@ -752,6 +758,8 @@ int faGetHitbitMinMultiplicity(int id);
 int faSetDelayAll(int id,unsigned int delay);
 int faSetGlobalDelay(unsigned int delay);
 
+void faSetCompression(int id, int opt);
+int faGetCompression(int id);
 
 typedef struct
 {

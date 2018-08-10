@@ -6810,5 +6810,13 @@ sspGetWindowOffset(int id)
   return(ret);
 }
 
+/*sergey*/
+void
+sspSetA32BaseAddress(unsigned int addr)
+{
+  sspA32Base = addr;
+  printf("ssp A32 base address set to 0x%08X\n",sspA32Base);
+}
+
 #endif
 

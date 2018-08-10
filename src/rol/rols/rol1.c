@@ -1252,6 +1252,7 @@ vmeBusUnlock();
     /*faChanDisable(FA_SLOT,0xffff);enabled in download*/
 vmeBusLock();
     faEnable(FA_SLOT,0,0);
+    faSetCompression(FA_SLOT,0);
 vmeBusUnlock();
   }
 

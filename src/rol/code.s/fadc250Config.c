@@ -349,7 +349,9 @@ fadc250ReadConfigFile(char *filename_in)
         else if(active && (strcmp(keyword,"FADC250_W_WIDTH") == 0))
         {
           sscanf (str_tmp, "%*s %d", &i1);
-        for(slot=slot1; slot<slot2; slot++) fa250[slot].winWidth = i1/4;
+          i1 = i1/4; /* convert ns to samples */
+          i1 = ((i1+15)/16)*16; /* round up to 16 samples */
+          for(slot=slot1; slot<slot2; slot++) fa250[slot].winWidth = i1;
         }
 
         else if(active && (strcmp(keyword,"FADC250_NSA") == 0))

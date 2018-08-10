@@ -591,7 +591,11 @@ vmeReadTask()
   int id, iFlag;
   int ii, jj, slot, interval;
   unsigned int maxA32Address;
+
+  unsigned int lastA32Address = 0x08800000;
+
   unsigned int fadcA32Address = 0x09000000;
+  unsigned int sspA32Address = 0x08800000;
 
 #ifdef VXWORKS
   extern unsigned long sysClkRateGet();
@@ -649,6 +653,7 @@ vmeReadTask()
   dsc2Config("");
 maxA32Address = dsc2GetA32MaxAddress();
 fadcA32Address = maxA32Address + FA_MAX_A32_MEM;
+sspA32Address = maxA32Address + FA_MAX_A32_MEM;
   ndsc2_tcp = dsc2GetNdsc_tcp();
   printf("vmeReadTask: found %d dsc2 boards\n",ndsc2_tcp);
 
@@ -707,6 +712,9 @@ faSetA32BaseAddress(fadcA32Address);
   nssp = 0;
   mssp = 0; /* board to read */
 
+  /*
+sspSetA32BaseAddress(sspA32Address);
+  */
   nssp = sspInit(0,0,0,iFlag);
   sspConfig ("");
 

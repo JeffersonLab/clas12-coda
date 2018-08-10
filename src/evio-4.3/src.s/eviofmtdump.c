@@ -16,6 +16,7 @@
 */
 
 #include <stdio.h>
+#include <stdint.h>
 
 #define MIN(a,b) ( (a) < (b) ? (a) : (b) )
 
@@ -53,7 +54,7 @@ typedef struct
 
 #define PRINT
 
-//#define DEBUG
+#undef DEBUG
 
 #define NWORDS 1000000
 static int iarr[NWORDS+10];
@@ -87,7 +88,7 @@ eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, 
   b8end = (char *)&iarr[nwrd] - nextrabytes; /* end of data + 1 */
 
 #ifdef DEBUG
-  printf("\n======== eviofmtdump start (xml=0x%08x) ==========\n",xml);
+  printf("\n=== eviofmtdump start (xml=0x%08x) ===\n",xml);
   printf("iarr[0]=0x%08x, nwrd=%d\n",iarr[0],nwrd);
 #endif
 
@@ -154,7 +155,7 @@ eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, 
         if(kcnf==15) /* left parenthesis, SPECIAL case: #repeats must be taken from int32 data */
         {
           kcnf = 0; /* set it to regular left parenthesis code */
-          b32 = (int *)b8;
+          b32 = (uint32_t *)b8;
           ncnf = *b32 = SWAP32(*b32); /* get #repeats from data */
 #ifdef PRINT
           xml += sprintf(xml,"          %d(\n",ncnf);
@@ -169,7 +170,7 @@ eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, 
         if(kcnf==14) /* left parenthesis, SPECIAL case: #repeats must be taken from int16 data */
         {
           kcnf = 0; /* set it to regular left parenthesis code */
-          b16 = (int *)b8;
+          b16 = (uint16_t *)b8;
           ncnf = *b16 = SWAP16(*b16); /* get #repeats from data */
 #ifdef PRINT
           xml += sprintf(xml,"          %d(\n",ncnf);
@@ -184,7 +185,7 @@ eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, 
         if(kcnf==13) /* left parenthesis, SPECIAL case: #repeats must be taken from int8 data */
         {
           kcnf = 0; /* set it to regular left parenthesis code */
-          ncnf = *((int *)b8); /* get #repeats from data */
+          ncnf = *((uint8_t *)b8); /* get #repeats from data */
 #ifdef PRINT
           xml += sprintf(xml,"          %d(\n",ncnf);
           /*printf("ncnf(: %d\n",ncnf);*/
@@ -242,7 +243,7 @@ eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, 
     }
 
 
-    /* if 'ncnf' is zero, get it from data (alwas in 'int' format) */
+    /* if 'ncnf' is zero, get it from data (always in 'int' format) */
     if(ncnf==0)
     {
       b32 = (int *)b8;
@@ -373,7 +374,7 @@ eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, 
 #endif
 
 #ifdef DEBUG
-  printf("\n======== eviofmtdump finish (xml1=0x%08x, xml=0x%08x, len=%d) ==========\n",xml1,xml,xml-xml1);fflush(stdout);
+  printf("\n=== eviofmtdump end (xml1=0x%08x, xml=0x%08x, len=%d) ===\n",xml1,xml,xml-xml1);fflush(stdout);
 #endif
 
   return(xml-xml1);

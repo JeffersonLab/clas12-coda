@@ -66,6 +66,7 @@
  *       if the number of repeats is symbol 'N' instead of the number, it will be taken from data assuming 'int32' format
  *       if the number of repeats is symbol 'n' instead of the number, it will be taken from data assuming 'int16' format
  *       if the number of repeats is symbol 'm' instead of the number, it will be taken from data assuming 'int8' format
+ *       NOTE: before '(' all 3 (N,n,m) can be used, without '(' only N can be used
  * </pre>
  * 
  *  @param fmt     null-terminated composite data format string
@@ -88,8 +89,16 @@ eviofmt(char *fmt, unsigned char *ifmt, int ifmtLen)
     lev = 0;
     nb = 0; /* the number of bytes in length taken from data */
 
+	/*HACK*/
+    if(!strcmp(fmt,"c,i,l,n(s,mc)"))
+	{
+      printf("REPLACING 'c,i,l,n(s,mc)' STRING by 'c,i,l,n(s,m(c))' !\n");
+      strcpy(fmt,"c,i,l,n(s,m(c))");
+	}
+	/*HACK*/
+
 #ifdef DEBUG
-    printf("\nfmt >%s<\n",fmt);
+    printf("\n=== eviofmt start, fmt >%s< ===\n",fmt);
 #endif
 
     /* loop over format string */
@@ -116,7 +125,7 @@ eviofmt(char *fmt, unsigned char *ifmt, int ifmtLen)
 #ifdef DEBUG
             printf("111: nn=%d nr=%d\n",nn,nr);
 #endif
-            if (nn == 0) /*special case: if #repeats is in data, use code '14' or '15'*/
+            if (nn == 0) /*special case: if #repeats is in data, use code '13' or '14' or '15'*/
 			{
               if(nb==4) ifmt[n++] = 15;
               else if(nb==2) ifmt[n++] = 14;
@@ -155,7 +164,7 @@ eviofmt(char *fmt, unsigned char *ifmt, int ifmtLen)
             nn = 0;
             nb = 4;
 #ifdef DEBUG
-            printf("NN, nb=%d\n",nb);
+            printf("N, nb=%d\n",nb);
 #endif
         }
         /* variable length format (int16) */
@@ -163,7 +172,7 @@ eviofmt(char *fmt, unsigned char *ifmt, int ifmtLen)
             nn = 0;
             nb = 2;
 #ifdef DEBUG
-            printf("nn, nb=%d\n",nb);
+            printf("n, nb=%d\n",nb);
 #endif
         }
         /* variable length format (int8) */
@@ -171,7 +180,7 @@ eviofmt(char *fmt, unsigned char *ifmt, int ifmtLen)
             nn = 0;
             nb = 1;
 #ifdef DEBUG
-            printf("nn, nb=%d\n",nb);
+            printf("m, nb=%d\n",nb);
 #endif
         }
         /* actual format */
@@ -213,7 +222,7 @@ eviofmt(char *fmt, unsigned char *ifmt, int ifmtLen)
     if (lev != 0) return(-8);
 
 #ifdef DEBUG
-    printf("\n");
+    printf("=== eviofmt end ===\n");
 #endif
 
     return(n);

@@ -983,4 +983,6 @@ void sspWriteReg(volatile unsigned int *addr, unsigned int val);
 void SSPLOCK();
 void SSPUNLOCK();
 
+void sspSetA32BaseAddress(unsigned int addr);
+
 #endif

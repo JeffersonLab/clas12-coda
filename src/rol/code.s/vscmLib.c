@@ -1482,6 +1482,29 @@ vscmEnableScaler(int id)
 }
 
 void
+vscmPrintScalers(int id)
+{
+  if (vscmIsNotInit(&id, __func__))
+    return;
+
+  vscmDisableScaler(id);
+  printf("FP_OUTPUT0 = %d\n", vmeRead32(&VSCMpr[id]->Sd.Scalers[VSCM_SCALER_FP_OUTPUT(0)]));
+  printf("FP_OUTPUT1 = %d\n", vmeRead32(&VSCMpr[id]->Sd.Scalers[VSCM_SCALER_FP_OUTPUT(1)]));
+  printf("FP_OUTPUT2 = %d\n", vmeRead32(&VSCMpr[id]->Sd.Scalers[VSCM_SCALER_FP_OUTPUT(2)]));
+  printf("FP_OUTPUT3 = %d\n", vmeRead32(&VSCMpr[id]->Sd.Scalers[VSCM_SCALER_FP_OUTPUT(3)]));
+  vscmEnableScaler(id);
+}
+
+void
+vcsmSetFPOutputSrc(int id, int port, int src)
+{
+  if (vscmIsNotInit(&id, __func__))
+    return;
+
+  vmeWrite32(&VSCMpr[id]->Sd.FpOutputCtrl[port], src);
+}
+
+void
 vscmSetClockSource(int id, int clock_int_ext)
 {
   if (vscmIsNotInit(&id, __func__))
@@ -2062,7 +2085,7 @@ vscmGetHitMaskWidth(int id)
 
   val = vmeRead32(&VSCMpr[id]->Tdc.TrgHitWidth);
 
-  return (val>>8) & 0xFF;
+  return (val>>0) & 0xFFF;
 }
 
 /*
@@ -2520,7 +2543,7 @@ vscmInit(uintptr_t addr, uint32_t addr_inc, int numvscm, int flag)
       /* delay for trigger processing in a board - must be more then 4us for 70MHz readout clock;
       if clock changed, it must be changes as well; ex. 35MHz -> 1024 etc */
       /* delay before start data processing in vscm board after recieving trigger */
-/*** NOT SUPPORTED ***/
+/*** NOT SUPPORTED - delay trigger instead ***/
 /*      vmeWrite32(&VSCMpr[boardID]->TrigLatency, 512);*/ /* multiply by 8ns */
 
       /* Enable Bus Error */
@@ -2537,10 +2560,12 @@ vscmInit(uintptr_t addr, uint32_t addr_inc, int numvscm, int flag)
       vscmSetPulserRate(boardID, 200000);
 
     /* Send FSSR gothit OR to SWB Trigout */
-/*    vmeWrite32(&VSCMpr[boardID]->TrigOutCfg, IO_MUX_FSSRHIT_TRIG);*/
+    /* Delay trigger output to match CLAS12 typical trigger latency */
+/*    vmeWrite32(&VSCMpr[boardID]->TrigOutCfg, IO_MUX_FSSRHIT_TRIG | (755<<16));*/
 
     /* Send FSSR gothit OR to SWB Trigout: this one requires coincidence between top/bottom silicon layers on each HFCB */
-    vmeWrite32(&VSCMpr[boardID]->Sd.TrigoutCtrl, IO_MUX_FSSRHIT_TBAND_TRIG);
+    /* Delay trigger output to match CLAS12 typical trigger latency */
+    vmeWrite32(&VSCMpr[boardID]->Sd.TrigoutCtrl, IO_MUX_FSSRHIT_TBAND_TRIG | (755<<16));
     
     /* Enable all gothit signals, stretch by 64*8ns for triggering */
     vscmSetHitMask(boardID, 0xFF, 64);
