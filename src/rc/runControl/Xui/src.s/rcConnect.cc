@@ -220,6 +220,7 @@ printf("CEDIT 1\n");
   return status;
 }
 
+
 void
 rcConnect::startRcServer (void)
 {
@@ -228,12 +229,23 @@ rcConnect::startRcServer (void)
   if (connect () != CODA_SUCCESS) //try to create rcServer
   {
     char msg[256];
-    /*::sprintf(msg,"$CODA/src/rc/runControl/rcServer/Linux_i686_vme/bin/rcServer -m %s -d %s -s %s &\n",*/
-	::sprintf(msg,"%s/rcServer -m %s -d %s -s %s &\n",
+
+    if(option->logRocs_)
+	{
+	  ::sprintf(msg,"%s/rcServer -m %s -d %s -s %s &>> /data/log/rcServer.log &\n",
           getenv("CODA_BIN"),
 	      option->msqldhost(),
 	      option->dbasename (),
 	      option->session ());
+	}
+	else
+	{
+	  ::sprintf(msg,"%s/rcServer -m %s -d %s -s %s &\n",
+          getenv("CODA_BIN"),
+	      option->msqldhost(),
+	      option->dbasename (),
+	      option->session ());
+	}
 
     printf("STARTING RCSERVER >%s<\n",msg);
     int errcode = system(msg);

@@ -3126,36 +3126,41 @@ dsc2UpdateFirmwareAll(const char *filename)
   int idsc, result;
 	
   for(idsc = 0; idsc < Ndsc; idsc++)
-    {
-      printf("Updating firmware on unit %d...", idsc);
-      fflush(stdout);
-      result = dsc2UpdateFirmware(idsc, filename);
-      if(result != OK)
+  {
+    printf("Updating firmware on unit %d...", idsc);fflush(stdout);
+    fflush(stdout);
+    result = dsc2UpdateFirmware(idsc, filename);
+    if(result != OK)
 	{
-	  printf("failed.\n");
+	  printf("failed.\n");fflush(stdout);
 	  return result;
 	}
-      else
-	printf("succeeded.");
-		
-      printf(" Verifying.");
-      fflush(stdout);
-      result = dsc2VerifyFirmware(idsc, filename);
-      if(result != OK)
+    else
 	{
-	  printf("failed.\n");
-	  return result;
+	  printf("succeeded.");fflush(stdout);
 	}
-      else
-	printf("ok.\n");
 
-      dsc2ReloadFPGA(idsc);
+    printf(" Verifying.");fflush(stdout);
+    fflush(stdout);
+    result = dsc2VerifyFirmware(idsc, filename);
+    if(result != OK)
+	{
+	  printf("failed.\n");fflush(stdout);
+	  return result;
+	}
+    else
+	{
+	  printf("ok.\n");fflush(stdout);
+	}
+
+    dsc2ReloadFPGA(idsc);
 #ifdef VXWORKS
-       taskDelay(2*sysClkRateGet());
+    taskDelay(2*sysClkRateGet());
 #else
-      sleep(2);
+    sleep(2);
 #endif
-    }
+  }
+
   return OK;
 }
 

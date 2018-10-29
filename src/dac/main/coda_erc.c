@@ -86,6 +86,11 @@ typedef struct ERpriv
   int  record_length;
   /*int*/long  split;
   char filename[128];
+
+  int usesubdir;
+  char subdirname[128];
+  char subfilename[128];
+
   pthread_t write_thread;
   objClass object;
   IFUNCPTR write_proc;
@@ -438,9 +443,10 @@ int
 CODA_open_file(ERp erp)
 {
   objClass object = localobject;
-
-  int tmp;
+  mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH;
+  int tmp, res;
   int stat=0;
+  char subdirname[128];
 
   erp->nlongs = 0;
   erp->nevents = 0;
@@ -450,7 +456,32 @@ CODA_open_file(ERp erp)
   printf("par2: %d\n",object->runNumber);
   printf("par3: %d\n",erp->splitnb);
   printf("befor: >%s<\n",erp->current_file);
-  sprintf(erp->current_file, "%s_%06d.evio.%d", erp->filename, object->runNumber, erp->splitnb);
+
+
+  if(erp->usesubdir)
+  {
+    sprintf(subdirname, "%s_%06d",erp->subdirname,object->runNumber);
+    res = mkdir(subdirname, mode);
+    if(res!=0)
+	{
+      printf("ERROR: cannot create subdirectory >%s< for data, mkdir returns %d - exit\n",subdirname,res);
+      exit(0);
+	}
+    if(chmod(subdirname, mode) != 0)
+    {
+      printf("coda_erc: ERROR: cannot change mode on subdirectory >%s<\n",subdirname);
+    }
+    else
+    {
+      printf("coda_erc: INFO: changed mode on subdirectory >%s< - opened for everybody\n",subdirname);
+    }
+    sprintf(erp->current_file, "%s_%06d/%s_%06d.evio.%05d", erp->subdirname, object->runNumber, erp->subfilename, object->runNumber, erp->splitnb);
+  }
+  else
+  {
+    sprintf(erp->current_file, "%s_%06d.evio.%05d", erp->filename, object->runNumber, erp->splitnb);
+  }
+
   printf("after: >%s<\n",erp->current_file);
   printf("coda_er: opening file >%s<\n",erp->current_file);
   
@@ -572,7 +603,15 @@ outputEvents(ERp erp, et_event **pe, int start, int stop)
       erp->nevents = 0;
 	  erp->nlongs  = 0;
 
-      sprintf(erp->current_file, "%s_%06d.evio.%d", erp->filename, erp->object->runNumber, erp->splitnb);
+
+      if(erp->usesubdir)
+	  {
+        sprintf(erp->current_file, "%s_%06d/%s_%06d.evio.%05d", erp->subdirname, erp->object->runNumber, erp->subfilename, erp->object->runNumber, erp->splitnb);
+	  }
+	  else
+	  {
+        sprintf(erp->current_file, "%s_%06d.evio.%05d", erp->filename, erp->object->runNumber, erp->splitnb);
+	  }
 
 	  printf("coda_er(outputEvents): Opening file : %s\n",erp->current_file);
       erp->fd = 0;
@@ -882,10 +921,55 @@ codaDownload(char *conf)
     return(ER_ERROR);
   }
   else
+  /*
   {
     strcpy(erp->filename,tmpp);
     printf("got erp->filename >%s<\n",erp->filename);
   }
+  */
+  {
+    int  arg1c;
+    char arg1v[10][128];
+    char *p_sl;
+    listSplit2(tmpp," ",&arg1c,arg1v);
+    printf("\nfirst split, arg1c=%d, first piece >%s<\n",arg1c,arg1v[0]);
+    if(arg1c==1)
+	{
+      strcpy(erp->filename,arg1v[0]);
+      erp->usesubdir = 0;
+      printf("got erp->filename >%s<, no subdirectory\n\n",erp->filename);
+	}
+    else if(arg1c==2)
+	{
+      erp->usesubdir = 1;
+
+	  /* extract string after last slash */
+      p_sl = strrchr(arg1v[0], '/');
+      if (p_sl)
+      {
+        strcpy(erp->subfilename,p_sl+1);
+      }
+      else
+      {
+        printf("Cannot find any slashes - exit\n");
+        exit(0);
+      }
+
+      strcpy(erp->subdirname,arg1v[0]);
+
+      printf("will use subdirectory >%s<, subfile >%s<\n\n",erp->subdirname,erp->subfilename);
+	}
+    else
+	{
+      printf("coda_erc: ERROR parsing datafile name - exit\n",listArgc);
+      exit(0);
+	}
+  }
+
+
+
+
+
 
 
 

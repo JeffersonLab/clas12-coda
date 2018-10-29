@@ -30,7 +30,8 @@
 #define SCALER_TYPE_VTP         3
 #define SCALER_TYPE_SSP         4
 #define SCALER_TYPE_TD          5
-#define SCALER_TYPE_MAX         6   /* the maximum number of different board types */
+#define SCALER_TYPE_TS          6
+#define SCALER_TYPE_MAX         7   /* the maximum number of different board types */
 
 
 #define SCALER_PARTYPE_THRESHOLD    0

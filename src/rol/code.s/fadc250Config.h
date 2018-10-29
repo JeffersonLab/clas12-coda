@@ -21,6 +21,7 @@ typedef struct {
   int b_ID;
 
   int          mode;
+  int          compression;
   unsigned int winOffset;
   unsigned int winWidth;
   unsigned int nsb;

@@ -2370,27 +2370,35 @@ faSetCompression(int id, int opt)
       return;
     }
 
+  printf("faSetCompression: id=%d opt=%d\n",id,opt);
+
   FALOCK;
 
   ctrl2  = (vmeRead32(&(FAp[id]->ctrl2)))&FA_CONTROL2_MASK;
+  printf("faSetCompression: read ctrl2=0x%08x\n",ctrl2);
 
   ctrl2 = ctrl2 & ~FA_CTRL_COMPRESS_MASK;
+  printf("faSetCompression: masked ctrl2=0x%08x\n",ctrl2);
 
   if(opt==0)
   {
+    printf("faSetCompression: doing nothing\n");
     ;
   }
   else if(opt==1)
   {
 	ctrl2 = ctrl2 | FA_CTRL_COMPRESS_ENABLE;
+    printf("faSetCompression: setting mode 1 ctrl2=0x%08x\n",ctrl2);
   }
   else if(opt==2)
   {
 	ctrl2 = ctrl2 | FA_CTRL_COMPRESS_VERIFY;
+    printf("faSetCompression: setting mode 2 ctrl2=0x%08x\n",ctrl2);
   }
   else
     printf("faSetCompression: illegal opt=%d\n",opt);
 
+  printf("faSetCompression: writing ctrl2=0x%08x\n",ctrl2);
   vmeWrite32(&(FAp[id]->ctrl2), ctrl2);
 
   FAUNLOCK;
@@ -2411,10 +2419,15 @@ faGetCompression(int id)
       return(-1);
     }
 
+  printf("faGetCompression: id=%d\n",id);
+
   FALOCK;
 
   ctrl2  = (vmeRead32(&(FAp[id]->ctrl2)))&FA_CONTROL2_MASK;
+  printf("faGetCompression: read ctrl2=0x%08x\n",ctrl2);
+
   ctrl2 = ctrl2 & FA_CTRL_COMPRESS_MASK;
+  printf("faGetCompression: masked ctrl2=0x%08x\n",ctrl2);
 
   if(ctrl2 == FA_CTRL_COMPRESS_DISABLE) opt = 0;
   else if(ctrl2 == FA_CTRL_COMPRESS_ENABLE) opt = 1;
@@ -2431,6 +2444,8 @@ faGetCompression(int id)
 void
 faEnable(int id, int eflag, int bank)
 {
+  unsigned int ctrl2;
+  int opt;
 
   if(id==0) id=fadcID[0];
 
@@ -2440,19 +2455,29 @@ faEnable(int id, int eflag, int bank)
       return;
     }
 
+  /* call it BEFORE 'FALOCK' !!! */
+  opt = faGetCompression(id);
+
   FALOCK;
 
-  if(eflag) 
-    {  /* Enable Internal Trigger logic as well*/
-      vmeWrite32(&(FAp[id]->ctrl2),
-		FA_CTRL_GO | FA_CTRL_ENABLE_TRIG | FA_CTRL_ENABLE_SRESET | 
-		FA_CTRL_ENABLE_INT_TRIG );
-    }
-  else
-    {
-      vmeWrite32(&(FAp[id]->ctrl2),
-		FA_CTRL_GO | FA_CTRL_ENABLE_TRIG | FA_CTRL_ENABLE_SRESET);
-    }
+  ctrl2 = FA_CTRL_GO | FA_CTRL_ENABLE_TRIG | FA_CTRL_ENABLE_SRESET;
+
+  if(eflag) /* Enable Internal Trigger logic as well*/
+  {
+    ctrl2 = ctrl2 | FA_CTRL_ENABLE_INT_TRIG;
+  }
+
+  if(opt==1)
+  {
+	ctrl2 = ctrl2 | FA_CTRL_COMPRESS_ENABLE;
+  }
+  else if(opt==2)
+  {
+	ctrl2 = ctrl2 | FA_CTRL_COMPRESS_VERIFY;
+  }
+
+  vmeWrite32(&(FAp[id]->ctrl2), ctrl2);
+
   FAUNLOCK;
 }
 

@@ -74,9 +74,12 @@ typedef struct
   int ecal_esum_emin;
   int ecal_esum_width;
 
-  int dc_mult_en;
+  int dc_en;
+  int dc_road_required;
+  int dc_road_inbend_required;
+  int dc_road_outbend_required;
   int dc_mult_min;
-  int dc_mult_width;
+  int dc_width;
 
   int htcc_en;
   long long htcc_mask;
@@ -122,7 +125,7 @@ typedef struct
 {
   int ftof_width;
   int pcu_width;
-  int match_tolerance;
+  int match_table;
 } ss_ftofpcu;
 
 typedef struct

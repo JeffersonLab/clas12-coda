@@ -18,6 +18,10 @@ include $(CODA)/src/Makefile.include
 #CC = /apps/gcc/4.9.4/bin/gcc -O2
 #CXX = /apps/gcc/4.9.4/bin/g++ -O2
 
+ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+  LDCC = $(LDCXX)
+endif
+
 ifeq ("$(OSTYPE_MACHINE)","SunOS_i86pc")
     CFLAGS += -DSunOS_i86pc
 endif
@@ -71,44 +75,72 @@ CLON_FLAGS += -I./$(MAIN).s \
 		-DDAYTIME="\"`date`\""
 CLON_FLAGS += -DNO_X11
 
+
+
+
+
+
+####################
+#
+####################
+
+
 ifeq ("$(OSTYPE)","VXWORKS")
+
   LIBNAMES += ./VXWORKS_ppc/lib/libdac.so
   LIBNAMES += $(CODA)/VXWORKS_ppc/lib/libmysql4.1.20.so
+
 else ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+
   LIBNAMES += ./Linux_armv7l/lib/libdac.a
+
+
+  #use system mysql, and then remaining calls from our mysql
+  LIBNAMES += /usr/lib/libmysqlclient.so
   LIBNAMES += $(CODA)/Linux_armv7l/lib/libmysql4.1.20.a
+
   LIBNAMES += $(CODA)/Linux_armv7l/lib/libet.a
   LIBNAMES += $(CODA)/Linux_armv7l/lib/libevio.a
+
+  LIBNAMES += $(CODA)/src/ipc/$(OSTYPE_MACHINE)/lib/libipc.a
+  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += -lapr-1
+  LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
+  LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
+
+
+
+
+
 else ifeq ("$(OSTYPE_MACHINE)","Linux_nios2")
+
   LIBNAMES += ./Linux_nios2/lib/libdac.a
   LIBNAMES += $(CODA)/Linux_nios2/lib/libmysql4.1.20.a
 #  LIBNAMES += $(CODA)/Linux_nios2/lib/libet.a
   LIBNAMES += $(CODA)/Linux_nios2/lib/libevio.a
-else
 
+else
 
   LIBNAMES += $(globallib)/libcreg.a
 
-
-
-#use system mysql, and then remaining calls from our mysql
-ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
-  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-endif
-ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
-  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
-endif
-ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
-endif
+  #use system mysql, and then remaining calls from our mysql
+  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+    LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+  endif
+  ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
+    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+  endif
+  ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+  endif
 
   LIBNAMES += $(globallib)/libmysql4.1.20.a # the rest of mysql (our stuff)
 
 
 
-ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
-  LIBNAMES += $(CODA)/src/rol/jvme/libjvme.so
-endif
+  ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
+    LIBNAMES += $(CODA)/src/rol/jvme/libjvme.so
+  endif
 
   LIBNAMES += $(CODA)/src/evio-4.3/$(OSTYPE_MACHINE)/lib/libevio.a
 ##  LIBNAMES += $(globallib)/libevio.a
@@ -123,24 +155,32 @@ endif
 #
   LIBNAMES += -L/usr/lib64 -lstdc++
   LIBNAMES += $(CODA)/src/ipc/$(OSTYPE_MACHINE)/lib/libipc.a
-ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
-  LIBNAMES += /usr/local/lib/libapr-1.so
-  LIBNAMES += -luuid -lrt -lcrypt -lssl -lcrypto -ldl -lz
-  LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
-else
-  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
-  LIBNAMES += -lapr-1
-  LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
-  LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
-endif
 
-
-
-
-
+  ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+    LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+    LIBNAMES += /usr/local/lib/libapr-1.so
+    LIBNAMES += -luuid -lrt -lcrypt -lssl -lcrypto -ldl -lz
+    LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
+  else
+    LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+    LIBNAMES += -lapr-1
+    LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
+    LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
+  endif
 
 endif
+
+
+
+####################
+#
+####################
+
+
+
+
+
+
 
 #ifeq ("$(OSTYPE_MACHINE)","SunOS_sun4u")
 #  LIBNAMES += /usr/sfw/lib/libgcc_s.so

@@ -6,6 +6,10 @@
 
 #include "jvme.h"
 
+// 0x00000000 = primary/failsafe image, 0x01000100 = run image
+//#define SSPRICH_FIRMWARE_ADDR           0x01000100
+#define SSPRICH_FIRMWARE_ADDR		0x00000000
+
 extern volatile SSP_regs *pSSP[MAX_VME_SLOTS+1];        /* pointers to SSP memory map */
 int sspRichConnectedFibers[MAX_VME_SLOTS+1];            /* array of SSPs valid fiber connections */
 MAROC_Regs sspRich_MAROC_Regs[MAX_VME_SLOTS+1][RICH_FIBER_NUM][3]; /* array of MAROC ASIC configurations */
@@ -415,7 +419,7 @@ int sspRich_ScanFibers_NoInit(int id)
   return OK;
 }
 
-int sspRich_Reboot(int id, int fiber)
+int sspRich_Reboot(int id, int fiber, int image)
 {
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
     return ERROR;
@@ -427,7 +431,7 @@ int sspRich_Reboot(int id, int fiber)
   sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0xAA995566); usleep(10);
   sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0x20000000); usleep(10);
   sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0x30020001); usleep(10);
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0x00010000); usleep(10);
+  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, image ? SSPRICH_FIRMWARE_ADDR : 0); usleep(10);
   sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0x30008001); usleep(10);
   sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0x0000000F); usleep(10);
   sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0x20000000); usleep(10);
@@ -1595,11 +1599,35 @@ int sspRich_FlashIsValid(int id, int fiber)
   return ERROR;
 }
 
+int sspRich_FirmwareVerifyAll(int id, const char *filename)
+{
+  FILE *f;
+  int i, fiber, mask = 0, fail_mask = 0;
+  unsigned int addr = SSPRICH_FIRMWARE_ADDR, page = 0, erase_first = 1;
+  unsigned char buf[256];
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
+    return ERROR;
+
+  for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+  {
+    if(sspRichConnectedFibers[id] & (1<<fiber))
+    {
+      printf("%s: Verifying ssp slot %d, fiber %d\n", __func__, id, fiber);
+      if(sspRich_FirmwareVerify(id, fiber, filename) != OK)
+        printf("SSP Slot %d, Fiber %d - programming FAILED\n", id, fiber);
+      else
+        printf("SSP Slot %d, Fiber %d - programming PASSED\n", id, fiber);
+    }
+  }
+
+  return OK;
+}
+
 int sspRich_FirmwareUpdateVerifyAll(int id, const char *filename)
 {
   FILE *f;
   int i, fiber, mask = 0, fail_mask = 0;
-  unsigned int addr = 0x1000100, page = 0, erase_first = 1;
+  unsigned int addr = SSPRICH_FIRMWARE_ADDR, page = 0, erase_first = 1;
   unsigned char buf[256];
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
     return ERROR;
@@ -1765,7 +1793,7 @@ int sspRich_FirmwareUpdate(int id, int fiber, const char *filename)
 {
   FILE *f;
   int i, flashId = 0;
-  unsigned int addr = 0x1000100, page = 0, erase_first = 1;
+  unsigned int addr = SSPRICH_FIRMWARE_ADDR, page = 0, erase_first = 1;
   unsigned char buf[256], rspId[3];
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH) ||
      sspRich_IsFiberInvalid(id, fiber, __func__))
@@ -1852,7 +1880,7 @@ int sspRich_FirmwareRead(int id, int fiber, const char *filename)
 {
   FILE *f;
   int i,len, flashId = 0;
-  unsigned int addr = 0x1000100;
+  unsigned int addr = SSPRICH_FIRMWARE_ADDR;
   unsigned char buf[256];
   unsigned char rspId[3];
 
@@ -1902,7 +1930,7 @@ int sspRich_FirmwareVerify(int id, int fiber, const char *filename)
 {
   FILE *f;
   int i,len, flashId = 0;
-  unsigned int addr = 0x1000100;
+  unsigned int addr = SSPRICH_FIRMWARE_ADDR;
   unsigned char buf[256];
   unsigned char rspId[3], val;
   

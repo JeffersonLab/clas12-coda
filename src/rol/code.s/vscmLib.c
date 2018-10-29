@@ -91,6 +91,8 @@ int vscmInited = 0;
 int minSlot = 21;
 int maxSlot = 1;
 
+int vscmSemLastHeartbeat[VSCM_MAX_BOARDS+1];
+
 typedef struct
 {
   int module;
@@ -899,10 +901,7 @@ fssrSetActiveLines(int id, int chip, unsigned int lines)
   }
 
   for(i=0;i<8;i++)
-  {
-    vmeWrite32(&VSCMpr[id]->Fssr[i].Ctrl, mode | 0x80000000);
-    vmeWrite32(&VSCMpr[id]->Fssr[i].Ctrl, mode);
-  }
+    vmeWrite32(&VSCMpr[id]->Fssr[i].Ctrl, mode | 0x10000);
 
   // Allow time for state machines to reset
   taskDelay(1);
@@ -1513,12 +1512,14 @@ vscmSetClockSource(int id, int clock_int_ext)
 
   if(clock_int_ext)
   {
+    printf("%s(%d,%d) - Set External\n", __func__, id, clock_int_ext);
     /* External Clock */
     vmeWrite32(&VSCMpr[id]->Clk.Ctrl, 0xC0000000); /* sets clock */
     vmeWrite32(&VSCMpr[id]->Clk.Ctrl, 0x40000000); /* release reset */
   }
   else
   {
+    printf("%s(%d,%d) - Set Internal\n", __func__, id, clock_int_ext);
     /* Internal Clock */
     vmeWrite32(&VSCMpr[id]->Clk.Ctrl, 0x80000000); /* sets clock */
     vmeWrite32(&VSCMpr[id]->Clk.Ctrl, 0x00000000); /* release reset */
@@ -1535,7 +1536,7 @@ vscmGetClockSource(int id)
   if (vscmIsNotInit(&id, __func__))
     return;
  
-  return (vmeRead32(&VSCMpr[id]->Clk.Ctrl)>>31) & 0x1; 
+  return (vmeRead32(&VSCMpr[id]->Clk.Ctrl)>>30) & 0x1; 
 }
 
 void
@@ -1735,6 +1736,11 @@ vscmStat(int id)
   logMsg("FIFO Block Count: %u\n",  vmeRead32(&VSCMpr[id]->Eb.FifoBlockCnt));
   logMsg("Input Triggers: %u\n",    vscmGetInputTriggers(id));
   logMsg("Accepted Triggers: %u\n", vscmGetAcceptedTriggers(id));
+  logMsg("Sync Scaler: %u\n", vmeRead32(&VSCMpr[id]->Sd.Scalers[VSCM_SCALER_SYNC]));
+  logMsg("Trig1 Scaler: %u\n", vmeRead32(&VSCMpr[id]->Sd.Scalers[VSCM_SCALER_TRIG1]));
+  logMsg("Sync Cfg: 0x%08X\n", vmeRead32(&VSCMpr[id]->Sd.SyncCtrl));
+  logMsg("Trig1 Cfg: 0x%08X\n", vmeRead32(&VSCMpr[id]->Sd.TrigCtrl));
+  logMsg("Clock Cfg: 0x%08X\n", vmeRead32(&VSCMpr[id]->Clk.Ctrl));
 }
 
 uint32_t
@@ -2197,7 +2203,7 @@ vscmGSendScalers()
   char name[100];
   int i, id, hfcb, strip, chip, crate;
   float ref[4], data[512];
-  unsigned int val;
+  unsigned int val, cnt;
   char host[100];
 
   gethostname(host,sizeof(host));
@@ -2224,7 +2230,9 @@ vscmGSendScalers()
       return 0;
 
     // SEM State
-    val = vmeRead32(&VSCMpr[id]->Cfg.SemHeartbeatCnt);
+    cnt = vmeRead32(&VSCMpr[id]->Cfg.SemHeartbeatCnt);
+    val = (cnt != vscmSemLastHeartbeat[id]) ? 1 : 0;
+    vscmSemLastHeartbeat[id] = cnt;
     sprintf(name, "SVT_DAQ_SVT%dSLOT%d:SEMSTATE", crate+1, id);
     epics_json_msg_send(name, "int", 1, &val);
 
@@ -2268,6 +2276,10 @@ vscmGSendScalers()
         data[chip] = ref[chip] * ((float)vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerMarkErr));
         data[chip]+= ref[chip] * ((float)vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerEncErr));
         data[chip]+= ref[chip] * ((float)vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerChipIdErr));
+
+        if(!vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerStatusWord)) data[chip]++;
+        if(!vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerEvent)) data[chip]++;
+        if(!vmeRead32(&VSCMpr[id]->Fssr[hfcb*4+chip].ScalerWords)) data[chip]++;
       }
       sprintf(name, "SVT_DAQ_R%dS%d:FSSRERR", entry.region, entry.module);
       epics_json_msg_send(name, "float", 4, data);

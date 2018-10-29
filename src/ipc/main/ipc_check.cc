@@ -89,8 +89,9 @@ main(int argc, char **argv)
     ipc_init(unique_name,(char*)"ipc_check");
   }
   */
-  server.AddSendTopic(application, getenv("SESSION"), "daq", destination);
-  server.AddRecvTopic(application, getenv("SESSION"), "daq", "ipc_check");
+  server.AddSendTopic(application, getenv("SESSION"), "control", destination);
+  server.AddRecvTopic(application, getenv("SESSION"), "control", "ipc_check");
+
   server.Open();
 
   MessageActionControl  *control = new MessageActionControl((char *)"server");

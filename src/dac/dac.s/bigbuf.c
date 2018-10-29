@@ -257,17 +257,18 @@ bb_dma_free()
 {
   int i, status;
 
+  printf("bb_dma_free: n_dma_hdl=%d\n",n_dma_hdl);fflush(stdout);
   for(i=0; i<n_dma_hdl; i++)
   {
     status = gefVmeFreeDmaBuf(dma_hdl[i]);
     if (status != GEF_SUCCESS)
     {
-      printf("bb_delete1: ERROR: gefVmeFreeDmaBuf[%2d] returned %x\n",i,status);
+      printf("bb_delete1: ERROR: gefVmeFreeDmaBuf[%2d] returned %x\n",i,status);fflush(stdout);
       return;
     }
     else
 	{
-      printf("bb_delete1: gefVmeFreeDmaBuf[%2d] has been called\n",i);
+      printf("bb_delete1: gefVmeFreeDmaBuf[%2d] has been called\n",i);fflush(stdout);
 	}
   }
 }

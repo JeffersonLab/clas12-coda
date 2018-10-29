@@ -229,6 +229,18 @@ __go()
   vtpV7SetResetSoft(0);
   vtpEbResetFifo();
 
+
+/* Do DMA readout before Go enabled to clear out any buffered data - hack fix until problem with extra TI block header from past run is found */
+#ifdef READOUT_TI
+  #ifdef USE_DMA
+    vtpDmaStart(VTP_DMA_TI, vtpDmaMemGetPhysAddress(0), MAXBUFSIZE*4);
+    vtpDmaWaitDone(VTP_DMA_TI);
+  #else
+    vtpEbTiReadEvent(gpDmaBuf, MAXBUFSIZE);
+  #endif
+#endif
+
+
   printf("INFO: User Go 1 Enabling\n");
   CDOENABLE(VTP,1,1);
   printf("INFO: User Go 1 Enabled\n");
@@ -269,15 +281,15 @@ TIMERL_START;
 #endif
 
 #ifdef READOUT_TI
-  #ifdef USE_DMA
+#ifdef USE_DMA
 //    vtpDmaStart(VTP_DMA_TI, vtpDmaMemGetPhysAddress(0), MAXBUFSIZE*4);
-    len = vtpDmaWaitDone(VTP_DMA_TI)>>2;
-    if(len) len--;
-    pBuf = (volatile unsigned int *)vtpDmaMemGetLocalAddress(0);
-  #else
-    len = vtpEbTiReadEvent(gpDmaBuf, MAXBUFSIZE);
-    pBuf = (volatile unsigned int *)gFixedBuf;
-  #endif
+  len = vtpDmaWaitDone(VTP_DMA_TI)>>2;
+  if(len) len--;
+  pBuf = (volatile unsigned int *)vtpDmaMemGetLocalAddress(0);
+#else
+  len = vtpEbTiReadEvent(gpDmaBuf, MAXBUFSIZE);
+  pBuf = (volatile unsigned int *)gFixedBuf;
+#endif
   if(len>1000)
   {
     printf("LEN1=%d\n",len);
@@ -293,16 +305,16 @@ TIMERL_START;
 #endif
 
 #ifdef READOUT_VTP
-  #ifdef USE_DMA
+#ifdef USE_DMA
 //    vtpDmaStart(VTP_DMA_VTP, vtpDmaMemGetPhysAddress(1), MAXBUFSIZE*4);
-    len = vtpDmaWaitDone(VTP_DMA_VTP)>>2;
-    if(len) len--;
-    pBuf = (volatile unsigned int *)vtpDmaMemGetLocalAddress(1);
-  #else
-    len = vtpEbReadEvent(pBuf, MAXBUFSIZE);
-    pBuf = (volatile unsigned int *)gFixedBuf;
-  #endif
-  if(len>1000)
+  len = vtpDmaWaitDone(VTP_DMA_VTP)>>2;
+  if(len) len--;
+  pBuf = (volatile unsigned int *)vtpDmaMemGetLocalAddress(1);
+#else
+  len = vtpEbReadEvent(pBuf, MAXBUFSIZE);
+  pBuf = (volatile unsigned int *)gFixedBuf;
+#endif
+  if(len>(MAXBUFSIZE/4)) /* if we are using more then 25% of the buffer, print message*/
   {
     printf("LEN2=%d\n",len);
     for(ii=0; ii<len; ii++) printf("vtp[%2d] = 0x%08x\n",ii,pBuf[ii]);

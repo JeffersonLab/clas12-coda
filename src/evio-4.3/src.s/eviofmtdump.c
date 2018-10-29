@@ -4,7 +4,7 @@
      input: iarr[] - data array (words)
             nwrd - length of data array in words
             ifmt[] - format (as produced by eviofmt.c)
-            nfmt - the number of bytes in ifmt[]
+            nfmt - the number of elements in ifmt[]
      return: the number of bytes in 'xml' if everything fine, negative if error
 
         Converts the data of array (iarr[i], i=0...nwrd-1)
@@ -17,6 +17,9 @@
 
 #include <stdio.h>
 #include <stdint.h>
+
+#include "evio.h"
+#include "eviofmt.h"
 
 #define MIN(a,b) ( (a) < (b) ? (a) : (b) )
 
@@ -60,9 +63,9 @@ typedef struct
 static int iarr[NWORDS+10];
 
 int
-eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, char *xml)
+eviofmtdump(int *arr, int nwrd, unsigned short *ifmt, int nfmt, int nextrabytes, char *xml)
 {
-  int i, imt, ncnf, kcnf, lev, iterm;
+  int i, imt, ncnf, kcnf, mcnf, lev, iterm;
   long long *b64, *b64end;
   int *b32, *b32end;
   short *b16, *b16end;
@@ -79,9 +82,9 @@ eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, 
   for(i=0; i<nwrd; i++) iarr[i] = arr[i]; /* do not modify original buffer ! */
 
 
-  imt = 0;   /* ifmt[] index */
-  ncnf = 0;  /* how many times must repeat a format */
-  lev  = 0;  /* parenthesis level */
+  imt   = 0; /* ifmt[] index */
+  ncnf  = 0; /* how many times must repeat a format */
+  lev   = 0; /* parenthesis level */
   iterm = 0; /*  */
 
   b8 = (char *)&iarr[0]; /* beginning of data */
@@ -149,55 +152,60 @@ eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, 
       }
       else
       {
-        ncnf = ifmt[imt-1]/16; /* how many times to repeat format code */
-        kcnf = ifmt[imt-1]-16*ncnf; /* format code */
-
-        if(kcnf==15) /* left parenthesis, SPECIAL case: #repeats must be taken from int32 data */
-        {
-          kcnf = 0; /* set it to regular left parenthesis code */
-          b32 = (uint32_t *)b8;
-          ncnf = *b32 = SWAP32(*b32); /* get #repeats from data */
-#ifdef PRINT
-          xml += sprintf(xml,"          %d(\n",ncnf);
-          /*printf("ncnf(: %d\n",ncnf);*/
-#endif
-          b8 += 4;
-#ifdef DEBUG
-          printf("ncnf from data = %d (code 15)\n",ncnf);
-#endif
-        }
-
-        if(kcnf==14) /* left parenthesis, SPECIAL case: #repeats must be taken from int16 data */
-        {
-          kcnf = 0; /* set it to regular left parenthesis code */
-          b16 = (uint16_t *)b8;
-          ncnf = *b16 = SWAP16(*b16); /* get #repeats from data */
-#ifdef PRINT
-          xml += sprintf(xml,"          %d(\n",ncnf);
-          /*printf("ncnf(: %d\n",ncnf);*/
-#endif
-          b8 += 2;
-#ifdef DEBUG
-          printf("ncnf from data = %d (code 14)\n",ncnf);
-#endif
-        }
-
-        if(kcnf==13) /* left parenthesis, SPECIAL case: #repeats must be taken from int8 data */
-        {
-          kcnf = 0; /* set it to regular left parenthesis code */
-          ncnf = *((uint8_t *)b8); /* get #repeats from data */
-#ifdef PRINT
-          xml += sprintf(xml,"          %d(\n",ncnf);
-          /*printf("ncnf(: %d\n",ncnf);*/
-#endif
-          b8 ++;
-#ifdef DEBUG
-          printf("ncnf from data = %d (code 13)\n",ncnf);
-#endif
-        }
+        ncnf = (ifmt[imt-1]>>8)&0x3F; /* how many times to repeat format code */
+        kcnf = ifmt[imt-1]&0xFF; /* format code */
+        mcnf = (ifmt[imt-1]>>14)&0x3; /* repeat code */
 
         if(kcnf == 0) /* left parenthesis - set new lv[] */
         {
+
+          /* check repeats for left parenthesis */
+
+          if(mcnf==1) /* left parenthesis, SPECIAL case: #repeats must be taken from int32 data */
+          {
+            mcnf = 0;
+            b32 = (uint32_t *)b8;
+            ncnf = *b32 = SWAP32(*b32); /* get #repeats from data */
+#ifdef PRINT
+            xml += sprintf(xml,"          %d(\n",ncnf);
+            /*printf("ncnf(: %d\n",ncnf);*/
+#endif
+            b8 += 4;
+#ifdef DEBUG
+            printf("ncnf from data = %d (code 15)\n",ncnf);
+#endif
+          }
+
+          if(mcnf==2) /* left parenthesis, SPECIAL case: #repeats must be taken from int16 data */
+          {
+            mcnf = 0;
+            b16 = (uint16_t *)b8;
+            ncnf = *b16 = SWAP16(*b16); /* get #repeats from data */
+#ifdef PRINT
+            xml += sprintf(xml,"          %d(\n",ncnf);
+            /*printf("ncnf(: %d\n",ncnf);*/
+#endif
+            b8 += 2;
+#ifdef DEBUG
+            printf("ncnf from data = %d (code 14)\n",ncnf);
+#endif
+          }
+
+          if(mcnf==3) /* left parenthesis, SPECIAL case: #repeats must be taken from int8 data */
+          {
+            mcnf = 0;
+            ncnf = *((uint8_t *)b8); /* get #repeats from data */
+#ifdef PRINT
+            xml += sprintf(xml,"          %d(\n",ncnf);
+            /*printf("ncnf(: %d\n",ncnf);*/
+#endif
+            b8 ++;
+#ifdef DEBUG
+            printf("ncnf from data = %d (code 13)\n",ncnf);
+#endif
+          }
+
+
           lv[lev].left = imt; /* store ifmt[] index */
           lv[lev].nrepeat = ncnf; /* how many time will repeat format code inside parenthesis */
           lv[lev].irepeat = 0; /* cleanup place for the right parenthesis (do not get it yet) */
@@ -243,20 +251,48 @@ eviofmtdump(int *arr, int nwrd, unsigned char *ifmt, int nfmt, int nextrabytes, 
     }
 
 
-    /* if 'ncnf' is zero, get it from data (always in 'int' format) */
+    /* if 'ncnf' is zero, get it from data */
+	/*printf("ncnf=%d\n",ncnf);fflush(stdout);*/
     if(ncnf==0)
     {
-      b32 = (int *)b8;
-      ncnf = *b32 = SWAP32(*b32);
+      if(mcnf==1)
+	  {
+        b32 = (int *)b8;
+        ncnf = *b32 = SWAP32(*b32);
+		/*printf("ncnf32=%d\n",ncnf);fflush(stdout);*/
+        b8 += 4;
+	  }
+      else if(mcnf==2)
+	  {
+        b16 = (short *)b8;
+        ncnf = *b16 = SWAP16(*b16);
+		/*printf("ncnf16=%d\n",ncnf);fflush(stdout);*/
+        b8 += 2;
+	  }
+      else if(mcnf==3)
+	  {
+        ncnf = *b8;
+		/*printf("ncnf08=%d\n",ncnf);fflush(stdout);*/
+        b8 += 1;
+	  }
+      /*else printf("ncnf00=%d\n",ncnf);fflush(stdout);*/
+
 #ifdef PRINT
 	  xml += sprintf(xml,"          %d:\n",ncnf);
       /*printf("ncnf: %d\n",ncnf);*/
 #endif
-      b8 += 4;
 #ifdef DEBUG
       printf("ncnf from data = %d\n",ncnf);
 #endif
     }
+
+
+
+
+
+
+
+
 
 
     /* at that point we are ready to process next piece of data; we have following entry info:

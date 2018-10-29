@@ -1152,7 +1152,7 @@ tdGStatus(int pflag)
 	  id = tdSlot(itd);
 	  for(iport=1; iport<TD_MAX_FIBER_PORTS+1; iport++)
 	    {
-	      /* Only continue of this port has been configured as a slave */
+	      /* Only continue if this port has been configured as a slave */
 	      if((tdSlaveMask[id] & (1<<(iport-1)))==0) continue;
 
 	      /* Slot and Port number */

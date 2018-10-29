@@ -1309,6 +1309,10 @@ popup_comp_attributes(drawComp* comp,
     if(comp->comp.code[i] != NULL)
       XmTextFieldSetString(atw.code_widget[i], comp->comp.code[i]);
   }
+
+
+
+
   /*
 printf("comp->comp.type = %d\n",comp->comp.type);
   */
@@ -1338,7 +1342,34 @@ printf("comp->comp.type = %d\n",comp->comp.type);
 	  }
 	  else
 	  {
+
+		/*
         res = getDefaultCodeFromDbase ("ROC", rols);
+		*/
+
+		/* distinguish ROC and VTP by name: VTP names ends on 'vtp' */
+        /* we can do it only is ROC name is set already (when component is selected from existing components menu) */
+
+        if(comp->comp.node_name != NULL)
+		{
+          int len;
+          char tmp[128];
+
+          printf("ROC name 1 >%s<\n",comp->comp.node_name);
+
+          /* get last 3 characters */
+          len = strlen(comp->comp.node_name);
+          printf("len=%d\n",len);
+          sprintf(tmp,"%s",comp->comp.node_name+(len-3));
+          printf("tmp=>%s<\n",tmp);
+
+          if(!strncmp(tmp,"vtp",3)) res = getDefaultCodeFromDbase ("VTP", rols);
+          else                      res = getDefaultCodeFromDbase ("ROC", rols);
+		}
+        else
+		{
+          res = getDefaultCodeFromDbase ("ROC", rols);
+		}
 	  }
 	printf("7\n");fflush(stdout);
 #if 1

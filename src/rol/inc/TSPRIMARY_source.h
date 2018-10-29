@@ -285,6 +285,9 @@ tsprimarytriglink(int code, VOIDFUNCPTR isr)
   {
     for(port=1; port<=8; port++)
     {
+	  /*SERGEY: IGNORE CRATES WHICH ARE NOT IN CONFIG - will NOT help: sometimes TD can return some junk number
+        for fibers connected to roc NOT in config, and it can coincide with rocid for roc IN config, it 
+        confuses everything; should return 0 or real ID for rocs NOT in config */
 vmeBusLock();
       roc_id_fiber[itd][port] = tdGetCrateID(tdSlot(itd),port);
 vmeBusUnlock();

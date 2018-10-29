@@ -251,14 +251,14 @@ dbaseReader::dbaseReader (int exptid, daqRun& run)
       reporter->cmsglog (CMSGLOG_INFO1,"Connected to mysql server on %s\n",
 			       run_.msqlhost());
     else
-      reporter->cmsglog (CMSGLOG_ERROR,"Can't talk to mysql server on %s\n",
+      reporter->cmsglog (CMSGLOG_ERROR,"Can't talk to mysql server on %s executing listAllDatabases\n",
 			       run_.msqlhost());
   }
   else
   {
-    reporter->cmsglog (CMSGLOG_ERROR,"Can't talk to mysql server on %s\n",
+    reporter->cmsglog (CMSGLOG_ERROR,"Can't talk to mysql server on %s executing connectMysql\n",
 			     run_.msqlhost());
-    fprintf (stderr, "Failed to connect to mysql server on %s\n",
+    fprintf (stderr, "Failed to connect to mysql server on %s executing connectMysql\n",
 	     run_.msqlhost());
     ::exit (1);
   }
@@ -346,6 +346,23 @@ int
 dbaseReader::reconnectMysql (void)
 {
   // check whether the mysql server is indeed went away
+/*sergey: "MSQL server has gone away" was denined and used in old msql, is it same for mysql ? */
+/* to do similar thing, have to find out what error mysql calls return in case if server gone away */
+/* or maybe should always try ti reconnect */
+
+/*from google:
+The MySQL server has gone away (error 2006) has two main causes and solutions:
+
+Server timed out and closed the connection. To fix, check that wait_timeout mysql variable in your my.cnf
+ configuration file is large enough.
+
+Server dropped an incorrect or too large packet. If mysqld gets a packet that is too large or incorrect,
+ it assumes that something has gone wrong with the client and closes the connection. To fix, you can
+ increase the maximal packet size limit max_allowed_packet in my.cnf file, eg. set max_allowed_packet = 128M,
+ then restart your MySQL server: sudo /etc/init.d/mysql restart
+ */
+
+#if 1
   /*sergey: if had following error, will try to reconnect, otherwise return error*/
   if (strcmp(mysql_error(dbaseSock_),"MySQL server has gone away") !=0 )
   {
@@ -354,6 +371,7 @@ dbaseReader::reconnectMysql (void)
     return(CODA_ERROR);
   }
   else
+#endif
   {
     fprintf(stderr,"dbaseReader::reconnectMysql: >%s< - will try to re-connect\n",
       mysql_error(dbaseSock_));
@@ -886,7 +904,7 @@ dbaseReader::getComponents (void)
 
   reporter->cmsglog (CMSGLOG_INFO1,"Parsing process table ....\n");
 
-  sprintf (qstring, "select * from %s", DBASE_PROCESS_TABLE);
+  sprintf (qstring, "select * from %s order by name", DBASE_PROCESS_TABLE);
 
   if (::mysql_query (dbaseSock_, qstring) != 0)
   {
@@ -998,7 +1016,7 @@ dbaseReader::getAllRunTypes (void)
   char qstring[256];
 
   reporter->cmsglog (CMSGLOG_INFO1,"Parsing runtype table......\n");
-  ::sprintf (qstring, "select * from %s", DBASE_RUNTYPE_TABLE);
+  ::sprintf (qstring, "select * from %s order by name", DBASE_RUNTYPE_TABLE);
 
   if (::mysql_query (dbaseSock_, qstring) != 0) {
 #ifdef _CODA_DEBUG

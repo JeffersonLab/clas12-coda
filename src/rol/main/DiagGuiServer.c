@@ -132,7 +132,7 @@ What have to be done:
 
 #define DIST_ADDR  0xEA00	  /*  base address of FADC signal distribution board  (A16)  */
 
-#define MAXBOARDS  21   /* max number od boards per crate */
+#define MAXBOARDS  22   /* max number od boards per crate */
 #define MAXWORDS  /*256*//*4096*/8192   /* max number of scaler words per board */
 
 #define MIN(a,b) ( (a) < (b) ? (a) : (b) )
@@ -145,7 +145,7 @@ static pthread_mutex_t vmescalers_lock;
 #endif
 
 
-static int nfadc, ndsc2_tcp, nvscm, nssp, ntd, rflag, rmode;
+static int nfadc, ndsc2_tcp, nvscm, nssp, nts, ntd, rflag, rmode;
 static int mssp, mvscm;
 
 static unsigned int  vmescalersmap[MAXBOARDS+1];  /* crate map */
@@ -169,6 +169,8 @@ static unsigned int vtpbuf[MAXVTPWORDS];
 #endif
 
 static int init_boards;
+
+static char hostname[128];
 
 
 /* parameter 'time' in seconds */
@@ -199,6 +201,8 @@ static int ScalersReadoutStop();
 
 #ifdef Linux_vme /* VME section */
 
+static float ttt=0.0;
+
 static int
 vmeScalersRead()
 {
@@ -214,20 +218,70 @@ vmeScalersRead()
 
     if(itype == SCALER_TYPE_DSC2)    /* dsc2 scalers */
 	{
+      char name[100];
+      float ref, data[16*72]; /* 72 scalers per slot, maximum can be 16 DSC2s */
+      int jj;
+
       for(id=0; id<ndsc2_tcp; id++)
       {
         slot = dsc2Slot_tcp(id);
 		rflag = 0xFF;
+		/*printf("reading DSC2 slot %d\n",slot);*/
 vmeBusLock();
         nw = dsc2ReadScalers(slot, tdcbuf, MAXWORDS, rflag, 1/*rmode*/);
 /*vmeBusUnlock(); move below trying to debug problem 'in FADC data: trailer #words 58 != actual #words 54'*/
         vmescalerslen[slot] = nw;
         for(ii=0; ii<nw; ii++) vmescalers[slot][ii] = tdcbuf[ii];
 vmeBusUnlock();
+
+        /*send everything as one message
+        jj=0;
+        for(ii=0; ii<nw; ii++) 
+        {
+          data[jj++] = ((float)(tdcbuf[ii]));
+		}
+		sprintf(name,"%s_DSC2SLOT%d",hostname,slot);
+        epics_json_msg_send(name, "float", nw, data);
+*/
+
+        /*send 4 groups as 4 messages*/
+        jj=0;
+        for(ii=3; ii<19; ii++) 
+        {
+          data[jj++] = ((float)(tdcbuf[ii]));
+		}
+		sprintf(name,"%s_DSC2SLOT%d_TRG_GATED",hostname,slot);
+        epics_json_msg_send(name, "float", 16, data);
+        jj=0;
+        for(ii=19; ii<35; ii++) 
+        {
+          data[jj++] = ((float)(tdcbuf[ii]));
+		}
+		sprintf(name,"%s_DSC2SLOT%d_TDC_GATED",hostname,slot);
+        epics_json_msg_send(name, "float", 16, data);
+        jj=0;
+        for(ii=35; ii<51; ii++) 
+        {
+          data[jj++] = ((float)(tdcbuf[ii]));
+		}
+		sprintf(name,"%s_DSC2SLOT%d_TRG_UNGATED",hostname,slot);
+        epics_json_msg_send(name, "float", 16, data);
+        jj=0;
+        for(ii=51; ii<67; ii++) 
+        {
+          data[jj++] = ((float)(tdcbuf[ii]));
+		}
+		sprintf(name,"%s_DSC2SLOT%d_TRG_UNGATED",hostname,slot);
+        epics_json_msg_send(name, "float", 16, data);
       }
 	}
+
     else if(itype == SCALER_TYPE_FADC250)    /* fadc250 scalers */
 	{
+      char name[100];
+      float ref, data[16*17]; /* 17 scalers per slot, maximum can be 16 FADCs */
+      int jj;
+
       for(id=0; id<nfadc; id++)
       {
         slot = faSlot(id);
@@ -236,10 +290,25 @@ vmeBusLock();
 vmeBusUnlock();
         vmescalerslen[slot] = nw;
         for(ii=0; ii<nw; ii++) vmescalers[slot][ii] = adcbuf[ii];
+
+
+        jj=0;
+        for(ii=0; ii<nw; ii++) 
+        {
+          data[jj++] = ((float)(adcbuf[ii]));
+		}
+
+		sprintf(name,"%s_FADC250SLOT%d",hostname,slot);
+        epics_json_msg_send(name, "float", 16/*nw*/, data);
+
+
+
       }
     }
+
     else if(itype == SCALER_TYPE_VSCM)    /* vscm scalers */
 	{
+#if 0
       for(id=0; id<nvscm; id++)
       {
         slot = vscmSlot(id);
@@ -250,6 +319,7 @@ vmeBusUnlock();
         for(ii=0; ii<nw; ii++) vmescalers[slot][ii] = vscmbuf[ii];
 		/*printf("vmeScalersRead: nw=%d, vmescalers[slot][nw-2]=%d, vmescalers[slot][nw-1]=%d\n",nw,vmescalers[slot][nw-2],vmescalers[slot][nw-1]);*/
       }
+#endif
     }
     else if(itype == SCALER_TYPE_SSP)    /* ssp scalers */
 	{
@@ -327,6 +397,7 @@ vmeBusUnlock();
 vmeBusLock();
           nw = tdReadScalers(slot, tdbuf);
 vmeBusUnlock();
+          /*printf("td slot %d, nw=%d\n",slot,nw);fflush(stdout);*/
           /*
           vmescalerslen[slot] = nw;
           for(ii=0; ii<nw; ii++) vmescalers[slot][ii] = tdbuf[ii];
@@ -343,12 +414,60 @@ vmeBusUnlock();
             data[jj++] = ((float)((buf[id][ii]-bufold[id][ii])*100)) / ref;
           }
           for(ii=0; ii<11; ii++) bufold[id][ii] = buf[id][ii];
+          /*printf("td id %d\n",id);fflush(stdout);*/
 		}
 
+		/*
+        ttt = ttt + 1.0;
+        data[0] = ttt;
+	    printf("td: sending %d floats message (%f %f ...)\n",ntd*8,data[0],data[1]);fflush(stdout);
+		*/
         sprintf(name,"ROCS_BUSY");
         epics_json_msg_send(name, "float", ntd*8, data);
+		/*
+        printf("td: message sent\n",id);fflush(stdout);
+		*/
 	  }
     }
+#if 1
+    else if(itype == SCALER_TYPE_TS)    /* ts scalers */
+	{
+      char name[100];
+      unsigned int gtpbuf[32], fpbuf[32];
+      static unsigned int gtpbufold[32], fpbufold[32];
+      float ref, data1[32], data2[32]; /* 32 scalers per group, 2 groups */
+      int nw1, nw2;
+
+      if(nts==1)
+      {
+        slot = 21;
+vmeBusLock();
+        nw1 = tsReadScalers(gtpbuf, 1); /* second parameter: 1-GTP scalers, 3-FP scalers */
+        nw2 = tsReadScalers(fpbuf, 3);
+vmeBusUnlock();
+        /*printf("nw1=%d nw2=%d\n",nw1,nw2);fflush(stdout);*/
+        nw = nw1 + nw2;
+        vmescalerslen[slot] = nw;
+
+        for(ii=0; ii<nw1; ii++) vmescalers[slot][ii] = gtpbuf[ii]-gtpbufold[ii];
+        for(ii=0; ii<nw2; ii++) vmescalers[slot][ii+nw1] = fpbuf[ii]-fpbufold[ii];
+
+        for(ii=0; ii<nw1; ii++) data1[ii] = ((float)(gtpbuf[ii]-gtpbufold[ii]));
+        for(ii=0; ii<nw2; ii++) data2[ii] = ((float)(fpbuf[ii]-fpbufold[ii]));
+
+        for(ii=0; ii<nw1; ii++) gtpbufold[ii] = gtpbuf[ii];
+        for(ii=0; ii<nw2; ii++) fpbufold[ii] = fpbuf[ii];
+
+		sprintf(name,"%s_TSGTPSLOT%d",hostname,slot);
+        epics_json_msg_send(name, "float", nw1, data1);
+
+		sprintf(name,"%s_TSFPSLOT%d",hostname,slot);
+        epics_json_msg_send(name, "float", nw2, data2);
+      }
+    }
+#endif
+
+
 
   }
 
@@ -588,7 +707,7 @@ vmeBusUnlock();
 static void
 vmeReadTask()
 {
-  int id, iFlag;
+  int id, iFlag, ret;
   int ii, jj, slot, interval;
   unsigned int maxA32Address;
 
@@ -721,7 +840,29 @@ sspSetA32BaseAddress(sspA32Address);
   /* fill map array with FADC's found */
   for(ii=0; ii<nssp; ii++) if( (slot=sspSlot(ii)) > 0) vmescalersmap[slot] = SCALER_TYPE_SSP;
 
-  printf("Finished SSP initialization, nssp=%d\n",nssp);
+  printf("Finished SSP initialization, nssp=%d\n",nssp);fflush(stdout);
+
+
+
+
+  /***********/
+  /* TS INIT */
+
+  nts = 0;
+  ret = tsInit((21<<19),2,0);
+  if(ret<0) ret = tsInit(0,2,0);
+  if(ret<0)
+  {
+    printf("cannot find TS, ret=%d\n",ret);
+  }
+  else
+  {
+    printf("foung TS\n");
+    nts = 1;
+    tsSetBusySource(0,1); /* remove all busy conditions */
+    tsIntDisable();
+    tsConfig("");
+  }
 
 
 
@@ -732,7 +873,7 @@ sspSetA32BaseAddress(sspA32Address);
   ntd = 0;
   tdInit((3<<19),0x80000,20,0);
   ntd = tdGetNtds(); /* actual number of TD boards found  */
-
+  printf("Finished TD initialization, ntd=%d\n",ntd);fflush(stdout);
 
 
 
@@ -743,7 +884,7 @@ sspSetA32BaseAddress(sspA32Address);
 
 
 
-  printf("Starting readout loop, vmeScalersReadInterval=%d\n",vmeScalersReadInterval);
+  printf("Starting readout loop, vmeScalersReadInterval=%d\n",vmeScalersReadInterval);fflush(stdout);
 
   while(1)
   {
@@ -1328,6 +1469,13 @@ Vme_GetCrateMap(Cmd_GetCrateMap *pCmd, Cmd_GetCrateMap_Rsp *pCmd_Rsp)
 int
 Vme_Delay(Cmd_Delay *pCmd_Delay)
 {
+  /*just to emulate lock for testing
+  printf("Delay called ..\n");fflush(stdout);
+  SCALER_LOCK;
+  sleep(10);
+  SCALER_UNLOCK;
+  printf(".. Delay done\n");fflush(stdout);
+  */
   usleep(1000*pCmd_Delay->ms);
 	
   return(0);
@@ -1344,6 +1492,18 @@ main(int argc, char *argv[])
   pthread_t gScalerThread;
 #endif
 
+
+  /* get hostname and convert to upper case */
+  char *s;
+  /*strcpy(hostname,getenv("HOST"));*/
+  gethostname(hostname,127);
+  s = hostname;
+  hostname[strlen(hostname)] = 0;
+  while(*s)
+  {
+    *s = toupper((unsigned char) *s);
+    s++;
+  }
 
 
   /*check if 'init' flag specified; if so, will init all boards found*/
@@ -1412,7 +1572,22 @@ main(int argc, char *argv[])
   /* connect to IPC server */
   printf("Connect to IPC server...\n");
   /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
-  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
+
+#if 1
+  /* Sergey: use different topics for different hosts */
+  if( (!strncmp(hostname,"TDCECAL",7)) || (!strncmp(hostname,"TDCPCAL",7)) || (!strncmp(hostname,"TDCFTOF",7)) )
+  {
+    epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "dsc2");
+  }
+  else if( (!strncmp(hostname,"ADCECAL",7)) || (!strncmp(hostname,"ADCPCAL",7)) || (!strncmp(hostname,"ADCFTOF",7)) )
+  {
+    epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "fadc");
+  }
+  else /* default topic */
+#endif
+  {
+    epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
+  }
   printf("done.\n");
 
 

@@ -17,7 +17,8 @@ FADC250_F_REV     0x02c1     <- firmware revision  (0x0 Bits:7-0)
 FADC250_B_REV     0x0a03     <- board revision     (0x0 Bits:15-8)
 FADC250_ID        0xfadc     <- board type         (0x0 Bits:31-16)
 
-FADC250_MODE      1   <- process mode: 1-4  (0x10C Bits:2-0)
+FADC250_MODE         1   <- process mode: 1-4  (0x10C Bits:2-0)
+FADC250_COMPRESSION  0   <- compression mode: 0-uncompressed, 1-compressed, 2-both
 FADC250_W_OFFSET  50  <- number of ns back from trigger point. (0x120)
 #                           (in Manual it is  PL=Trigger_Window(ns) * 250MHz)
 FADC250_W_WIDTH   49  <- number of ns to include in trigger window. (0x11C)
@@ -162,6 +163,7 @@ fadc250InitGlobals()
   for(jj=0; jj<NBOARD; jj++)
   {
     fa250[jj].mode      = 1;
+    fa250[jj].compression = 0;
     fa250[jj].winOffset = 300;
     fa250[jj].winWidth  = 100;
     fa250[jj].nsa       = 6;
@@ -337,13 +339,19 @@ fadc250ReadConfigFile(char *filename_in)
         else if(active && (strcmp(keyword,"FADC250_MODE") == 0))
         {
           sscanf (str_tmp, "%*s %d", &i1);
-        for(slot=slot1; slot<slot2; slot++) fa250[slot].mode = i1;
+          for(slot=slot1; slot<slot2; slot++) fa250[slot].mode = i1;
+        }
+
+        else if(active && (strcmp(keyword,"FADC250_COMPRESSION") == 0))
+        {
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) fa250[slot].compression = i1;
         }
 
         else if(active && (strcmp(keyword,"FADC250_W_OFFSET") == 0))
         {
           sscanf (str_tmp, "%*s %d", &i1);
-        for(slot=slot1; slot<slot2; slot++) fa250[slot].winOffset = i1/4;
+          for(slot=slot1; slot<slot2; slot++) fa250[slot].winOffset = i1/4;
         }
 
         else if(active && (strcmp(keyword,"FADC250_W_WIDTH") == 0))
@@ -599,6 +607,8 @@ fadc250DownloadAll()
 
     faSetHitbitMinMultiplicity(slot, fa250[slot].trigMinMult);
 
+    faSetCompression(slot,fa250[slot].compression);
+
     for(ii=0; ii<NCHAN; ii++)
     {
       faSetChannelDelay(slot, ii, fa250[slot].delay[ii] / 4);
@@ -641,7 +651,6 @@ fadc250UploadAll(char *string, int length)
         &fa250[slot].nsa,
         &fa250[slot].npeak);
 
-
     fa250[slot].chDisMask = faGetChanMask(slot);
     fa250[slot].thrIgnoreMask = faGetThresholdIgnoreMask(slot);
 
@@ -652,6 +661,8 @@ fadc250UploadAll(char *string, int length)
     fa250[slot].trigMinTOT = faGetHitbitMinTOT(slot);
 
     fa250[slot].trigMinMult = faGetHitbitMinMultiplicity(slot);
+
+    fa250[slot].compression = faGetCompression(slot);
 
     for(i=0;i<FA_MAX_ADC_CHANNELS;i++)
     {
@@ -684,6 +695,9 @@ fadc250UploadAll(char *string, int length)
       ADD_TO_STRING;
 
       sprintf(sss,"FADC250_MODE %d\n",      fa250[slot].mode);
+      ADD_TO_STRING;
+
+      sprintf(sss,"FADC250_COMPRESSION %d\n", fa250[slot].compression);
       ADD_TO_STRING;
 
       sprintf(sss,"FADC250_W_OFFSET %d\n",  fa250[slot].winOffset*FA_ADC_NS_PER_CLK);

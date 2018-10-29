@@ -339,9 +339,17 @@ roc_constructor()
 
 
 #ifdef Linux_vme
+  printf("\n\n ======= clear dma memory ===================================\n");
+  bb_dma_free();
+
+  printf("\n\n coda_roc: ======= Close the default VME windows =========\n\n");
+  /*vmeCloseA32Slave();*/
+  vmeCloseDefaultWindows();
+
+
   printf("\n\n coda_roc: ======= Open the default VME windows =========\n\n");
   vmeOpenDefaultWindows();
-  vmeOpenSlaveA32(0x18000000,0x00400000); /* Open Slave Window for SFI Initiated Block transfers */
+  /*sergey: NO MORE SFIs         vmeOpenSlaveA32(0x18000000,0x00400000);*/ /* Open Slave Window for SFI Initiated Block transfers */
 #endif
 
   /*************************/
@@ -2553,7 +2561,7 @@ __attribute__((destructor)) void end (void)
   bb_dma_free();
 
   printf("\n\n coda_roc: ======= Close the default VME windows =========\n\n");
-  vmeCloseA32Slave();
+  /*vmeCloseA32Slave();*/
   vmeCloseDefaultWindows();
 #endif
 }

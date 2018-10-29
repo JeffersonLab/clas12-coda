@@ -95,23 +95,69 @@ main(int argc, char *argv[])
   sleep(1);
 
 
+
+  /*
+  printf("DELAY ...\n");fflush(stdout);
+  ret = tcp->Delay(1000);
+  printf("  DELAY !\n");fflush(stdout);
+  */
+
+
+
+
   printf("-------------------------\n");
   while(1)
   {
-	
+    printf("BEGIN LOOP\n");fflush(stdout);
+
+
+    /* check if we still connected */
+    if(tcp->IsValid())
+    {
+      printf("Still connected\n");fflush(stdout);
+    }
+    else
+    {
+      printf("Connection lost\n");fflush(stdout);
+      /*exit(0);*/
+	  /*
+	  printf("sleeping ..\n");fflush(stdout);
+      sleep(10);
+	  printf(".. slept\n");fflush(stdout);
+	  */
+    }
+
+
+    slot = 4;
+    printf("Calling tcp->GetBoardParams()\n");fflush(stdout);
+    partype = SCALER_PARTYPE_THRESHOLD;
+    ret = tcp->GetBoardParams(slot, partype, &buf, &len);
+    printf("cratemsgclienttest:GetBoardParams ret=%d, len=%d slot=%d\n",ret,len, slot);fflush(stdout);
+    if(ret != kTRUE) continue; /* skip the rst, otherwise it will segfault on 'delete [] buf' since 'buf' was not allocated in ReadScalers() if it failed ! */
+
+    for(ii=0; ii<len; ii++) {printf("ch[%2d] thres1=%d\n",ii,buf[ii]);fflush(stdout);}
+
+
+
+	/*
     slot=3;
     ret = tcp->ReadScalers(slot, &buf, &len);
     printf("cratemsgclienttest: ret=%d, len=%d slot=%d\n",ret,len, slot);
     for(ii=0; ii<len; ii++) printf("  [%2d] %7d 0x%08x (swap 0x%08x)\n",ii,buf[ii],buf[ii],LSWAP(buf[ii]));fflush(stdout);
+	*/
     slot=4;
+    printf("Calling tcp->ReadScalers()\n");fflush(stdout);
     ret = tcp->ReadScalers(slot, &buf, &len);
-    printf("cratemsgclienttest: ret=%d, len=%d slot=%d\n",ret,len, slot);
+    printf("cratemsgclienttest:ReadScalers ret=%d, len=%d slot=%d\n",ret,len, slot);fflush(stdout);
+    if(ret != kTRUE) continue; /* skip the rst, otherwise it will segfault on 'delete [] buf' since 'buf' was not allocated in ReadScalers() if it failed ! */
+
     for(ii=0; ii<len; ii++) printf("  [%2d] %7d 0x%08x (swap 0x%08x)\n",ii,buf[ii],buf[ii],LSWAP(buf[ii]));fflush(stdout);
+	/*
     slot=5;
     ret = tcp->ReadScalers(slot, &buf, &len);
     printf("cratemsgclienttest: ret=%d, len=%d slot=%d\n",ret,len, slot);
     for(ii=0; ii<len; ii++) printf("  [%2d] %7d 0x%08x (swap 0x%08x)\n",ii,buf[ii],buf[ii],LSWAP(buf[ii]));fflush(stdout);
-
+	*/
 
 
 
@@ -121,7 +167,10 @@ main(int argc, char *argv[])
 //    ii = 36;
 //    printf("total sum:      %10d \n",buf[ii]);fflush(stdout);
 
+
+	printf("buf=0x%08x, calling 'delete [] buf'\n",buf);fflush(stdout);
     delete [] buf;
+    printf("buf=0x%08x deleted\n",buf);fflush(stdout);
 
 #if 0
     ret = tcp->ReadData(slot, &buf, &len);

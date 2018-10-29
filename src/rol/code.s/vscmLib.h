@@ -135,7 +135,7 @@ typedef struct
 /* 0x0000 */ volatile uint32_t Ctrl;
 /* 0x0004 */ volatile uint32_t Status;
 /* 0x0008 */ BLANK[(0x100-0x8)/4];
-} VCSM_CLKRST_REGS;
+} VSCM_CLKRST_REGS;
 
 #define VSCM_SCALER_SYSCLK50      0
 #define VSCM_SCALER_GCLK125       1
@@ -253,7 +253,7 @@ typedef struct
 typedef struct
 {
 /* 0x0000-0x00FF */ VSCM_CFG_REGS       Cfg;
-/* 0x0100-0x01FF */ VCSM_CLKRST_REGS    Clk;
+/* 0x0100-0x01FF */ VSCM_CLKRST_REGS    Clk;
 /* 0x0200-0x03FF */ VSCM_SD_REGS        Sd;
 /* 0x0400-0x04FF */ VSCM_EB_REGS        Eb;
 /* 0x0500-0x05FF */ VSCM_FSSR_CTRL_REGS FssrCtrl;

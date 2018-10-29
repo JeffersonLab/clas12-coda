@@ -350,6 +350,7 @@ else                          tiRemoveRocSWA();
 TEST*/
 
 
+
   /********************************************/
   /* found and add all 'inuse' rocs as slaves */
 
@@ -390,7 +391,7 @@ vmeBusUnlock();
     printf("TIPRIMARY: nrow=%d, my rocid=%d\n",numRows,rol->pid);
 
 
-	/* get out hostname and our vtp hostname if it exist */
+	/* get our hostname and our vtp hostname if it exist */
     strcpy(tmp,getenv("HOST"));
     if( (p=strchr(tmp,'.'))!=NULL )
 	{
@@ -402,7 +403,12 @@ vmeBusUnlock();
     printf("TIPRIMARY: our hostname is >%s<, our vtp hostname is >%s<\n",ourhostname,ourvtphostname);
     have_sync_vtp = 0;
 
+
+
+
+    /***************************************/
     /* loop over all rows in configuration */
+
 	for(ix=0; ix<numRows; ix++)
     {
       row = mysql_fetch_row(result);
@@ -421,17 +427,22 @@ vmeBusUnlock();
       }
 
 
-      /* */
+
+
+/*SERGEY: DO tiAddSlave() FOR MASTER OR STANDALONE ONLY; HAVE TO RESOLVE HPS PART WHERE SOMETHING ELSE IS DONE AS WELL ... */
+#ifndef TI_SLAVE
+
+      /* 'inuse' field has roc id */
       if( strncmp(row[2],"no",2) != 0 ) /* 'inuse' != 'no' */
       {
         roc_id_db = atoi(row[2]);
-        printf("TIPRIMARY: roc_id_db = %d\n",roc_id_db);
+        printf("   TIPRIMARY: roc_id_db = %d\n",roc_id_db);
 
 #ifdef USE_HPS
 
         if(roc_id_db==38 && rol->pid==37) /*hps1/hps1gtp, temporary until resolved in hardware*/
 		{
-          printf("TIPRIMARY: set busy for hps1gtp\n");
+          printf("   TIPRIMARY: set busy for hps1gtp\n");
 vmeBusLock();
           tiSetBusySource(TI_BUSY_SWA,0);
           tiAddRocSWA();
@@ -439,7 +450,7 @@ vmeBusUnlock();
 		}
         else if(roc_id_db==40 && rol->pid==39) /*hps2/hps2gtp, temporary until resolved in hardware*/
 		{
-          printf("TIPRIMARY: set busy for hps2gtp\n");
+          printf("   TIPRIMARY: set busy for hps2gtp\n");
 vmeBusLock();
           tiSetBusySource(TI_BUSY_SWA,0);
           tiAddRocSWA();
@@ -459,11 +470,11 @@ vmeBusUnlock();
                 roc_id_db==64||
                 roc_id_db==65)
 		{
-          printf("TIPRIMARY: do nothing for 'secondary' DPMs\n");
+          printf("   TIPRIMARY: do nothing for 'secondary' DPMs\n");
 		}
         else if(roc_id_db==51) /*temporary until resolved in hardware*/
 		{
-          printf("TIPRIMARY: add slave connected to fiber 4 (DPM0)\n");
+          printf("   TIPRIMARY: add slave connected to fiber 4 (DPM0)\n");
 vmeBusLock();
 /* hps10: tiAddSlave(2);*/ /* temporary !!!! TI buster, so moved 4->2 */
           tiAddSlave(4);
@@ -471,7 +482,7 @@ vmeBusUnlock();
 		}
         else if(roc_id_db==59) /*temporary until resolved in hardware*/
 		{
-          printf("TIPRIMARY: add slave connected to fiber 5 (DPM8)\n");
+          printf("   TIPRIMARY: add slave connected to fiber 5 (DPM8)\n");
 vmeBusLock();
 /* hps10: tiAddSlave(3);*/ /* temporary !!!! TI buster, so moved 5->3 */
           tiAddSlave(5);
@@ -482,26 +493,21 @@ vmeBusUnlock();
 #endif
 
 
-
-
-
-
-
 		{
-          printf("TIPRIMARY: looping over ports ..\n");
+          printf("   TIPRIMARY: looping over ports ..\n");
           for(port=1; port<=8; port++)
           {
             if(roc_id_db == roc_id_fiber[port])
 		    {
               if(roc_id_db == rol->pid) /* never here ? */
 		      {
-                printf("TIPRIMARY: rocid=%d - do nothing (cannot be myself's slave\n",roc_id_db);
+                printf("      TIPRIMARY: rocid=%d - do nothing (cannot be myself's slave\n",roc_id_db);
 		      }
 		      else
 		      {
-                printf("TIPRIMARY: added slave connected to fiber %d, rocid=%d\n",port,roc_id_db);
+                printf("      TIPRIMARY: added slave connected to fiber %d, rocid=%d\n",port,roc_id_db);
 vmeBusLock();
-   tiAddSlave(port);
+                tiAddSlave(port);
 vmeBusUnlock();
 		      }
               break;
@@ -510,10 +516,18 @@ vmeBusUnlock();
 		}
 
 
+      } /* 'inuse' != 'no' */
+
+#endif /* #ifndef TI_SLAVE */
 
 
-      }
+
     }
+
+    /* loop over all rows in configuration */
+    /***************************************/
+
+
 
     mysql_free_result(result);
   }

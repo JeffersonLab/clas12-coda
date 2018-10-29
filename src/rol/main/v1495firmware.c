@@ -11,6 +11,9 @@ v1495firmware 0x11980000 PCALTrigger.rbf
 v1495firmware 0x11A00000 ECALTrigger.rbf
 v1495firmware 0x11A00000 CTOFTrigger.rbf
 
+BAND:
+v1495firmware 0x11580000 BANDTrigger.rbf
+
 
 cd "/usr/local/clas12/release/0.1/parms/firmwares"
 mv6100:

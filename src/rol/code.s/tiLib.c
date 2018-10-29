@@ -65,6 +65,8 @@ void intUnlock(int key) {};
     intUnlock(tiLockKey);						\
   }
 
+#define DEBUG
+
 /* Global Variables */
 volatile struct TI_A24RegStruct  *TIp=NULL;    /* pointer to TI memory map */
 volatile        unsigned int     *TIpd=NULL;  /* pointer to TI data FIFO */
@@ -265,6 +267,7 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
   int stat;
   int noBoardInit=0, noFirmwareCheck=0;
 
+printf("%s:  INFO1: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
 
   /* Check VME address */
   if(tAddr<0 || tAddr>0xffffff)
@@ -306,6 +309,7 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
       noFirmwareCheck=1;
     }
 
+printf("%s:  INFO2: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
 
 #ifdef VXWORKS
   stat = sysBusToLocalAdrs(0x39,(char *)tAddr,(char **)&laddr);
@@ -342,6 +346,8 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
 #else
   stat = vmeMemProbe((char *)(&TIp->boardID),4,(char *)&rval);
 #endif
+
+printf("%s:  INFO3: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
 
   if (stat != 0)
     {
@@ -382,6 +388,8 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
 
     }
 
+printf("%s:  INFO4: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
+
   /* Check to see if we're in a VXS Crate */
   if((boardID==20) || (boardID==21))
     {
@@ -400,6 +408,8 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
     }
   else
     tiNoVXS=1;
+
+printf("%s:  INFO5: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
 
   /* Get the Firmware Information and print out some details */
   firmwareInfo = tiGetFirmwareVersion();
@@ -455,12 +465,16 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
       return ERROR;
     }
 
+printf("%s:  INFO6: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
+
   /* Check if we should exit here, or initialize some board defaults */
   if(noBoardInit)
     {
+      printf("%s:  INFO: exiting before initializing some board defaults\n",__FUNCTION__);
       return OK;
     }
 
+  printf("%s:  INFO: initializing some board defaults, tiMaster=%d\n",__FUNCTION__,tiMaster);
 
   /* Reset global library variables */
   tiBlockLevel=1;
@@ -475,14 +489,23 @@ tiInit(unsigned int tAddr, unsigned int mode, int iFlag)
   tiSyncEventFlag = 0; tiSyncEventReceived = 0;
   tiNReadoutEvents = 0; tiDoSyncResetRequest = 0;
 
+#if 1
+  if((mode == TI_READOUT_TS_INT) || (mode == TI_READOUT_TS_POLL))
+    tiMaster = 0;
+#endif
+
   if(tiMaster==0) /* Reload only on the TI Slaves */
     {
       if(tiReload() == ERROR)
 	{
 	  printf("%s: ERROR returned from tiReload\n",
-		 __func__);
+			 __func__); fflush(stdout);
 	  return -1;
 	}
+
+	  printf("%s:  INFO tiReload successful\n",
+			 __func__); fflush(stdout);
+
     }
 
   tiDisableTriggerSource(0);
@@ -1260,6 +1283,9 @@ tiStatus(int pflag)
   printf("\n");
   printf(" Input counter %d\n",ro->inputCounter);
 
+  if(tiMaster)
+    tiSlaveStatus(pflag);
+
   printf("--------------------------------------------------------------------------------\n");
   printf("\n\n");
 
@@ -1434,6 +1460,10 @@ tiSlaveStatus(int pflag)
 
   TIBase = (unsigned long)TIp;
 
+  printf("\n");
+  printf("TI-Master Port STATUS Summary\n");
+  printf("--------------------------------------------------------------------------------\n");
+
   if(pflag>0)
     {
       printf(" Registers (offset):\n");
@@ -1453,7 +1483,6 @@ tiSlaveStatus(int pflag)
       printf("\n");
     }
 
-  printf("TI-Master Port STATUS Summary\n");
   printf("                                                     Block Status\n");
   printf("Port  ROCID   Connected   TrigSrcEn   Busy Status   Ready / NeedAck  Blocklevel\n");
   printf("--------------------------------------------------------------------------------\n");
@@ -1523,7 +1552,7 @@ tiSlaveStatus(int pflag)
       slaveCount++;
     }
   printf("\n");
-  printf("Total Slaves Added = %d\n",slaveCount);
+  printf(" Total Slaves Added = %d\n",slaveCount);
 
 }
 
@@ -1577,7 +1606,8 @@ tiGetFirmwareVersion()
 int
 tiReload()
 {
-  int rval = OK, iwait = 0, reg = 0, Locked = 0;
+  int rval = OK, iwait = 0, Locked = 0;
+  unsigned int reg = 0;
 
   if(TIp==NULL)
     {
@@ -1585,7 +1615,7 @@ tiReload()
       return ERROR;
     }
 
-  printf ("%s: \n FPGA Re-Load ! \n",__FUNCTION__);
+  printf ("%s: \n FPGA Re-Load ... \n",__FUNCTION__);fflush(stdout);
   TILOCK;
   vmeWrite32(&TIp->reset,TI_RESET_JTAG);
   vmeWrite32(&TIp->JTAGPROMBase[(0x3c)>>2],0);
@@ -1597,9 +1627,12 @@ tiReload()
   while(iwait < 100)
     {
       reg = vmeRead32(&TIp->GTPtriggerBufferLength);
-      Locked = (reg >> 29) & 0x7;
+      Locked = (int)((reg >> 29) & 0x7);
 
-      if(Locked == 0x7)
+      printf("%s: Wait for Clock DCM Lock (reg = 0x%08x, Locked = 0x%x)\n",
+	     __func__, reg, Locked);
+
+      if ((reg != 0xFFFFFFFF) && (Locked == 0x7))
 	break;
 
       taskDelay(50);
@@ -1611,16 +1644,18 @@ tiReload()
   if(Locked < 0x7)
     {
       printf("%s: ERROR: FPGA is not yet ready.\n",
-	     __func__);
+	     __func__);fflush(stdout);
       printf("   CLK250 DCM: %s\n", (Locked & (1 << 0)) ? "Locked" :
-	     "*** Not Locked ***");
+	     "*** Not Locked ***");fflush(stdout);
       printf("   CLK125 DCM: %s\n", (Locked & (1 << 1)) ? "Locked" :
-	     "*** Not Locked ***");
+	     "*** Not Locked ***");fflush(stdout);
       printf("   VMECLK DCM: %s\n", (Locked & (1 << 2)) ? "Locked" :
-	     "*** Not Locked ***");
+	     "*** Not Locked ***");fflush(stdout);
 
       rval = ERROR;
     }
+
+  printf ("%s: \n FPGA Re-Load !!! \n",__FUNCTION__);fflush(stdout);
 
   return rval;
 
@@ -2314,6 +2349,12 @@ tiEnableTriggerSource()
     }
 
   TILOCK;
+
+  /* SERGEY: ADDED RECENTLY, MAKE SURE IT DOES NOT BRAKE OUR CRATEID SETTING SCHEME !!!
+  vmeWrite32(&TIp->boardID,
+	   (vmeRead32(&TIp->boardID) & ~TI_BOARDID_CRATEID_MASK)  | tiCrateID);
+*/
+
   if(tiUseGoOutput)
     vmeWrite32(&TIp->trigsrc, tiTriggerSource | TI_TRIGSRC_GO);
   else
@@ -2408,6 +2449,9 @@ tiDisableTriggerSource(int fflag)
 int
 tiSetSyncSource(unsigned int sync)
 {
+  unsigned int sync_readback;
+  unsigned long TIBase = (unsigned long)TIp;
+
   if(TIp==NULL)
     {
       printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
@@ -2422,7 +2466,14 @@ tiSetSyncSource(unsigned int sync)
     }
 
   TILOCK;
+#ifdef DEBUG
+  printf("tiSetSyncSource: writing %d to TIp->sync=0x%08x\n",sync,(unsigned long)&TIp->sync - TIBase);fflush(stdout);
+#endif
   vmeWrite32(&TIp->sync,sync);
+#ifdef DEBUG
+  sync_readback = vmeRead32(&TIp->sync);
+  printf("tiSetSyncSource: read %d from TIp->sync=0x%08x\n",sync_readback,(unsigned long)&TIp->sync - TIBase);fflush(stdout);
+#endif
   TIUNLOCK;
 
   return OK;
@@ -3532,8 +3583,9 @@ tiDecodeTriggerType(volatile unsigned int *data, int data_len, int event)
 int
 tiEnableFiber(unsigned int fiber)
 {
-  unsigned int sval;
+  unsigned int sval, sval2;
   unsigned int fiberbit;
+  unsigned long TIBase = (unsigned long)TIp;
 
   if(TIp==NULL)
     {
@@ -3551,20 +3603,29 @@ tiEnableFiber(unsigned int fiber)
   fiberbit = (1<<(fiber-1));
 
   TILOCK;
+#ifdef DEBUG
+  printf("tiEnableFiber: enabling fiber %d\n",fiber);fflush(stdout);
+#endif
   sval = vmeRead32(&TIp->fiber);
+#ifdef DEBUG
+  printf("tiEnableFiber: sval=0x%08x(%d)\n",sval,sval);fflush(stdout);
+#endif
   vmeWrite32(&TIp->fiber,
 	     sval | fiberbit );
+#ifdef DEBUG
+  sval2 = vmeRead32(&TIp->fiber);
+  printf("tiEnableFiber: sval2=0x%08x(%d)\n",sval2,sval2);fflush(stdout);
+#endif
   TIUNLOCK;
 
   return OK;
-
 }
 
 /**
  * @ingroup Config
  * @brief Disnable Fiber transceiver
  *
- * @sa tiEnableFiber
+ * @sa tiDisableFiber
  *
  * @param   fiber: integer indicative of the transceiver to disable
  *
@@ -4141,14 +4202,14 @@ tiSetSyncResetType(int type)
 int
 tiTrigDisable()
 {
-    if(TIp == NULL) 
+    if(TIp == NULL)
     {
       printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
       return;
     }
-  
+
   TILOCK;
-  vmeWrite32(&TIp->syncCommand,TI_SYNCCOMMAND_TRIGGERLINK_DISABLE); 
+  vmeWrite32(&TIp->syncCommand,TI_SYNCCOMMAND_TRIGGERLINK_DISABLE);
   taskDelay(1);
   TIUNLOCK;
 
@@ -4194,6 +4255,28 @@ tiSyncReset(int blflag)
       tiBroadcastNextBlockLevel(tiNextBlockLevel);
       tiSetBlockBufferLevel(tiBlockBufferLevel);
     }
+
+}
+
+/**
+ * @ingroup MasterConfig
+ * @brief Generate a Sync signal to reset only event buffers. This
+ *    signal is sent to the loopback and all configured TI Slaves.
+ *
+ */
+void
+tiResetEB()
+{
+  if(TIp == NULL)
+    {
+      printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+      return;
+    }
+
+  TILOCK;
+  vmeWrite32(&TIp->syncCommand,TI_SYNCCOMMAND_RESET_EVNUM);
+  taskDelay(1);
+  TIUNLOCK;
 
 }
 
@@ -4273,6 +4356,8 @@ tiSetAdr32(unsigned int a32base)
 {
   unsigned long laddr=0;
   int res=0,a32Enabled=0;
+  unsigned int a32base_readback, vmecontrol_readback;
+  unsigned long TIBase = (unsigned long)TIp;
 
   if(TIp == NULL)
     {
@@ -4288,8 +4373,21 @@ tiSetAdr32(unsigned int a32base)
     }
 
   TILOCK;
+
+#ifdef DEBUG
+  printf("tiSetAdr32: writing 0x%08x to TIp->adr32=0x%08x\n",a32base & TI_ADR32_BASE_MASK,(unsigned long)&TIp->adr32 - TIBase);fflush(stdout);
+#endif
+
   vmeWrite32(&TIp->adr32,
 	     (a32base & TI_ADR32_BASE_MASK) );
+
+#ifdef DEBUG
+  a32base_readback = vmeRead32(&TIp->adr32);
+  printf("tiSetAdr32: reading 0x%08x(whole word=0x%08x) from TIp->adr32=0x%08x\n",a32base_readback&TI_ADR32_BASE_MASK,a32base_readback,(unsigned long)&TIp->adr32 - TIBase);fflush(stdout);
+
+  vmecontrol_readback = vmeRead32(&TIp->vmeControl);
+  printf("tiSetAdr32: reading 0x%08x from TIp->vmeControl=0x%08x\n",vmecontrol_readback,(unsigned long)&TIp->vmeControl - TIBase);fflush(stdout);
+#endif
 
   vmeWrite32(&TIp->vmeControl,
 	     vmeRead32(&TIp->vmeControl) | TI_VMECONTROL_A32);
@@ -4623,6 +4721,7 @@ tiEnableVXSSignals()
       printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
       return ERROR;
     }
+  printf("tiEnableVXSSignals reached\n");fflush(stdout);
 
   TILOCK;
   vmeWrite32(&TIp->fiber,
@@ -4654,6 +4753,7 @@ tiDisableVXSSignals()
       return ERROR;
     }
 
+  printf("tiDisableVXSSignals reached\n");fflush(stdout);
   TILOCK;
   vmeWrite32(&TIp->fiber,
 	     (vmeRead32(&TIp->fiber) & 0xFF) & ~TI_FIBER_ENABLE_P0);
@@ -4922,7 +5022,7 @@ tiGetTSInputMask()
 {
   int ret;
 
-  if(TIp == NULL) 
+  if(TIp == NULL)
     {
       printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
       return ERROR;
@@ -4994,6 +5094,7 @@ tiSetClockSource(unsigned int source)
   unsigned int clkset=0;
   unsigned int clkread=0;
   char sClock[20] = "";
+  unsigned long TIBase = (unsigned long)TIp;
 
   if(TIp == NULL)
     {
@@ -5020,19 +5121,31 @@ tiSetClockSource(unsigned int source)
       return ERROR;
     }
 
-  printf("%s: Setting clock source to %s\n",__FUNCTION__,sClock);
+  printf("%s: Setting clock source to %s\n",__FUNCTION__,sClock);fflush(stdout);
 
 
   TILOCK;
+#ifdef DEBUG
+  printf("tiSetClockSource: writing clkset=%d to TIp->clock=0x%08x\n",clkset,(unsigned long)&TIp->clock - TIBase);fflush(stdout);
+#endif
   vmeWrite32(&TIp->clock, clkset);
   taskDelay(10);
+#ifdef DEBUG
+  printf("tiSetClockSource: reseting 250MHz\n");fflush(stdout);
+#endif
   /* Reset DCM (Digital Clock Manager) - 250/200MHz */
   vmeWrite32(&TIp->reset,TI_RESET_CLK250);
   taskDelay(10);
+#ifdef DEBUG
+  printf("tiSetClockSource: reseting 125MHz\n");fflush(stdout);
+#endif
   /* Reset DCM (Digital Clock Manager) - 125MHz */
   vmeWrite32(&TIp->reset,TI_RESET_CLK125);
   taskDelay(10);
 
+#ifdef DEBUG
+  printf("tiSetClockSource: waiting for FPGA Ready / Clock DCM locked\n");fflush(stdout);
+#endif
   /* Wait for FPGA Ready / Clock DCM locked */
   while(iwait < 100)
     {
@@ -5049,28 +5162,37 @@ tiSetClockSource(unsigned int source)
   if(Locked < 0x7)
     {
       printf("%s: ERROR: FPGA is not yet ready.\n",
-	     __func__);
+	     __func__);fflush(stdout);
       printf("   CLK250 DCM: %s\n", (Locked & (1 << 0)) ? "Locked" :
-	     "*** Not Locked ***");
+	     "*** Not Locked ***");fflush(stdout);
       printf("   CLK125 DCM: %s\n", (Locked & (1 << 1)) ? "Locked" :
-	     "*** Not Locked ***");
+	     "*** Not Locked ***");fflush(stdout);
       printf("   VMECLK DCM: %s\n", (Locked & (1 << 2)) ? "Locked" :
-	     "*** Not Locked ***");
+	     "*** Not Locked ***");fflush(stdout);
 
       rval = ERROR;
     }
 
   if(source==1) /* Turn on running mode for External Clock verification */
     {
+#ifdef DEBUG
+      printf("tiSetClockSource: writing %d to TIp->runningMode=0x%08x\n",TI_RUNNINGMODE_ENABLE,(unsigned long)&TIp->runningMode - TIBase);fflush(stdout);
+#endif
       vmeWrite32(&TIp->runningMode,TI_RUNNINGMODE_ENABLE);
       taskDelay(5);
       clkread = vmeRead32(&TIp->clock) & TI_CLOCK_MASK;
+#ifdef DEBUG
+      printf("tiSetClockSource: read clkread=%d from TIp->clock=0x%08x\n",clkread,(unsigned long)&TIp->clock - TIBase);fflush(stdout);
+#endif
       if(clkread != clkset)
 	{
 	  printf("%s: ERROR Setting Clock Source (clkset = 0x%x, clkread = 0x%x)\n",
 		 __FUNCTION__,clkset, clkread);
 	  rval = ERROR;
 	}
+#ifdef DEBUG
+      printf("tiSetClockSource: writing %d to TIp->runningMode=0x%08x\n",TI_RUNNINGMODE_DISABLE,(unsigned long)&TIp->runningMode - TIBase);fflush(stdout);
+#endif
       vmeWrite32(&TIp->runningMode,TI_RUNNINGMODE_DISABLE);
     }
 
@@ -5231,6 +5353,37 @@ tiGetFiberDelay()
   return rval;
 }
 
+/**
+ *  @ingroup MasterConfig
+ *  @brief Reset the configuration of TI Slaves on the TI-Master.
+ *
+ *      This routine removes all slaves and resets the fiber port busys.
+ *
+ *  @return OK if successful, ERROR otherwise
+ *
+ */
+int
+tiResetSlaveConfig()
+{
+  if(TIp == NULL)
+    {
+      printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+      return ERROR;
+    }
+
+  if(!tiMaster)
+    {
+      printf("%s: ERROR: TI is not the TI Master.\n",__FUNCTION__);
+      return ERROR;
+    }
+
+  TILOCK;
+  tiSlaveMask = 0;
+  vmeWrite32(&TIp->busy, (vmeRead32(&TIp->busy) & ~TI_BUSY_HFBR_MASK));
+  TIUNLOCK;
+
+  return OK;
+}
 
 /**
  * @ingroup MasterConfig
@@ -5280,6 +5433,55 @@ tiAddSlave(unsigned int fiber)
 
   return OK;
 
+}
+
+/**
+ *  @ingroup MasterConfig
+ *  @brief Remove a TI Slave
+ *
+ *  @param fiber  The fiber port of the TI master to remove.
+ *
+ *  @return OK if successful, ERROR otherwise
+ */
+int
+tiRemoveSlave(unsigned int fiber)
+{
+  unsigned int busybits;
+  if(TIp == NULL)
+    {
+      printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+      return ERROR;
+    }
+
+  if(!tiMaster)
+    {
+      printf("%s: ERROR: TI is not the TI Master.\n",__FUNCTION__);
+      return ERROR;
+    }
+
+  if((fiber<1) || (fiber>8) )
+    {
+      printf("%s: ERROR: Invalid value for fiber (%d)\n",
+	     __FUNCTION__,fiber);
+      return ERROR;
+    }
+
+  /* Remove this slave to the global slave mask */
+  tiSlaveMask &= ~(1<<(fiber-1));
+
+  /* Remove this fiber as a busy source (use first fiber macro as the base) */
+  TILOCK;
+  /* Read in previous values, keeping current busy's */
+  busybits = vmeRead32(&TIp->busy);
+
+  /* Turn off busy to the fiber in question */
+  busybits &= ~(1<<(TI_BUSY_HFBR1-1+fiber));
+
+  /* Write the new mask */
+  vmeWrite32(&TIp->busy, busybits);
+  TIUNLOCK;
+
+  return OK;
 }
 
 /**
@@ -7004,13 +7206,16 @@ tiPrintSyncHistory()
       return;
     }
 
+  printf("     syncHistory  OF   TStmp  Code  valid\n");
+
   while(code!=0)
     {
       TILOCK;
       syncHistory = vmeRead32(&TIp->syncHistory);
       TIUNLOCK;
 
-      printf("     TimeStamp: Code (valid)\n");
+      if(syncHistory == 0)
+	break;
 
       if(tiMaster)
 	{
@@ -7019,8 +7224,22 @@ tiPrintSyncHistory()
 	}
       else
 	{
-	  code  = syncHistory & TI_SYNCHISTORY_HFBR1_CODE_MASK;
-	  valid = (syncHistory & TI_SYNCHISTORY_HFBR1_CODE_VALID)>>4;
+	  if(tiSlaveFiberIn == 1)
+	    {
+	      code  = syncHistory & TI_SYNCHISTORY_HFBR1_CODE_MASK;
+	      valid = (syncHistory & TI_SYNCHISTORY_HFBR1_CODE_VALID)>>4;
+	    }
+	  else if(tiSlaveFiberIn == 5)
+	    {
+	      code  = (syncHistory & TI_SYNCHISTORY_HFBR5_CODE_MASK) >> 5;
+	      valid = (syncHistory & TI_SYNCHISTORY_HFBR5_CODE_VALID)>>9;
+	    }
+	  else
+	    {
+	      printf("%s: Invalid slave fiber port %d\n",
+		     __func__, tiSlaveFiberIn);
+	      return;
+	    }
 	}
 
       overflow  = (syncHistory & TI_SYNCHISTORY_TIMESTAMP_OVERFLOW)>>15;
@@ -7028,7 +7247,7 @@ tiPrintSyncHistory()
 
 /*       if(valid) */
 	{
-	  printf("%4d: 0x%08x   %d %5d :  0x%x (%d)\n",
+	  printf("%4d: 0x%08x   %d   %5d   0x%x    %d\n",
 		 count, syncHistory,
 		 overflow, timestamp, code, valid);
 	}
@@ -7345,6 +7564,111 @@ tiTriggerReadyReset()
 }
 
 /**
+ * @ingroup MasterConfig
+ * @brief Reset the registers that record bit errors recorded on the trigger link.
+ *
+ */
+void
+tiTriggerLinkErrorReset()
+{
+  if(TIp == NULL)
+    {
+      printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+      return;
+    }
+
+  if(!tiMaster)
+    {
+      printf("%s: ERROR: TI is not the TI Master.\n",__FUNCTION__);
+      return;
+    }
+
+  TILOCK;
+  vmeWrite32(&TIp->syncCommand,
+	     TI_SYNCCOMMAND_GTP_STATUSB_RESET);
+  TIUNLOCK;
+}
+
+/**
+ * @ingroup Status
+ * @brief Get the error status bits for the trigger link
+ *
+ * @param pflag
+ *  - !0: Print to standard out
+ *
+ * @return Trigger Link bits if successful, ERROR otherwise
+ */
+unsigned int
+tiGetTriggerLinkStatus(int pflag)
+{
+  unsigned int rval = 0, bitflags = 0;
+  int ibit = 0;
+
+  if(TIp == NULL)
+    {
+      printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+      return ERROR;
+    }
+
+  TILOCK;
+  rval = vmeRead32(&TIp->GTPStatusB);
+  TIUNLOCK;
+
+  if(pflag)
+    {
+      printf("STATUS for Trigger Links\n");
+
+      printf("      Connected    RX Data Error      Disparity    NON 8b/10b Data\n");
+      printf("     (12345678)      (12345678)      (12345678)      (12345678)\n");
+      printf("--------------------------------------------------------------------------------\n");
+
+      printf("      ");
+      bitflags = rval & TI_GTPSTATUSB_CHANNEL_BONDING_MASK;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+
+      printf("        ");
+      bitflags = (rval & TI_GTPSTATUSB_DATA_ERROR_MASK) >> 8;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+
+      printf("        ");
+      bitflags = (rval & TI_GTPSTATUSB_DISPARITY_ERROR_MASK) >> 16;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+      printf("        ");
+
+      bitflags = (rval & TI_GTPSTATUSB_DATA_NOT_IN_TABLE_ERROR_MASK) >> 24;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+
+      printf("\n");
+    }
+
+  return rval;
+}
+
+/**
  * @ingroup MasterReadout
  * @brief Generate non-physics triggers until the current block is filled.
  *    This feature is useful for "end of run" situations.
@@ -7418,6 +7742,27 @@ tiResetMGTRx()
 
   TILOCK;
   vmeWrite32(&TIp->reset, TI_RESET_MGT_RX_RESET);
+  TIUNLOCK;
+  taskDelay(1);
+
+  return OK;
+}
+
+/**
+ * @ingroup Config
+ * @brief Reset the Fiber Tranceivers
+ */
+int
+tiResetFiber()
+{
+  if(TIp == NULL)
+    {
+      printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+      return ERROR;
+    }
+
+  TILOCK;
+  vmeWrite32(&TIp->reset, TI_RESET_FIBER);
   TIUNLOCK;
   taskDelay(1);
 
@@ -8995,7 +9340,7 @@ tiUnload(int pflag)
 int
 tiAddRocSWA()
 {
-  if(TIp == NULL) 
+  if(TIp == NULL)
   {
     printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
     return ERROR;
@@ -9010,7 +9355,7 @@ tiAddRocSWA()
 int
 tiRemoveRocSWA()
 {
-  if(TIp == NULL) 
+  if(TIp == NULL)
   {
     printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
     return ERROR;

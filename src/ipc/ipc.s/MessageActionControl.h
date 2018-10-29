@@ -208,7 +208,8 @@ class MessageActionControl : public MessageAction {
     void sendStatus()
 	{
       char topic[1024];
-      sprintf(topic,"%s.%s.%s.%s",getenv("EXPID"),getenv("SESSION"),"daq",requester.c_str());
+      /* send message to topic expid.session.control.our_name */
+      sprintf(topic,"%s.%s.%s.%s",getenv("EXPID"),getenv("SESSION"),"control",requester.c_str());
       if(debug) std::cout << "MessageActionControl: sendStatus to topic " << topic << std::endl;     
       IpcServer &server = IpcServer::Instance();
       server << clrm << "status:"+myname << myname << 0/*<< time(0)*/;

@@ -497,7 +497,7 @@ if(bigerptr->id==0) {TIMERL_STOP(1,bigerptr->id);}
 	{
 
       /* open evio file */
-      sprintf(current_file, "%s_%06d.evio.%d", bigerptr->filename, bigerptr->runNumber, splitnb);
+      sprintf(current_file, "%s_%06d.evio.%05d", bigerptr->filename, bigerptr->runNumber, splitnb);
 #ifdef DEBUG
       for(i=0; i<8*bigerptr->id+8; i++) printf(" ");
 	  printf("[%d] coda_er(evio_thread): Opening file : %s\n",bigerptr->id,current_file);fflush(stdout);

@@ -69,7 +69,7 @@ Destination destination = session.createQueue("test-queue,test-queue-foo,topic:/
         ")";
 */
 
-#define DEFAULT_BROCKER_HOST "clondb1"
+#define DEFAULT_BROKER_HOST "clondb1"
 
 #define GET_BROKER \
   char *broker_host = NULL; \
@@ -77,8 +77,8 @@ Destination destination = session.createQueue("test-queue,test-queue-foo,topic:/
   broker_host = getenv("IPC_HOST"); \
   if(broker_host==NULL) \
   { \
-    printf("Cannot get broker_host name - use default >%s<\n",DEFAULT_BROCKER_HOST);	\
-    broker_host = strdup(DEFAULT_BROCKER_HOST); \
+    printf("Cannot get broker_host name - use default >%s<\n",DEFAULT_BROKER_HOST);	\
+    broker_host = strdup(DEFAULT_BROKER_HOST); \
   } \
   printf("Will use broker on host >%s<\n",broker_host);		   \
   sprintf(broker_str,"failover:(tcp://%s:61616?wireFormat=openwire&wireFormat.maxInactivityDuration=10)",broker_host); \
@@ -575,7 +575,10 @@ IpcProducer &sender = IpcProducer::Instance();
     void waitUntilReady()
     {
       //printf("IpcProducer::waitUntilReady() reached\n");
-      while(producer==NULL||session==NULL||message==NULL) {;}
+      while(producer==NULL||session==NULL||message==NULL)
+      {
+        sleep(1); // it will hung if does NOT sleep here !
+      }
       //printf("IpcProducer::waitUntilReady() ready !!!\n");
     }
 
@@ -603,7 +606,6 @@ IpcProducer &sender = IpcProducer::Instance();
 		*/
         Topic_orig = Topic;
         printf("IpcProducer's topic >%s<, topic_orig >%s<\n",Topic.c_str(), Topic_orig.c_str());
-
 		/* step 1: Create a ConnectionFactory (broker's URI specified here: protocol(TCP etc), IP address, port, optionally other params) */
 		/*    username and password can be specified, for example:
 				  createCMSConnectionFactory( "tcp://127.0.0.1:61616?username=${USERNAME}&password=${PASSWORD}" ) */
@@ -639,7 +641,6 @@ IpcProducer &sender = IpcProducer::Instance();
         /* wait here until 'waiting_for_messages' becomes 0, then return */
 		while(waiting_for_messages)
 		{
-
           //printf("IpcProducer::run: waiting_for_messages\n");
 		  sleep(1);
 		}
@@ -1178,7 +1179,10 @@ private:
     void waitUntilReady()
     {
       //printf("IpcConsumer::waitUntilReady() reached\n");
-      while(waiting_for_messages==0) {;}
+      while(waiting_for_messages==0)
+      {
+        sleep(1); // it will hung if does NOT sleep here !
+      }
       //printf("IpcConsumer::waitUntilReady() ready !!!\n");
     }
 
@@ -1437,6 +1441,7 @@ private:
 
 
 
+
 class IpcServer : public IpcProducer,
                   public IpcConsumer {
 
@@ -1473,8 +1478,11 @@ public:
       printf("Use following: expid='%s', sesid='%s', sysid_send='%s', unique_send='%s', sysid_recv='%s', unique_recv='%s'\n",
                expid, sesid, sysid_send, unique_send, sysid_recv, unique_recv);
 	  */
+printf("open 1\n");fflush(stdout);
 	  send_init(/*expid, sesid, sysid_send, unique_send*/);
+printf("open 2\n");fflush(stdout);
 	  recv_init(/*expid, sesid, sysid_recv, unique_recv*/);
+printf("open 3\n");fflush(stdout);
       inited = 1;
       return(0);
 	}

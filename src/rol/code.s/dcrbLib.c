@@ -165,7 +165,7 @@ dcrbId(unsigned int slot)
 int 
 dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
 {
-  int ii, res, errFlag = 0;
+  int ii, res, errFlag = 0, vers = 0;
   int boardID = 0;
   int maxSlot = 1;
   int minSlot = 21;
@@ -284,9 +284,10 @@ dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
 	  if(boardID >= maxSlot) maxSlot = boardID;
 	  if(boardID <= minSlot) minSlot = boardID;
 	  
-	  printf("Initialized DCRB %2d  Slot # %2d at address 0x%08x (0x%08x) \n",
+    vers   = vmeRead32(&DCRBp[(dcrbID[ndcrb])]->Cfg.FirmwareRev) & DCRB_VERSION_MASK;
+	  printf("Initialized DCRB %2d  Slot # %2d at address 0x%08x (0x%08x), versoin 0x%08X \n",
 		 ndcrb,dcrbID[ndcrb],(UINT32) DCRBp[(dcrbID[ndcrb])],
-		 (UINT32) DCRBp[(dcrbID[ndcrb])]-dcrbA24Offset);
+		 (UINT32) DCRBp[(dcrbID[ndcrb])]-dcrbA24Offset, vers);
 	  ndcrb++;
 /* 	  printf("Initialized DCRB %2d  Slot # %2d at address 0x%08x \n", */
 /* 		 ii,dcrbID[ii],(UINT32) DCRBp[(dcrbID[ii])]); */
@@ -2471,6 +2472,12 @@ dcrbDownloadAll()
     dcrbSetProcMode(slot, conf.window_offset[slot], conf.window_width[slot], conf.deadtime[slot]);
     dcrbSetDAC(slot, conf.threshold[slot]);
     dcrbSetTriggerPulseWidth(slot, conf.trig_hit_width[slot]);
+
+    /* reset all TDC serdes */
+    dcrbChanDisable(slot, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+
+    /* release reset to all TDC serdes */
+    dcrbChanDisable(slot, 0x00000000, 0x00000000, 0x00000000);
   }
 
   return(0);

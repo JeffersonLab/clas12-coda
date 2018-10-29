@@ -18,9 +18,24 @@ int
 main(int argc, char *argv[])
 {
   int res;
-  char myname[256];
+  char myname[256], result;
   unsigned int addr, laddr;
   int slot = 0;
+
+  /* Open the default VME windows */
+  vmeOpenDefaultWindows();
+  printf("\n");
+
+  dcrbInit((3<<19), 0x80000, 20, 0);
+
+  printf("Enter 'y' to update firmware, 'n' to abort");
+  scanf("%c", &result);
+
+  if(result!='y'&&result!='Y')
+  {
+    printf("aborting...\n");
+    exit(1);
+  }
 
   printf("\n");
   if(argc==2)
@@ -36,12 +51,6 @@ main(int argc, char *argv[])
   }
   printf("\n");
 
-  /* Open the default VME windows */
-  vmeOpenDefaultWindows();
-  printf("\n");
-
-  dcrbInit((3<<19), 0x80000, 20, 0);
-  
   dcrbGFirmwareUpdateVerify(argv[1]);
 
   exit(0);

@@ -752,6 +752,9 @@ listAllTables (char* tables[], int* num)
   return -1;
 }
 
+
+/* select all types from 'runTupes' table */
+
 int
 listAllConfigs (char* configs[], int* num)
 {
@@ -763,7 +766,8 @@ listAllConfigs (char* configs[], int* num)
   *num = 0;
   if (databaseSelected ())
   {
-    sprintf (queryString, "select * from %s", RUNTYPE_TABLE_NAME);
+    /*sprintf (queryString, "select * from %s", RUNTYPE_TABLE_NAME);*/
+    sprintf (queryString, "select * from %s ORDER BY name", RUNTYPE_TABLE_NAME);
 #ifdef _CODA_DEBUG
     printf ("listAllConfigs: QUERY: >%s<\n",queryString);
 #endif
@@ -1361,7 +1365,7 @@ removeMiscConfigInfo (void)
 
 
 
-
+/* select all components from 'process' table */
 
 int
 createRcNetCompsFromDbase (rcNetComp** comp, int *num)
@@ -1375,7 +1379,8 @@ createRcNetCompsFromDbase (rcNetComp** comp, int *num)
   *num = 0;
   if (!databaseSelected ()) return(-1);
 
-  sprintf (queryString, "select * from %s", PROCESS_TABLE_NAME);
+  /*sprintf (queryString, "select * from %s", PROCESS_TABLE_NAME);*/
+  sprintf (queryString, "select * from %s ORDER BY name", PROCESS_TABLE_NAME);
   if (mysql_query (mysql, queryString) != 0)
   {
 #ifdef _CODA_DEBUG
@@ -1410,6 +1415,9 @@ createRcNetCompsFromDbase (rcNetComp** comp, int *num)
   }
   mysql_free_result (res);
   *num = i;
+
+  printf("createRcNetCompsFromDbase: selected %d components from 'process' table\n",i);
+
   return 0;
 }
 

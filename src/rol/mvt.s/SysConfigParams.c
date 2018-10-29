@@ -98,9 +98,9 @@ char *SysCmpDataFmt2Str( SysCmpDataFmt fmt )
 	     if( fmt == Sys_CmpDatFmt_Udef )
 		return ("Udef    ");
 	else if( fmt == Sys_CmpDatFmt_UnPacked )
-		return ("Unpacked");
+		return ("Unpacked ");
 	else if( fmt == Sys_CmpDatFmt_Packed )
-		return ("Packed  ");
+		return ("Packed   ");
 	else
 		return ("Unknown ");
 }

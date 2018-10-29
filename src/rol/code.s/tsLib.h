@@ -104,7 +104,7 @@ struct TS_A24RegStruct
   /* 0x0004C */ volatile unsigned int output;
   /* 0x00050 */ volatile unsigned int fiberSyncDelay;
   /* 0x00054 */ volatile unsigned int GTPprescale[4];
-  /* 0x00064 */ volatile unsigned int fpInputPrescale[4]; 
+  /* 0x00064 */ volatile unsigned int fpInputPrescale[4];
   /*            Duplication Mode: fpInputPrescale[2] ->  Local Trigger Table                */
   /*            Duplication Mode: fpInputPrescale[3] ->  Local Trigger, Fast Clear Setting  */
   /* 0x00074 */ volatile unsigned int specialEvTypes;
@@ -357,10 +357,10 @@ struct TS_A24RegStruct
 #define TS_FIBERSYNCDELAY_HFBR5_SYNCDELAY_MASK    0xFF000000
 
 /* 0x70 fpInputPrescale[3] Masks (Duplication Mode) */
-#define TS_DUPL_LOCAL_TRIG_RULE_MASK       0x0000007F 
-#define TS_DUPL_LOCAL_TRIG_WIDTH_MASK      0x0000FF00 
-#define TS_DUPL_FAST_CLEAR_WIDTH_MASK      0x00FF0000 
-#define TS_DUPL_FAST_CLEAR_VETO_WIDTH_MASK 0xFF000000 
+#define TS_DUPL_LOCAL_TRIG_RULE_MASK       0x0000007F
+#define TS_DUPL_LOCAL_TRIG_WIDTH_MASK      0x0000FF00
+#define TS_DUPL_FAST_CLEAR_WIDTH_MASK      0x00FF0000
+#define TS_DUPL_FAST_CLEAR_VETO_WIDTH_MASK 0xFF000000
 
 /* 0x74 specialEvTypes masks */
 #define TS_SPECIALEVTYPES_MULT_GTP_OR_FP_MASK  0x000000FF
@@ -627,11 +627,14 @@ int  tsSetTriggerPulse(int trigger, int delay, int width);
 void tsTrigLinkReset();
 void tsSetSyncDelayWidth(unsigned int delay, unsigned int width, int widthstep);
 void tsSyncReset(int blflag);
+void tsResetEB();
 void tsSyncResetResync();
 void tsClockReset();
 void tsUserSyncReset(int enable);
 int  tsSetUserSyncResetReceive(int enable);
 void tsTriggerReadyReset();
+void tsTriggerLinkErrorReset();
+unsigned int tsGetTriggerLinkStatus(int pflag);
 int  tsSetAdr32(unsigned int a32base);
 int  tsResetEventCounter();
 unsigned long long int tsGetEventCounter();
@@ -668,7 +671,7 @@ int  tsLoadTriggerTable();
 void tsPrintTriggerTable(int inputType, int subGroup, int showbits);
 
 unsigned int tsGetDaqStatus();
-int  tsSetOutputPort(unsigned int set1, unsigned int set2, unsigned int set3, 
+int  tsSetOutputPort(unsigned int set1, unsigned int set2, unsigned int set3,
 		     unsigned int set4, unsigned int set5, unsigned int set6);
 int  tsSetClockSource(unsigned int source);
 void tsResetIODelay();

@@ -1,5 +1,4 @@
 
-
 /* rol1.c - 'standard' first readout list */
 
 #if defined(VXWORKS) || defined(Linux_vme)
@@ -1053,6 +1052,7 @@ vmeBusUnlock();
   if(nvscm1>0)
   {
     printf("Set BUSY from SWB for FADCs\n");
+
 vmeBusLock();
     tiSetBusySource(TI_BUSY_SWB,0);
 	sdSetActiveVmeSlots(vscmSlotMask);
@@ -1252,7 +1252,7 @@ vmeBusUnlock();
     /*faChanDisable(FA_SLOT,0xffff);enabled in download*/
 vmeBusLock();
     faEnable(FA_SLOT,0,0);
-    faSetCompression(FA_SLOT,0);
+    /*faSetCompression(FA_SLOT,0);*/
 vmeBusUnlock();
   }
 
@@ -1306,6 +1306,9 @@ vmeBusUnlock();
 
   /* USER code here */
   /******************/
+
+
+
 
 vmeBusLock();
   tiIntDisable();
@@ -2233,7 +2236,36 @@ vmeBusUnlock();
           mask = 1<<jj;
           if((fadcSlotMask&mask) && !(gbready&mask)) printf("%3d",jj);
 		}
-        printf("\n");
+        printf("\n");fflush(stdout);
+
+
+
+
+		{
+          printf("\n============= trying to read troubled FADCs ===================\n");fflush(stdout);
+
+          for(jj=1; jj<21; jj++)
+		  {
+            mask = 1<<jj;
+            if((fadcSlotMask&mask) && !(gbready&mask))
+			{
+              printf("FADC in slot %3d:\n",jj);fflush(stdout);
+vmeBusLock();
+              faStatus(faSlot(jj),0);
+	          len = faReadBlock(faSlot(jj),tdcbuf,500000,1);
+              printf("read %d words from FADC\n",len);
+              for(jjj=0; jjj<len; jjj++) printf(" [%3d]  0x%08x\n",jjj,tdcbuf[jjj]);
+vmeBusUnlock();
+			}
+		  }
+          printf("\n============= finished reading troubled FADCs ===================\n");
+		}
+
+
+
+
+
+
 	  }
 
       /* Reset the Token */

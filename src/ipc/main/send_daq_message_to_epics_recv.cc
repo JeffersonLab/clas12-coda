@@ -31,7 +31,8 @@ main()
 
   // connect to ipc server
   server.AddSendTopic(NULL, NULL, NULL, "HallB_DAQ");
-  server.AddRecvTopic(NULL, NULL, NULL, "HallB_DAQ");
+  //server.AddRecvTopic(NULL, NULL, NULL, "HallB_DAQ");
+  server.AddRecvTopic("clasrun", "clasprod", "*", "*");
   //server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");
   server.Open();
 

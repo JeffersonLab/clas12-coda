@@ -560,7 +560,7 @@ BOOL VMEClient::ConnectVME(char *targetname, int port)
   {
     int ret;
     struct timeval tv;
-    tv.tv_sec = 3;  /* timeout in seconds */
+    tv.tv_sec = 10;  /* timeout in seconds */
     tv.tv_usec = 0;  /* not init'ing this can cause strange errors */
     ret = setsockopt(sFd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(struct timeval));
     if(ret!=0) printf("ERROR from setsockopt()\n");
@@ -676,7 +676,7 @@ BOOL VMEClient::DisconnectVME()
     sFd = 0;
   }
   m_bConnected = FALSE;
-  printf("Disconnected\n");
+  printf("VMEClient::DisconnectVME: Disconnected\n");
   return(TRUE);
 }
 

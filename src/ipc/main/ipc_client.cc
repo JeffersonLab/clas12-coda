@@ -41,7 +41,9 @@ main(int argc AMQCPP_UNUSED, char* argv[] AMQCPP_UNUSED)
     server.AddRecvTopic(getenv("EXPID"), NULL, NULL, (char *)"server");
     server.AddRecvTopic(getenv("EXPID"), NULL, NULL, (char *)"test");
 
+	printf("ipc_client: Opening server...\n");fflush(stdout);
     server.Open();
+	printf("ipc_client: Opened !\n");fflush(stdout);
 
     MessageActionControl  *control = new MessageActionControl((char *)"server");
     MessageActionTest        *test = new MessageActionTest();

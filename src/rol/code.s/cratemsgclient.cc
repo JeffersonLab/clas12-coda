@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <errno.h>
 
 #include "arpa/inet.h" // htonl
 
@@ -79,11 +80,16 @@ bool CrateMsgClient::IsValid()
 
 void CrateMsgClient::Close(char *opt)
 {
+  printf("CrateMsgClient::Close reached\n");
 	/*
 	if(pSocket)
 		pSocket->Close();
 	*/
-  if(IsValid()) Disconnect();
+  if(IsValid())
+  {
+    printf("CrateMsgClient::Close: calling 'Disconnect()'\n");
+    Disconnect();
+  }
 }
 
 
@@ -122,15 +128,27 @@ int CrateMsgClient::RecvRaw(void* buffer, int length/*, ESendRecvOptions opt = k
   int len, lll;
   unsigned char *buf = (unsigned char *) buffer;
 
-  //printf("ReadFromSocket INFO: trying to read...\n");
+  //printf("ReadFromSocket INFO: trying to read...\n");fflush(stdout);
   len = read(sFd,(void *)buf, length);
-  //printf("ReadFromSocket INFO: len=%d length=%d\n",len,length);
+  if(len<=0)
+  {
+    perror ("read");
+    printf("errno=%d len=%d\n",errno,len);
+    return(len);
+  }
+  //printf("ReadFromSocket INFO: len=%d length=%d\n",len,length);fflush(stdout);
 
   while(len<length)
   {
-    //printf("ReadFromSocket INFO: trying to read the rest ...\n");
+    //printf("ReadFromSocket INFO: trying to read the rest ...\n");fflush(stdout);
     lll = read(sFd,(void *)&buf[len], length-len);
-    //printf("ReadFromSocket INFO: ... received %d (expected %d)\n",lll,length-len);
+    if(lll<=0)
+    {
+      perror ("read");
+      printf("errno=%d lll=%d\n",errno,lll);
+      return(lll);
+    }
+    //printf("ReadFromSocket INFO: ... received %d (expected %d)\n",lll,length-len);fflush(stdout);
     len += lll;
   }
  
@@ -156,6 +174,7 @@ bool CrateMsgClient::InitConnection()
   else if(val == LSWAP(CRATEMSG_HDR_ID)) swap = 1;
   else
   {
+    printf("CrateMsgClient::InitConnection: calling 'Close()'\n");
 	Close();
 	return kFALSE;
   }
@@ -167,6 +186,7 @@ bool CrateMsgClient::InitConnection()
 
 bool CrateMsgClient::Reconnect()
 {
+  printf("CrateMsgClient::Reconnect: calling 'Close()'\n");
   Close();
   /*delete pSocket;*/
 
@@ -198,7 +218,7 @@ bool CrateMsgClient::RcvRsp(int type)
 {
   if(RecvRaw(&Msg, 8) == 8)
   {
-	/*printf("RcvRsp: len=%d\n",Msg.len);*/
+	//printf("RcvRsp: len=%d\n",Msg.len);
 	if(swap)
 	{
 	  Msg.len = LSWAP(Msg.len);
@@ -213,6 +233,7 @@ bool CrateMsgClient::RcvRsp(int type)
 	}
   }
 
+  printf("CrateMsgClient::RcvRsp: calling 'Close()'\n");
   Close();
 
   return kFALSE;
@@ -372,12 +393,13 @@ bool CrateMsgClient::ReadScalers(int slot, unsigned int **val, int *len)
   Msg.msg.m_Cmd_ReadScalers.cnt = 70; /* ignored by server */
   Msg.msg.m_Cmd_ReadScalers.slot = slot;
 
-  /*printf("CrateMsgClient::ReadScalers: befor cnt %d %d\n",Msg.msg.m_Cmd_ReadScalers.cnt,Msg.msg.m_Cmd_ReadScalers_Rsp.cnt);*/
+  //printf("CrateMsgClient::ReadScalers: befor cnt %d %d\n",Msg.msg.m_Cmd_ReadScalers.cnt,Msg.msg.m_Cmd_ReadScalers_Rsp.cnt);fflush(stdout);
   SendRaw(&Msg, Msg.len+8);
+  //printf("CrateMsgClient::ReadScalers: after SendRaw()\n");fflush(stdout);
 
   if(RcvRsp(Msg.type))
   {
-    /*printf("CrateMsgClient::ReadScalers: after cnt %d %d\n",Msg.msg.m_Cmd_ReadScalers.cnt,Msg.msg.m_Cmd_ReadScalers_Rsp.cnt);*/
+    //printf("CrateMsgClient::ReadScalers: after cnt %d %d\n",Msg.msg.m_Cmd_ReadScalers.cnt,Msg.msg.m_Cmd_ReadScalers_Rsp.cnt);fflush(stdout);
 	if(swap)
 	{
 	  Msg.msg.m_Cmd_ReadScalers_Rsp.cnt = LSWAP(Msg.msg.m_Cmd_ReadScalers_Rsp.cnt);
@@ -391,7 +413,7 @@ bool CrateMsgClient::ReadScalers(int slot, unsigned int **val, int *len)
 	}
 
     *len = Msg.msg.m_Cmd_ReadScalers_Rsp.cnt;
-    /*printf("CrateMsgClient::ReadScalers: *len=%d\n",*len);*/
+    //printf("CrateMsgClient::ReadScalers: *len=%d\n",*len);fflush(stdout);
     if(swap)
 	{
 	  for(int i = 0; i < Msg.msg.m_Cmd_ReadScalers_Rsp.cnt; i++)
@@ -404,11 +426,12 @@ bool CrateMsgClient::ReadScalers(int slot, unsigned int **val, int *len)
 	  for(int i = 0; i < Msg.msg.m_Cmd_ReadScalers_Rsp.cnt; i++)
 	  {
 		(*val)[i] = Msg.msg.m_Cmd_ReadScalers_Rsp.vals[i];
-		/*printf("[%2d] 0x%08x\n",i,(*val)[i]);fflush(stdout);*/
+		//printf("[%2d] 0x%08x\n",i,(*val)[i]);fflush(stdout);
 	  }
 	}
 	return kTRUE;
   }
+
   return kFALSE;
 }
 
@@ -695,7 +718,7 @@ bool CrateMsgClient::Connect(char *targetname, int port)
   {
     int ret;
     struct timeval tv;
-    tv.tv_sec = 3;  /* timeout in seconds */
+    tv.tv_sec = 10;  /* timeout in seconds */
     tv.tv_usec = 0;  /* not init'ing this can cause strange errors */
     ret = setsockopt(sFd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(struct timeval));
     if(ret!=0) printf("ERROR from setsockopt()\n");

@@ -78,7 +78,7 @@ int main(int argc, char *argv[]){
 
   for(i=0;i<nssp;i++){
     slot = sspSlot(i);
-    sspSetMode(slot, 1 | (0xFF<<16), 1);
+    sspSetMode(slot, 3 | (0xFF<<16), 1);
   }
 
   sspGStatus(1);

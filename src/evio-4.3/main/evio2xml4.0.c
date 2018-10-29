@@ -47,6 +47,9 @@ enum {
 #include <evio.h>
 #include <expat.h>
 
+#include "evio.h"
+#include "eviofmt.h"
+
 
 /*  misc variables from orig evio2xml.c */
 static char *filename;
@@ -948,7 +951,7 @@ dump_composite(unsigned int *buf)
     int index = 1;
     int nfmt;
     char fmt[256], *ch;
-    unsigned char ifmt[256];
+    unsigned short ifmt[256];
     int ifmtlength = 255;
 
     ch = (char*)&buf[index];
@@ -987,6 +990,23 @@ dump_composite(unsigned int *buf)
     /*printf("length ---> %d (padding %d extra bytes, nfmt=%d)\n",length, padding,nfmt);*/
     if(nfmt>0)
 	{
+
+      /*testing eviofmtswap
+	  {
+        int i;
+        int tmp1[1000000];
+        int tmp2[1000000];
+        memcpy(tmp1,(int *)&buf[index], length*4);
+        memcpy(tmp2,(int *)&buf[index], length*4);
+		for(i=0; i<length; i++) if(tmp1[i]!=tmp2[i]) {printf("ERROR1: i=%d\n",i);exit(0);}
+
+		printf("eviofmtswap start\n");fflush(stdout);
+        eviofmtswap(tmp2, length, ifmt, nfmt, 0, padding);
+		for(i=0; i<length; i++) if(tmp1[i]!=tmp2[i]) {printf("ERROR2: i=%d\n",i);exit(0);}
+		printf("eviofmtswap end\n");fflush(stdout);
+	  }
+      testing eviofmtswap*/
+
       /*printf("\n\n\n---> befor\n");fflush(stdout);*/
       xml += sprintf(xml,"      <data>\n");
       xml += eviofmtdump((int *)&buf[index], length, ifmt, nfmt, padding, xml);

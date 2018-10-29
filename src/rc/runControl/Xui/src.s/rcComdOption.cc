@@ -89,6 +89,11 @@ rcComdOption::~rcComdOption (void)
     delete []codadb_;
 }
 
+
+/*global*/
+extern int logging;
+/*global*/
+
 void
 rcComdOption::parseOptions (void)
 {
@@ -157,7 +162,7 @@ rcComdOption::parseOptions (void)
       else if (::strcmp (argv_[i], "-c") == 0 || ::strcmp (argv_[i], "-cedit") == 0 || ::strcmp (argv_[i], "-codaedit") == 0) startCedit_ = 1;
       else if (::strcmp (argv_[i], "-d") == 0 || ::strcmp (argv_[i], "-dbedit") == 0) startDbedit_ = 1;
       else if (::strcmp (argv_[i], "-rocs") == 0) startRocs_ = 1;
-      else if (::strcmp (argv_[i], "-log") == 0) logRocs_ = 1; /*sergey*/
+      else if (::strcmp (argv_[i], "-log") == 0 || ::strcmp (argv_[i], "-logs") == 0) {logRocs_ = 1; logging = 1;} /*sergey*/
       else if (::strcmp (argv_[i], "-A") == 0 || ::strcmp (argv_[i], "-autostart") == 0) autostart_ = 1;
       else if (::strcmp (argv_[i], "-w") == 0 || ::strcmp (argv_[i], "-wide") == 0) startWide_ = 1;
       else if (::strcmp (argv_[i], "-n") == 0 || ::strcmp (argv_[i], "-noedit") == 0) noEdit_ = 1;

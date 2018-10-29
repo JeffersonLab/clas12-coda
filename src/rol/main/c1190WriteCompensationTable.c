@@ -90,8 +90,7 @@ main(int argc, char *argv[])
     {
       vme_addr = (unsigned int) strtoll(argv[1],NULL,16)&0xffffffff;
       filename = argv[2];
-      if(argc==4)
-	file_is_hex = 1;
+      if(argc==4) file_is_hex = 1;
     }
 
 #ifdef DO_VME
@@ -202,14 +201,13 @@ main(int argc, char *argv[])
   printf("\n");
 
   if(file_is_hex == 0)
-    {
-      /* Flip the sign */
-      for(idata = 0; idata < ndata; idata++)
-	file_data[idata] *= -1;
+  {
+    /* Flip the sign */
+    for(idata = 0; idata < ndata; idata++) file_data[idata] *= -1;
       
-      /* Convert float data to two's complement 2byte integer */
-      tdc1190ConvertTable_Float2TCInt(file_data, compram, ndata);
-    }
+    /* Convert float data to two's complement 2byte integer */
+    tdc1190ConvertTable_Float2TCInt(file_data, compram, ndata);
+  }
   
 #ifdef DO_VME
   vmeBusLock();

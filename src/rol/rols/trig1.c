@@ -509,23 +509,19 @@ vmeBusUnlock();
 
 
 
-  /* SYNC RESET */
+  /* SYNC RESET - reset event number (and clear FIFOs) in TIs */
 
-
-/*
   sleep(1);
 vmeBusLock();
-  tsSyncReset(1);
+  tsSyncReset(1); /* '1' will push 'next_block_level' to 'block_level' in slave TI's (not TD's !), we did it already in download */
 vmeBusUnlock();
   sleep(1);
-*/
 
 
 
 
-
-
-
+  /* USER RESET - use it because 'SYNC RESET' produces too short pulse, still need 'SYNC RESET' above because 'USER RESET'
+  does not do everything 'SYNC RESET' does (in paticular does not reset event number) */
 
 vmeBusLock();
   tsUserSyncReset(1);

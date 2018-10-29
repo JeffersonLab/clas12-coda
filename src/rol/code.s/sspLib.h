@@ -297,7 +297,7 @@ typedef struct
 #define GT_STRG_CTRL_ECCLUSTER_EMIN_EN      0x00000004
 #define GT_STRG_CTRL_PCESUM_EMIN_EN         0x00000008
 #define GT_STRG_CTRL_ECESUM_EMIN_EN         0x00000010
-#define GT_STRG_CTRL_DC_MULT_EN             0x00000020
+#define GT_STRG_CTRL_DC_EN                  0x00000020
 #define GT_STRG_CTRL_ECOCOSMIC_EN           0x00000040
 #define GT_STRG_CTRL_ECICOSMIC_EN           0x00000080
 #define GT_STRG_CTRL_PCCOSMIC_EN            0x00000100
@@ -323,7 +323,10 @@ typedef struct
 #define GT_STRG_COSMIC_WIDTH_MASK           0x00FF0000
 
 #define GT_STRG_DCCTRL_MULT_MIN_MASK        0x00000007
-#define GT_STRG_DCCTRL_MULT_WIDTH_MASK      0x01FF0000
+#define GT_STRG_DCCTRL_ROAD_MASK            0x00000008
+#define GT_STRG_DCCTRL_ROAD_OUTBEND_MASK    0x00000010
+#define GT_STRG_DCCTRL_ROAD_INBEND_MASK     0x00000020
+#define GT_STRG_DCCTRL_WIDTH_MASK           0x01FF0000
 
 #define GT_STRG_HTCC_CTRL_WIDTH_MASK        0x00FF0000
 #define GT_STRG_HTCC_MASK0                  0xFFFFFFFF
@@ -864,10 +867,12 @@ int sspGt_SetTrigger_PcalClusterWidth(int id, int trg, int val);
 int sspGt_GetTrigger_PcalClusterWidth(int id, int trg);
 int sspGt_SetTrigger_CosmicWidth(int id, int trg, int val);
 int sspGt_GetTrigger_CosmicWidth(int id, int trg);
+int sspGt_SetTrigger_DcRoad(int id, int trg, int mask);
+int sspGt_GetTrigger_DcRoad(int id, int trg);
 int sspGt_SetTrigger_DcMultMin(int id, int trg, int val);
 int sspGt_GetTrigger_DcMultMin(int id, int trig);
-int sspGt_SetTrigger_DcMultWidth(int id, int trg, int val);
-int sspGt_GetTrigger_DcMultWidth(int id, int trg);
+int sspGt_SetTrigger_DcWidth(int id, int trg, int val);
+int sspGt_GetTrigger_DcWidth(int id, int trg);
 int sspGt_SetTrigger_HtccWidth(int id, int trg, int val);
 int sspGt_GetTrigger_HtccWidth(int id, int trg);
 int sspGt_SetTrigger_HtccMask(int id, int trg, long long mask);
@@ -946,6 +951,8 @@ void sspSerdesPrintStatus(int id);
 
 /* Scaler routines */
 void sspPrintScalers(int id);
+void sspGtPrintScalers(int id);
+void sspPrintGtScalers(int id);
 
 /* Firmware update routines */
 int  sspFirmwareUpdateVerify(int id, const char *filename);

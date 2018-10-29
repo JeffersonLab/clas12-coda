@@ -5,7 +5,7 @@
 
 if ($1 == start) then
 
-  ssh -n $CLON_DAQ "(cd $CLON_LOG/database; dbrouter -a $2 -debug) >>& $CLON_LOG/database/dbr_$2.log &" &
+  ssh -n $CLON_DAQ "(cd $CLON_LOG/database; dbrouter -a $2 -debug) >>& $CLON_LOG/database/dbrouter_$2.log &" &
 
 else if ($1 == stop) then
 

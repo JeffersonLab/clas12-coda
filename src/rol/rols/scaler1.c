@@ -14,7 +14,9 @@ static int nusertrig, ndone;
 
 #define USE_SIS3801
 #define USE_DSC2
+#define USE_V1190
 #define USE_V851
+#define USE_MO
 
 
 /* if event rate goes higher then 10kHz, with random triggers we have wrong
@@ -196,7 +198,9 @@ static int tdctypebyslot[NBOARDS];
 static int error_flag[NBOARDS];
 static int ndsc2=0, ndsc2_daq=0;
 static int ntdcs;
-
+#ifdef USE_V1190
+#include "tdc1190.h"
+#endif
 
 int
 getTdcTypes(int *typebyslot)
@@ -254,7 +258,7 @@ static void
 __download()
 {
   int i1, i2, i3, ii;
-  int id;
+  int id, slot;
   char *ch, tmp[64];
   /*unsigned int maxA32Address;
   unsigned int fadcA32Address = 0x09000000;*/
@@ -363,6 +367,9 @@ if(rol->pid==18)
 
 
 
+
+
+
 #ifdef USE_DSC2
   printf("DSC2 Download() starts =========================\n");
 
@@ -393,6 +400,55 @@ vmeBusUnlock();
 #endif
 
 
+
+
+#ifdef USE_V1190
+  printf("V1190 Download() starts =========================\n");
+
+vmeBusLock();
+  ntdcs = tdc1190Init(0x11100000,0x80000,20,0);
+  if(ntdcs>0) TDC_READ_CONF_FILE;
+vmeBusUnlock();
+
+  for(ii=0; ii<ntdcs; ii++)
+  {
+    slot = tdc1190Slot(ii);
+    tdctypebyslot[slot] = tdc1190Type(ii);
+    printf(">>> id=%d slot=%d type=%d\n",ii,slot,tdctypebyslot[slot]);
+  }
+
+
+#ifdef SLOTWORKAROUND
+  for(ii=0; ii<ntdcs; ii++)
+  {
+vmeBusLock();
+    slot = tdc1190GetGeoAddress(ii);
+vmeBusUnlock();
+	slotnums[ii] = slot;
+    printf("[%d] slot %d\n",ii,slotnums[ii]);
+  }
+#endif
+
+
+  /* if TDCs are present, set busy from P2 */
+  if(ntdcs>0)
+  {
+    printf("Set BUSY from P2 for TDCs\n");
+vmeBusLock();
+    tiSetBusySource(TI_BUSY_P2,0);
+vmeBusUnlock();
+  }
+
+  for(ii=0; ii<ntdcs; ii++)
+  {
+vmeBusLock();
+    tdc1190Clear(ii);
+vmeBusUnlock();
+    error_flag[ii] = 0;
+  }
+
+  printf("V1190 Download() ends =========================\n\n");
+#endif
 
 
 
@@ -433,6 +489,13 @@ vmeBusUnlock();
 vmeBusLock();
   v851Init(0xd000,0);
   v851_start(1000000);
+vmeBusUnlock();
+#endif
+
+#ifdef USE_MO
+vmeBusLock();
+  moInit(0xa00000,0);
+  moConfigPrint();
 vmeBusUnlock();
 #endif
 
@@ -495,6 +558,16 @@ vmeBusUnlock();
   /* dsc2 configuration */
   if(ndsc2>0) DSC2_READ_CONF_FILE;
   printf("DSC2 Prestart() ends =========================\n\n");
+#endif
+
+
+#ifdef USE_V1190
+  for(ii=0; ii<ntdcs; ii++)
+  {
+vmeBusLock();
+    tdc1190SetBLTEventNumber(ii, block_level);
+vmeBusUnlock();
+  }
 #endif
 
 
@@ -691,6 +764,18 @@ vmeBusUnlock();
   }
 #endif
 
+#ifdef USE_V1190
+  for(jj=0; jj<ntdcs; jj++)
+  {
+vmeBusLock();
+    tdc1190Clear(jj);
+vmeBusUnlock();
+    error_flag[jj] = 0;
+  }
+  taskDelay(100);
+
+#endif
+
 #ifdef USE_SIS3801
   run_trig_count = 0;
   for(id=0; id<nsis; id++)
@@ -731,6 +816,15 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
   int dready = 0, timeout = 0, siswasread = 0;
 #ifndef VXWORKS
   TIMERL_VAR;
+#endif
+#ifdef USE_V1190
+  int nev, rlenbuf[22];
+  unsigned long tdcslot, tdcchan, tdcval, tdc14, tdcedge, tdceventcount;
+  unsigned long tdceventid, tdcbunchid, tdcwordcount, tdcerrorflags;
+  unsigned int *tdchead;
+#ifdef SLOTWORKAROUND
+  unsigned long tdcslot_h, tdcslot_t, remember_h;
+#endif
 #endif
 #ifdef DMA_TO_BIGBUF
   unsigned int pMemBase, uMemBase, mSize;
@@ -841,6 +935,94 @@ vmeBusUnlock();
 TIMERL_START;
 #endif
 
+#ifdef USE_V1190
+	if(ntdcs>0)
+	{
+vmeBusLock();
+      tdc1190ReadStart(tdcbuf, rlenbuf);
+vmeBusUnlock();
+	  /*
+	  rlenbuf[0] = tdc1190ReadBoard(0, tdcbuf);
+	  rlenbuf[1] = tdc1190ReadBoard(1, &tdcbuf[rlenbuf[0]]);
+	  */
+
+      /*check if anything left in event buffer; if yes, print warning message and clear event buffer
+      for(jj=0; jj<ntdcs; jj++)
+      {
+        nev = tdc1190Dready(jj);
+        if(nev > 0)
+		{
+          printf("WARN: v1290[%2d] has %d events - clear it\n",jj,nev);
+          tdc1190Clear(jj);
+		}
+	  }
+      for(ii=0; ii<rlenbuf[0]; ii++) tdcbuf[ii] = LSWAP(tdcbuf[ii]);
+	  */
+
+      itdcbuf = 0;
+      njjloops = ntdcs;
+
+      BANKOPEN(0xe10B,1,rol->pid);
+      for(ii=0; ii<njjloops; ii++)
+      {
+        rlen = rlenbuf[ii];
+		/*
+        printf("rol1(TDCs): ii=%d, rlen=%d\n",ii,rlen);
+		*/
+
+	  /*	  
+#ifdef DEBUG
+        level = tdc1190GetAlmostFullLevel(ii);
+        iii = tdc1190StatusAlmostFull(ii);
+        logMsg("ii=%d, rlen=%d, almostfull=%d level=%d\n",ii,rlen,iii,level,5,6);
+#endif
+	  */	  
+
+        if(rlen <= 0) continue;
+
+        tdc = &tdcbuf[itdcbuf];
+        itdcbuf += rlen;
+
+
+#ifdef SLOTWORKAROUND
+		/* go through current board and fix slot number */
+        for(jj=0; jj<rlen; jj++)
+		{
+          utmp = LSWAP(tdc[jj]);
+
+          if( ((utmp>>27)&0x1F) == 8 ) /* GLOBAL HEADER */
+		  {
+            slot = utmp&0x1f;
+            if( slot != slotnums[ii] )
+			{
+              /*printf("ERROR: old=0x%08x: WRONG slot=%d IN GLOBAL HEADER, must be %d - fixed\n",utmp,slot,slotnums[ii]);*/
+              utmp = (utmp & 0xFFFFFFE0) | slotnums[ii];
+              /*printf("new=0x%08x\n",utmp);*/
+              tdc[jj] = LSWAP(utmp);
+            }
+		  }
+          else if( ((utmp>>27)&0x1F) == 0x10 ) /* GLOBAL TRAILER */
+		  {
+            slot = utmp&0x1f;
+            if( slot != slotnums[ii] )
+			{
+              /*printf("ERROR: old=0x%08x: WRONG slot=%d IN GLOBAL TRAILER, must be %d - fixed\n",utmp,slot,slotnums[ii]);*/
+              utmp = (utmp & 0xFFFFFFE0) | slotnums[ii];
+              /*printf("new=0x%08x\n",utmp);*/
+              tdc[jj] = LSWAP(utmp);
+            }
+		  }
+        }
+#endif
+
+        for(jj=0; jj<rlen; jj++) *rol->dabufp ++ = tdc[jj];
+      }
+      BANKCLOSE;
+
+	}
+
+
+#endif /* USE_V1190 */
 
 
 #ifdef USE_SIS3801
@@ -1082,6 +1264,19 @@ vmeBusUnlock();
       chptr += len;
       nbytes += len;
 
+#ifdef USE_V1190_HIDE
+	  if(ntdcs>0)
+	  {
+vmeBusLock();
+        len = tdc1190UploadAll(chptr, 10000);
+vmeBusUnlock();
+        /*printf("\nTDC len=%d\n",len);
+        printf("%s\n",chptr);*/
+        chptr += len;
+        nbytes += len;
+	  }
+#endif
+
       /* 'nbytes' does not includes end_of_string ! */
       chptr[0] = '\n';
       chptr[1] = '\n';
@@ -1094,6 +1289,7 @@ vmeBusUnlock();
       rol->dabufp += nwords;
 
       BANKCLOSE;
+
 
       printf("SYNC: read boards configurations - done\n");
     }

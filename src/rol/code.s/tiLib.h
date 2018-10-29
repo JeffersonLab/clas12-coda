@@ -301,6 +301,7 @@ struct TI_A24RegStruct
 #define TI_BUSY_HFBR6            (1<<13)
 #define TI_BUSY_HFBR7            (1<<14)
 #define TI_BUSY_HFBR8            (1<<15)
+#define TI_BUSY_HFBR_MASK        0x0000FF00
 #define TI_BUSY_MONITOR_MASK     0xFFFF0000
 #define TI_BUSY_MONITOR_SWA      (1<<16)
 #define TI_BUSY_MONITOR_SWB      (1<<17)
@@ -460,6 +461,24 @@ struct TI_A24RegStruct
 #define TI_FIBERALIGNMENT_HFBR5_IODELAY_MASK   0x00FF0000
 #define TI_FIBERALIGNMENT_HFBR5_SYNCDELAY_MASK 0xFF000000
 
+/* 0xB0 GTPStatusA bits and masks */
+#define TI_GTPSTATUSA_RESET_DONE_MASK 0x000000FF
+#define TI_GTPSTATUSA_PLL_LOCK_MASK   0x00000F00
+
+/* 0xB4 GTPStatusB bits and masks */
+#define TI_GTPSTATUSB_CHANNEL_BONDING_MASK         0x000000FF
+#define TI_GTPSTATUSB_DATA_ERROR_MASK              0x0000FF00
+#define TI_GTPSTATUSB_DISPARITY_ERROR_MASK         0x00FF0000
+#define TI_GTPSTATUSB_DATA_NOT_IN_TABLE_ERROR_MASK 0xFF000000
+
+/* 0xB8 GTPtriggerBufferLength bits and masks */
+#define TI_GTPTRIGGERBUFFERLENGTH_GLOBAL_LENGTH_MASK 0x000007FF
+#define TI_GTPTRIGGERBUFFERLENGTH_SUBSYS_LENGTH_MASK 0x07FF0000
+#define TI_GTPTRIGGERBUFFERLENGTH_HFBR1_MGT_ERROR    (1<<28)
+#define TI_GTPTRIGGERBUFFERLENGTH_CLK250_DCM_LOCK    (1<<29)
+#define TI_GTPTRIGGERBUFFERLENGTH_CLK125_DCM_LOCK    (1<<30)
+#define TI_GTPTRIGGERBUFFERLENGTH_VMECLK_DCM_LOCK    (1<<31)
+
 /* 0xC0 blockStatus bits and masks */
 #define TI_BLOCKSTATUS_NBLOCKS_READY0    0x000000FF
 #define TI_BLOCKSTATUS_NBLOCKS_NEEDACK0  0x0000FF00
@@ -492,6 +511,7 @@ struct TI_A24RegStruct
 #define TI_RESET_JTAG                 (1<<2)
 #define TI_RESET_SFM                  (1<<3)
 #define TI_RESET_SOFT                 (1<<4)
+#define TI_RESET_FIBER                (1<<5)
 #define TI_RESET_SYNC_HISTORY         (1<<6)
 #define TI_RESET_BUSYACK              (1<<7)
 #define TI_RESET_CLK250               (1<<8)
@@ -638,6 +658,7 @@ void tiSetSyncDelayWidth(unsigned int delay, unsigned int width, int widthstep);
 void tiTrigLinkReset();
 int  tiSetSyncResetType(int type);
 void tiSyncReset(int bflag);
+void tiResetEB();
 void tiSyncResetResync();
 void tiClockReset();
 int  tiSetAdr32(unsigned int a32base);
@@ -665,7 +686,10 @@ int  tiGetClockSource();
 void tiSetFiberDelay(unsigned int delay, unsigned int offset);
 void tiSetFiberSyncDelay(unsigned int syncDelay);
 int  tiGetFiberDelay();
+int  tiResetSlaveConfig();
 int  tiAddSlave(unsigned int fiber);
+int  tiRemoveSlave(unsigned int fiber);
+int  tiAddSlaveMask(unsigned int fibermask);
 int  tiSetTriggerHoldoff(int rule, unsigned int value, int timestep);
 int  tiGetTriggerHoldoff(int rule);
 int  tiPrintTriggerHoldoff(int dflag);
@@ -713,6 +737,9 @@ int  tiGetSyncResetRequest();
 int  tiEnableSyncResetRequest(unsigned int portMask, int self);
 int  tiSyncResetRequestStatus(int pflag);
 void tiTriggerReadyReset();
+void tiTriggerLinkErrorReset();
+unsigned int tiGetTriggerLinkStatus(int pflag);
+
 int  tiFillToEndBlock();
 int  tiResetMGT();
 int  tiSetTSInputDelay(int chan, int delay);
@@ -761,7 +788,6 @@ void tiUnload(int pflag);
 int tiGetRandomTriggerSetting(int trigger);
 int tiGetRandomTriggerEnable(int trigger);
 int tiTrigDisable();
-/*unsigned int tiGetBlockBufferLevel();added by Bryan*/
 int tiGetTSInputMask();
 int tiGetSlaveMask();
 int tiBusy();
@@ -769,7 +795,6 @@ int tiAddRocSWA();
 int tiRemoveRocSWA();
 int tiGetNumberOfBlocksInBuffer();
 /*
-unsigned int tiGetFiberDelay();
 unsigned int tiGetSyncDelay();
 */
 /*sergey*/

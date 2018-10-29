@@ -12,7 +12,7 @@ if ($#argv != 0 ) then
     echo "    dc5 dc6 dc11 dc12"
     echo "    lac1 cc1 cc2 ec1 ec2 sc1 tage3 pcalfb"
     echo "    scaler1 scaler2 scaler3 scaler4"
-    echo "    pretrig1 pretrig2 camac1 camac2 sc-laser1"
+    echo "    pretrig1 pretrig2 camac1 sc-laser1"
     echo "    dccntrl ioctorus1 iocptarg clasgas"
     echo "    classc1 classc2 classc3 classc4 classc5 classc6 classc7 classc8 classc12"
     echo "    primexts2 primexroc4 primexroc5 primexroc6 primexioc1 primexioc2"
@@ -42,6 +42,7 @@ set group=1
 set group_snmp=2
 set group_PwSw=3
 set group_softioc=4
+set group_canbus=5
 
 
 #***  Transliterate input argv to lower-case characters ***
@@ -51,7 +52,7 @@ set roc = `echo $1 | tr '[A-Z]' '[a-z]' `
 #***  Set list of ROCs ***
 #
 set roc_name = ( scaler11 scaler2 scaler3 scaler4 \
-                 pretrig1 pretrig2 camac1 camac2 sc-laser1 \
+                 pretrig1 pretrig2 camac1old camac2old sc-laser1 \
                  dccntrl ioctorus1 iocptarg clasgas \
                  classc1 classc2 classc3 classc4 classc5 classc6 classc7 classc8 classc12 \
                  primexts2 primexroc4 primexroc5 primexroc6 primexioc1 primexioc2 \
@@ -80,7 +81,7 @@ set roc_name_snmp = ( dc11       dc12       dc13       dc21       \
                       scaler1    pcal0      pretrig3   pretrig4   \
                       croctest1  croctest2  hps2       test1      \
                       roc1       halldtrg3  jlab12vme  tdcctof1   \
-                      adcecal1   svt1       wolfram1   hps12      \
+                      adcecal1   svt1       wolfram1   adcband1   \
                       hps1       hps2       cnd1       tdcecal1   \
                       tdcpcal1   tdcftof1   adcpcal1   adcftof1   \
                       adcecal1   adcftof6   tdcftof6   adcpcal6   \
@@ -108,7 +109,7 @@ set ip_snmp = ( 129.57.68.184   129.57.68.179   129.57.160.200  129.57.68.183  \
                 129.57.167.85   129.57.86.175   129.57.69.32    129.57.69.47   \
                 129.57.69.30    129.57.69.28    129.57.69.40    129.57.86.122   \
                 129.57.167.104  129.57.167.47   129.57.167.56   129.57.160.158   \
-                129.57.167.80   129.57.160.197  129.57.86.34    129.57.167.20  \
+                129.57.167.80   129.57.160.197  129.57.86.34    129.57.160.144  \
                 129.57.167.164  129.57.167.165  129.57.86.53    129.57.167.52  \
                 129.57.167.54   129.57.167.73   129.57.167.81   129.57.167.156 \
                 129.57.167.80   129.57.167.157  129.57.167.158  129.57.167.39  \
@@ -129,12 +130,17 @@ set ip_snmp = ( 129.57.68.184   129.57.68.179   129.57.160.200  129.57.68.183  \
 #
 set roc_name_softioc = ( clonpc1 clonpc2 clonpc3 )
 
+#***  Set list of crates rebooted via canbus ***
+#
+set roc_name_canbus = ( camac1 )
+
 
 #*** Check ROC name ***
 set ii = -1
 set ii_PwSw = 0
 set ii_snmp = 0
 set ii_softioc = 0
+set ii_canbus = 0
 
 foreach word ($roc_name)
   if ( $roc == $word ) set ii = 0
@@ -162,6 +168,14 @@ if ( $ii == -1 ) then
     @ ii_softioc++
     if ( $roc == $word ) set ii = $ii_softioc ; set group = $group_softioc
 #    echo ii = $ii ii_softioc = $ii_softioc roc = $roc word = $word
+  end
+endif
+
+if ( $ii == -1 ) then
+  foreach word ($roc_name_canbus)
+    @ ii_canbus++
+    if ( $roc == $word ) set ii = $ii_canbus ; set group = $group_canbus
+#    echo ii = $ii ii_canbus = $ii_canbus roc = $roc word = $word
   end
 endif
 
@@ -214,6 +228,14 @@ else if ( $group == $group_softioc ) then
 #***** software IOC reboot via service command :
 #
   ssh clasrun@$roc "setenv  SUDO_ASKPASS $CODA/common/scripts/remote_softioc.sh ; sudo -A /etc/init.d/softioc restart" >& /dev/null &
+  echo "$roc node rebooting is in progress"
+
+
+else if ( $group == $group_canbus ) then
+#
+#***** reboot via canbus command :
+#
+  $CODA/common/scripts/roc_reboot_canbus.py ${roc}-crate >& /dev/null &
   echo "$roc node rebooting is in progress"
 
 

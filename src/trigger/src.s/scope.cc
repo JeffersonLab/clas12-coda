@@ -54,11 +54,7 @@
 
 #include "guiecal.h"
 
-#ifdef OLDOLD
-#include "vmeclient.h"
-#else
 #include "cratemsgclient.h"
-#endif
 
 #include "scope.h"
 
@@ -95,11 +91,7 @@ static char THIS_FILE[] = __FILE__;
 
 
 //sergey: global for now, will find appropriate place later
-#ifdef OLDOLD
-extern VMEClient *tcpvme;
-#else
 extern CrateMsgClient *tcp;
-#endif
 
 
 
@@ -116,7 +108,7 @@ Bool_t ScopeTimer::Notify()
 {
   Bool_t repeat;
 
-  printf("ScopeTimer::Notify() reached\n");
+  printf("ScopeTimer::Notify() reached\n");fflush(stdout);
   repeat = fScopeDlg->OnTimer();
 
   // reset timer only if we are in continuous mode or if did not get anything in single trigger mode, otherwise stop it
@@ -137,7 +129,7 @@ ScopeDlg::ScopeDlg(const TGWindow *p, TGMainFrame *main, UInt_t w, UInt_t h, UIn
 {
   int sig;
   int i=0;
-  printf("ScopeDlg::ScopeDlg reached\n");
+  printf("ScopeDlg::ScopeDlg reached\n");fflush(stdout);
 
   fMain = main; // remember mainframe
   board_address[0] = addr[0];
@@ -258,6 +250,15 @@ ScopeDlg::ScopeDlg(const TGWindow *p, TGMainFrame *main, UInt_t w, UInt_t h, UIn
     fCanvas->Range(0.,0.,165.,256.); // define 200x256 drawing area
     fCanvas->SetFillColor(10);
     fCanvas->SetBorderSize(2);
+
+
+
+	/* make canvas close application, when canvas is closing - it closing everything !!! */
+    //fCanvas->Connect("TCanvas", "Closed()", "TApplication", gApplication, "Terminate()");
+
+    /* when closing ascii, CloseWindow called, when non-ascii - not; following call not needed */
+	//fCanvas->Connect("TCanvas", "Closed()", "TApplication", this, "CloseWindow()");
+
 
     // get access to TRootCanvas imp
     fRootCanvas = (TRootCanvas *)fCanvas->GetCanvasImp();
@@ -399,20 +400,23 @@ ScopeDlg::ScopeDlg(const TGWindow *p, TGMainFrame *main, UInt_t w, UInt_t h, UIn
     fCanvas->Update();
   }
 
+  fMedian = NULL;
+  fCursor = NULL;
+
   fScopeTimer = new ScopeTimer(this, 100); //1000 = 1sec
 }
 
 
 ScopeDlg::~ScopeDlg()
 {
-  printf("ScopeDlg::~ScopeDlg reached\n");
+  printf("ScopeDlg::~ScopeDlg reached\n");fflush(stdout);
    // Delete ScopeDlg widgets.
 }
 
 
 void ScopeDlg::CloseWindow()
 {
-  printf("ScopeDlg::CloseWindow reached\n");
+  printf("ScopeDlg::CloseWindow reached\n");fflush(stdout);
    // Called when window is closed (via the window manager or not).
 
    // ... and close the Ged editor if it was activated.
@@ -446,11 +450,12 @@ void ScopeDlg::ExecuteEvent(Int_t event, Int_t px, Int_t py)
   Double_t x[2], y[2];
   Double_t x0 = SCOPE_MIN_X;
 
+  printf("ScopeDlg::ExecuteEvent reached\n");fflush(stdout);
   printf("ScopeDlg::ExecuteEvent reached: %d(%d,%d) %d %d\n",event,GET_MSG(event),GET_SUBMSG(event),px,py);
   switch(event)
   {
   case kMouseMotion:
-    printf("kMouseMotion\n");
+    printf("kMouseMotion\n");fflush(stdout);
     char txt[80];
     x[0] = gPad->AbsPixeltoX(px);
     y[0] = gPad->AbsPixeltoY(py);
@@ -460,7 +465,7 @@ void ScopeDlg::ExecuteEvent(Int_t event, Int_t px, Int_t py)
     fStatusBar->SetText(txt, 3);
     break;
   case kButton1Down:
-    printf("kButton1Down\n");
+    printf("kButton1Down\n");fflush(stdout);
     x[0] = ((Double_t)px)/6.9;
     y[0] = ((Double_t)py)/((Double_t)VSTEP);
     ix = (Int_t)x[0];
@@ -469,31 +474,31 @@ void ScopeDlg::ExecuteEvent(Int_t event, Int_t px, Int_t py)
     OnLButtonDown(nflags,ix,iy);
     break;
   case kButton1Up:
-	printf("kButton1Up\n");
+	printf("kButton1Up\n");fflush(stdout);
 	break;
   case kButton2Down:
-	printf("kButton2Down\n");
+	printf("kButton2Down\n");fflush(stdout);
 	break;
   case kButton2Up:
-	printf("kButton2Up\n");
+	printf("kButton2Up\n");fflush(stdout);
 	break;
   case kButton3Down:
-	printf("kButton3Down\n");
+	printf("kButton3Down\n");fflush(stdout);
 	break;
   case kButton3Up:
-	printf("kButton3Up\n");
+	printf("kButton3Up\n");fflush(stdout);
 	break;
   case kWheelUp:
-	printf("kWheelUp\n");
+	printf("kWheelUp\n");fflush(stdout);
 	break;
   case kWheelDown:
-	printf("kWheelDown\n");
+	printf("kWheelDown\n");fflush(stdout);
 	break;
   case kMouseLeave:
-	printf("kMouseLeave\n");
+	printf("kMouseLeave\n");fflush(stdout);
 	break;
   default:
-	printf("UNKNOWN ACTION !!!!!!!!!!!!!!!!!!!!\n");
+	printf("UNKNOWN ACTION !!!!!!!!!!!!!!!!!!!!\n");fflush(stdout);
   }
 }
 
@@ -502,6 +507,8 @@ Bool_t ScopeDlg::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
   Int_t ret, x, y;
   UInt_t nflags;
   Float_t fx, fy;
+
+  printf("ScopeDlg::ProcessMessage reached\n");fflush(stdout);
 
   // Process messages coming from widgets associated with the dialog.
   printf("ScopeDlg::ProcessMessage: msg=%d get_msg=%d get_submsg=%d parm1=%d parm2=%d\n",
@@ -673,34 +680,17 @@ Bool_t ScopeDlg::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
 // process scroll bar events - to check up-down moves and draw/not draw new lines
 void ScopeDlg::OnVScroll(UInt_t nSBCode, UInt_t nPos, /*CScrollBar*/TGScrollBar* pScrollBar)
 {
+  printf("ScopeDlg::OnVScroll() reached\n");fflush(stdout);
   ;
 }
 
 // reads vme on timer (about 100ms)
 Bool_t ScopeDlg::OnTimer() 
 {
-  printf("ScopeDlg::OnTimer() reached\n");
+  printf("ScopeDlg::OnTimer() reached\n");fflush(stdout);
 
   unsigned int status1, status2, tmp;
 
-#ifdef OLDOLD
-  if(!tcpvme->m_bConnected) return(FALSE); // do nothing if not connected
-
-  if(!tcpvme->VMERead32(board_address[0] + ECAL_TRIG_STATUS, &status1, FALSE))
-  {
-    tcpvme->DebugMsg("ERROR: Scope Trigger Failed to Read Status 1");
-    return(FALSE);
-  }
-
-  if(board_address[1]!=0)
-  {
-    if(!tcpvme->VMERead32(board_address[1] + ECAL_TRIG_STATUS, &status2, FALSE))
-    {
-      tcpvme->DebugMsg("ERROR: Scope Trigger Failed to Read Status 2");
-      return(FALSE);
-    }
-  }
-#else
   /*if(!tcp->m_bConnected) return(FALSE); // do nothing if not connected*/
 
   if(!tcp->Read32(board_address[0] + ECAL_TRIG_STATUS, &status1))
@@ -717,12 +707,11 @@ Bool_t ScopeDlg::OnTimer()
       return(FALSE);
     }
   }
-#endif
 
-  printf("-------> status1=0x%08x status2=0x%08x\n",status1,status2);
+  //printf("-------> status1=0x%08x status2=0x%08x\n",status1,status2);
   if((status1 & 0x2) || (status2 & 0x2))
   {
-printf("-------> 1\n");
+	//printf("-------> 1\n");
     if(!m_Persist)
     {
       memset(m_iTriggerBuffer_Low, 0, sizeof(m_iTriggerBuffer_Low));
@@ -739,33 +728,26 @@ printf("-------> 1\n");
         memset(n_iTriggerBuffer, 0, sizeof(n_iTriggerBuffer));
       }
     }
-printf("-------> 2\n");
+	//printf("-------> 2\n");
     ReadoutScope();
-printf("-------> 3\n");
+	//printf("-------> 3\n");
 
     if(m_bTriggerContinuous)
     {
-#ifdef OLDOLD
-      tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_STATUS, 0x0000, FALSE);
-      if(board_address[1]!=0) tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_STATUS, 0x0000, FALSE);
-      tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_STATUS, 0x0001, FALSE);
-      if(board_address[1]!=0) tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_STATUS, 0x0001, FALSE);
-#else
       tmp = 0;
       tcp->Write32(board_address[0] + ECAL_TRIG_STATUS, &tmp);
       if(board_address[1]!=0) tcp->Write32(board_address[1] + ECAL_TRIG_STATUS, &tmp);
       tmp = 1;
       tcp->Write32(board_address[0] + ECAL_TRIG_STATUS, &tmp);
       if(board_address[1]!=0) tcp->Write32(board_address[1] + ECAL_TRIG_STATUS, &tmp);
-#endif
     }
     else
     {
       ;
     }
-printf("-------> 4\n");
+	printf("-------> 4\n");fflush(stdout);
     DrawScope();
-printf("-------> 5\n");
+	printf("-------> 5\n");fflush(stdout);
   }
   else
   {
@@ -778,6 +760,7 @@ printf("-------> 5\n");
 // process left mouse button moving cursor
 void ScopeDlg::OnMouseMove(UInt_t nFlags, Int_t point_x, Int_t point_y) 
 {
+  printf("OnMouseMove reached\n");fflush(stdout);
   ;
 }
 
@@ -785,6 +768,7 @@ void ScopeDlg::OnMouseMove(UInt_t nFlags, Int_t point_x, Int_t point_y)
 // process left button on mouse for 2 cases: move cursor on screen and switch 1-0-x
 void ScopeDlg::OnLButtonDown(UInt_t nFlags, Int_t point_x, Int_t point_y) 
 {
+  printf("OnLButtonDown reached\n");fflush(stdout);
   printf("OnLButtonDown reached, x=%d y=%d SCOPE_MIN_X=%d\n",point_x,point_y,(Int_t)SCOPE_MIN_X);
 
   if(point_x < (Int_t)SCOPE_MIN_X)  // toggle 0-1-x sequence
@@ -808,6 +792,9 @@ void ScopeDlg::OnLButtonDown(UInt_t nFlags, Int_t point_x, Int_t point_y)
 BOOL ScopeDlg::OnInitDialog() 
 {
   int i;
+
+  printf("OnInitDialog reached\n");fflush(stdout);
+
   for(i=0; i<SCOPE_CHANNELCOUNT; i++) m_iTriggerPattern[i] = TRIGPATTERN_X;
 
   memset(m_iTriggerBuffer_Low, 0, sizeof(m_iTriggerBuffer_Low));
@@ -837,12 +824,14 @@ BOOL ScopeDlg::OnInitDialog()
 //callback to repaint, redraw scope and texts
 void ScopeDlg::OnPaint() 
 {
+  printf("OnPaint reached\n");fflush(stdout);
   ;
 }
 
 // chouse line color
 unsigned int ScopeDlg::GetColor(unsigned int intensity, unsigned int odd)
 {
+  //printf("GetColor reached\n");fflush(stdout);
   return(0);
 }
 
@@ -856,7 +845,7 @@ unsigned int ScopeDlg::GetColor(unsigned int intensity, unsigned int odd)
 */
 void ScopeDlg::DrawScope()
 {
-  printf("ScopeDlg::DrawScope reached\n");
+  printf("ScopeDlg::DrawScope reached\n");fflush(stdout);
 
   int ii, i, j, icursor, y = 50;
   char ch;
@@ -868,9 +857,15 @@ void ScopeDlg::DrawScope()
   Double_t xstep = 1.;
   Double_t ystep = 1.;
 
+  /*SERGEY: TESTING*/
+  //fCanvas->DontCallClose();
+
   // for graphic mode, draw background boxes and handle persistency
   if(!use_ascii)
   {
+	printf("fCanvas=%d\n",fCanvas);fflush(stdout);
+    if (fCanvas->GetCanvasImp()==NULL) {printf("fCancas window has been closed\n");fflush(stdout);};
+
     fCanvas->SetEditable(TRUE);
     fCanvas->Clear();
 
@@ -968,6 +963,7 @@ void ScopeDlg::DrawScope()
 	  }
     }
 
+
 	if(use_ascii)
 	{
 	  // update text in entry[i]
@@ -989,6 +985,7 @@ void ScopeDlg::DrawScope()
 
     y++;
   }
+
 
   if(use_ascii)
   {
@@ -1017,7 +1014,7 @@ void ScopeDlg::DrawScope()
     fCanvas->Update();
   }
 
-  if(m_bTriggerContinuous) printf("Continuous mode !!!\n");
+  //if(m_bTriggerContinuous) printf("Continuous mode !!!\n");
 }
 
 
@@ -1026,6 +1023,7 @@ void ScopeDlg::DrawScope()
 // update cursor position and update info on the left
 void ScopeDlg::UpdateCursor(int ix, int iy, BOOL updatePosition, BOOL eraseold)
 {
+  printf("ScopeDlg::UpdateCursor reached\n");fflush(stdout);
   printf("ScopeDlg::UpdateCursor reached, ix=%d, iy=%d\n",ix,iy);
 
   Double_t xx[2], yy[2];
@@ -1048,18 +1046,12 @@ void ScopeDlg::UpdateCursor(int ix, int iy, BOOL updatePosition, BOOL eraseold)
 void ScopeDlg::OnBScopecontinuous() 
 {
   unsigned int tmp;
+
+  printf("ScopeDlg::OnBScopecontinuous reached\n");fflush(stdout);
+
   m_bTriggerContinuous = TRUE;
   if(UpdateTriggerMasks())
   {
-#ifdef OLDOLD
-    if(tcpvme->m_bConnected)
-	{
-      tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_STATUS, 0x0000, FALSE);
-      if(board_address[1]!=0) tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_STATUS, 0x0000, FALSE);
-      tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_STATUS, 0x0001, FALSE);
-      if(board_address[1]!=0) tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_STATUS, 0x0001, FALSE);
-	}
-#else
     /*if(tcp->m_bConnected)*/
 	{
       tmp = 0;
@@ -1069,7 +1061,6 @@ void ScopeDlg::OnBScopecontinuous()
       tcp->Write32(board_address[0] + ECAL_TRIG_STATUS, &tmp);
       if(board_address[1]!=0) tcp->Write32(board_address[1] + ECAL_TRIG_STATUS, &tmp);
 	}
-#endif
     fScopeTimer->Start();
   }
 }
@@ -1078,18 +1069,12 @@ void ScopeDlg::OnBScopecontinuous()
 void ScopeDlg::OnBScopesingle() 
 {
   unsigned int tmp;
+
+  printf("ScopeDlg::OnBScopesingle reached\n");fflush(stdout);
+
   m_bTriggerContinuous = FALSE;
   if(UpdateTriggerMasks())
   {
-#ifdef OLDOLD
-   if(tcpvme->m_bConnected)
-	{
-      tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_STATUS, 0x0000, FALSE);
-      if(board_address[1]!=0) tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_STATUS, 0x0000, FALSE);
-      tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_STATUS, 0x0001, FALSE);
-      if(board_address[1]!=0) tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_STATUS, 0x0001, FALSE);
-    }
-#else
    /*if(tcpvme->m_bConnected)*/
 	{
       tmp = 0;
@@ -1099,7 +1084,6 @@ void ScopeDlg::OnBScopesingle()
       tcp->Write32(board_address[0] + ECAL_TRIG_STATUS, &tmp);
       if(board_address[1]!=0) tcp->Write32(board_address[1] + ECAL_TRIG_STATUS, &tmp);
     }
-#endif
     fScopeTimer->Start();
   }
 }
@@ -1107,12 +1091,16 @@ void ScopeDlg::OnBScopesingle()
 // process stop
 void ScopeDlg::OnBScopestop()
 {
+  printf("ScopeDlg::OnBScopestop reached\n");fflush(stdout);
+
   m_bTriggerContinuous = FALSE;
 }
 
 // process clear
 void ScopeDlg::OnBScopeclear() 
 {
+  printf("ScopeDlg::OnBScopeclear reached\n");fflush(stdout);
+
   memset(m_iTriggerBuffer_Low, 0, sizeof(m_iTriggerBuffer_Low));
   memset(m_iTriggerBuffer_High, 0, sizeof(m_iTriggerBuffer_High));
   memset(m_iTriggerBuffer_TransLow, 0, sizeof(m_iTriggerBuffer_TransLow));
@@ -1126,6 +1114,8 @@ BOOL ScopeDlg::UpdateTriggerMasks()
 {
   unsigned int bit_masks[8], ignore_masks[8];
 
+  printf("ScopeDlg::UpdateTriggerMasks reached\n");fflush(stdout);
+
   memset(bit_masks, 0, sizeof(bit_masks));
   memset(ignore_masks, 0, sizeof(ignore_masks));
   for(int i=0; i<SCOPE_CHANNELCOUNT; i++)
@@ -1138,49 +1128,6 @@ BOOL ScopeDlg::UpdateTriggerMasks()
   }
 
 
-#ifdef OLDOLD
-  if(tcpvme->m_bConnected)
-  {
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_VALUE7, bit_masks[7])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_VALUE6, bit_masks[6])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_VALUE5, bit_masks[5])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_VALUE4, bit_masks[4])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_VALUE3, bit_masks[3])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_VALUE2, bit_masks[2])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_VALUE1, bit_masks[1])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_VALUE0, bit_masks[0])) return FALSE;
-
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_INGORE7, ignore_masks[7])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_INGORE6, ignore_masks[6])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_INGORE5, ignore_masks[5])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_INGORE4, ignore_masks[4])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_INGORE3, ignore_masks[3])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_INGORE2, ignore_masks[2])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_INGORE1, ignore_masks[1])) return FALSE;
-    if(!tcpvme->VMEWrite32(board_address[0] + ECAL_TRIG_INGORE0, ignore_masks[0])) return FALSE;
-
-    if(board_address[1]!=0) 
-	{
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_VALUE7, bit_masks[7])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_VALUE6, bit_masks[6])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_VALUE5, bit_masks[5])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_VALUE4, bit_masks[4])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_VALUE3, bit_masks[3])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_VALUE2, bit_masks[2])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_VALUE1, bit_masks[1])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_VALUE0, bit_masks[0])) return FALSE;
-
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_INGORE7, ignore_masks[7])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_INGORE6, ignore_masks[6])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_INGORE5, ignore_masks[5])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_INGORE4, ignore_masks[4])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_INGORE3, ignore_masks[3])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_INGORE2, ignore_masks[2])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_INGORE1, ignore_masks[1])) return FALSE;
-      if(!tcpvme->VMEWrite32(board_address[1] + ECAL_TRIG_INGORE0, ignore_masks[0])) return FALSE;
-	}
-  }
-#else
   /*if(tcp->m_bConnected)*/
   {
     if(!tcp->Write32(board_address[0] + ECAL_TRIG_VALUE7, &bit_masks[7])) return FALSE;
@@ -1222,41 +1169,24 @@ BOOL ScopeDlg::UpdateTriggerMasks()
       if(!tcp->Write32(board_address[1] + ECAL_TRIG_INGORE0, &ignore_masks[0])) return FALSE;
 	}
   }
-#endif
 
   return TRUE;
 }
 
 BOOL ScopeDlg::ReadScope(UInt_t addr, UInt_t *buf, Int_t len)
 {
-#ifdef OLDOLD
-  if(!tcpvme->m_bConnected) return FALSE;
-#endif
 
-  printf("ScopeDlg::ReadScope reached, len=%d\n",len);
+  printf("ScopeDlg::ReadScope reached\n");fflush(stdout);
+  //printf("ScopeDlg::ReadScope reached, len=%d\n",len);
   unsigned int val;
-#ifdef OLDOLD
-  tcpvme->VMERead32(addr + 0x2000, &val);
-#else
   tcp->Read32(addr + 0x2000, &val);
-#endif
-  printf("'Global' Firmware Revision: V%u.%u\n", (unsigned int)(val>>8), (unsigned int)(val & 0xFF));
+  //printf("'Global' Firmware Revision: V%u.%u\n", (unsigned int)(val>>8), (unsigned int)(val & 0xFF));
 
   len=len/8;
-  printf("---------------------------- len=%d\n",len); /*128*/
+  //printf("---------------------------- len=%d\n",len); /*128*/
 
 
   /* Break into pieces - 5500 CPU otherwise drops connection with larger transfers...*/
-#ifdef OLDOLD
-  if(!(tcpvme->VMEBlkRead32(addr + ECAL_TRIG_BUFFER, len, &buf[len*0], 1))) return FALSE;
-  if(!(tcpvme->VMEBlkRead32(addr + ECAL_TRIG_BUFFER, len, &buf[len*1], 1))) return FALSE;
-  if(!(tcpvme->VMEBlkRead32(addr + ECAL_TRIG_BUFFER, len, &buf[len*2], 1))) return FALSE;
-  if(!(tcpvme->VMEBlkRead32(addr + ECAL_TRIG_BUFFER, len, &buf[len*3], 1))) return FALSE;
-  if(!(tcpvme->VMEBlkRead32(addr + ECAL_TRIG_BUFFER, len, &buf[len*4], 1))) return FALSE;
-  if(!(tcpvme->VMEBlkRead32(addr + ECAL_TRIG_BUFFER, len, &buf[len*5], 1))) return FALSE;
-  if(!(tcpvme->VMEBlkRead32(addr + ECAL_TRIG_BUFFER, len, &buf[len*6], 1))) return FALSE;
-  if(!(tcpvme->VMEBlkRead32(addr + ECAL_TRIG_BUFFER, len, &buf[len*7], 1))) return FALSE;
-#else
   if(!(tcp->Read32(addr + ECAL_TRIG_BUFFER, &buf[len*0], len, CRATE_MSG_FLAGS_NOADRINC))) return FALSE;
   if(!(tcp->Read32(addr + ECAL_TRIG_BUFFER, &buf[len*1], len, CRATE_MSG_FLAGS_NOADRINC))) return FALSE;
   if(!(tcp->Read32(addr + ECAL_TRIG_BUFFER, &buf[len*2], len, CRATE_MSG_FLAGS_NOADRINC))) return FALSE;
@@ -1265,7 +1195,6 @@ BOOL ScopeDlg::ReadScope(UInt_t addr, UInt_t *buf, Int_t len)
   if(!(tcp->Read32(addr + ECAL_TRIG_BUFFER, &buf[len*5], len, CRATE_MSG_FLAGS_NOADRINC))) return FALSE;
   if(!(tcp->Read32(addr + ECAL_TRIG_BUFFER, &buf[len*6], len, CRATE_MSG_FLAGS_NOADRINC))) return FALSE;
   if(!(tcp->Read32(addr + ECAL_TRIG_BUFFER, &buf[len*7], len, CRATE_MSG_FLAGS_NOADRINC))) return FALSE;
-#endif
 
   return TRUE;
 }
@@ -1275,7 +1204,7 @@ BOOL ScopeDlg::ReadoutScope()
   int i,j,k,m,n;
   int i1,i2,j1,j2;
 
-  printf("ScopeDlg::ReadoutScope reached\n");
+  printf("ScopeDlg::ReadoutScope reached\n");fflush(stdout);
 
   memset(ScopeTraces, 0xAA, sizeof(ScopeTraces));
   memset(ScopeTracesTmp, 0xAA, sizeof(ScopeTracesTmp));
@@ -1301,7 +1230,7 @@ BOOL ScopeDlg::ReadoutScope()
 
   }
 
-  printf("ScopeDlg::ReadoutScope fills\n");
+  //printf("ScopeDlg::ReadoutScope fills\n");
   {
     for(i=0; i<SCOPE_SAMPLEDEPTH; i++) //128
     {

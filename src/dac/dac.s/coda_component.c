@@ -909,8 +909,11 @@ coda_destructor()
 	*/
   }
 
-#ifdef Linux_vme
   /* disconnect from IPC server */
+#ifdef Linux_vme
+  epics_json_msg_close();
+#endif
+#ifdef Linux_armv7l
   epics_json_msg_close();
 #endif
 
@@ -1068,6 +1071,12 @@ CODA_Init(int argc, char **argv)
 
 
 #ifdef Linux_vme
+  printf("CODA_Init: Connecting to IPC server ..\n");
+  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
+  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
+  printf(".. done connecting to IPC server.\n");
+#endif
+#ifdef Linux_armv7l
   printf("CODA_Init: Connecting to IPC server ..\n");
   /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
   epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
@@ -1775,6 +1784,16 @@ UDP_send(int socket)
       data[3] = data_rate/1048576;
       epics_json_msg_send(name, "float", 4, data);
 #endif
+
+#ifdef Linux_armv7l
+      sprintf(name,"STA:%s",localobject->name);
+      data[0] = (float)nevents;
+      data[1] = event_rate;
+      data[2] = (float)((nlongs*4)/1048576);
+      data[3] = data_rate/1048576;
+      epics_json_msg_send(name, "float", 4, data);
+#endif
+
     }
     else
     {
@@ -2183,7 +2202,8 @@ CODAtcpServer(void)
 
     /* try another port (just increment on one) */
     portnum ++;
-    if((portnum-SERVER_PORT_NUM) > 50)
+    printf(" ... trying port %d\n",portnum);
+    if((portnum-SERVER_PORT_NUM) > 200)
     {
       close(sFd); 
       return(ERROR);

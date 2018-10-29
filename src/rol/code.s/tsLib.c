@@ -32,7 +32,7 @@
 #include <iv.h>
 #include <semLib.h>
 #include <vxLib.h>
-#else 
+#else
 #include <sys/prctl.h>
 #include <unistd.h>
 #endif
@@ -52,7 +52,7 @@ pthread_mutex_t   tsMutex = PTHREAD_MUTEX_INITIALIZER;
 #define TILOCK TSLOCK
 #define TIUNLOCK TSUNLOCK
 
-#define tiVMESlot2PayloadPort tsVMESlot2PayloadPort 
+#define tiVMESlot2PayloadPort tsVMESlot2PayloadPort
 
 
 /* Global Variables */
@@ -118,19 +118,19 @@ IMPORT  STATUS sysVmeDmaSend(UINT32, UINT32, int, BOOL);
 #endif
 
 /** This is either 20 or 21 */
-#define MAX_VME_SLOTS 21    
+#define MAX_VME_SLOTS 21
 /** VXS Payload Port to VME Slot map */
 unsigned short tsPayloadPort[MAX_VME_SLOTS+1] =
   {
-    0,     /**< Filler for mythical VME slot 0 */ 
+    0,     /**< Filler for mythical VME slot 0 */
 #if MAX_VME_SLOTS == 21
     0,     /**< VME Controller */
 #endif
-    17, 15, 13, 11, 9, 7, 5, 3, 1,  
+    17, 15, 13, 11, 9, 7, 5, 3, 1,
     0,     /**< Switch Slot A - SD */
     0,     /**< Switch Slot B - CTP/GTP */
-    2, 4, 6, 8, 10, 12, 14, 16, 
-    18     /**< VME Slot Furthest to the Right - TS */ 
+    2, 4, 6, 8, 10, 12, 14, 16,
+    18     /**< VME Slot Furthest to the Right - TS */
   };
 
 /**
@@ -173,7 +173,7 @@ tsSetCrateID_preInit(int cid)
  *  @brief Initialize the TSp register space into local memory,
  *  and setup registers given user input
  *
- * @param tAddr  
+ * @param tAddr
  *  - A24 VME Address of the TS
  *  - Slot number of TS (1 - 21)
  * @param   mode   - Readout/Triggering Mode
@@ -242,23 +242,23 @@ tsInit(unsigned int tAddr, unsigned int mode, int iFlag)
   /* Form VME base address from slot number */
 #ifdef VXWORKS
   stat = sysBusToLocalAdrs(0x39,(char *)(unsigned long)tAddr,(char **)&laddr);
-  if (stat != 0) 
+  if (stat != 0)
     {
       printf("%s: ERROR: Error in sysBusToLocalAdrs res=%d \n",__FUNCTION__,stat);
       return ERROR;
-    } 
-  else 
+    }
+  else
     {
       printf("TS address = 0x%lx\n",laddr);
     }
 #else
   stat = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)tAddr,(char **)&laddr);
-  if (stat != 0) 
+  if (stat != 0)
     {
       printf("%s: ERROR: Error in vmeBusToLocalAdrs res=%d \n",__FUNCTION__,stat);
       return ERROR;
-    } 
-  else 
+    }
+  else
     {
       if(!noBoardInit)
 	printf("TS VME (Local) address = 0x%.8x (0x%.8lx)\n",tAddr,laddr);
@@ -276,7 +276,7 @@ tsInit(unsigned int tAddr, unsigned int mode, int iFlag)
   stat = vmeMemProbe((char *)(&TSp->boardID),4,(char *)&rval);
 #endif
 
-  if (stat != 0) 
+  if (stat != 0)
     {
       printf("%s: ERROR: TS card not addressable\n",__FUNCTION__);
       TSp = NULL;
@@ -285,7 +285,7 @@ tsInit(unsigned int tAddr, unsigned int mode, int iFlag)
   else
     {
       /* Check that it is a TS */
-      if(((rval&TS_BOARDID_TYPE_MASK)>>16) != TS_BOARDID_TYPE_TS) 
+      if(((rval&TS_BOARDID_TYPE_MASK)>>16) != TS_BOARDID_TYPE_TS)
 	{
 	  printf("%s: ERROR: Invalid Board ID: 0x%x (rval = 0x%08x)\n",
 		 __FUNCTION__,
@@ -295,7 +295,7 @@ tsInit(unsigned int tAddr, unsigned int mode, int iFlag)
 	}
       /* Check if this is board has a valid slot number */
       boardID =  (rval&TS_BOARDID_GEOADR_MASK)>>8;
-      if((boardID <= 0)||(boardID >21)) 
+      if((boardID <= 0)||(boardID >21))
 	{
 	  printf("%s: ERROR: Board Slot ID is not in range: %d\n",
 		 __FUNCTION__,boardID);
@@ -310,7 +310,7 @@ tsInit(unsigned int tAddr, unsigned int mode, int iFlag)
       else
 	tsSwapTriggerBlock=0;
     }
-  
+
   /* Check to see if we're in a VXS Crate */
   if((boardID==20) || (boardID==21))
     { /* It's possible... now check for valid i2c to SWB (SD) */
@@ -341,9 +341,9 @@ tsInit(unsigned int tAddr, unsigned int mode, int iFlag)
   if(firmwareInfo>0)
     {
       printf("  User ID: 0x%x \tFirmware (type - revision): %X - %x.%x\n",
-	     (firmwareInfo&TS_FIRMWARE_ID_MASK)>>16, 
-	     (firmwareInfo&TS_FIRMWARE_TYPE_MASK)>>12, 
-	     (firmwareInfo&TS_FIRMWARE_MAJOR_VERSION_MASK)>>4, 
+	     (firmwareInfo&TS_FIRMWARE_ID_MASK)>>16,
+	     (firmwareInfo&TS_FIRMWARE_TYPE_MASK)>>12,
+	     (firmwareInfo&TS_FIRMWARE_MAJOR_VERSION_MASK)>>4,
 	     firmwareInfo&TS_FIRWMARE_MINOR_VERSION_MASK);
 
       tsVersion = firmwareInfo&0xFFF;
@@ -376,7 +376,7 @@ tsInit(unsigned int tAddr, unsigned int mode, int iFlag)
   /*** SET DEFAULTS ***/
   /* Disable trigger sources */
   tsDisableTriggerSource(0);
-  
+
   tsReadoutMode = mode;
   switch(mode)
     {
@@ -449,7 +449,7 @@ tsInit(unsigned int tAddr, unsigned int mode, int iFlag)
  *  @ingroup Config
  *  @brief Find the TS within the prescribed "GEO Slot to A24 VME Address"
  *           range from slot 2 to 21.
- *           
+ *
  *  @return A24 VME address if found.  Otherwise, 0
  */
 unsigned int
@@ -461,7 +461,7 @@ tsFind()
 
   for(islot = 0; islot<20; islot++)
     {
-      /* Form VME base address from slot number 
+      /* Form VME base address from slot number
        Start from slot 21 and 20, then go from 2 to 19 */
       switch(islot)
 	{
@@ -474,7 +474,7 @@ tsFind()
 	default:
 	  tAddr = (islot<<19);
 	}
-      
+
 #ifdef VXWORKS
       stat = sysBusToLocalAdrs(0x39,(char *)tAddr,(char **)&laddr);
 #else
@@ -490,14 +490,14 @@ tsFind()
       stat = vmeMemProbe((char *)(laddr),4,(char *)&rval);
 #endif
 
-      if (stat != 0) 
+      if (stat != 0)
 	{
 	  continue;
 	}
       else
 	{
 	  /* Check that it is a TI */
-	  if(((rval&TS_BOARDID_TYPE_MASK)>>16) != TS_BOARDID_TYPE_TS) 
+	  if(((rval&TS_BOARDID_TYPE_MASK)>>16) != TS_BOARDID_TYPE_TS)
 	    {
 	      continue;
 	    }
@@ -523,7 +523,7 @@ tsCheckAddresses()
 {
   unsigned int offset=0, expected=0, base=0;
   int rval=OK;
-  
+
   if(TSp==NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
@@ -551,7 +551,7 @@ tsCheckAddresses()
 	     __FUNCTION__,expected,offset);
       rval = ERROR;
     }
-    
+
   offset = ((unsigned long) &TSp->syncWidth) - base;
   expected = 0x80;
   if(offset != expected)
@@ -560,7 +560,7 @@ tsCheckAddresses()
 	     __FUNCTION__,expected,offset);
       rval = ERROR;
     }
-    
+
   offset = ((unsigned long) &TSp->adr24) - base;
   expected = 0xD0;
   if(offset != expected)
@@ -633,7 +633,7 @@ tsCheckAddresses()
       rval = ERROR;
     }
 
-    
+
   offset = ((unsigned int) &TSp->JTAGPROMBase[0]) - base;
   expected = 0x10000;
   if(offset != expected)
@@ -642,7 +642,7 @@ tsCheckAddresses()
 	     __FUNCTION__,expected,offset);
       rval = ERROR;
     }
-    
+
   offset = ((unsigned int) &TSp->JTAGFPGABase[0]) - base;
   expected = 0x20000;
   if(offset != expected)
@@ -651,7 +651,7 @@ tsCheckAddresses()
 	     __FUNCTION__,expected,offset);
       rval = ERROR;
     }
-    
+
   offset = ((unsigned int) &TSp->SWA[0]) - base;
   expected = 0x30000;
   if(offset != expected)
@@ -660,7 +660,7 @@ tsCheckAddresses()
 	     __FUNCTION__,expected,offset);
       rval = ERROR;
     }
-    
+
   offset = ((unsigned int) &TSp->SWB[0]) - base;
   expected = 0x40000;
   if(offset != expected)
@@ -698,7 +698,7 @@ tsStatus(int pflag)
   unsigned long long int l1a_count=0;
   unsigned int syncEventCtrl, blocklimit;
   unsigned int GTPtriggerBufferLength;
-  
+
   if(TSp==NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
@@ -822,7 +822,7 @@ tsStatus(int pflag)
 
   printf(" Block Buffer Level = %d\n",
 	 blockBuffer & TS_BLOCKBUFFER_BUFFERLEVEL_MASK);
-  
+
   if((syncEventCtrl & TS_SYNCEVENTCTRL_NBLOCKS_MASK) == 0)
     printf(" Sync Events DISABLED\n");
   else
@@ -836,14 +836,14 @@ tsStatus(int pflag)
       printf(" TI Slaves Configured on HFBR (0x%x) = ",tsSlaveMask);
       for(ifiber=0; ifiber<2; ifiber++)
 	{
-	  if( tsSlaveMask & (1<<ifiber)) 
+	  if( tsSlaveMask & (1<<ifiber))
 	    printf(" %d",ifiber+1);
 	}
-      printf("\n");	
+      printf("\n");
     }
   else
     printf(" No TI Slaves Configured on HFBR\n");
-  
+
 
   if(tsTriggerSource&TS_TRIGGER_SOURCEMASK)
     {
@@ -872,7 +872,7 @@ tsStatus(int pflag)
       if(tsTriggerSource & TS_TRIGGER_ENABLE)
 	printf("   FP/Ext/GTP\n");
     }
-  else 
+  else
     {
       printf(" No Trigger input sources\n");
     }
@@ -937,14 +937,14 @@ tsStatus(int pflag)
   printf("\n");
   printf(" Trigger Rules:\n");
   tsPrintTriggerHoldoff(pflag);
-  
+
   if(intsetup&TS_INTSETUP_ENABLE)
     printf(" Interrupts ENABLED\n");
   else
     printf(" Interrupts DISABLED\n");
   printf("   Level = %d   Vector = 0x%02x\n",
 	 (intsetup&TS_INTSETUP_LEVEL_MASK)>>8, (intsetup&TS_INTSETUP_VECTOR_MASK));
-  
+
   if(vmeControl&TS_VMECONTROL_BERR)
     printf(" Bus Errors Enabled\n");
   else
@@ -1002,7 +1002,7 @@ tsStatus(int pflag)
  *  @ingroup Config
  *  @brief Print a summary of all fiber port connections to potential TI Slaves
  *
- *  @param pflag  
+ *  @param pflag
  *   - 0 - Default output
  *   - 1 - Print Raw Registers
  *
@@ -1063,20 +1063,20 @@ tsSlaveStatus(int pflag)
   /* Master first */
   /* Slot and Port number */
   printf("L     ");
-  
+
   /* Port Name */
   printf("%5d      ",
 	 (master_tiID&TS_ID_CRATEID_MASK)>>8);
-  
+
   /* Connection Status */
   printf("%s      %s       ",
 	 "YES",
 	 (trigsrc & TS_TRIGGER_LOOPBACK)?"ENABLED ":"DISABLED");
-  
+
   /* Busy Status */
   printf("%s       ",
 	 (busy & TS_BUSY_MONITOR_LOOPBACK)?"BUSY":"    ");
-  
+
   /* Block Status */
   nblocksReady   = (blockStatus[3] & TS_BLOCKSTATUS_NBLOCKS_READY1)>>16;
   nblocksNeedAck = (blockStatus[3] & TS_BLOCKSTATUS_NBLOCKS_NEEDACK1)>>24;
@@ -1088,14 +1088,14 @@ tsSlaveStatus(int pflag)
     {
       /* Only continue of this port has been configured as a slave */
       if((tsSlaveMask & (1<<(iport-1)))==0) continue;
-      
+
       /* Slot and Port number */
       printf("%d     ", iport);
 
       /* Port Name */
       printf("%5d      ",
 	     (hfbr_tiID[iport-1]&TS_ID_CRATEID_MASK)>>8);
-	  
+
       /* Connection Status */
       printf("%s      %s       ",
 	     "YES",
@@ -1118,7 +1118,7 @@ tsSlaveStatus(int pflag)
 	  nblocksNeedAck = (blockStatus[(ifiber-1)/2] & TS_BLOCKSTATUS_NBLOCKS_NEEDACK1)>>24;
 	}
       printf("   %3d / %3d",nblocksReady, nblocksNeedAck);
-	  
+
       printf("\n");
       slaveCount++;
     }
@@ -1137,7 +1137,7 @@ tsSlaveStatus(int pflag)
  *
  * @return bitmask of rigger sources enabled if successful, otherwise ERROR
  *         bitmask
- *         - 0 - P0 
+ *         - 0 - P0
  *         - 1 - Fiber 1
  *         - 2 - Loopback
  *         - 3 - TRG (FP)
@@ -1151,7 +1151,7 @@ int
 tsGetPortTrigSrcEnabled(int port)
 {
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -1234,7 +1234,7 @@ tsGetFirmwareVersion()
 
   /* shift in 32-bit to FPGA JTAG */
   vmeWrite32(&TSp->JTAGFPGABase[(0x1F1C)>>2],0);
-  
+
   /* Readback the firmware version */
   rval = vmeRead32(&TSp->JTAGFPGABase[(0x1F1C)>>2]);
   TSUNLOCK;
@@ -1267,7 +1267,7 @@ tsReload()
 
   printf ("%s: \n FPGA Re-Load ! \n",__FUNCTION__);
   return OK;
-  
+
 }
 
 /**
@@ -1305,11 +1305,11 @@ tsGetSerialNumber(char **rSN)
     }
 
 
-  printf("%s: TS Serial Number is %s (0x%08x)\n", 
+  printf("%s: TS Serial Number is %s (0x%08x)\n",
 	 __FUNCTION__,retSN,rval);
 
   return rval;
-  
+
 
 }
 
@@ -1329,14 +1329,14 @@ tsClockResync()
       return ERROR;
     }
 
-  
+
   TSLOCK;
-  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_AD9510_RESYNC); 
+  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_AD9510_RESYNC);
   TSUNLOCK;
 
   printf ("%s: \n\t AD9510 ReSync ! \n",__FUNCTION__);
   return OK;
-  
+
 }
 
 /**
@@ -1354,7 +1354,7 @@ tsReset()
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
     }
-  
+
   TSLOCK;
   vmeWrite32(&TSp->reset,TS_RESET_SOFT);
   TSUNLOCK;
@@ -1363,7 +1363,7 @@ tsReset()
 
 /**
  * @ingroup Config
- * @brief Set the crate ID 
+ * @brief Set the crate ID
  *
  * @return OK if successful, ERROR otherwise
  *
@@ -1382,7 +1382,7 @@ tsSetCrateID(unsigned int crateID)
       printf("%s: ERROR: Invalid crate id (0x%x)\n",__FUNCTION__,crateID);
       return ERROR;
     }
-  
+
   TSLOCK;
   vmeWrite32(&TSp->boardID,
 	   (vmeRead32(&TSp->boardID) & ~TS_BOARDID_CRATEID_MASK)  | crateID);
@@ -1390,7 +1390,7 @@ tsSetCrateID(unsigned int crateID)
   TSUNLOCK;
 
   return OK;
-  
+
 }
 
 /**
@@ -1408,7 +1408,7 @@ int
 tsGetCrateID(int port)
 {
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -1586,13 +1586,13 @@ tsSetInstantBlockLevelChange(int enable)
 
   TSLOCK;
   if(enable)
-    vmeWrite32(&TSp->vmeControl, 
+    vmeWrite32(&TSp->vmeControl,
 	       vmeRead32(&TSp->vmeControl) | TS_VMECONTROL_BLOCKLEVEL_UPDATE);
   else
-    vmeWrite32(&TSp->vmeControl, 
+    vmeWrite32(&TSp->vmeControl,
 	       vmeRead32(&TSp->vmeControl) & ~TS_VMECONTROL_BLOCKLEVEL_UPDATE);
   TSUNLOCK;
-  
+
   return OK;
 }
 
@@ -1616,7 +1616,7 @@ tsGetInstantBlockLevelChange()
   TSLOCK;
   rval = (vmeRead32(&TSp->vmeControl) & TS_VMECONTROL_BLOCKLEVEL_UPDATE)>>21;
   TSUNLOCK;
-  
+
   return rval;
 }
 
@@ -1648,7 +1648,7 @@ tsSetInputMix(int enable)
     bitset = TS_CLOCK_INPUT_MIX_ENABLE;
 
   TSLOCK;
-  vmeWrite32(&TSp->clock, 
+  vmeWrite32(&TSp->clock,
 	     (vmeRead32(&TSp->clock) & ~TS_CLOCK_INPUT_MIX_CONTROL_MASK) | bitset);
   TSUNLOCK;
 
@@ -1656,7 +1656,7 @@ tsSetInputMix(int enable)
 }
 
 /**
- * @ingroup 
+ * @ingroup
  * @brief Get option to mix FP and GTP inputs
  *      Effectively swaps the FP(16:1) -> GTP'(32:17) and GTP(32:17) -> FP'(16:1)
  *      in both trigger table and data pattern output.
@@ -1778,7 +1778,7 @@ tsGetGTPInput()
  * @brief Set the trigger source
  *
  *     This routine will set a library variable to be set in the TS registers
- *     at a call to tsIntEnable.  
+ *     at a call to tsIntEnable.
  *
  *  @param trig - integer indicating the trigger source
  *    - 5: Random
@@ -1834,17 +1834,17 @@ tsSetTriggerSource(int trig)
  *    This routine is for special use when tsSetTriggerSource(...) does
  *    not set all of the trigger sources that is required by the user.
  *
- * @param trigmask bits:  
+ * @param trigmask bits:
  *    - 0:  P0
- *    - 1:  HFBR #1 
+ *    - 1:  HFBR #1
  *    - 2:  TI Master Loopback
  *    - 3:  Front Panel (TRG) Input
  *    - 4:  VME Trigger
  *    - 5:  Front Panel TS Inputs
  *    - 6:  TS (rev 2) Input
  *    - 7:  Random Trigger
- *    - 8:  FP/Ext/GTP 
- *    - 9:  P2 Busy 
+ *    - 8:  FP/Ext/GTP
+ *    - 9:  P2 Busy
  *
  * @return OK if successful, ERROR otherwise
  */
@@ -1872,10 +1872,10 @@ tsSetTriggerSourceMask(int trigmask)
 
 /**
  * @ingroup Config
- * @brief Enable trigger sources set by 
+ * @brief Enable trigger sources set by
  *                          tsSetTriggerSource(...) or
  *                          tsSetTriggerSourceMask(...)
- * 
+ *
  * @sa tsSetTriggerSource tsSetTriggerSourceMask(...)
  *
  * @return OK if successful, ERROR otherwise
@@ -1908,7 +1908,7 @@ tsEnableTriggerSource()
  * @ingroup Config
  * @brief Disable trigger sources
  *
- * @param fflag 
+ * @param fflag
  *  -  0: Disable Triggers
  *  - >0: Disable Triggers and generate enough triggers to fill the current block
  *
@@ -1930,8 +1930,8 @@ tsDisableTriggerSource(int fflag)
   TSUNLOCK;
   if(fflag)
     {
-      tsFillToEndBlock();      
-      
+      tsFillToEndBlock();
+
       if(tsCurrentBlockFilled(ntries)==ERROR)
 	{
 	  printf("%s: WARN: Last block not complete after %d tries!\n",
@@ -1948,7 +1948,7 @@ tsDisableTriggerSource(int fflag)
  * @brief Set the Sync source mask
  *
  * @param sync - MASK indicating the sync source
- *  - 0: P0 
+ *  - 0: P0
  *  - 1: HFBR1
  *  - 2: HFBR5
  *  - 3: Front Panel
@@ -2049,7 +2049,7 @@ tsSetEventFormat(int format)
  *  @param trigger  trigger type 1 or 2 (playback trigger)
  *  @param nevents  integer number of events to trigger
  *  @param period_inc  period multiplier, depends on range (0-0x7FFF)
- *  @param range  
+ *  @param range
  *     - 0: small period range (min: 120ns, increments of 120ns)
  *     - 1: large period range (min: 120ns, increments of 245.7us)
  *
@@ -2165,10 +2165,10 @@ tsSetRandomTrigger(int trigger, int setting)
 
   TSLOCK;
   if(trigger==1)
-    vmeWrite32(&TSp->randomPulser, 
+    vmeWrite32(&TSp->randomPulser,
 	       setting | (setting<<4) | TS_RANDOMPULSER_TRIG1_ENABLE );
   else if (trigger==2)
-    vmeWrite32(&TSp->randomPulser, 
+    vmeWrite32(&TSp->randomPulser,
 	       (setting | (setting<<4))<<8 | TS_RANDOMPULSER_TRIG2_ENABLE );
   TSUNLOCK;
 
@@ -2204,7 +2204,7 @@ tsDisableRandomTrigger()
  * @param   nwrds - Max number of words to transfer
  * @param   rflag - Readout Flag
  *   - 0 - programmed I/O from the specified board
- *   - 1 - DMA transfer using Universe/Tempe DMA Engine 
+ *   - 1 - DMA transfer using Universe/Tempe DMA Engine
  *                    (DMA VME transfer Mode must be setup prior)
  *
  * @return Number of words transferred to data if successful, ERROR otherwise
@@ -2230,7 +2230,7 @@ tsReadBlock(volatile unsigned int *data, int nwrds, int rflag)
       return ERROR;
     }
 
-  if(data==NULL) 
+  if(data==NULL)
     {
       logMsg("\ntsReadBlock: ERROR: Invalid Destination address\n",0,0,0,0,0,0);
       return(ERROR);
@@ -2248,12 +2248,12 @@ tsReadBlock(volatile unsigned int *data, int nwrds, int rflag)
 	  TSLOCK;
 	}
 
-      /* Assume that the DMA programming is already setup. 
+      /* Assume that the DMA programming is already setup.
 	 Don't Bother checking if there is valid data - that should be done prior
 	 to calling the read routine */
-      
+
       /* Check for 8 byte boundary for address - insert dummy word (Slot 0 FADC Dummy DATA)*/
-      if((unsigned long) (data)&0x7) 
+      if((unsigned long) (data)&0x7)
 	{
 #ifdef VXWORKS
 	  *data = (TS_DATAFORMAT_DATA_TYPE_WORD) | (TS_DATAFORMAT_FILLER_WORD_TYPE) | (tsSlotNumber<<22);
@@ -2262,13 +2262,13 @@ tsReadBlock(volatile unsigned int *data, int nwrds, int rflag)
 #endif
 	  dummy = 1;
 	  laddr = (data + 1);
-	} 
-      else 
+	}
+      else
 	{
 	  dummy = 0;
 	  laddr = data;
 	}
-      
+
       vmeAdr = ((unsigned long)(TSpd) - tsA32Offset);
 	  /*sergey
 #ifdef VXWORKS
@@ -2279,7 +2279,7 @@ tsReadBlock(volatile unsigned int *data, int nwrds, int rflag)
 	  */
     retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int)laddr, (nwrds<<2));
 
-      if(retVal != 0) 
+      if(retVal != 0)
 	{
 	  logMsg("\ntsReadBlock: ERROR in DMA transfer Initialization 0x%x\n",retVal,0,0,0,0,0);
 	  TSUNLOCK;
@@ -2306,7 +2306,7 @@ tsReadBlock(volatile unsigned int *data, int nwrds, int rflag)
 	  TSUNLOCK;
 	  return(xferCount);
 	}
-      else if (retVal == 0) 
+      else if (retVal == 0)
 	{
 #ifdef VXWORKS
 	  logMsg("\ntsReadBlock: WARN: DMA transfer terminated by word count 0x%x\n",
@@ -2318,7 +2318,7 @@ tsReadBlock(volatile unsigned int *data, int nwrds, int rflag)
 	  TSUNLOCK;
 	  return(nwrds);
 	}
-      else 
+      else
 	{  /* Error in DMA */
 #ifdef VXWORKS
 	  logMsg("\ntsReadBlock: ERROR: sysVmeDmaDone returned an Error\n",
@@ -2329,7 +2329,7 @@ tsReadBlock(volatile unsigned int *data, int nwrds, int rflag)
 #endif
 	  TSUNLOCK;
 	  return(retVal>>2);
-	  
+
 	}
     }
   else
@@ -2346,7 +2346,7 @@ tsReadBlock(volatile unsigned int *data, int nwrds, int rflag)
       dCnt = 0;
       ii=0;
 
-      while(ii<nwrds) 
+      while(ii<nwrds)
 	{
 	  val = (unsigned int) *TSpd;
 #ifndef VXWORKS
@@ -2413,7 +2413,7 @@ tsReadTriggerBlock(volatile unsigned int *data)
   int iblkhead=-1, iblktrl=-1;
 
 
-  if(data==NULL) 
+  if(data==NULL)
     {
       logMsg("\ntsReadTriggerBlock: ERROR: Invalid Destination address\n",0,0,0,0,0,0);
       return(ERROR);
@@ -2443,12 +2443,12 @@ tsReadTriggerBlock(volatile unsigned int *data)
   else if (rval == 0)
     {
       /* No data returned */
-      return 0; 
+      return 0;
     }
-    
+
   /* Work down to find index of block header */
   while(iword<rval)
-    { 
+    {
 
       word = data[iword];
 #ifndef VXWORKS
@@ -2461,7 +2461,7 @@ tsReadTriggerBlock(volatile unsigned int *data)
 	      iblkhead = iword;
 	      break;
 	    }
-	}     
+	}
       iword++;
     }
 
@@ -2481,7 +2481,7 @@ tsReadTriggerBlock(volatile unsigned int *data)
   /* Work up to find index of block trailer */
   iword=rval-1;
   while(iword>=0)
-    { 
+    {
 
       word = data[iword];
 #ifndef VXWORKS
@@ -2498,7 +2498,7 @@ tsReadTriggerBlock(volatile unsigned int *data)
 	      iblktrl = iword;
 	      break;
 	    }
-	}     
+	}
       iword--;
     }
 
@@ -2552,7 +2552,7 @@ tsReadTriggerBlock(volatile unsigned int *data)
  *    bit 31
  *       0: As stored
  *       1: Shifted by 7 bits (must multiply by 2**7)
- *   
+ *
  * @param data  - local memory address to place scaler data
  * @param choice
  *   - 1-4: Scaler set (1-4)
@@ -2575,8 +2575,8 @@ tsReadScalers(volatile unsigned int *data, int choice)
       logMsg("\ntsReadScalers: ERROR: TS not initialized\n",1,2,3,4,5,6);
       return ERROR;
     }
-  
-  if(data==NULL) 
+
+  if(data==NULL)
     {
       logMsg("\ntsReadScalers: ERROR: Invalid Destination address\n",0,0,0,0,0,0);
       return(ERROR);
@@ -2586,7 +2586,7 @@ tsReadScalers(volatile unsigned int *data, int choice)
   scalers[1] = (struct ScalerStruct *)(&TSp->Scalers2);
   scalers[2] = (struct ScalerStruct *)(&TSp->Scalers3);
   scalers[3] = (struct ScalerStruct *)(&TSp->Scalers4);
-  
+
   TSLOCK;
   switch(choice)
     {
@@ -2611,7 +2611,7 @@ tsReadScalers(volatile unsigned int *data, int choice)
 	}
       break;
 
-    case 2: /* FP */
+    case 2: /* Ext */
       banks = 4;
       for(iscal=0; iscal<4; iscal++)
 	{
@@ -2632,7 +2632,7 @@ tsReadScalers(volatile unsigned int *data, int choice)
 	}
       break;
 
-    case 3: /* Gen */
+    case 3: /* FP */
       banks = 8;
       for(iscal=0; iscal<4; iscal++)
 	{
@@ -2675,7 +2675,7 @@ tsPrintScalers(int choice)
   int ichan=0, nwrds=0;
   volatile unsigned int data[64];
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -2701,13 +2701,13 @@ tsPrintScalers(int choice)
   for(ichan=0; ichan<nwrds; ichan++)
     {
       if((ichan%4)==0) printf("\n%2d: ",ichan);
-      
+
       if(data[ichan] & TS_SCALER_SCALE_HI)
 	printf("%16d ", (data[ichan] & ~TS_SCALER_SCALE_HI)*(2^7));
       else
 	printf("%16d ", data[ichan]);
     }
-  
+
   printf("\n\n");
 
   return OK;
@@ -2715,9 +2715,9 @@ tsPrintScalers(int choice)
 
 /**
  * @ingroup Config
- * @brief Set the busy source with a given sourcemask sourcemask bits: 
+ * @brief Set the busy source with a given sourcemask sourcemask bits:
  *
- * @param sourcemask 
+ * @param sourcemask
  *  - 0: SWA
  *  - 1: SWB
  *  - 2: P2
@@ -2744,7 +2744,7 @@ tsSetBusySource(unsigned int sourcemask, int rFlag)
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
     }
-  
+
   if(sourcemask>TS_BUSY_SOURCEMASK)
     {
       printf("%s: ERROR: Invalid value for sourcemask (0x%x)\n",
@@ -2832,7 +2832,7 @@ tsDisableBusError()
  * @ingroup Deprec
  * @brief Routine to return the VME slot, provided the VXS payload port
  * @param payloadport Payload port
- * @return Vme Slot 
+ * @return Vme Slot
  */
 int
 tsPayloadPort2VMESlot(int payloadport)
@@ -2875,7 +2875,7 @@ int
 tsVMESlot2PayloadPort(int vmeslot)
 {
   int rval=0;
-  if(vmeslot<1 || vmeslot>MAX_VME_SLOTS) 
+  if(vmeslot<1 || vmeslot>MAX_VME_SLOTS)
     {
       printf("%s: ERROR: Invalid VME slot %d\n",
 	     __FUNCTION__,vmeslot);
@@ -2899,7 +2899,7 @@ tsVMESlot2PayloadPort(int vmeslot)
  *  @ingroup Config
  *  @brief Set the prescale factor for the external trigger
  *
- *  @param   prescale Factor for prescale.  
+ *  @param   prescale Factor for prescale.
  *               Max {prescale} available is 65535
  *
  *  @return OK if successful, otherwise ERROR.
@@ -3118,20 +3118,20 @@ tsSetTriggerPulse(int trigger, int delay, int width)
   TSLOCK;
   if(trigger==1)
     {
-      rval = vmeRead32(&TSp->trigDelay) & 
+      rval = vmeRead32(&TSp->trigDelay) &
 	~(TS_TRIGDELAY_TRIG1_DELAY_MASK | TS_TRIGDELAY_TRIG1_WIDTH_MASK) ;
       rval |= ( (delay) | (width<<8) );
       vmeWrite32(&TSp->trigDelay, rval);
     }
   if(trigger==2)
     {
-      rval = vmeRead32(&TSp->trigDelay) & 
+      rval = vmeRead32(&TSp->trigDelay) &
 	~(TS_TRIGDELAY_TRIG2_DELAY_MASK | TS_TRIGDELAY_TRIG2_WIDTH_MASK) ;
       rval |= ( (delay<<16) | (width<<24) );
       vmeWrite32(&TSp->trigDelay, rval);
     }
   TSUNLOCK;
-  
+
   return OK;
 }
 
@@ -3149,7 +3149,7 @@ tsSetSyncDelayWidth(unsigned int delay, unsigned int width, int widthstep)
 {
   int twidth=0, tdelay=0;
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return;
@@ -3190,23 +3190,23 @@ tsSetSyncDelayWidth(unsigned int delay, unsigned int width, int widthstep)
  * @ingroup Config
  * @brief Reset the trigger link.
  */
-void 
+void
 tsTrigLinkReset()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return;
     }
-  
+
   TSLOCK;
-  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_TRIGGERLINK_DISABLE); 
+  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_TRIGGERLINK_DISABLE);
   taskDelay(1);
 
-  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_TRIGGERLINK_DISABLE); 
+  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_TRIGGERLINK_DISABLE);
   taskDelay(1);
 
-  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_TRIGGERLINK_ENABLE); 
+  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_TRIGGERLINK_ENABLE);
   taskDelay(1);
   TSUNLOCK;
 
@@ -3217,20 +3217,20 @@ tsTrigLinkReset()
  * @ingroup Config
  * @brief Disable the trigger link.
  */
-void 
+void
 tsTrigLinkDisable()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return;
     }
-  
+
   TSLOCK;
-  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_TRIGGERLINK_DISABLE); 
+  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_TRIGGERLINK_DISABLE);
   taskDelay(1);
 
-  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_TRIGGERLINK_DISABLE); 
+  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_TRIGGERLINK_DISABLE);
   taskDelay(1);
 
   TSUNLOCK;
@@ -3274,16 +3274,16 @@ tsSetSyncResetType(int type)
 void
 tsSyncReset(int blflag)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return;
     }
-  
+
   TSLOCK;
-  vmeWrite32(&TSp->syncCommand,tsSyncResetType); 
+  vmeWrite32(&TSp->syncCommand,tsSyncResetType);
   taskDelay(1);
-  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_RESET_EVNUM); 
+  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_RESET_EVNUM);
   taskDelay(1);
   TSUNLOCK;
 
@@ -3300,7 +3300,28 @@ tsSyncReset(int blflag)
 
 /**
  * @ingroup Config
- * @brief Generate a Sync Reset Resync signal.  
+ * @brief Generate a Sync Reset signal that resets the event buffer
+ *
+ */
+void
+tsResetEB()
+{
+  if(TSp == NULL)
+    {
+      printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
+      return;
+    }
+
+  TSLOCK;
+  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_RESET_EVNUM);
+  taskDelay(1);
+  TSUNLOCK;
+
+}
+
+/**
+ * @ingroup Config
+ * @brief Generate a Sync Reset Resync signal.
  *
  *     This type of Sync Reset will NOT reset event numbers
  *
@@ -3308,14 +3329,14 @@ tsSyncReset(int blflag)
 void
 tsSyncResetResync()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return;
     }
-  
+
   TSLOCK;
-  vmeWrite32(&TSp->syncCommand,tsSyncResetType); 
+  vmeWrite32(&TSp->syncCommand,tsSyncResetType);
   taskDelay(1);
   TSUNLOCK;
 
@@ -3330,14 +3351,14 @@ tsSyncResetResync()
 void
 tsClockReset()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return;
     }
-  
+
   TSLOCK;
-  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_CLK250_RESYNC); 
+  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_CLK250_RESYNC);
   TSUNLOCK;
 
 }
@@ -3353,7 +3374,7 @@ tsClockReset()
 void
 tsUserSyncReset(int enable)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return;
@@ -3361,9 +3382,9 @@ tsUserSyncReset(int enable)
 
   TSLOCK;
   if(enable)
-    vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_SYNCRESET_HIGH); 
+    vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_SYNCRESET_HIGH);
   else
-    vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_SYNCRESET_LOW); 
+    vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_SYNCRESET_LOW);
 
   taskDelay(2);
   TSUNLOCK;
@@ -3416,17 +3437,116 @@ tsSetUserSyncResetReceive(int enable)
 void
 tsTriggerReadyReset()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return;
     }
-  
+
   TSLOCK;
-  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_TRIGGER_READY_RESET); 
+  vmeWrite32(&TSp->syncCommand,TS_SYNCCOMMAND_TRIGGER_READY_RESET);
   TSUNLOCK;
 
 
+}
+
+/**
+ * @ingroup Config
+ * @brief Reset the registers that record bit errors recorded on the trigger link.
+ *
+ */
+void
+tsTriggerLinkErrorReset()
+{
+  if(TSp == NULL)
+    {
+      printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
+      return;
+    }
+
+  TSLOCK;
+  vmeWrite32(&TSp->syncCommand,
+	     TS_SYNCCOMMAND_GTP_STATUSB_RESET);
+  TSUNLOCK;
+}
+
+/**
+ * @ingroup Status
+ * @brief Get the error status bits for the trigger links from specified TDs
+ *
+ * @param pflag
+ *  - !0: Print to standard out
+ *
+ * @return Trigger Link bits if successful, ERROR otherwise
+ */
+unsigned int
+tsGetTriggerLinkStatus(int pflag)
+{
+  unsigned int rval = 0, bitflags = 0;
+  int ibit = 0;
+
+  if(TSp == NULL)
+    {
+      printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
+      return ERROR;
+    }
+
+  TSLOCK;
+  rval = vmeRead32(&TSp->GTPStatusB);
+  TSUNLOCK;
+
+  if(pflag)
+    {
+      printf("STATUS for Trigger Links\n");
+
+      printf("      Connected    RX Data Error      Disparity    NON 8b/10b Data\n");
+      printf("     (12345678)      (12345678)      (12345678)      (12345678)\n");
+      printf("--------------------------------------------------------------------------------\n");
+
+      printf("      ");
+      bitflags = rval & TS_GTPSTATUSB_CHANNEL_BONDING_MASK;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+
+      printf("        ");
+      bitflags = (rval & TS_GTPSTATUSB_DATA_ERROR_MASK) >> 8;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+
+      printf("        ");
+      bitflags = (rval & TS_GTPSTATUSB_DISPARITY_ERROR_MASK) >> 16;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+      printf("        ");
+
+      bitflags = (rval & TS_GTPSTATUSB_DATA_NOT_IN_TABLE_ERROR_MASK) >> 24;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+
+      printf("\n");
+    }
+
+  return rval;
 }
 
 /**
@@ -3441,7 +3561,7 @@ tsSetAdr32(unsigned int a32base)
   unsigned long laddr=0;
   int res=0,a32Enabled=0;
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -3455,10 +3575,10 @@ tsSetAdr32(unsigned int a32base)
     }
 
   TSLOCK;
-  vmeWrite32(&TSp->adr32, 
+  vmeWrite32(&TSp->adr32,
 	     (a32base & TS_ADR32_BASE_MASK) );
 
-  vmeWrite32(&TSp->vmeControl, 
+  vmeWrite32(&TSp->vmeControl,
 	     vmeRead32(&TSp->vmeControl) | TS_VMECONTROL_A32);
 
   a32Enabled = vmeRead32(&TSp->vmeControl)&(TS_VMECONTROL_A32);
@@ -3471,7 +3591,7 @@ tsSetAdr32(unsigned int a32base)
 
 #ifdef VXWORKS
   res = sysBusToLocalAdrs(0x09,(char *)a32base,(char **)&laddr);
-  if (res != 0) 
+  if (res != 0)
     {
       printf("%s: ERROR in sysBusToLocalAdrs(0x09,0x%x,&laddr) \n",
 	     __FUNCTION__,a32base);
@@ -3480,7 +3600,7 @@ tsSetAdr32(unsigned int a32base)
     }
 #else
   res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)a32base,(char **)&laddr);
-  if (res != 0) 
+  if (res != 0)
     {
       printf("%s: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",
 	     __FUNCTION__,a32base);
@@ -3509,12 +3629,12 @@ tsSetAdr32(unsigned int a32base)
 int
 tsResetEventCounter()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
     }
-  
+
   TSLOCK;
   vmeWrite32(&TSp->reset, TS_RESET_RESET_L1A_NUMBER);
   TSUNLOCK;
@@ -3534,7 +3654,7 @@ tsGetEventCounter()
   unsigned long long int rval=0;
   unsigned int lo=0, hi=0;
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -3546,7 +3666,7 @@ tsGetEventCounter()
 
   rval = lo | ((unsigned long long)hi<<32);
   TSUNLOCK;
-  
+
   return rval;
 }
 
@@ -3559,7 +3679,7 @@ tsGetEventCounter()
 int
 tsSetBlockLimit(unsigned int limit)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -3582,7 +3702,7 @@ unsigned int
 tsGetBlockLimit()
 {
   unsigned int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -3598,15 +3718,15 @@ tsGetBlockLimit()
 /**
  * @ingroup Status
  * @brief Get the current status of the block limit
- *    
+ *
  * @return 1 if block limit has been reached, 0 if not, otherwise ERROR;
- *    
+ *
  */
 int
 tsGetBlockLimitStatus()
 {
   unsigned int reg=0, rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -3630,14 +3750,14 @@ tsGetBlockLimitStatus()
  * @param enable
  *    - 0: Disable
  *    - >0: Enable
- *    
+ *
  * @return OK if successful, otherwise ERROR
- *    
+ *
  */
 int
 tsSetGTPInputReadout(int enable)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -3662,14 +3782,14 @@ tsSetGTPInputReadout(int enable)
  * @param enable
  *    - 0: Disable
  *    - >0: Enable
- *    
+ *
  * @return OK if successful, otherwise ERROR
- *    
+ *
  */
 int
 tsSetFPInputReadout(int enable)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -3745,7 +3865,7 @@ tsGetIntCount()
  *  - Default interrupt handler
  *    Handles the TS interrupt.  Calls a user defined routine,
  *    if it was connected with tsIntConnect()
- *    
+ *
  */
 
 static void
@@ -3783,7 +3903,7 @@ tsPoll(void)
 
   int policy=0;
   struct sched_param sp;
-  
+
   /* Set scheduler and priority for this thread */
   policy=SCHED_FIFO;
   sp.sched_priority=40;
@@ -3794,24 +3914,24 @@ tsPoll(void)
 	  (policy == SCHED_FIFO ? "FIFO"
 	   : (policy == SCHED_RR ? "RR"
 	      : (policy == SCHED_OTHER ? "OTHER"
-		 : "unknown"))), sp.sched_priority);  
+		 : "unknown"))), sp.sched_priority);
   prctl(PR_SET_NAME,"tsPoll");
 
-  while(1) 
+  while(1)
     {
 
       pthread_testcancel();
 
       /* If still need Ack, don't test the Trigger Status */
-      if(tsNeedAck>0) 
+      if(tsNeedAck>0)
 	{
 	  continue;
 	}
 
       tsdata = 0;
-	  
+
       tsdata = tsBReady();
-      if(tsdata == ERROR) 
+      if(tsdata == ERROR)
 	{
 	  printf("%s: ERROR: tsIntPoll returned ERROR.\n",__FUNCTION__);
 	  break;
@@ -3819,33 +3939,33 @@ tsPoll(void)
 
       if(tsdata && tsIntRunning)
 	{
-	  INTLOCK; 
+	  INTLOCK;
 	  tsDaqCount = tsdata;
 	  tsIntCount++;
 
 	  if (tsIntRoutine != NULL)	/* call user routine */
 	    (*tsIntRoutine) (tsIntArg);
-	
-	  /* Write to TS to Acknowledge Interrupt */	  
-	  if(tsDoAck==1) 
+
+	  /* Write to TS to Acknowledge Interrupt */
+	  if(tsDoAck==1)
 	    {
 	      tsIntAck();
 	    }
 	  INTUNLOCK;
 	}
-    
+
     }
   printf("%s: Read ERROR: Exiting Thread\n",__FUNCTION__);
   pthread_exit(0);
 
 }
-#endif 
+#endif
 
 
 /*******************************************************************************
  *
  *  tsStartPollingThread
- *  - Routine that launches tsPoll in its own thread 
+ *  - Routine that launches tsPoll in its own thread
  *
  */
 #ifndef VXWORKS
@@ -3854,15 +3974,15 @@ tsStartPollingThread(void)
 {
   int pts_status;
 
-  pts_status = 
+  pts_status =
     pthread_create(&tspollthread,
 		   NULL,
 		   (void*(*)(void *)) tsPoll,
 		   (void *)NULL);
-  if(pts_status!=0) 
-    {						
+  if(pts_status!=0)
+    {
       printf("%s: ERROR: TS Polling Thread could not be started.\n",
-	     __FUNCTION__);	
+	     __FUNCTION__);
       printf("\t pthread_create returned: %d\n",pts_status);
     }
 
@@ -3887,7 +4007,7 @@ tsIntConnect(unsigned int vector, VOIDFUNCPTR routine, unsigned int arg)
   int status;
 #endif
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return(ERROR);
@@ -3906,7 +4026,7 @@ tsIntConnect(unsigned int vector, VOIDFUNCPTR routine, unsigned int arg)
   tsDoAck = 1;
 
   /* Set Vector and Level */
-  if((vector < 0xFF)&&(vector > 0x40)) 
+  if((vector < 0xFF)&&(vector > 0x40))
     {
       tsIntVec = vector;
     }
@@ -3930,13 +4050,13 @@ tsIntConnect(unsigned int vector, VOIDFUNCPTR routine, unsigned int arg)
 #else
       status = vmeIntConnect (tsIntVec, tsIntLevel,
 			      tsInt,arg);
-      if (status != OK) 
+      if (status != OK)
 	{
 	  printf("%s: vmeIntConnect failed with status = 0x%08x\n",
 		 __FUNCTION__,status);
 	  return(ERROR);
 	}
-#endif  
+#endif
       break;
 
     default:
@@ -3948,7 +4068,7 @@ tsIntConnect(unsigned int vector, VOIDFUNCPTR routine, unsigned int arg)
   printf("%s: INFO: Interrupt Vector = 0x%x  Level = %d\n",
 	 __FUNCTION__,tsIntVec,tsIntLevel);
 
-  if(routine) 
+  if(routine)
     {
       tsIntRoutine = routine;
       tsIntArg = arg;
@@ -3978,13 +4098,13 @@ tsIntDisconnect()
   void *res;
 #endif
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
     }
 
-  if(tsIntRunning) 
+  if(tsIntRunning)
     {
       logMsg("tsIntDisconnect: ERROR: TS is Enabled - Call tsIntDisable() first\n",
 	     1,2,3,4,5,6);
@@ -3993,7 +4113,7 @@ tsIntDisconnect()
 
   INTLOCK;
 
-  switch (tsReadoutMode) 
+  switch (tsReadoutMode)
     {
     case TS_READOUT_EXT_INT:
 
@@ -4004,7 +4124,7 @@ tsIntDisconnect()
 	printf("%s: Error disconnecting Interrupt\n",__FUNCTION__);
 #else
       status = vmeIntDisconnect(tsIntLevel);
-      if (status != OK) 
+      if (status != OK)
 	{
 	  printf("vmeIntDisconnect failed\n");
 	}
@@ -4013,9 +4133,9 @@ tsIntDisconnect()
 
     case TS_READOUT_EXT_POLL:
 #ifndef VXWORKS
-      if(tspollthread) 
+      if(tspollthread)
 	{
-	  if(pthread_cancel(tspollthread)<0) 
+	  if(pthread_cancel(tspollthread)<0)
 	    perror("pthread_cancel");
 	  if(pthread_join(tspollthread,&res)<0)
 	    perror("pthread_join");
@@ -4035,15 +4155,15 @@ tsIntDisconnect()
   printf("%s: Disconnected\n",__FUNCTION__);
 
   return OK;
-  
+
 }
 
 /**
  * @ingroup IntPoll
- * @brief Connect a user routine to be executed instead of the default 
+ * @brief Connect a user routine to be executed instead of the default
  *  TS interrupt/trigger latching acknowledge prescription
  *
- * @param routine Routine to call 
+ * @param routine Routine to call
  * @param arg argument to pass to routine
  * @return OK if successful, otherwise ERROR
  */
@@ -4067,7 +4187,7 @@ tsAckConnect(VOIDFUNCPTR routine, unsigned int arg)
 
 /**
  * @ingroup IntPoll
- * @brief Acknowledge an interrupt or latched trigger.  This "should" effectively 
+ * @brief Acknowledge an interrupt or latched trigger.  This "should" effectively
  *  release the "Busy" state of the TS.
  *
  *  Execute a user defined routine, if it is defined.  Otherwise, use
@@ -4111,7 +4231,7 @@ tsIntAck()
 /**
  * @ingroup IntPoll
  * @brief Enable interrupts or latching triggers (depending on set TS mode)
- *  
+ *
  * @param iflag if = 1, trigger counter will be reset
  *
  * @return OK if successful, otherwise ERROR
@@ -4123,7 +4243,7 @@ tsIntEnable(int iflag)
   int lock_key=0;
 #endif
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return(-1);
@@ -4168,7 +4288,7 @@ tsIntEnable(int iflag)
 	     __FUNCTION__,tsReadoutMode);
       TSUNLOCK;
       return(ERROR);
-      
+
     }
 
   TSUNLOCK; /* Locks performed in tsEnableTriggerSource() */
@@ -4190,11 +4310,11 @@ tsIntEnable(int iflag)
  * @brief Disable interrupts or latching triggers
  *
 */
-void 
+void
 tsIntDisable()
 {
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return;
@@ -4220,8 +4340,8 @@ unsigned int
 tsBReady()
 {
   unsigned int blockBuffer=0, readyInt=0, rval=0;
-  
-  if(TSp == NULL) 
+
+  if(TSp == NULL)
     {
       logMsg("tsBReady: ERROR: TS not initialized\n",1,2,3,4,5,6);
       return 0;
@@ -4258,7 +4378,7 @@ int
 tsGetSyncEventFlag()
 {
   int rval=0;
-  
+
   TSLOCK;
   rval = tsSyncEventFlag;
   TSUNLOCK;
@@ -4279,7 +4399,7 @@ int
 tsGetSyncEventReceived()
 {
   int rval=0;
-  
+
   TSLOCK;
   rval = tsSyncEventReceived;
   TSUNLOCK;
@@ -4309,7 +4429,7 @@ int
 tsSetBlockBufferLevel(unsigned int level)
 {
   unsigned int trigger = 0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -4327,7 +4447,7 @@ tsSetBlockBufferLevel(unsigned int level)
   vmeWrite32(&TSp->blockBuffer, level);
 
   tsBlockBufferLevel = level;
-  
+
   /* Broadcast buffer level to TI-slaves */
   trigger = vmeRead32(&TSp->trigger);
 
@@ -4353,7 +4473,7 @@ tsGetBlockBufferLevel()
 {
   unsigned int level;
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -4373,7 +4493,7 @@ tsGetBlockBufferLevel()
 /**
  * @ingroup Config
  * @brief Set (or unset) high level for the user controllable output ports on the front panel.
- *     
+ *
  * @param         set1  OUT #3
  * @param         set2  OUT #4
  * @param         set3  OUT #5
@@ -4384,16 +4504,16 @@ tsGetBlockBufferLevel()
  * @return OK if successful, otherwise ERROR
  */
 int
-tsSetOutputPort(unsigned int set1, unsigned int set2, unsigned int set3, 
+tsSetOutputPort(unsigned int set1, unsigned int set2, unsigned int set3,
 		unsigned int set4, unsigned int set5, unsigned int set6)
 {
   unsigned int bits=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
     }
-  
+
   if(set1)
     bits |= TS_OUTPUT_FP_1;
   if(set2)
@@ -4430,7 +4550,7 @@ tsSetClockSource(unsigned int source)
   unsigned int clkset=0;
   char sClock[20] = "";
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -4448,7 +4568,7 @@ tsSetClockSource(unsigned int source)
       break;
     default:
       printf("%s: ERROR: Invalid Clock Souce (%d)\n",__FUNCTION__,source);
-      return ERROR;      
+      return ERROR;
     }
 
   printf("%s: Setting clock source to %s\n",__FUNCTION__,sClock);
@@ -4475,7 +4595,7 @@ tsSetClockSource(unsigned int source)
 void
 tsResetIODelay()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return;
@@ -4526,7 +4646,7 @@ tsResetSlaveConfig()
 int
 tsAddSlave(unsigned int fiber)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -4541,11 +4661,11 @@ tsAddSlave(unsigned int fiber)
 
   /* Add this slave to the global slave mask */
   tsSlaveMask |= (1<<(fiber-1));
-  
+
   /* Add this fiber as a busy source */
   switch(fiber)
     {
-    case 1: 
+    case 1:
       if(tsSetBusySource(TS_BUSY_TI_A,0)!=OK)
 	return ERROR;
       break;
@@ -4554,7 +4674,7 @@ tsAddSlave(unsigned int fiber)
     default:
       if(tsSetBusySource(TS_BUSY_TI_B,0)!=OK)
 	return ERROR;
-    }      
+    }
 
   return OK;
 
@@ -4587,7 +4707,7 @@ tsRemoveSlave(unsigned int fiber)
 
   /* Remove this slave to the global slave mask */
   tsSlaveMask &= ~(1<<(fiber-1));
-  
+
   /* Remove this fiber as a busy source (use first fiber macro as the base) */
   TSLOCK;
   /* Read in previous values, keeping current busy's */
@@ -4641,8 +4761,8 @@ tsSetTriggerHoldoff(int rule, unsigned int value, int timestep)
   unsigned int maxvalue = 0x7f;
   unsigned int vmeControl = 0;
   static int slow_clock_previously_switched = 0;
-  
-  if(TSp == NULL) 
+
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -4668,7 +4788,7 @@ tsSetTriggerHoldoff(int rule, unsigned int value, int timestep)
   TSLOCK;
   rval = vmeRead32(&TSp->triggerRule);
   vmeControl = vmeRead32(&TSp->vmeControl);
-  
+
   switch(rule)
     {
     case 1:
@@ -4697,7 +4817,7 @@ tsSetTriggerHoldoff(int rule, unsigned int value, int timestep)
 		     __FUNCTION__);
 	      printf("\tThis may affect previously set rules!\n");
 	    }
-	  vmeWrite32(&TSp->vmeControl, 
+	  vmeWrite32(&TSp->vmeControl,
 		     vmeControl | TS_VMECONTROL_SLOWER_TRIGGER_RULES);
 	  slow_clock_previously_switched = 1;
 	}
@@ -4731,7 +4851,7 @@ tsSetTriggerHoldoff(int rule, unsigned int value, int timestep)
  *            e.g. rule=1: No more than ONE trigger within the
  *                         specified time period
  *
- * @return If successful, returns the value (in steps of 16ns) 
+ * @return If successful, returns the value (in steps of 16ns)
  *            for the specified rule. ERROR, otherwise.
  *
  */
@@ -4739,13 +4859,13 @@ int
 tsGetTriggerHoldoff(int rule)
 {
   unsigned int rval=0;
-  
-  if(TSp == NULL) 
+
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
     }
-  
+
   if(rule<1 || rule>5)
     {
       printf("%s: ERROR: Invalid value for rule (%d).  Must be 1 or 2.\n",
@@ -4756,7 +4876,7 @@ tsGetTriggerHoldoff(int rule)
   TSLOCK;
   rval = vmeRead32(&TSp->triggerRule);
   TSUNLOCK;
-  
+
   switch(rule)
     {
     case 1:
@@ -4788,12 +4908,12 @@ tsPrintTriggerHoldoff(int dflag)
   int irule = 0, slowclock = 0, clockticks = 0, timestep = 0, minticks = 0;
   float clock[3] = {250, 33.3, 33.3/32.}, stepsize = 0., time = 0., min = 0.;
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
     }
-  
+
   TSLOCK;
   triggerRule    = vmeRead32(&TSp->triggerRule);
   triggerRuleMin = vmeRead32(&TSp->part1.triggerRuleMin);
@@ -4831,7 +4951,7 @@ tsPrintTriggerHoldoff(int dflag)
 	minticks = (triggerRuleMin >> (irule*8)) & 0x7F;
       else
 	minticks = 0;
-      
+
       if((timestep == 1) && (slowclock == 1))
 	{
 	  timestep = 2;
@@ -4843,7 +4963,7 @@ tsPrintTriggerHoldoff(int dflag)
       time = (float)clockticks * stepsize;
 
       min = (float) minticks * stepsize;
-      
+
       printf("    %4d     %8.1f    %8.1f    %8.1f ",
 	     irule + 1, 1E3 * time, 1E3 * stepsize, min);
 
@@ -4855,7 +4975,7 @@ tsPrintTriggerHoldoff(int dflag)
 
     }
   printf("\n");
-  
+
   return OK;
 }
 
@@ -4872,7 +4992,7 @@ tsPrintTriggerHoldoff(int dflag)
  *       	 	      rule
  *    		         2      3      4
  *    		       ----- ------ ------
- *    		        16ns  480ns  480ns 
+ *    		        16ns  480ns  480ns
  *</pre>
  *
  * @return OK if successful, otherwise ERROR.
@@ -4882,12 +5002,12 @@ int
 tsSetTriggerHoldoffMin(int rule, unsigned int value)
 {
   unsigned int mask=0, enable=0, shift=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
       return ERROR;
     }
-  
+
   if(rule<2 || rule>5)
     {
       printf("%s: ERROR: Invalid rule (%d).  Must be 2-4.\n",
@@ -4922,7 +5042,7 @@ tsSetTriggerHoldoffMin(int rule, unsigned int value)
     }
 
   TSLOCK;
-  vmeWrite32(&TSp->part1.triggerRuleMin, 
+  vmeWrite32(&TSp->part1.triggerRuleMin,
 	     (vmeRead32(&TSp->part1.triggerRuleMin) & mask) |
 	     enable |
 	     (value << shift) );
@@ -4941,8 +5061,8 @@ tsSetTriggerHoldoffMin(int rule, unsigned int value)
  *
  * @param  pflag  if not 0, print the setting to standard out.
  *
- * @return If successful, returns the value 
- *          (in steps of 16ns for rule 2, 480ns otherwise) 
+ * @return If successful, returns the value
+ *          (in steps of 16ns for rule 2, 480ns otherwise)
  *            for the specified rule. ERROR, otherwise.
  *
  */
@@ -4951,12 +5071,12 @@ tsGetTriggerHoldoffMin(int rule, int pflag)
 {
   int rval=0;
   unsigned int mask=0, enable=0, shift=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
       return ERROR;
     }
-  
+
   if(rule<2 || rule>5)
     {
       printf("%s: ERROR: Invalid rule (%d).  Must be 2-4.\n",
@@ -5022,7 +5142,7 @@ tsTriggerTableConfig(unsigned int **itable)
   for(imem=0; imem<8; imem++)
     for(ielement=0; ielement<256; ielement++)
       tsTrigPatternData[imem][ielement] = itable[imem][ielement];
-  
+
   return OK;
 }
 
@@ -5049,7 +5169,7 @@ tsGetTriggerTable(unsigned int **otable)
   for(imem=0; imem<8; imem++)
     for(ielement=0; ielement<16; ielement++)
       otable[imem][ielement] = tsTrigPatternData[imem][ielement];
-  
+
   return OK;
 }
 
@@ -5074,7 +5194,7 @@ tsTriggerTableDefault()
 	  /* set bit(8) to 1 (hw trig1), and bit(11:10) to 3 for multi-bit trigger */
 	  tsTrigPatternData[imem][iword] = 0xD00 + iword;
 	}
-      
+
       /* Zero inputs, No triggers */
       tsTrigPatternData[imem][0] = 0;
 
@@ -5158,7 +5278,7 @@ tsDefineEventType(int inputType, unsigned int trigMask, int hwTrig, int evType)
       else if(foundPattern==1)
 	{
 	  printf("%s: WARN: Pattern 0x%02x for %s subgroup %s ignored.\n",
-		 __FUNCTION__,pattern, (inputType==0)?"GTP":"FP", subgroup[ibyte]);  
+		 __FUNCTION__,pattern, (inputType==0)?"GTP":"FP", subgroup[ibyte]);
 	  printf("          Pattern was already found in provided trigMask (0x%08x).\n",
 		 trigMask);
 	  continue;
@@ -5197,7 +5317,7 @@ tsDefineSpecialEventType(int trigOpt, int evType)
 {
   unsigned int reg=0;
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5262,7 +5382,7 @@ tsGetSpecialEventType(int trigOpt)
 {
   unsigned int rval=0;
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5323,7 +5443,7 @@ SBRAMLoad(volatile unsigned int *reg, unsigned int *Wdata)
 }
 
 
-static void 
+static void
 STRGTableLoad()
 {
   int imem=0;
@@ -5339,7 +5459,7 @@ STRGTableLoad()
 }
 
 
-static void 
+static void
 STRGSubTableLoad()
 {
   unsigned int MemData[256];
@@ -5379,7 +5499,7 @@ STRGSubTableLoad()
 int
 tsLoadTriggerTable()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5412,7 +5532,7 @@ tsPrintTriggerTable(int inputType, int subGroup, int showbits)
 {
   int ielement=0, ipattern=0, multi1=0, multi2=0;
   int hwTrig1=0, evType1=0, hwTrig2=0, evType2=0;
-  const char* input[2] = 
+  const char* input[2] =
     {
       "GTP", " FP"
     };
@@ -5476,20 +5596,20 @@ tsPrintTriggerTable(int inputType, int subGroup, int showbits)
 	  hwTrig1 = ((tsTrigPatternData[inputType*4+subGroup][ipattern]) & 0x300)>>8;
 	  evType1 = (tsTrigPatternData[inputType*4+subGroup][ipattern]) & 0xFF;
 	  multi1  = ((tsTrigPatternData[inputType*4+subGroup][ipattern]) & 0xC00)==0xC00;
-      
+
 	  if(multi1)
 	    evType1 = 250;
 
 	  hwTrig2 = ((tsTrigPatternData[inputType*4+subGroup][ipattern+8]) & 0x300)>>8;
 	  evType2 = (tsTrigPatternData[inputType*4+subGroup][ipattern+8]) & 0xFF;
 	  multi2  = ((tsTrigPatternData[inputType*4+subGroup][ipattern+8]) & 0xC00)==0xC00;
-      
+
 	  if(multi2)
 	    evType2 = 250;
 
 	  if(showbits)
 	    {
-	      printf(" %d  %d  %d  %d  %d  %d  %d  %d  %d   %3d           %d  %d  %d  %d  %d  %d  %d  %d  %d   %3d\n", 
+	      printf(" %d  %d  %d  %d  %d  %d  %d  %d  %d   %3d           %d  %d  %d  %d  %d  %d  %d  %d  %d   %3d\n",
 		     ((ipattern) & (1<<0))?1:0,
 		     ((ipattern) & (1<<1))?1:0,
 		     ((ipattern) & (1<<2))?1:0,
@@ -5498,7 +5618,7 @@ tsPrintTriggerTable(int inputType, int subGroup, int showbits)
 		     ((ipattern) & (1<<5))?1:0,
 		     ((ipattern) & (1<<6))?1:0,
 		     ((ipattern) & (1<<7))?1:0,
-		     hwTrig1, evType1, 
+		     hwTrig1, evType1,
 		     ((ipattern+8) & (1<<0))?1:0,
 		     ((ipattern+8) & (1<<1))?1:0,
 		     ((ipattern+8) & (1<<2))?1:0,
@@ -5511,7 +5631,7 @@ tsPrintTriggerTable(int inputType, int subGroup, int showbits)
 	    }
 	  else
 	    {
-	      printf("   0x%02x        %d  %3d         0x%02x       %d  %3d\n", 
+	      printf("   0x%02x        %d  %3d         0x%02x       %d  %3d\n",
 		     ipattern,hwTrig1, evType1,
 		     ipattern+8,hwTrig2, evType2);
 	    }
@@ -5537,7 +5657,7 @@ tsPrintTriggerTable(int inputType, int subGroup, int showbits)
 int
 tsLatchTimers()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5561,7 +5681,7 @@ unsigned int
 tsGetLiveTime()
 {
   unsigned int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5585,7 +5705,7 @@ unsigned int
 tsGetBusyTime()
 {
   unsigned int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5609,7 +5729,7 @@ unsigned int
 tsGetLiveTime_InputHigh()
 {
   unsigned int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5633,7 +5753,7 @@ unsigned int
 tsGetBusyTime_InputHigh()
 {
   unsigned int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5664,7 +5784,7 @@ tsLive(int sflag)
   unsigned int live=0, total=0;
   static unsigned int oldLive=0, oldTotal=0;
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5715,7 +5835,7 @@ tsBlockStatus(int fiber, int pflag)
   char name[50];
   unsigned int nblocksReady, nblocksNeedAck;
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5775,12 +5895,12 @@ tsGetBusyStatus(int pflag)
   unsigned int busy=0, setbusy=0, isbusy=0, easybusy=0;
   int busyFound=0;
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
     }
-  
+
   TSLOCK;
   busy = vmeRead32(&TSp->busy);
   TSUNLOCK;
@@ -5796,7 +5916,7 @@ tsGetBusyStatus(int pflag)
   if(pflag)
     {
       printf("%s: TS Busy from:\n",__FUNCTION__);
-      
+
       if(easybusy & TS_BUSY_SWA)
 	printf("   Switch Slot A\n");
       if(easybusy & TS_BUSY_SWB)
@@ -5857,16 +5977,16 @@ tsGetBusyStatus(int pflag)
  * @ingroup Config
  * @brief Set the value of the syncronization event interval
  *
- * 
- * @param  blk_interval 
+ *
+ * @param  blk_interval
  *      Sync Event will occur in the last event of the set blk_interval (number of blocks)
- * 
+ *
  * @return OK if successful, otherwise ERROR
  */
 int
 tsSetSyncEventInterval(int blk_interval)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5894,7 +6014,7 @@ tsSetSyncEventInterval(int blk_interval)
 int
 tsForceSyncEvent()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5909,7 +6029,7 @@ tsForceSyncEvent()
 
 /**
  * @ingroup Readout
- * @brief Sync Reset Request is sent to TI-Master or TS.  
+ * @brief Sync Reset Request is sent to TI-Master or TS.
  *
  *    This option is available for multicrate systems when the
  *    synchronization is suspect.  It should be exercised only during
@@ -5921,7 +6041,7 @@ tsForceSyncEvent()
 int
 tsSyncResetRequest()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5944,7 +6064,7 @@ int
 tsGetSyncResetRequest()
 {
   int request=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5967,7 +6087,7 @@ tsGetSyncResetRequest()
 int
 tsFillToEndBlock()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -5995,12 +6115,12 @@ tsCurrentBlockFilled(unsigned short npoll)
   int rval=OK, ipoll=0;
   unsigned int bl, nevents;
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
     }
-  
+
   bl = tsGetCurrentBlockLevel();
 
   TSLOCK;
@@ -6024,7 +6144,7 @@ tsCurrentBlockFilled(unsigned short npoll)
 int
 tsResetMGT()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -6048,7 +6168,7 @@ tsResetMGT()
 int
 tsSetFPDelay(int chan, int delay)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -6087,7 +6207,7 @@ int
 tsGetFPDelay(int chan)
 {
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -6117,7 +6237,7 @@ tsPrintFPDelay()
 {
   unsigned int reg[11];
   int ireg=0, ichan=0, delay=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -6129,10 +6249,10 @@ tsPrintFPDelay()
   TSUNLOCK;
 
   printf("%s: Front panel delays:", __FUNCTION__);
-  for(ichan=0;ichan<31;ichan++) 
+  for(ichan=0;ichan<31;ichan++)
     {
       delay = reg[ichan/3] & TS_FPDELAY_MASK(ichan)>>(10*(ichan%3));
-      if((ichan%4)==0) 
+      if((ichan%4)==0)
 	{
 	  printf("\n");
 	}
@@ -6155,7 +6275,7 @@ int
 tsSetTSIODrive(int enable)
 {
   unsigned int reg=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -6185,7 +6305,7 @@ int
 tsGetTSIODrive()
 {
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -6223,7 +6343,7 @@ tsGetDriverSupportedVersion()
  *
  */
 
-int 
+int
 tsReadScalersMon(volatile unsigned int *data)
 {
 
@@ -6238,18 +6358,18 @@ tsReadScalersMon(volatile unsigned int *data)
       logMsg("\ntsReadScalers: ERROR: TS not initialized\n",1,2,3,4,5,6);
       return ERROR;
     }
-  
-  if(data==NULL) 
+
+  if(data==NULL)
     {
       logMsg("\ntsReadScalers: ERROR: Invalid Destination address\n",0,0,0,0,0,0);
       return(ERROR);
     }
-  
+
   scalers[0] = (struct ScalerStruct *)(&TSp->Scalers1);
   scalers[1] = (struct ScalerStruct *)(&TSp->Scalers2);
   scalers[2] = (struct ScalerStruct *)(&TSp->Scalers3);
   scalers[3] = (struct ScalerStruct *)(&TSp->Scalers4);
-  
+
   TSLOCK;
 
   /* Latch Timers */
@@ -6271,11 +6391,11 @@ tsReadScalersMon(volatile unsigned int *data)
 	    }
 	  else
 	    data[nwrds] = tmpData;
-	  
+
 	  nwrds++;
 	}
     }
-  
+
   /* Gen */
   banks = 8;
   for(iscal = 0; iscal < 4; iscal++)
@@ -6291,20 +6411,20 @@ tsReadScalersMon(volatile unsigned int *data)
 	    }
 	  else
 	    data[nwrds] = tmpData;
-	  
+
 	  nwrds++;
 	}
     }
-  
+
   /* LiveTime */
-  data[64] = vmeRead32(&TSp->livetime);  
+  data[64] = vmeRead32(&TSp->livetime);
   nwrds++;
   /* BusyTime */
   data[65] = vmeRead32(&TSp->busytime);
   nwrds++;
 
   TSUNLOCK;
-  
+
   return nwrds;
 }
 
@@ -6316,12 +6436,12 @@ tsReadScalersMon(volatile unsigned int *data)
  * @return OK if successful, otherwise ERROR
  */
 
-int 
+int
 tsSetTrigCoinWindow(unsigned int size)
 {
   unsigned int maxvalue = 0xFF;
-  
-  if(TSp == NULL) 
+
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -6331,11 +6451,11 @@ tsSetTrigCoinWindow(unsigned int size)
     {
       printf("%s: ERROR: Invalid window size (%d). Must be less than %d.\n",
 	     __FUNCTION__,size,maxvalue);
-      return ERROR;    
+      return ERROR;
     }
 
   TSLOCK;
-  vmeWrite32(&TSp->triggerWindow, 
+  vmeWrite32(&TSp->triggerWindow,
 	     (vmeRead32(&TSp->triggerWindow) &~ TS_TRIGGERWINDOW_COINC_MASK)
 	     | size);
   TSUNLOCK;
@@ -6347,16 +6467,16 @@ tsSetTrigCoinWindow(unsigned int size)
 /**
  * @ingroup Status
  * @brief Get the trigger coincidence window
- * @return Size of the coincidence window in units of 4ns if successful, 
+ * @return Size of the coincidence window in units of 4ns if successful,
  *         otherwise ERROR
  */
 
-int 
+int
 tsGetTrigCoinWindow()
 {
   unsigned int rval = 0;
-  
-  if(TSp == NULL) 
+
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -6377,20 +6497,20 @@ tsGetTrigCoinWindow()
  * @return OK if successful, otherwise ERROR
  */
 
-int 
+int
 tsSetTrigInhibitWindow(unsigned int size)
 {
   unsigned int maxvalue = 0xFF;
-  
+
   if( (size > maxvalue) || (size == 0) )
     {
       printf("%s: ERROR: Invalid inhibit window size (%d). Must be less than %d.\n",
 	     __FUNCTION__,size,maxvalue);
-      return ERROR;    
+      return ERROR;
     }
 
   TSLOCK;
-  vmeWrite32(&TSp->triggerWindow, 
+  vmeWrite32(&TSp->triggerWindow,
 	     (vmeRead32(&TSp->triggerWindow) &~ TS_TRIGGERWINDOW_INHIBIT_MASK)
 	     | (size<<8));
   TSUNLOCK;
@@ -6402,16 +6522,16 @@ tsSetTrigInhibitWindow(unsigned int size)
 /**
  * @ingroup Status
  * @brief Get the trigger inhibit window
- * @return Size of the inhibit window in units of 4ns if successful, 
+ * @return Size of the inhibit window in units of 4ns if successful,
  *         otherwise ERROR
  */
 
-int 
+int
 tsGetTrigInhibitWindow()
 {
   unsigned int rval = 0;
-  
-  if(TSp == NULL) 
+
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -6435,7 +6555,7 @@ tsGetTrigInhibitWindow()
  * @ingroup Part
  * @brief Initialize a TS partition
  * @param pID The partition identification number (1-4)
- * @param tAddr 
+ * @param tAddr
  *  - A24 VME Address of the TS
  *  - Slot number of TS (1 - 21)
  * @param mode What mode to signal data ready from the partition
@@ -6480,23 +6600,23 @@ tsPartInit(int pID, unsigned int tAddr, unsigned int mode, int iFlag)
   /* Form VME base address from slot number */
 #ifdef VXWORKS
   stat = sysBusToLocalAdrs(0x39,(char *)tAddr,(char **)&laddr);
-  if (stat != 0) 
+  if (stat != 0)
     {
       printf("%s: ERROR: Error in sysBusToLocalAdrs res=%d \n",__FUNCTION__,stat);
       return ERROR;
-    } 
-  else 
+    }
+  else
     {
       printf("TS address = 0x%x\n",laddr);
     }
 #else
   stat = vmeBusToLocalAdrs(0x39,(char *)tAddr,(char **)&laddr);
-  if (stat != 0) 
+  if (stat != 0)
     {
       printf("%s: ERROR: Error in vmeBusToLocalAdrs res=%d \n",__FUNCTION__,stat);
       return ERROR;
-    } 
-  else 
+    }
+  else
     {
       if(!noBoardInit)
 	printf("TS VME (Local) address = 0x%.8x (0x%.8x)\n",tAddr,laddr);
@@ -6514,7 +6634,7 @@ tsPartInit(int pID, unsigned int tAddr, unsigned int mode, int iFlag)
   stat = vmeMemProbe((char *)(&TSp->boardID),4,(char *)&rval);
 #endif
 
-  if (stat != 0) 
+  if (stat != 0)
     {
       printf("%s: ERROR: TS card not addressable\n",__FUNCTION__);
       TSp=NULL;
@@ -6523,7 +6643,7 @@ tsPartInit(int pID, unsigned int tAddr, unsigned int mode, int iFlag)
   else
     {
       /* Check that it is a TS */
-      if(((rval&TS_BOARDID_TYPE_MASK)>>16) != TS_BOARDID_TYPE_TS) 
+      if(((rval&TS_BOARDID_TYPE_MASK)>>16) != TS_BOARDID_TYPE_TS)
 	{
 	  printf("%s: ERROR: Invalid Board ID: 0x%x (rval = 0x%08x)\n",
 		 __FUNCTION__,
@@ -6533,7 +6653,7 @@ tsPartInit(int pID, unsigned int tAddr, unsigned int mode, int iFlag)
 	}
       /* Check if this is board has a valid slot number */
       boardID =  (rval&TS_BOARDID_GEOADR_MASK)>>8;
-      if((boardID <= 0)||(boardID >21)) 
+      if((boardID <= 0)||(boardID >21))
 	{
 	  printf("%s: ERROR: Board Slot ID is not in range: %d\n",
 		 __FUNCTION__,boardID);
@@ -6541,7 +6661,7 @@ tsPartInit(int pID, unsigned int tAddr, unsigned int mode, int iFlag)
 	  return(ERROR);
 	}
     }
-  
+
   /* Check if we should exit here, or initialize some board defaults */
   if(noBoardInit)
     {
@@ -6553,9 +6673,9 @@ tsPartInit(int pID, unsigned int tAddr, unsigned int mode, int iFlag)
   if(firmwareInfo>0)
     {
       printf("  User ID: 0x%x \tFirmware (type - revision): 0x%X - 0x%x.0x%02x\n",
-	     (firmwareInfo&TS_FIRMWARE_ID_MASK)>>16, 
-	     (firmwareInfo&TS_FIRMWARE_TYPE_MASK)>>12, 
-	     (firmwareInfo&TS_FIRMWARE_MAJOR_VERSION_MASK)>>4, 
+	     (firmwareInfo&TS_FIRMWARE_ID_MASK)>>16,
+	     (firmwareInfo&TS_FIRMWARE_TYPE_MASK)>>12,
+	     (firmwareInfo&TS_FIRMWARE_MAJOR_VERSION_MASK)>>4,
 	     firmwareInfo&TS_FIRWMARE_MINOR_VERSION_MASK);
 
       tsVersion = firmwareInfo&0xFFF;
@@ -6666,7 +6786,7 @@ tsPartSetBusySource(int busysrc)
     case 1: /* Front Panel */
       busybits = TS_PART_BUSYCONFIG_FP;
       break;
-      
+
     case 2: /* Fiber TI-A */
       busybits = TS_PART_BUSYCONFIG_TI_A;
       break;
@@ -6689,7 +6809,7 @@ tsPartSetBusySource(int busysrc)
 
 /**
  * @ingroup Part
- * @brief Set up the Block Buffer Level 
+ * @brief Set up the Block Buffer Level
  * @param bufferlevel How many unacknowledged blocks in the system before busy
  * @return OK if successful, otherwise ERROR
  */
@@ -6774,8 +6894,8 @@ tsPartSetTDInput(unsigned int tdinput)
  * @return OK if successful, otherwise ERROR
  */
 int
-tsPartSetFPInput(unsigned short input1, 
-		 unsigned short input2, 
+tsPartSetFPInput(unsigned short input1,
+		 unsigned short input2,
 		 unsigned short input3)
 {
   if(TSp==NULL)
@@ -6800,7 +6920,7 @@ tsPartSetFPInput(unsigned short input1,
   TSLOCK;
   vmeWrite32(&TSpart->fpConfig,
 	     input1 |
-	     (input2<<6) | 
+	     (input2<<6) |
 	     (input3<<12));
   TSUNLOCK;
 
@@ -6818,10 +6938,10 @@ tsPartSetFPInput(unsigned short input1,
  * @return OK if successful, otherwise ERROR
  */
 int
-tsPartSetGTPInput(unsigned short input1, 
-		  unsigned short input2, 
-		  unsigned short input3, 
-		  unsigned short input4, 
+tsPartSetGTPInput(unsigned short input1,
+		  unsigned short input2,
+		  unsigned short input3,
+		  unsigned short input4,
 		  unsigned short input5)
 {
   if(TSp==NULL)
@@ -6846,9 +6966,9 @@ tsPartSetGTPInput(unsigned short input1,
   TSLOCK;
   vmeWrite32(&TSpart->gtpConfig,
 	     input1 |
-	     (input2<<6) | 
-	     (input3<<12) | 
-	     (input4<<18) | 
+	     (input2<<6) |
+	     (input3<<12) |
+	     (input4<<18) |
 	     (input5<<24) );
   TSUNLOCK;
 
@@ -6909,13 +7029,13 @@ tsPartReadBlock(volatile unsigned int *data, int nwrds)
       return ERROR;
     }
 
-  if(data==NULL) 
+  if(data==NULL)
     {
       logMsg("\ntsPartReadBlock: ERROR: Invalid Destination address\n",0,0,0,0,0,0);
       return(ERROR);
     }
 
-  while(ii<nwrds) 
+  while(ii<nwrds)
     {
       val = (unsigned int) TSpart->data;
 #ifndef VXWORKS
@@ -6933,7 +7053,7 @@ tsPartReadBlock(volatile unsigned int *data, int nwrds)
 #ifndef VXWORKS
       val = LSWAP(val);
 #endif
-      if(val & TS_DATAFORMAT_DATA_TYPE_WORD) 
+      if(val & TS_DATAFORMAT_DATA_TYPE_WORD)
 	{
 	  if(((val & TS_DATAFORMAT_TYPE_MASK)>>27)==TS_DATAFORMAT_TYPE_BLOCK_TRAILER)
 	    {
@@ -6942,7 +7062,7 @@ tsPartReadBlock(volatile unsigned int *data, int nwrds)
 	}}
 
   dCnt += ii;
-  
+
   TSUNLOCK;
   return(dCnt);
 }
@@ -6984,7 +7104,7 @@ tsPartBReady()
 void
 tsPartIntAck()
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       logMsg("tsPartIntAck: ERROR: TS not initialized\n",0,0,0,0,0,0);
       return;
@@ -7012,13 +7132,13 @@ tsPartPoll(void)
 
   prctl(PR_SET_NAME,__FUNCTION__);
 
-  while(1) 
+  while(1)
     {
 
       pthread_testcancel();
 
       /* If still need Ack, don't test the Trigger Status */
-      if(tsNeedAck>0) 
+      if(tsNeedAck>0)
 	{
 	  continue;
 	}
@@ -7027,27 +7147,27 @@ tsPartPoll(void)
 
       if(tsdata && tsIntRunning)
 	{
-	  INTLOCK; 
+	  INTLOCK;
 	  tsDaqCount = tsdata;
 	  tsIntCount++;
 
 	  if (tsIntRoutine != NULL)	/* call user routine */
 	    (*tsIntRoutine) (tsIntArg);
-	
-	  /* Write to TS to Acknowledge Interrupt */	  
-	  if(tsDoAck==1) 
+
+	  /* Write to TS to Acknowledge Interrupt */
+	  if(tsDoAck==1)
 	    {
 	      tsPartIntAck();
 	    }
 	  INTUNLOCK;
 	}
-    
+
     }
   printf("%s: Read ERROR: Exiting Thread\n",__FUNCTION__);
   pthread_exit(0);
 
 }
-#endif 
+#endif
 
 
 #ifndef VXWORKS
@@ -7056,15 +7176,15 @@ tsPartStartPollingThread(void)
 {
   int pts_status;
 
-  pts_status = 
+  pts_status =
     pthread_create(&tspollthread,
 		   NULL,
 		   (void*(*)(void *)) tsPartPoll,
 		   (void *)NULL);
-  if(pts_status!=0) 
-    {						
+  if(pts_status!=0)
+    {
       printf("%s: ERROR: TS Partition Polling Thread could not be started.\n",
-	     __FUNCTION__);	
+	     __FUNCTION__);
       printf("\t pthread_create returned: %d\n",pts_status);
     }
 
@@ -7081,7 +7201,7 @@ int
 tsPartIntEnable(int iflag)
 {
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7118,7 +7238,7 @@ tsPartIntEnable(int iflag)
 	     __FUNCTION__,tsReadoutMode);
       TSUNLOCK;
       return ERROR;
-      
+
     }
 
   taskDelay(30); /* maybe replace with a condition variable? */
@@ -7140,11 +7260,11 @@ tsPartIntEnable(int iflag)
  * @ingroup Part
  * @brief Disable interrupts or latching triggers for this partition
  */
-void 
+void
 tsPartIntDisable()
 {
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return;
@@ -7181,7 +7301,7 @@ tsPartIntDisable()
 int
 tsPartIntConnect(VOIDFUNCPTR routine, unsigned int arg)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7198,7 +7318,7 @@ tsPartIntConnect(VOIDFUNCPTR routine, unsigned int arg)
   tsDoAck = 1;
 
 
-  if(routine) 
+  if(routine)
     {
       tsIntRoutine = routine;
       tsIntArg = arg;
@@ -7225,7 +7345,7 @@ tsPartIntDisconnect()
 {
   void *res;
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       logMsg("tsPartIntDisconnect: ERROR: TS not initialized\n",1,2,3,4,5,6);
       return ERROR;
@@ -7237,7 +7357,7 @@ tsPartIntDisconnect()
       return ERROR;
     }
 
-  if(tsIntRunning) 
+  if(tsIntRunning)
     {
       logMsg("tsPartIntDisconnect: ERROR: TS is Enabled - Call tsPartIntDisable() first\n",
 	     1,2,3,4,5,6);
@@ -7247,9 +7367,9 @@ tsPartIntDisconnect()
   INTLOCK;
 
 #ifndef VXWORKS /*sergey*/
-  if(tspollthread) 
+  if(tspollthread)
     {
-      if(pthread_cancel(tspollthread)<0) 
+      if(pthread_cancel(tspollthread)<0)
 	perror("pthread_cancel");
       if(pthread_join(tspollthread,&res)<0)
 	perror("pthread_join");
@@ -7265,7 +7385,7 @@ tsPartIntDisconnect()
   printf("%s: Disconnected\n",__FUNCTION__);
 
   return OK;
-  
+
 }
 #endif
 
@@ -7283,12 +7403,12 @@ tsPartIntDisconnect()
 int
 tsDuplMode(int set)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
     }
-  
+
   TSLOCK;
 
   tsDuplicationMode = (set)?1:0;
@@ -7310,7 +7430,7 @@ int
 tsDuplSetBranchEnable(int b1, int b2, int b3, int b4)
 {
   unsigned int bmask=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7348,7 +7468,7 @@ tsDuplSetBranchEnable(int b1, int b2, int b3, int b4)
 int
 tsDuplSetLocalTrigComboMask(unsigned int mask)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7365,8 +7485,8 @@ tsDuplSetLocalTrigComboMask(unsigned int mask)
 	     __FUNCTION__,mask);
       mask = mask &~ 0x1;
     }
-  
-  
+
+
   TSLOCK;
   vmeWrite32(&TSp->fpInputPrescale[2], mask);
   TSUNLOCK;
@@ -7386,7 +7506,7 @@ unsigned int
 tsDuplGetLocalTrigComboMask()
 {
   unsigned int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7397,7 +7517,7 @@ tsDuplGetLocalTrigComboMask()
 	     __FUNCTION__);
       return ERROR;
     }
-  
+
   TSLOCK;
   rval = vmeRead32(&TSp->fpInputPrescale[2]);
   TSUNLOCK;
@@ -7417,7 +7537,7 @@ int
 tsDuplSetLocalTrigCombo(unsigned int mask, int set)
 {
   int ibit=0, trigbit=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7434,7 +7554,7 @@ tsDuplSetLocalTrigCombo(unsigned int mask, int set)
 	     __FUNCTION__,mask);
       return ERROR;
     }
-  
+
   /* Determine the bit in enable/disable */
   for(ibit=1; ibit<6; ibit++)
     {
@@ -7445,16 +7565,16 @@ tsDuplSetLocalTrigCombo(unsigned int mask, int set)
   TSLOCK;
   if(set)
     {
-      vmeWrite32(&TSp->fpInputPrescale[2], 
+      vmeWrite32(&TSp->fpInputPrescale[2],
 		 vmeRead32(&TSp->fpInputPrescale[2]) | (1<<trigbit));
     }
   else
     {
-      vmeWrite32(&TSp->fpInputPrescale[2], 
+      vmeWrite32(&TSp->fpInputPrescale[2],
 		 vmeRead32(&TSp->fpInputPrescale[2]) & ~(1<<trigbit));
     }
   TSUNLOCK;
-  
+
   return OK;
 }
 
@@ -7469,7 +7589,7 @@ tsDuplSetLocalTrigCombo(unsigned int mask, int set)
 int
 tsDuplSetTriggerHoldoff(unsigned int value)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7486,7 +7606,7 @@ tsDuplSetTriggerHoldoff(unsigned int value)
 	     __FUNCTION__, value);
       return ERROR;
     }
-  
+
   TSLOCK;
   vmeWrite32(&TSp->fpInputPrescale[3],
 	     (vmeRead32(&TSp->fpInputPrescale[3]) &~ TS_DUPL_LOCAL_TRIG_RULE_MASK) |
@@ -7504,11 +7624,11 @@ tsDuplSetTriggerHoldoff(unsigned int value)
  *
  * @return OK if successful, otherwise ERROR;
  */
-int 
+int
 tsDuplGetTriggerHoldoff()
 {
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7538,7 +7658,7 @@ tsDuplGetTriggerHoldoff()
 int
 tsDuplSetLocalTriggerWidth(int width)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7555,7 +7675,7 @@ tsDuplSetLocalTriggerWidth(int width)
 	     __FUNCTION__, width);
       return ERROR;
     }
-  
+
   TSLOCK;
   vmeWrite32(&TSp->fpInputPrescale[3],
 	     (vmeRead32(&TSp->fpInputPrescale[3]) &~ TS_DUPL_LOCAL_TRIG_WIDTH_MASK) |
@@ -7573,11 +7693,11 @@ tsDuplSetLocalTriggerWidth(int width)
  *
  * @return OK if successful, otherwise ERROR;
  */
-int 
+int
 tsDuplGetLocalTriggerWidth()
 {
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7607,7 +7727,7 @@ tsDuplGetLocalTriggerWidth()
 int
 tsDuplSetFastClearWidth(int width)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7624,7 +7744,7 @@ tsDuplSetFastClearWidth(int width)
 	     __FUNCTION__, width);
       return ERROR;
     }
-  
+
   TSLOCK;
   vmeWrite32(&TSp->fpInputPrescale[3],
 	     (vmeRead32(&TSp->fpInputPrescale[3]) &~ TS_DUPL_FAST_CLEAR_WIDTH_MASK) |
@@ -7642,11 +7762,11 @@ tsDuplSetFastClearWidth(int width)
  *
  * @return OK if successful, otherwise ERROR;
  */
-int 
+int
 tsDuplGetFastClearWidth()
 {
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7676,7 +7796,7 @@ tsDuplGetFastClearWidth()
 int
 tsDuplSetFastClearDelay(int delay)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7693,7 +7813,7 @@ tsDuplSetFastClearDelay(int delay)
 	     __FUNCTION__, delay);
       return ERROR;
     }
-  
+
   TSLOCK;
   vmeWrite32(&TSp->fpDelay[5],
 	     (vmeRead32(&TSp->fpDelay[5]) &~ TS_DUPL_FAST_CLEAR_DELAY_MASK) |
@@ -7711,11 +7831,11 @@ tsDuplSetFastClearDelay(int delay)
  *
  * @return OK if successful, otherwise ERROR;
  */
-int 
+int
 tsDuplGetFastClearDelay()
 {
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7745,7 +7865,7 @@ tsDuplGetFastClearDelay()
 int
 tsDuplSetFastClearVetoWidth(int width)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7762,7 +7882,7 @@ tsDuplSetFastClearVetoWidth(int width)
 	     __FUNCTION__, width);
       return ERROR;
     }
-  
+
   TSLOCK;
   vmeWrite32(&TSp->fpInputPrescale[3],
 	     (vmeRead32(&TSp->fpInputPrescale[3]) &~ TS_DUPL_FAST_CLEAR_VETO_WIDTH_MASK) |
@@ -7780,11 +7900,11 @@ tsDuplSetFastClearVetoWidth(int width)
  *
  * @return OK if successful, otherwise ERROR;
  */
-int 
+int
 tsDuplGetFastClearVetoWidth()
 {
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7814,7 +7934,7 @@ tsDuplGetFastClearVetoWidth()
 int
 tsDuplSetLocalTrigBusy(int value)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7831,7 +7951,7 @@ tsDuplSetLocalTrigBusy(int value)
 	     __FUNCTION__, value);
       return ERROR;
     }
-  
+
   TSLOCK;
   vmeWrite32(&TSp->fpDelay[6],
 	     (vmeRead32(&TSp->fpDelay[6]) &~ TS_DUPL_LOCAL_TRIG_BUSY_MASK) |
@@ -7849,11 +7969,11 @@ tsDuplSetLocalTrigBusy(int value)
  *
  * @return OK if successful, otherwise ERROR;
  */
-int 
+int
 tsDuplGetLocalTrigBusy()
 {
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7883,7 +8003,7 @@ tsDuplGetLocalTrigBusy()
 int
 tsDuplSetFastClearBusy(int value)
 {
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7900,7 +8020,7 @@ tsDuplSetFastClearBusy(int value)
 	     __FUNCTION__, value);
       return ERROR;
     }
-  
+
   TSLOCK;
   vmeWrite32(&TSp->fpDelay[6],
 	     (vmeRead32(&TSp->fpDelay[6]) &~ TS_DUPL_FAST_CLEAR_BUSY_MASK) |
@@ -7918,11 +8038,11 @@ tsDuplSetFastClearBusy(int value)
  *
  * @return OK if successful, otherwise ERROR;
  */
-int 
+int
 tsDuplGetFastClearBusy()
 {
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7953,7 +8073,7 @@ int
 tsDuplGetBusyTime()
 {
   int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -7984,7 +8104,7 @@ unsigned int
 tsDuplGetBusyStatus()
 {
   unsigned int rval=0;
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -8017,7 +8137,7 @@ tsDuplPrintBusyStatus()
   unsigned int status=0;
   int ibranch;
   int en[4], alt[4], afc[4], fe[4], oa[4];
-  if(TSp == NULL) 
+  if(TSp == NULL)
     {
       printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
       return ERROR;
@@ -8039,13 +8159,13 @@ tsDuplPrintBusyStatus()
       fe[ibranch]  = (status & (1<<(12+ibranch)))?1:0;
       oa[ibranch]  = (status & (1<<(20+ibranch)))?1:0;
     }
-  
+
   printf("                       TS Duplication Mode Busy Status\n\n");
-  
+
   printf(" All Branches      : %s\n\n", (status & (1<<17))?"BUSY":"Not Busy");
-  
+
   printf(" Local Trigger Rule: %s\n\n", (status & (1<<16))?"BUSY":"Not Busy");
-  
+
   printf("                  After Local   After Fast                             \n");
   printf("Branch  Enabled    Trigger        Clear       FrontEnd      Overall \n");
   printf("--------------------------------------------------------------------------------\n");
@@ -8078,7 +8198,7 @@ tsBusy()
   unsigned int live=0, total=0;
   static unsigned int oldLive=0, oldTotal=0;
 
-  if(TSp == NULL) 
+  if(TSp == NULL)
   {
     printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
     return ERROR;

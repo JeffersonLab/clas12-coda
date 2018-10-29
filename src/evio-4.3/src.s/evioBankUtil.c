@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "evioBankUtil.h"
 
@@ -71,7 +72,7 @@ evOpenBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum
     *ptr++ = 1;  /*set 'internal' bank length to 1 - we have header only*/
     *ptr++ = (0<<16) + (0x0<<8) + 0; /*internal bank header*/
   }
-  else /* 'norman' bank with 2-word header */
+  else /* 'normal' bank with 2-word header */
   {
     *ptr++ = 1;  /*set 'internal' bank length to 1 - we have header only*/
     *ptr++ = (banktag<<16) + (banktyp<<8) + banknum; /*bank header*/
@@ -102,10 +103,11 @@ evCloseBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknu
 {
   int lev, len1, len2, n1, nw;
   char *ch;
+  int banktyp;
   int nbytes, ind_data;
   int lfrag, ind, ind2, ind3, ind_frag;
   unsigned int *bank_start, *ptr, *dataout;
-  unsigned int padding;
+  uint64_t padding;
 
 
   if( (ind_frag = evLinkFrag(buf, fragtag, fragnum)) <= 0)
@@ -132,25 +134,42 @@ evCloseBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknu
   printf("evCloseBank: bank_start = 0x%08x, full bank length=%d\n",bank_start,bank_start[0]+1);fflush(stdout);
 #endif
 
-  ind2 = ind+2; /* index of the tagsegment (contains format description) */
-  len2 = (buf[ind2]&0xffff) + 1; /* tagsegment length */
-  ind3 = ind2 + len2; /* index of the internal bank */
+  banktyp = (bank_start[1]>>8)&0xFF;
 
-  dataout = (unsigned int *) ( ( ((unsigned int)b08+3)/4 ) * 4);
-  padding = (unsigned int)dataout - (unsigned int)b08;
-  buf[ind3+1] |= (padding&0x3)<<14;
+  if(banktyp==0xf) /* composite bank */
+  {
+    ind2 = ind+2; /* index of the tagsegment (contains format description) */
+    len2 = (buf[ind2]&0xffff) + 1; /* tagsegment length */
+    ind3 = ind2 + len2; /* index of the internal bank */
 
-  /* the number of DATA words */
-  nw = dataout -bank_start - buf[ind] - 1;
+    dataout = (unsigned int *) ( ( ((uint64_t)b08+3)/4 ) * 4);
+    padding = (uint64_t)dataout - (uint64_t)b08;
+    buf[ind3+1] |= (padding&0x3)<<14;
 
+    nw = dataout - bank_start - buf[ind] - 1; /* the number of DATA words */
 #ifdef DEBUG
-  printf("evCloseBank: length befor: nw=%d ev=%d frag=%d bank=%d int_bank=%d\n",nw,buf[0],buf[ind_frag],buf[ind],buf[ind3]);
+    printf("evCloseBank(composite): length befor: nw=%d ev=%d frag=%d bank=%d int_bank=%d\n",nw,buf[0],buf[ind_frag],buf[ind],buf[ind3]);
 #endif
 
-  buf[ind] += nw; /* update bank length */
-  buf[ind3] += nw; /* update internal bank length */
-  buf[0] += nw; /*update event length*/
-  buf[ind_frag] += nw; /*update fragment length*/
+    buf[ind] += nw; /* update bank length */
+    buf[ind3] += nw; /* update internal bank length */
+    buf[0] += nw; /*update event length*/
+    buf[ind_frag] += nw; /*update fragment length*/
+  }
+  else /* 'normal' bank with 2-word header */
+  {
+    dataout = (unsigned int *) ( ( ((uint64_t)b08+3)/4 ) * 4); /* ??? */
+
+    nw = dataout - bank_start - buf[ind] - 1; /* the number of DATA words */
+#ifdef DEBUG
+    printf("evCloseBank(normal): length befor: nw=%d ev=%d frag=%d bank=%d\n",nw,buf[0],buf[ind_frag],buf[ind]);
+#endif
+
+    buf[ind] += nw; /* update bank length */
+    buf[0] += nw; /*update event length*/
+    buf[ind_frag] += nw; /*update fragment length*/
+  }
+
 
 #ifdef DEBUG
   printf("evCloseBank: length after: nw=%d ev=%d frag=%d bank=%d int_bank=%d\n",nw,buf[0],buf[ind_frag],buf[ind],buf[ind3]);

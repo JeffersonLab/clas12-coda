@@ -217,9 +217,12 @@ main(int argc,char **argv)
 
 
 #ifdef USE_ACTIVEMQ
-  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", (char *)"ipcbank2et");
-  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "ipcbank2et");
-  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "epics_monitor");
+
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", (char *)"ipcbank2et");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
+
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "bank2et", "*");
+
   server.Open();
 
   
