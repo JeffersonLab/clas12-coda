@@ -114,7 +114,7 @@ What have to be done:
 
 4. Add corresponding pieces into 3 'cratemsgclient' files to provide an examples for users:
 
-  
+ 
 
 *****************************************************************************/
 

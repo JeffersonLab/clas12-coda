@@ -2467,6 +2467,17 @@ tiSetSyncSource(unsigned int sync)
 
   TILOCK;
 #ifdef DEBUG
+  printf("%s: writing %d to TIp->reset=0x%08x\n",
+	 __func__,
+	 TI_RESET_AUTOALIGN_HFBR1_SYNC | TI_RESET_AUTOALIGN_HFBR5_SYNC,
+	 (unsigned long)&TIp->reset - TIBase);fflush(stdout);
+#endif
+
+  /* added by Bryan on William advise 30-oct-2018 */
+  vmeWrite32(&TIp->reset, TI_RESET_AUTOALIGN_HFBR1_SYNC | TI_RESET_AUTOALIGN_HFBR5_SYNC);
+  taskDelay(1);
+
+#ifdef DEBUG
   printf("tiSetSyncSource: writing %d to TIp->sync=0x%08x\n",sync,(unsigned long)&TIp->sync - TIBase);fflush(stdout);
 #endif
   vmeWrite32(&TIp->sync,sync);

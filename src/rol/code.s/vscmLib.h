@@ -122,7 +122,7 @@ typedef struct
 /* 0x0004 */ volatile uint32_t BoardID;
 /* 0x0008 */ volatile uint32_t SpiCtrl;
 /* 0x000C */ volatile uint32_t SpiStatus;
-/* 0x0010 */ BLANK[(0x14-0x10)/4];
+/* 0x0010 */ volatile uint32_t Reboot;
 /* 0x0014 */ volatile uint32_t SpiRev2;
 /* 0x0018 */ BLANK[(0x20-0x18)/4];
 /* 0x0020 */ volatile uint32_t SemHeartbeatCnt;

@@ -1044,7 +1044,7 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
   if (selectConfigTable (currconfig) < 0)
   {
     /*XcodaEditorShowConfigName (0);*/
-    printf("Cannot select configuration %s", currconfig);
+    printf("Cannot select configuration %s", currconfig);fflush(stdout);
     return;
   }
   else
@@ -1052,9 +1052,14 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
 	printf("ConfigSelOk: currconfig >%s<\n",currconfig); fflush(stdout);
 
     /*XcodaEditorShowConfigName (currconfig);*/
-    if (constructRcnetCompsWithConfig (currconfig, 
-				       daq_list, &num_comps,
-				       configs, &num_configs) == 0)
+    /* in following call sometimes have popup gui with message:
+    Get all components failed: Lost connection to MySQL server during query
+      it comes from Editor_converter.c calling Editor_database.c
+      ( routine createRcNetCompsFromDbase() )
+	*/
+    if ( (ret=constructRcnetCompsWithConfig (currconfig, 
+											 daq_list, &num_comps,
+											 configs, &num_configs)) == 0)
     {
 	  /*	  
       printf("\nConfigSelOk: num_comps=%d\n",num_comps);
@@ -1145,7 +1150,7 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
             ncomp_ ++;
             if(ncomp_ >= MAX_NUM_COMPS)
 			{
-              printf("MAX_NUM_COMPS=%d is not enough, increase it in Editor.h !!!\n"); fflush(stdout);
+              printf("MAX_NUM_COMPS=%d is not enough, increase it in Editor.h !!!\n");fflush(stdout);
               exit(0);
 			}
             break;
@@ -1153,7 +1158,7 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
 		}
         if(ncomp_ == ncomp_old)
 		{
-          printf("ERROR: cannot find component >%s< - exit\n",comp[ncomp_].comp_name);
+          printf("ERROR: cannot find component >%s< - exit\n",comp[ncomp_].comp_name);fflush(stdout);
           ncomp_ = 0;
 		  return;
 	    }
@@ -1182,7 +1187,7 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
 
         if(pid < 0)
         {
-          printf("FORK ERROR - exit\n");
+          printf("FORK ERROR - exit\n");fflush(stdout);
           exit(0);
         }
         else if(pid == 0) /* child */
@@ -1286,6 +1291,13 @@ grep MaxStartups /etc/ssh/sshd_config
       for (i = 0; i < num_comps; i++) freeRcNetComp (daq_list[i]);
       for (i = 0; i < num_configs; i++) freeConfigInfo (configs[i]);
     }
+	else
+	{
+      printf("rcRocMenuWindow::RocsSelectConfig: ERROR in constructRcnetCompsWithConfig(), returned %d\n",ret);fflush(stdout);
+      printf("rcRocMenuWindow::RocsSelectConfig: rocs windows were NOT created !!!\n");fflush(stdout);
+	}
+
+
 
   }
   /*

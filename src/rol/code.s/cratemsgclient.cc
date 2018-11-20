@@ -53,9 +53,14 @@ CrateMsgClient::CrateMsgClient(const char *pHost, int port)
 	  else
 	  	printf("Successfully connected to host: %s\n" , pHost);
 	*/
-  Connect(hostname,hostport);
+  printf("CrateMsgClient::CrateMsgClient: calling Connect\n");fflush(stdout);
 
+  Connect(hostname,hostport);
+  printf("CrateMsgClient::CrateMsgClient: calling InitConnection\n");fflush(stdout);
   InitConnection();
+
+  printf("CrateMsgClient::CrateMsgClient: done\n");fflush(stdout);
+
 }
 
 
@@ -128,7 +133,7 @@ int CrateMsgClient::RecvRaw(void* buffer, int length/*, ESendRecvOptions opt = k
   int len, lll;
   unsigned char *buf = (unsigned char *) buffer;
 
-  //printf("ReadFromSocket INFO: trying to read...\n");fflush(stdout);
+  printf("ReadFromSocket INFO: trying to read...\n");fflush(stdout);
   len = read(sFd,(void *)buf, length);
   if(len<=0)
   {
@@ -136,11 +141,11 @@ int CrateMsgClient::RecvRaw(void* buffer, int length/*, ESendRecvOptions opt = k
     printf("errno=%d len=%d\n",errno,len);
     return(len);
   }
-  //printf("ReadFromSocket INFO: len=%d length=%d\n",len,length);fflush(stdout);
+  printf("ReadFromSocket INFO: len=%d length=%d\n",len,length);fflush(stdout);
 
   while(len<length)
   {
-    //printf("ReadFromSocket INFO: trying to read the rest ...\n");fflush(stdout);
+    printf("ReadFromSocket INFO: trying to read the rest ...\n");fflush(stdout);
     lll = read(sFd,(void *)&buf[len], length-len);
     if(lll<=0)
     {
@@ -148,7 +153,7 @@ int CrateMsgClient::RecvRaw(void* buffer, int length/*, ESendRecvOptions opt = k
       printf("errno=%d lll=%d\n",errno,lll);
       return(lll);
     }
-    //printf("ReadFromSocket INFO: ... received %d (expected %d)\n",lll,length-len);fflush(stdout);
+    printf("ReadFromSocket INFO: ... received %d (expected %d)\n",lll,length-len);fflush(stdout);
     len += lll;
   }
  
@@ -162,22 +167,27 @@ bool CrateMsgClient::InitConnection()
 {
   int val;
 
+  printf("CrateMsgClient::InitConnection reached\n");fflush(stdout);
   if(!IsValid()) return(0);
 
+  printf("CrateMsgClient::InitConnection: calling SendRaw\n");fflush(stdout);
   // send endian test word to server
   val = CRATEMSG_HDR_ID;
   SendRaw(&val, 4);
 
+  printf("CrateMsgClient::InitConnection: calling RecvRaw\n");fflush(stdout);
   if(RecvRaw(&val, 4) != 4) return kFALSE;
 
+  printf("CrateMsgClient::InitConnection: checking responce\n");fflush(stdout);
   if(val == CRATEMSG_HDR_ID)             swap = 0;
   else if(val == LSWAP(CRATEMSG_HDR_ID)) swap = 1;
   else
   {
-    printf("CrateMsgClient::InitConnection: calling 'Close()'\n");
+    printf("CrateMsgClient::InitConnection: calling 'Close()'\n");fflush(stdout);
 	Close();
 	return kFALSE;
   }
+  printf("CrateMsgClient::InitConnection done\n");fflush(stdout);
   return kTRUE;
 }
 
@@ -794,8 +804,7 @@ bool CrateMsgClient::Connect(char *targetname, int port)
   alarm(0); /* clear alarm so it will not interrupt us */
 
   m_bConnected = TRUE; /*we are connected now*/
-  printf("Connected successfully, sFd=%d\n",sFd);
-
+  printf("CrateMsgClient::Connect: Connected successfully, sFd=%d\n",sFd);
 
   return(TRUE);
 }

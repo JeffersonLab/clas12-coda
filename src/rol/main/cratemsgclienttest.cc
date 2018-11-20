@@ -45,6 +45,8 @@ main(int argc, char *argv[])
   }
 
   tcp = new CrateMsgClient(hostname,hostport);
+exit(0);
+
   if(tcp->IsValid())
   {
     printf("Connected\n");
@@ -54,6 +56,11 @@ main(int argc, char *argv[])
     printf("NOT CONNECTED - EXIT\n");
     exit(0);
   }
+
+sleep(10);
+exit(0);
+
+
 
   printf("111\n");fflush(stdout);
   ret = tcp->GetCrateMap(&buf, &len);

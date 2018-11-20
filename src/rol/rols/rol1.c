@@ -2251,8 +2251,8 @@ vmeBusUnlock();
 			{
               printf("FADC in slot %3d:\n",jj);fflush(stdout);
 vmeBusLock();
-              faStatus(faSlot(jj),0);
-	          len = faReadBlock(faSlot(jj),tdcbuf,500000,1);
+              faStatus(jj,0);
+	          len = faReadBlock(jj,tdcbuf,500000,1);
               printf("read %d words from FADC\n",len);
               for(jjj=0; jjj<len; jjj++) printf(" [%3d]  0x%08x\n",jjj,tdcbuf[jjj]);
 vmeBusUnlock();
@@ -2738,6 +2738,11 @@ vmeBusUnlock();
           if((dcrbSlotMask&mask) && !(gbready&mask)) printf("%3d",jj);
 		}
         printf("\n");
+        for(jj=1; jj<21; jj++)
+		{
+          mask = 1<<jj;
+          if((dcrbSlotMask&mask) && !(gbready&mask)) dcrbStatus(jj, 0);
+		}
 	  }
 
       /* Reset the Token */

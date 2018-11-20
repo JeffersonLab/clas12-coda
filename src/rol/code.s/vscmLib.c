@@ -875,10 +875,50 @@ fssrSendData(int id, int chip, int send)
 }
 
 void
-fssrSetActiveLines(int id, int chip, unsigned int lines)
+fssrSetActiveLines_Asic(int id, int chip, unsigned int lines)
 {
   uint32_t val = (lines & 0x3);
   int mode, i;
+
+  if (vscmIsNotInit(&id, __func__))
+    return;
+
+  fssrTransfer(id, chip, FSSR_ADDR_REG_ALINES, FSSR_CMD_WRITE, 2, &val);
+}
+
+void
+fssrSetActiveLines_Fpga(int id, int chip, unsigned int lines)
+{
+  uint32_t val = (lines & 0x3);
+  int mode;
+
+  if (vscmIsNotInit(&id, __func__))
+    return;
+
+  switch (lines) {
+  case FSSR_ALINES_4:
+    mode = 1;
+    break;
+  case FSSR_ALINES_2:
+    mode = 2;
+    break;
+  case FSSR_ALINES_1:
+    mode = 3;
+    break;
+  default:
+    mode = 0;
+    break;
+  }
+
+  vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, mode | 0x10000);
+  vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, mode);
+}
+
+void
+fssrSetActiveLines(int id, int chip, unsigned int lines)
+{
+  uint32_t val = (lines & 0x3);
+  int mode;
 
   if (vscmIsNotInit(&id, __func__))
     return;
@@ -900,8 +940,8 @@ fssrSetActiveLines(int id, int chip, unsigned int lines)
     break;
   }
 
-  for(i=0;i<8;i++)
-    vmeWrite32(&VSCMpr[id]->Fssr[i].Ctrl, mode | 0x10000);
+  vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, mode | 0x10000);
+  vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, mode);
 
   // Allow time for state machines to reset
   taskDelay(1);
@@ -2121,8 +2161,26 @@ vscmSetBlockLevel(int id, int block_level)
 
 
 
+void
+vscmRebootFpga(int id)
+{
+  if (vscmIsNotInit(&id, __func__))
+    return;
 
+  vmeWrite32(&VSCMpr[id]->Cfg.Reboot, 0x1);
+}
 
+void
+vscmGRebootFpga()
+{
+  int i;
+
+  /*VSCMLOCK;*/
+  for (i = 0; i < nvscm; i++) {
+    vscmRebootFpga(vscmID[i]);
+  }
+  /*VSCMUNLOCK;*/
+}
 
 void
 vscmPrestart(char *fname)

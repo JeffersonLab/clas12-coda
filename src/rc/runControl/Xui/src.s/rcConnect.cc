@@ -230,13 +230,16 @@ rcConnect::startRcServer (void)
   {
     char msg[256];
 
+#if 0
     if(option->logRocs_)
 	{
+#endif
 	  ::sprintf(msg,"%s/rcServer -m %s -d %s -s %s &>> /data/log/rcServer.log &\n",
           getenv("CODA_BIN"),
 	      option->msqldhost(),
 	      option->dbasename (),
 	      option->session ());
+#if 0
 	}
 	else
 	{
@@ -246,6 +249,7 @@ rcConnect::startRcServer (void)
 	      option->dbasename (),
 	      option->session ());
 	}
+#endif
 
     printf("STARTING RCSERVER >%s<\n",msg);
     int errcode = system(msg);

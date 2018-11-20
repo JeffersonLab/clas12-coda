@@ -100,6 +100,8 @@ main(int argc, char *argv[])
     goto CLOSE;
   }
 
+  ltm4676_print_status();
+
   if(vtpInit(VTP_INIT_CLK_INT))
   {
     printf("VTP Init failed - exiting...\n");
@@ -110,6 +112,7 @@ main(int argc, char *argv[])
   printf("Connect to IPC server...\n");
   epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");
   printf("done.\n");
+  fflush(stdout);
 
   count = 0;
   while(1)
