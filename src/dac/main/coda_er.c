@@ -136,6 +136,11 @@ typedef struct ERpriv
   int  record_length;
   /*int*/long  split;
   char filename[128];
+
+  int usesubdir;
+  char subdirname[128];
+  char subfilename[128];
+
   pthread_t write_thread;
   pthread_t evio_thread[MAXTHREAD];
   objClass object;
@@ -1673,10 +1678,52 @@ codaDownload(char *conf)
     return(ER_ERROR);
   }
   else
+  /*
   {
     strcpy(erp->filename,tmpp);
     printf("got erp->filename >%s<\n",erp->filename);
   }
+  */
+  {
+    int  arg1c;
+    char arg1v[10][128];
+    char *p_sl;
+    listSplit2(tmpp," ",&arg1c,arg1v);
+    printf("\nfirst split, arg1c=%d, first piece >%s<\n",arg1c,arg1v[0]);
+    if(arg1c==1)
+	{
+      strcpy(erp->filename,arg1v[0]);
+      erp->usesubdir = 0;
+      printf("got erp->filename >%s<, no subdirectory\n\n",erp->filename);
+	}
+    else if(arg1c==2)
+	{
+      erp->usesubdir = 1;
+
+	  /* extract string after last slash */
+      p_sl = strrchr(arg1v[0], '/');
+      if (p_sl)
+      {
+        strcpy(erp->subfilename,p_sl+1);
+      }
+      else
+      {
+        printf("Cannot find any slashes - exit\n");
+        exit(0);
+      }
+
+      strcpy(erp->subdirname,arg1v[0]);
+
+      printf("will use subdirectory >%s<, subfile >%s<\n\n",erp->subdirname,erp->subfilename);
+	}
+    else
+	{
+      printf("coda_erc: ERROR parsing datafile name - exit\n",listArgc);
+      exit(0);
+	}
+  }
+
+
 
 
 

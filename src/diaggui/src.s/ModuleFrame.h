@@ -13,6 +13,8 @@
 
 using namespace std;
 
+#define DEBUG_PRINTIO   1
+
 #define MSG_TAB_ACTIVATE		40020
 
 #define SPFREG(BUF,PTR,REG)				\
@@ -86,18 +88,51 @@ public:
 		WriteReg32(p, (ReadReg32(p) & ~mask) | (val & mask));
 	}
 
-	unsigned short ReadReg16(volatile unsigned int *p)
+	Bool_t BlkReadReg16(volatile unsigned short *p, unsigned short *val, int cnt = 1, int flags = 0)
+	{
+	  Bool_t res;
+		unsigned long addr = (unsigned long)p;
+		res = pCrateMsgClient->Read16((unsigned int)addr, val, cnt, flags);
+#if DEBUG_PRINTIO
+    printf("%s(addr=0x%08X,cnt=%d,flags=%d):");
+    for(int i=0;i<cnt;i++)
+    {
+      if(!i) printf("\n");
+      printf(" 0x%04X", (unsigned int)val[i]);
+    }
+    printf("\n");
+        //printf("cnt=%d 0x%0x 0x%0x %d %d %d\n",cnt,(unsigned int)addr,val,*val,*(val+1),*(val+2));
+#endif
+		return res;
+	}
+
+	unsigned short ReadReg16(volatile unsigned short *p)
 	{
 		unsigned short val = 0xFFFF;
 		unsigned long addr = (unsigned long)p;
 		pCrateMsgClient->Read16((unsigned int)addr, &val);
+#if DEBUG_PRINTIO
+    printf("%s(0x%08X)=0x%04hX\n", __func__, addr, val);
+#endif
 		return val;
 	}
 
-	void WriteReg16(volatile unsigned int *p, unsigned short val)
+	void WriteReg16(volatile unsigned short *p, unsigned short val)
 	{
 		unsigned long addr = (unsigned long)p;
 		pCrateMsgClient->Write16((unsigned int)addr, &val);
+#if DEBUG_PRINTIO
+    printf("%s(0x%08X,0x%04hX)\n", __func__, addr, val);
+#endif
+	}
+
+	void RMWReg16(volatile unsigned short *p, unsigned short val, unsigned short mask)
+	{
+		WriteReg16(p, (ReadReg16(p) & ~mask) | (val & mask));
+#if DEBUG_PRINTIO
+    unsigned int addr = ((long)p) & 0xFFFFFFFF;
+    printf("%s(0x%08X,0x%04hX,0x%04hX)\n", __func__, addr, val, mask);
+#endif
 	}
 
 	void SetActive(Bool_t active)

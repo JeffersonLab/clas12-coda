@@ -2816,9 +2816,10 @@ dsc2DACLoop()
 }
 
 
-static void
+int
 dsc2ReloadFPGA(UINT32 id)
 {
+  CHECKID(id);
   vmeWrite32(&dscp[id]->calCmd,6);	/* reload fpga */
   vmeWrite32(&dscp[id]->calExe,1);
 }
@@ -3123,37 +3124,38 @@ dsc2VerifyFirmware(UINT32 id, const char *filename)
 int
 dsc2UpdateFirmwareAll(const char *filename)
 {
-  int idsc, result;
+  int idsc, result, slot;
 	
   for(idsc = 0; idsc < Ndsc; idsc++)
   {
+    slot = dsc2Slot(idsc);
     printf("Updating firmware on unit %d...", idsc);fflush(stdout);
     fflush(stdout);
-    result = dsc2UpdateFirmware(idsc, filename);
+    result = dsc2UpdateFirmware(slot, filename);
     if(result != OK)
-	{
-	  printf("failed.\n");fflush(stdout);
-	  return result;
-	}
+	  {
+	    printf("failed.\n");fflush(stdout);
+	    return result;
+  	}
     else
-	{
-	  printf("succeeded.");fflush(stdout);
-	}
+	  {
+	    printf("succeeded.");fflush(stdout);
+  	}
 
     printf(" Verifying.");fflush(stdout);
     fflush(stdout);
-    result = dsc2VerifyFirmware(idsc, filename);
+    result = dsc2VerifyFirmware(slot, filename);
     if(result != OK)
-	{
-	  printf("failed.\n");fflush(stdout);
-	  return result;
-	}
+  	{
+	    printf("failed.\n");fflush(stdout);
+	    return result;
+  	}
     else
-	{
-	  printf("ok.\n");fflush(stdout);
-	}
+	  {
+	    printf("ok.\n");fflush(stdout);
+  	}
 
-    dsc2ReloadFPGA(idsc);
+    dsc2ReloadFPGA(slot);
 #ifdef VXWORKS
     taskDelay(2*sysClkRateGet());
 #else

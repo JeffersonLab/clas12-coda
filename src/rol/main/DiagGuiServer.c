@@ -366,6 +366,7 @@ vmeBusUnlock();
               memcpy(&sspbuf[nw], maroc, RICH_CHAN_NUM*sizeof(int)); nw += RICH_CHAN_NUM;
               sspbuf[nw_len] = nw - nw_len; /*inclusive length in words*/
 		    }
+			/*sleep(1);*/
 	      }
 		}
 

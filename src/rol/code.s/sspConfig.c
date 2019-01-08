@@ -349,6 +349,9 @@ sspInitGlobals()
       ssp[jj].gt.strg[ii].ftofpcu_en = 0;
       ssp[jj].gt.strg[ii].ftofpcu_width = 0;
       ssp[jj].gt.strg[ii].ftofpcu_match_mask = 0;
+      ssp[jj].gt.strg[ii].cndctof_en = 0;
+      ssp[jj].gt.strg[ii].cndctof_width = 0;
+      ssp[jj].gt.strg[ii].cndctof_match_mask = 0;
     }
     ssp[jj].gt.ecal.esum_delay = 0;
     ssp[jj].gt.ecal.cluster_delay = 0;
@@ -392,6 +395,10 @@ sspInitGlobals()
     ssp[jj].gtc.fanout_en_ctofhtcc = 1;
     ssp[jj].gtc.fanout_en_cnd = 0;
     ssp[jj].gtc.gtpif_latency = 0;
+    ssp[jj].gtc.ctof.ctof_delay = 0;
+    ssp[jj].gtc.cnd.cnd_delay = 0;
+    ssp[jj].gtc.cndctof.cnd_width = 0;
+    ssp[jj].gtc.cndctof.ctof_width = 0;
 
     // CLAS12 RICH
     ssp[jj].rich.disable_evtbuild = 0;
@@ -1004,6 +1011,11 @@ sspReadConfigFile(char *filename_in)
           sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].ftofpcu_en = i1;
         }
+        else if(!strcmp(keyword,"SSP_GT_STRG_CNDCTOF_EN"))
+        {        
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].cndctof_en = i1;
+        }
         else if(!strcmp(keyword,"SSP_GT_STRG_COSMIC_WIDTH"))
         {        
           sscanf (str_tmp, "%*s %d", &i1);
@@ -1144,6 +1156,16 @@ sspReadConfigFile(char *filename_in)
           sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].ftofpcu_match_mask = i1;
         }
+        else if(!strcmp(keyword,"SSP_GT_STRG_CNDCTOF_WIDTH"))
+        {        
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].cndctof_width = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GT_STRG_CNDCTOF_MATCH_MASK"))
+        {        
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gt.strg[strg_bit].cndctof_match_mask = i1;
+        }
 
         ///////////////////////////////////////////////////////////////////        
         // GTC 
@@ -1177,6 +1199,26 @@ sspReadConfigFile(char *filename_in)
         {        
           sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.ft.esum_intwidth = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GTC_CTOF_DELAY"))
+        {
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.ctof.ctof_delay = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GTC_CND_DELAY"))
+        {
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.cnd.cnd_delay = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GTC_CNDCTOF_CND_WIDTH"))
+        {
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.cndctof.cnd_width = i1;
+        }
+        else if(!strcmp(keyword,"SSP_GTC_CNDCTOF_CTOF_WIDTH"))
+        {
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.cndctof.ctof_width = i1;
         }
         else if(!strcmp(keyword,"SSP_GTC_CTRG"))
         {
@@ -2004,7 +2046,8 @@ sspDownloadAll()
                                 (ssp[slot].gt.strg[jj].ecalpcal_cluster_emin_en<<11) |
                                 (ssp[slot].gt.strg[jj].ctof_en<<12) |
                                 (ssp[slot].gt.strg[jj].cnd_en<<13) |
-                                (ssp[slot].gt.strg[jj].ftofpcu_en<<14)
+                                (ssp[slot].gt.strg[jj].ftofpcu_en<<14) |
+                                (ssp[slot].gt.strg[jj].cndctof_en<<15)
                                );
 
         sspGt_SetTrigger_EcalEsumEmin(slot,     jj, ssp[slot].gt.strg[jj].ecal_esum_emin);
@@ -2039,6 +2082,8 @@ sspDownloadAll()
         sspGt_SetTrigger_CndMask(slot,          jj, ssp[slot].gt.strg[jj].cnd_mask);
         sspGt_SetTrigger_FtofPcuWidth(slot,     jj, ssp[slot].gt.strg[jj].ftofpcu_width);
         sspGt_SetTrigger_FtofPcuMatchMask(slot, jj, ssp[slot].gt.strg[jj].ftofpcu_match_mask);
+        sspGt_SetTrigger_CndCtofWidth(slot,     jj, ssp[slot].gt.strg[jj].cndctof_width);
+        sspGt_SetTrigger_CndCtofMatchMask(slot, jj, ssp[slot].gt.strg[jj].cndctof_match_mask);
       }
     }
     /******************************************/
@@ -2062,6 +2107,10 @@ sspDownloadAll()
       if(ssp[slot].gtc.fanout_en_ctofhtcc) mask |= GTC_CTRIGFANOUT_HTCCCTOF_EN;
       if(ssp[slot].gtc.fanout_en_cnd)      mask |= GTC_CTRIGFANOUT_CND_EN; 
       sspGtc_SetFanout_EnableMask(slot, mask);
+      sspGtc_SetCtof_Delay(slot, ssp[slot].gt.ctof.ctof_delay);
+      sspGtc_SetCnd_Delay(slot, ssp[slot].gt.cnd.cnd_delay);
+      sspGtc_SetCndCtof_CndWidth(slot, ssp[slot].gtc.cndctof.cnd_width);
+      sspGtc_SetCndCtof_CtofWidth(slot, ssp[slot].gtc.cndctof.ctof_width);
 
       for(jj=0; jj<4; jj++)
       {
@@ -2318,7 +2367,6 @@ sspUploadAll(char *string, int length)
       ssp[slot].gt.ftof.ftof_delay = sspGt_GetFtof_Delay(slot);
       ssp[slot].gt.ctof.ctof_delay = sspGt_GetCtof_Delay(slot);
       ssp[slot].gt.cnd.cnd_delay = sspGt_GetCnd_Delay(slot);
-
       ssp[slot].gt.ftofpcu.match_table = sspGt_SetPcuFtof_MatchTable(slot); 
       ssp[slot].gt.ftofpcu.ftof_width = sspGt_GetPcuFtof_FtofWidth(slot);
       ssp[slot].gt.ftofpcu.pcu_width = sspGt_GetPcuFtof_PcuWidth(slot);
@@ -2341,6 +2389,7 @@ sspUploadAll(char *string, int length)
         ssp[slot].gt.strg[jj].ctof_en                  = (ival & 0x1000) ? 1 : 0;
         ssp[slot].gt.strg[jj].cnd_en                   = (ival & 0x2000) ? 1 : 0;
         ssp[slot].gt.strg[jj].ftofpcu_en               = (ival & 0x4000) ? 1 : 0;
+        ssp[slot].gt.strg[jj].cndctof_en               = (ival & 0x8000) ? 1 : 0;
        
         ssp[slot].gt.strg[jj].ecal_esum_emin = sspGt_GetTrigger_EcalEsumEmin(slot, jj);
         ssp[slot].gt.strg[jj].ecal_esum_width = sspGt_GetTrigger_EcalEsumWidth(slot, jj);
@@ -2378,6 +2427,8 @@ sspUploadAll(char *string, int length)
 
         ssp[slot].gt.strg[i].ftofpcu_width = sspGt_GetTrigger_FtofPcuWidth(slot, i);
         ssp[slot].gt.strg[i].ftofpcu_match_mask = sspGt_GetTrigger_FtofPcuMatchMask(slot, i);
+        ssp[slot].gt.strg[i].cndctof_width = sspGt_GetTrigger_CndCtofWidth(slot, i);
+        ssp[slot].gt.strg[i].cndctof_match_mask = sspGt_GetTrigger_CndCtofMatchMask(slot, i);
       }
     }
     /******************************************/
@@ -2398,6 +2449,10 @@ sspUploadAll(char *string, int length)
       mask = sspGtc_GetFanout_EnableMask(slot);
       ssp[slot].gtc.fanout_en_ctofhtcc = (mask & GTC_CTRIGFANOUT_HTCCCTOF_EN) ? 1 : 0;
       ssp[slot].gtc.fanout_en_cnd      = (mask & GTC_CTRIGFANOUT_CND_EN)      ? 1 : 0;
+      ssp[slot].gtc.ctof.ctof_delay = sspGtc_GetCtof_Delay(slot);
+      ssp[slot].gtc.cnd.cnd_delay = sspGtc_GetCnd_Delay(slot);
+      ssp[slot].gtc.cndctof.cnd_width = sspGtc_GetCndCtof_CndWidth(slot);
+      ssp[slot].gtc.cndctof.ctof_width = sspGtc_GetCndCtof_CtofWidth(slot);
 
       for(i=0; i<4; i++)
       {
@@ -2665,6 +2720,7 @@ sspUploadAll(char *string, int length)
           sprintf(sss,"SSP_GT_STRG_CTOF_EN %d\n",                  ssp[slot].gt.strg[i].ctof_en);                  ADD_TO_STRING;
           sprintf(sss,"SSP_GT_STRG_CND_EN %d\n",                   ssp[slot].gt.strg[i].cnd_en);                   ADD_TO_STRING;
           sprintf(sss,"SSP_GT_STRG_FTOFPCU_EN %d\n",               ssp[slot].gt.strg[i].ftofpcu_en);               ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_CNDCTOF_EN %d\n",               ssp[slot].gt.strg[i].cndctof_en);               ADD_TO_STRING;
 
           sprintf(sss,"SSP_GT_STRG_ECALPCAL_CLUSTER_MIN %d\n",     ssp[slot].gt.strg[i].ecalpcal_cluster_emin);    ADD_TO_STRING;
           sprintf(sss,"SSP_GT_STRG_ECALPCAL_CLUSTER_WIDTH %d\n",   ssp[slot].gt.strg[i].ecalpcal_cluster_width);   ADD_TO_STRING;
@@ -2698,6 +2754,8 @@ sspUploadAll(char *string, int length)
           sprintf(sss,"SSP_GT_STRG_CND_MASK 0x%02X\n",             ssp[slot].gt.strg[i].cnd_mask);                 ADD_TO_STRING;
           sprintf(sss,"SSP_GT_STRG_FTOFPCU_WIDTH %d\n",            ssp[slot].gt.strg[i].ftofpcu_width);            ADD_TO_STRING;
           sprintf(sss,"SSP_GT_STRG_FTOFPCU_MATCH_MASK %d\n",       ssp[slot].gt.strg[i].ftofpcu_match_mask);       ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_CNDCTOF_WIDTH %d\n",            ssp[slot].gt.strg[i].cndctof_width);            ADD_TO_STRING;
+          sprintf(sss,"SSP_GT_STRG_CNDCTOF_MATCH_MASK %d\n",       ssp[slot].gt.strg[i].cndctof_match_mask);       ADD_TO_STRING;
         }
       }
       /******************************************/
@@ -2716,6 +2774,10 @@ sspUploadAll(char *string, int length)
         sprintf(sss,"SSP_GTC_FT_ESUM_INTWIDTH %d\n",             ssp[slot].gtc.ft.esum_intwidth); ADD_TO_STRING;
         sprintf(sss,"SSP_GTC_FANOUT_ENABLE_CTOFHTCC %d\n",     ssp[slot].gtc.fanout_en_ctofhtcc);
         sprintf(sss,"SSP_GTC_FANOUT_ENABLE_CND %d\n",          ssp[slot].gtc.fanout_en_cnd);
+        sprintf(sss,"SSP_GTC_CTOF_DELAY %d\n",             ssp[slot].gtc.ctof.ctof_delay);          ADD_TO_STRING;
+        sprintf(sss,"SSP_GTC_CND_DELAY %d\n",              ssp[slot].gtc.cnd.cnd_delay);            ADD_TO_STRING;
+        sprintf(sss,"SSP_GTC_CNDCTOF_CND_WIDTH %d\n",     ssp[slot].gtc.cndctof.cnd_width);       ADD_TO_STRING;
+        sprintf(sss,"SSP_GTC_CNDCTOF_CTOF_WIDTH %d\n",      ssp[slot].gtc.cndctof.ctof_width);        ADD_TO_STRING;
 
         for(i=0; i<4; i++)
         {

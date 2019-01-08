@@ -45,7 +45,7 @@ CLON_FLAGS += -I./src.s \
 				-I./inc/vetroc \
 				-I$(CODA)/common/include
 
-CLON_FLAGS += -I$(IPC_HOME)/src/main -I$(CODA)/src/ipc/ipc.s
+CLON_FLAGS += -I$(IPC_HOME)/src/main -I$(CODA)/src/ipc/ipc.s -w
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   CLON_FLAGS += -I/usr/local/include/apr-1

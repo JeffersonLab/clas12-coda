@@ -31,7 +31,11 @@ main(int argc, char *argv[])
   printf("NVSCM=%d\n",nvscm);
 
   printf("Reboot FPGAs...");
+
+  vscmGStat();
   vscmGRebootFpga();
+  sleep(3);
+  vscmGStat();
   printf("done.\n");
 
   exit(0);

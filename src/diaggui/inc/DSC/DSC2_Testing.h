@@ -544,11 +544,11 @@ public:
 		unsigned short vme_word;
 		char buf[200];
 
-		vme_word = pModFrame->ReadReg16((volatile unsigned int *)(pNumEntryTDCAddr->GetIntNumber()+0x403C));
+		vme_word = pModFrame->ReadReg16((volatile unsigned short int *)(pNumEntryTDCAddr->GetIntNumber()+0x403C));
 		val = vme_word & 0xFF;
-		vme_word = pModFrame->ReadReg16((volatile unsigned int *)(pNumEntryTDCAddr->GetIntNumber()+0x4038));
+		vme_word = pModFrame->ReadReg16((volatile unsigned short int *)(pNumEntryTDCAddr->GetIntNumber()+0x4038));
 		val |= (vme_word & 0xFF)<<8;
-		vme_word = pModFrame->ReadReg16((volatile unsigned int *)(pNumEntryTDCAddr->GetIntNumber()+0x4034));
+		vme_word = pModFrame->ReadReg16((volatile unsigned short int *)(pNumEntryTDCAddr->GetIntNumber()+0x4034));
 		val |= (vme_word & 0xFF)<<16;
 
 		sprintf(buf, "TDC Board Id: 0x%08X", val);
@@ -675,7 +675,7 @@ retry_pulsewidth:
 			
 			pModFrame->WriteReg32(&pDSC2regs->pulsewidth, i | (i<<16));
 			pModFrame->Delay(1);
-			pModFrame->WriteReg16((volatile unsigned int *)(pNumEntryTDCAddr->GetIntNumber()+0x1016), 0x0001);	// TDC clear
+			pModFrame->WriteReg16((volatile unsigned short *)(pNumEntryTDCAddr->GetIntNumber()+0x1016), 0x0001);	// TDC clear
 			pModFrame->Delay(1);
 			pModFrame->WriteReg32(&pDSC2regs->testCtrl, 0);										// sw test pulse
 			pModFrame->Delay(1);
@@ -844,7 +844,7 @@ retry_pulsewidth:
 			else
 				pModFrame->Delay(17);
 
-			pModFrame->WriteReg16((volatile unsigned int *)(pNumEntryTDCAddr->GetIntNumber()+0x1016), 0x0001);	// TDC clear
+			pModFrame->WriteReg16((volatile unsigned short *)(pNumEntryTDCAddr->GetIntNumber()+0x1016), 0x0001);	// TDC clear
 			pModFrame->Delay(1);
 			pModFrame->BlkReadReg32((volatile unsigned int *)(pNumEntryTDCAddr->GetIntNumber()+0x0000), TDCBuffer, sizeof(TDCBuffer)/sizeof(TDCBuffer[0]), CRATE_MSG_FLAGS_ADRINC);
 
@@ -1055,7 +1055,7 @@ retry_pulsewidth:
 		for(i = 0; i < NUM_SCALER_PASSES; i++)
 		{
 			memset(TDCBuffer, 0, sizeof(TDCBuffer));
-			pModFrame->WriteReg16((volatile unsigned int *)(pNumEntryTDCAddr->GetIntNumber()+0x1016), 0x0001);	// TDC clear
+			pModFrame->WriteReg16((volatile unsigned short *)(pNumEntryTDCAddr->GetIntNumber()+0x1016), 0x0001);	// TDC clear
 
 			for(j = 0; j < NUM_SCALER_PULSES; j++)
 				pModFrame->WriteReg32(&pDSC2regs->testCtrl, 0);		// sw test pulse
@@ -1403,11 +1403,11 @@ printf("Need to check/erase sector\n");
 
 		for(i = 0; i < 100; i++)		
 		{
-			rval = pModFrame->ReadReg16((volatile unsigned int *)(pNumEntryTDCAddr->GetIntNumber()+0x1030));
+			rval = pModFrame->ReadReg16((volatile unsigned short *)(pNumEntryTDCAddr->GetIntNumber()+0x1030));
 			if(rval & 0x1)
 				break;
 		}
-		pModFrame->WriteReg16((volatile unsigned int *)(pNumEntryTDCAddr->GetIntNumber()+0x102E), val);
+		pModFrame->WriteReg16((volatile unsigned short *)(pNumEntryTDCAddr->GetIntNumber()+0x102E), val);
 	}
 
 	unsigned short TDCMicroRead()
@@ -1416,11 +1416,11 @@ printf("Need to check/erase sector\n");
 
 		for(i = 0; i < 100; i++)		
 		{
-			rval = pModFrame->ReadReg16((volatile unsigned int *)(pNumEntryTDCAddr->GetIntNumber()+0x1030));
+			rval = pModFrame->ReadReg16((volatile unsigned short *)(pNumEntryTDCAddr->GetIntNumber()+0x1030));
 			if(rval & 0x1)
 				break;
 		}
-		rval = pModFrame->ReadReg16((volatile unsigned int *)(pNumEntryTDCAddr->GetIntNumber()+0x102E));
+		rval = pModFrame->ReadReg16((volatile unsigned short *)(pNumEntryTDCAddr->GetIntNumber()+0x102E));
 		return rval;
 	}
 

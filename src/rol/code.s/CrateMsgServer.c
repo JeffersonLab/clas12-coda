@@ -210,14 +210,14 @@ ConnectionThread(void *parm)
   val = CRATEMSG_HDR_ID;
   if(send(pParm->sock, &val, 4, 0) <= 0) 
   {
-	printf("Error in %s: failed to send HDRID\n", __FUNCTION__);
+	printf("ConnectionThread: Error in %s: failed to send HDRID\n", __FUNCTION__);
 	goto ConnectionThread_exit;
   }
   printf("ConnectionThread: send val=0x%08x\n",val);
 
   if(recv(pParm->sock, &val, 4, 0) != 4)
   {
-	printf("Error in %s: failed to recv HDRID\n", __FUNCTION__);
+	printf("ConnectionThread: Error in %s: failed to recv HDRID\n", __FUNCTION__);
 	goto ConnectionThread_exit;
   }
   printf("ConnectionThread: recv val=0x%08x\n",val);
@@ -225,17 +225,17 @@ ConnectionThread(void *parm)
   // determine sender endianess...
   if(val == CRATEMSG_HDR_ID)
   {
-	printf("swap=0\n");
+	printf("ConnectionThread: swap=0\n");
 	swap = 0;
   }
   else if(val == DW_SWAP(CRATEMSG_HDR_ID))
   {
-	printf("swap=1\n");
+	printf("ConnectionThread: swap=1\n");
    	swap = 1;
   }
   else
   {
-   	printf("Error in %s: bad recv HDRID\n", __FUNCTION__);
+   	printf("ConnectionThread: Error in %s: bad recv HDRID\n", __FUNCTION__);
    	goto ConnectionThread_exit;
   }
 
@@ -244,11 +244,14 @@ ConnectionThread(void *parm)
     /*printf("ConnectionThread befor recv1 - expecting  message length and message type - 8 bytes total\n");*/
    	if( (result = recv(pParm->sock, (char *)&pParm->msg, 8, 0)) != 8)
    	{
-      printf("break 1: result=%d\n",result);
-      if(result==0) printf("Probably client closed connection\n");
-      printf("error %d >%s<\n",errno,strerror(errno));
+      printf("ConnectionThread: break 1: result=%d\n",result);
+      if(result==0) printf("ConnectionThread: Probably client closed connection\n");
+      printf("ConnectionThread: error %d >%s<\n",errno,strerror(errno));
    	  /*break;*/
-      goto error_exit;
+
+      /*goto error_exit; sergey: does not release memory */
+      goto ConnectionThread_exit;
+
    	}
     /*printf("ConnectionThread after recv1, result=%d\n",result);*/
 
@@ -260,14 +263,14 @@ ConnectionThread(void *parm)
 	
    	if( (pParm->msg.len > MAX_MSG_SIZE) || (pParm->msg.len < 0) )
 	{
-      printf("break 2: pParm->msg.len=%d > MAX_MSG_SIZE=%d, or pParm->msg.len=%d < 0\n",pParm->msg.len, MAX_MSG_SIZE, pParm->msg.len);
+      printf("ConnectionThread: break 2: pParm->msg.len=%d > MAX_MSG_SIZE=%d, or pParm->msg.len=%d < 0\n",pParm->msg.len, MAX_MSG_SIZE, pParm->msg.len);
 	  break;
 	}
 
     /*printf("ConnectionThread befor recv2, expecting msg.len=%d msg.type=%d\n",pParm->msg.len,pParm->msg.type);*/
    	if(pParm->msg.len && ((result = recv(pParm->sock, (char *)&pParm->msg.msg, pParm->msg.len, 0)) != pParm->msg.len))
 	{	
-      printf("break 3: result=%d, pParm->msg.len=%d\n",result,pParm->msg.len);
+      printf("ConnectionThread: break 3: result=%d, pParm->msg.len=%d\n",result,pParm->msg.len);
 	  break;
 	}
     /*printf("ConnectionThread after recv2, result=%d\n",result);*/
@@ -317,13 +320,13 @@ ConnectionThread(void *parm)
 
 	else
 	{
-   	  printf("Error in %s: unhandled message type %u\n", __FUNCTION__, pParm->msg.type);
+   	  printf("ConnectionThread: Error in %s: unhandled message type %u\n", __FUNCTION__, pParm->msg.type);
 	  break;
 	}
 		
 	if(result < 0)
 	{
-	  printf("Error in %s: failed to process msg type %u\n", __FUNCTION__, pParm->msg.type);
+	  printf("ConnectionThread: Error in %s: failed to process msg type %u\n", __FUNCTION__, pParm->msg.type);
 	  break;
 	}
 	else if(result > 0)
@@ -332,7 +335,7 @@ ConnectionThread(void *parm)
 	  pParm->msg.type = CMD_RSP(pParm->msg.type);
 	  if(send(pParm->sock, &pParm->msg, pParm->msg.len+8, 0) <= 0) 
 	  {
-		printf("Error in %s: failed to send msg type %u\n", __FUNCTION__, pParm->msg.type);
+		printf("ConnectionThread: Error in %s: failed to send msg type %u\n", __FUNCTION__, pParm->msg.type);
 		break;
 	  }
 	}
@@ -340,16 +343,19 @@ ConnectionThread(void *parm)
 
 	
 ConnectionThread_exit:
-  printf("Closing connection...\n");
-	
-  close(pParm->sock);
-  free(pParm);
 
+  if(pParm!=NULL)
+  {
+    printf("ConnectionThread: Closing connection ..\n");fflush(stdout);
+    close(pParm->sock);
+    printf("ConnectionThread: Releasing memory at 0x%08x ..\n",pParm);fflush(stdout);
+    free(pParm);
+    pParm = NULL;
+  }
 error_exit:
-	
+
+  printf("ConnectionThread: calling 'pthread_exit' ..\n");fflush(stdout);
   pthread_exit(NULL);
-	
-  return(0);
 }
 
 
@@ -357,35 +363,35 @@ void *
 ListenerThread(void *p)
 {
   pthread_t cThread;
-  SocketThreadStruct *pcThreadParm;
+  SocketThreadStruct *pcThreadParm = NULL;
   socklen_t sockAddrSize = sizeof(struct sockaddr_in);
   struct sockaddr_in clientAddr;
   struct sockaddr_in serverAddr;
   int lsock, csock;
 
-  printf("ListenerThread reached, port >%d<\n",gListenPort);fflush(stdout);
+  printf("ListenerThread: reached, port >%d<\n",gListenPort);fflush(stdout);
 
   memset((char *)&serverAddr, 0, sockAddrSize);
   serverAddr.sin_family = AF_INET;
   serverAddr.sin_port = htons(gListenPort);
   serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	
-  printf("ListenerThread befor socket\n");fflush(stdout);
+  printf("ListenerThread: befor socket\n");fflush(stdout);
   lsock = socket(AF_INET, SOCK_STREAM, 0);
-  printf("ListenerThread after socket\n");fflush(stdout);
+  printf("ListenerThread: after socket\n");fflush(stdout);
   if(lsock == -1)
   {
-	printf("Error in %s: create socket failed\n", __FUNCTION__);fflush(stdout);
+	printf("ListenerThread: Error in %s: create socket failed\n", __FUNCTION__);fflush(stdout);
 	return 0;
   }
 
 
 next_port:
 	
-  printf("ListenerThread befor bind\n");fflush(stdout);
+  printf("ListenerThread: befor bind\n");fflush(stdout);
   if(bind(lsock, (struct sockaddr *)&serverAddr, sockAddrSize) == -1)
   {
-	printf("Error in %s: bind() failed\n", __FUNCTION__);fflush(stdout);
+	printf("ListenerThread: Error in %s: bind() failed\n", __FUNCTION__);fflush(stdout);
 
 	/* in case if port is busy, grab next one */
     gListenPort ++;
@@ -395,41 +401,49 @@ next_port:
 	close(lsock);
 	return 0;
   }
-  printf("ListenerThread after bind\n");fflush(stdout);
+  printf("ListenerThread: after bind\n");fflush(stdout);
 	
-  printf("ListenerThread befor listen\n");fflush(stdout);
+  printf("ListenerThread: befor listen\n");fflush(stdout);
   if(listen(lsock, 1) == -1)
   {
-	printf("Error in %s: listen() failed\n", __FUNCTION__);fflush(stdout);
+	printf("ListenerThread: Error in %s: listen() failed\n", __FUNCTION__);fflush(stdout);
 	close(lsock);
 	return 0;
   }
-  printf("ListenerThread after listen\n");fflush(stdout);
+  printf("ListenerThread: after listen\n");fflush(stdout);
 
 
 
   while(1)
   {
-	printf("waiting for accept, port >%d<\n",gListenPort);fflush(stdout);
+	printf("ListenerThread: waiting for accept, port >%d<\n",gListenPort);fflush(stdout);
     csock = accept(lsock, (struct sockaddr *)&clientAddr, &sockAddrSize);
-	printf("accepted\n");fflush(stdout);
+
+	printf("ListenerThread: accepted\n");fflush(stdout);
     if(csock < 0)
 	{
-      printf("Error in %s: accept() failed\n", __FUNCTION__);fflush(stdout);
+      printf("ListenerThread: Error in %s: accept() failed\n", __FUNCTION__);fflush(stdout);
 	  break;
 	}
+
+
+
+
+/*if(pcThreadParm==NULL)*/
+{
 	pcThreadParm = (SocketThreadStruct *) malloc(sizeof(SocketThreadStruct));
 	pcThreadParm->sock = csock;
 	if(!pcThreadParm)
 	{
-	  printf("Error in %s: malloc() failed\n", __FUNCTION__);fflush(stdout);
+	  printf("ListenerThread: Error in %s: malloc() failed\n", __FUNCTION__);fflush(stdout);
 	  break;
 	}
     else
 	{
-      printf("pcThreadParm=0x%08x\n",pcThreadParm);fflush(stdout);
+      printf("ListenerThread: malloc'ed %d bytes at pcThreadParm=0x%08x\n",sizeof(SocketThreadStruct),pcThreadParm);
+      fflush(stdout);
 	}
-
+ }
 
 
 
@@ -457,15 +471,16 @@ next_port:
           strncmp(address,"129.57.86.",10) &&
           strncmp(address,"129.57.29.",10) )
 	  {
-        printf("CrateMsgServer: ignore request from %s\n",address);fflush(stdout);
+        printf("ListenerThread:  ignore request from %s\n",address);fflush(stdout);
         /*close(lsock);*/
         continue;
 	  }
 
 	}
 
-
+	
 	pthread_create(&cThread, NULL, ConnectionThread, (void *)pcThreadParm);
+	pthread_detach(cThread); /*sergey: without this have memory leak 10M on every pthread_create*/
   }
 
   close(lsock);

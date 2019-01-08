@@ -105,6 +105,10 @@ typedef struct
   int ftofpcu_en;
   int ftofpcu_width;
   int ftofpcu_match_mask;
+
+  int cndctof_en;
+  int cndctof_width;
+  int cndctof_match_mask;
 } strigger;
 
 typedef struct
@@ -127,6 +131,12 @@ typedef struct
   int pcu_width;
   int match_table;
 } ss_ftofpcu;
+
+typedef struct
+{
+  int cnd_width;
+  int ctof_width;
+} ss_cndctof;
 
 typedef struct
 {
@@ -289,11 +299,14 @@ typedef struct {
 
   struct
   {
-    ctrigger ctrg[4];
-    ss_ft    ft;
-    int      fanout_en_ctofhtcc;
-    int      fanout_en_cnd;
-    int      gtpif_latency;
+    ctrigger   ctrg[4];
+    ss_ft      ft;
+    ss_ctof    ctof;
+    ss_cnd     cnd;
+    ss_cndctof cndctof;
+    int        fanout_en_ctofhtcc;
+    int        fanout_en_cnd;
+    int        gtpif_latency;
   } gtc; 
  
   struct

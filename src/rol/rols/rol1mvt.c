@@ -1497,6 +1497,12 @@ vmeBusUnlock();
 		vmeBusLock();
 			ret = mvtPrestart();
 		vmeBusUnlock();
+
+        printf("Set BUSY from SWB for MVTs\n");
+        vmeBusLock();
+            tiSetBusySource(TI_BUSY_SWB,0);
+        vmeBusUnlock();
+
 		if(ret<=0)
 		{
 			sprintf( log_message, "%s: mvtPrestart failed with %d in %s crate %d",

@@ -38,7 +38,8 @@
 #define FA_VME_INT_LEVEL           3     
 #define FA_VME_INT_VEC          0xFA
 
-#define FA_SUPPORTED_CTRL_FIRMWARE 0xB1
+#define FA_SUPPORTED_CTRL_FIRMWARE_MIN 0xB1
+#define FA_SUPPORTED_CTRL_FIRMWARE_MAX 0xB2
 
 struct fadc_struct 
 {

@@ -298,11 +298,12 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 
 	      if(!noFirmwareCheck)
 		{
-		  if( (rdata&FA_VERSION_MASK) != FA_SUPPORTED_CTRL_FIRMWARE )
+		  if( ((rdata&FA_VERSION_MASK) < FA_SUPPORTED_CTRL_FIRMWARE_MIN) ||
+          ((rdata&FA_VERSION_MASK) > FA_SUPPORTED_CTRL_FIRMWARE_MAX) )
 		    {
 		      printf("%s: ERROR Control FPGA Firmware (0x%02x) not supported by this driver.\n",
 			     __FUNCTION__,rdata & FA_VERSION_MASK);
-		      printf("\tUpdate to 0x%02x to use this driver.\n",FA_SUPPORTED_CTRL_FIRMWARE);
+		      printf("\tUpdate to 0x%02x (min) 0x%02x (max) to use this driver.\n",FA_SUPPORTED_CTRL_FIRMWARE_MIN);
 		      continue;
 		    }
 		}

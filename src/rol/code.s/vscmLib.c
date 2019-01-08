@@ -1765,6 +1765,15 @@ vscmFifoClear(int id)
 }
 
 void
+vscmGStat(int id)
+{
+  int i;
+
+  for (i = 0; i < nvscm; i++)
+    vscmStat(vscmID[i]);
+}
+
+void
 vscmStat(int id)
 {
   if (vscmIsNotInit(&id, __func__))

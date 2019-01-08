@@ -26,10 +26,7 @@ public:
 //		tFrame = pTabs->AddTab("GTX");			tFrame->AddFrame(new FADC250_GTX(tFrame, this), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 //		tFrame = pTabs->AddTab("TrgHist");		tFrame->AddFrame(new FADC250_TrgHist(tFrame, this), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 		tFrame = pTabs->AddTab("VXS Scope");	tFrame->AddFrame(new FADC250_SerialScope(tFrame, this), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
-		for(int i = 0; i < 16; i++)
-		{
-			tFrame = pTabs->AddTab(Form("Ch%d", i));	tFrame->AddFrame(new FADC250_AdcScope(tFrame, this, i), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
-		}
+		tFrame = pTabs->AddTab("Ch Scope");	tFrame->AddFrame(new FADC250_AdcScope(tFrame, this), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
 
 		//		tFrame = pTabs->AddTab("EventHist");	tFrame->AddFrame(new FADC250_EventHist(tFrame, this), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
