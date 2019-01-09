@@ -4011,7 +4011,8 @@ faGLoadChannelPedestals(char *fname, int updateThresholds)
 int
 faMeasureChannelPedestal(int id, unsigned int chan, fa250Ped *ped)
 {
-  int status, i, reg_bit, n;
+  int status, i, n;
+  unsigned int sample0, sample1;
   double adc_val, nsamples;
   fa250Ped p;
 
@@ -4035,51 +4036,52 @@ faMeasureChannelPedestal(int id, unsigned int chan, fa250Ped *ped)
     return(ERROR);
   }
 
-  if(chan & 0x1)
-    reg_bit = 0x00000001;
-  else
-    reg_bit = 0x00010000;
-
   for(n = 0; n < FA_MEASURE_PED_NTIMES; n++)
   {
-	FALOCK;
-	vmeWrite32(&FAp[id]->la_ctrl[chan>>1], 0);       /* disable logic analyzer */
-	vmeWrite32(&FAp[id]->la_cmp_mode0[chan>>1], 0);	/* setup a don't care trigger */
-	vmeWrite32(&FAp[id]->la_cmp_thr0[chan>>1], 0);	/* setup a don't care trigger */
-	vmeWrite32(&FAp[id]->la_cmp_en0[chan>>1], 0);	   /* setup a don't care trigger */
-	vmeWrite32(&FAp[id]->la_cmp_val0[chan>>1], 0);	/* setup a don't care trigger */
-	vmeWrite32(&FAp[id]->la_ctrl[chan>>1], reg_bit); /* enable logic analyzer */
-	FAUNLOCK;
-	
-	taskDelay(1);
-	
-	FALOCK;
-	status = vmeRead32(&FAp[id]->la_status[chan>>1]);
-	vmeWrite32(&FAp[id]->la_ctrl[chan>>1], 0);       /* disable logic analyzer */
-	FAUNLOCK;
-	
-	if(!(status & reg_bit))
-	{
-		logMsg("faMeasureChannelPedestal: ERROR : timeout \n");
-		return(ERROR);
-	}
+    FALOCK;
+    vmeWrite16(&FAp[id]->la_ctrl, 0);       /* disable logic analyzer */
+    for(i=0;i<16;i++)
+    {
+      vmeWrite16(&FAp[id]->la_cmp_mode0[i], 0);	/* setup a don't care trigger */
+      vmeWrite16(&FAp[id]->la_cmp_thr0[i], 0);	/* setup a don't care trigger */
+    }
+    vmeWrite16(&FAp[id]->la_ctrl, 1); /* enable logic analyzer */
+    FAUNLOCK;
+    
+    taskDelay(1);
+    
+    FALOCK;
+    status = vmeRead16(&FAp[id]->la_status);
+    vmeWrite16(&FAp[id]->la_ctrl, 0);       /* disable logic analyzer */
+    FAUNLOCK;
+    
+    if(!status)
+    {
+      logMsg("faMeasureChannelPedestal: ERROR : timeout \n");
+      return(ERROR);
+    }
 
-	FALOCK;
-	for(i = 0; i < 512; i++)
-	{
-		adc_val = (double)(vmeRead32(&FAp[id]->la_data[chan]) & 0xFFF);
-		
-		p.avg+= adc_val;
-		
-		p.rms+= adc_val*adc_val;
-		
-		if(adc_val < p.min)
-			p.min = adc_val;
-		
-		if(adc_val > p.max)
-			p.max = adc_val;
-	}
-	FAUNLOCK;
+    FALOCK;
+    for(i = 0; i < 512; i++)
+    {
+      unsigned int idx   = (chan*13)/16;
+      unsigned int shift = (chan*13)%16;
+      sample0 = (unsigned int)vmeRead16(&FAp[id]->la_data[idx]);
+      if(idx<12) sample1 = (unsigned int)vmeRead16(&FAp[id]->la_data[idx+1]);
+
+      adc_val = (double)(((sample0>>shift) | (sample1<<(16-shift))) & 0xFFF);
+      
+      p.avg+= adc_val;
+      
+      p.rms+= adc_val*adc_val;
+      
+      if(adc_val < p.min)
+        p.min = adc_val;
+      
+      if(adc_val > p.max)
+        p.max = adc_val;
+    }
+    FAUNLOCK;
   }
   
   nsamples = 512.0 * (double)FA_MEASURE_PED_NTIMES;
@@ -4505,6 +4507,56 @@ faDisableScalers(int id)
 }
 
 
+/**************************************************************************************
+ *
+ *  faReadChargeScalers - Scaler Data readout routine
+ *        Readout the desired scalers (indicated by the channel mask), as well
+ *        as the timer counter.  The timer counter will be the last word
+ *        in the "data" array.
+ *
+ *    id     - Slot number of module to read
+ *    data   - local memory address to place data
+ *    chmask - Channel Mask (indicating which channels to read)
+ *    rflag  - Readout Flag
+ *            bit 0 - Latch Scalers before read
+ *            bit 1 - Clear Scalers after read
+ *
+ *   RETURNS the number of 32bit words read, or ERROR if unsuccessful.
+ */
+int
+faReadChargeScalers(int id, volatile unsigned long long *data, unsigned int chmask)
+{
+  int ichan=0;
+  int dCnt=0;
+
+  if(id==0) id=fadcID[0];
+
+  if((id<=0) || (id>21) || (FAp[id] == NULL)) 
+    {
+      logMsg("faReadChargeScalers: ERROR : ADC in slot %d is not initialized \n",
+	     id,0,0,0,0,0);
+      return ERROR;
+    }
+
+  FALOCK;
+  vmeWrite16(&FAp[id]->adc_scaler_ctrl, 1);
+
+  for(ichan=0; ichan<16; ichan++)
+  {
+    if( (1<<ichan) & chmask )
+    {
+	    data[dCnt]  = (unsigned long long)vmeRead16(&FAp[id]->adc_accumulator0[ichan]);
+	    data[dCnt] |= ((unsigned long long)vmeRead16(&FAp[id]->adc_accumulator1[ichan]))<<16;
+	    data[dCnt] |= ((unsigned long long)vmeRead16(&FAp[id]->adc_accumulator2[ichan]))<<32;
+      dCnt++;
+    }
+  }
+  
+  FAUNLOCK;
+
+  return dCnt;
+
+}
 
 
 

@@ -13,7 +13,7 @@
 
 using namespace std;
 
-#define DEBUG_PRINTIO   1
+#define DEBUG_PRINTIO   0
 
 #define MSG_TAB_ACTIVATE		40020
 

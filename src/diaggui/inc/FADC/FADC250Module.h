@@ -39,6 +39,11 @@ public:
 	{
 		static RegMemDesc regs[] = {
 				{"AdcParameters", 0},
+          {"ChargeScalers", 0},
+            {"Acc0",      REGMEM_DESC_FLAGS_UINT, {0x0260, 0, 16, 16}},
+            {"Acc1",      REGMEM_DESC_FLAGS_UINT, {0x0280, 0, 16, 16}},
+            {"Acc2",      REGMEM_DESC_FLAGS_UINT, {0x02A0, 0, 16, 16}},
+          {NULL, 0},
 					{"AdcThreshold", 0},
 						{"tet0",				REGMEM_DESC_FLAGS_UINT,		{0x012C, 16, 12, 32}},
 						{"tet1",				REGMEM_DESC_FLAGS_UINT,		{0x012C, 0, 12, 32}},

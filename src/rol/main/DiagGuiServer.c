@@ -206,6 +206,7 @@ static float ttt=0.0;
 static int
 vmeScalersRead()
 {
+  static int first = 1;
   int itype, id, ii, nw, nw_len, slot, fiber;
   unsigned int chmask = 0xFFFF;
 
@@ -280,6 +281,7 @@ vmeBusUnlock();
 	{
       char name[100];
       float ref, data[16*17]; /* 17 scalers per slot, maximum can be 16 FADCs */
+      unsigned long long lldata[16];
       int jj;
 
       for(id=0; id<nfadc; id++)
@@ -296,13 +298,26 @@ vmeBusUnlock();
         for(ii=0; ii<nw; ii++) 
         {
           data[jj++] = ((float)(adcbuf[ii]));
-		}
+		    }
 
-		sprintf(name,"%s_FADC250SLOT%d",hostname,slot);
-        epics_json_msg_send(name, "float", 16/*nw*/, data);
+		    sprintf(name,"%s_FADC250SLOT%d",hostname,slot);
+          epics_json_msg_send(name, "float", 16/*nw*/, data);
 
+//        if(!strcmp(hostname,"adcecal2") ||
+//           !strcmp(hostname,"adcpcal2") ||
+//           !strcmp(hostname,"adcftof2") )
+//        {
+          faReadChargeScalers(slot, lldata, chmask);
+          for(ii=0; ii<nw; ii++)
+            data[ii] = (float)lldata[ii];
 
-
+          /* skip first report of charge values to eliminate bogus reporting */
+          if(!first)
+          {
+            sprintf(name,"%s_FADC250SLOT%d_Q",hostname,slot);
+            epics_json_msg_send(name, "float", 16/*nw*/, data);
+          }
+//        }
       }
     }
 
@@ -474,6 +489,7 @@ vmeBusUnlock();
 
 
   SCALER_UNLOCK;
+  first = 0;
 
   return(0);
 }
@@ -789,7 +805,8 @@ sspA32Address = maxA32Address + FA_MAX_A32_MEM;
 
   iFlag = 0;  /* base address */
   iFlag = (DIST_ADDR)<<10;
-  iFlag |= (1<<0);    /* Sync Source: VXS */
+  /*iFlag |= (1<<0);*/    /* Sync Source: VXS */
+  iFlag |= (0<<0);    /* Sync Source: SW */
   iFlag |= (1<<2);    /* Trigger Source: VXS */
   /*iFlag |= (1<<5);*/    /* Clock Source: VXS */
   iFlag |= (0<<5);  /* Internal Clock Source */
@@ -808,7 +825,19 @@ faSetA32BaseAddress(fadcA32Address);
   /* fill map array with FADC's found */
   for(ii=0; ii<nfadc; ii++) if( (slot=faSlot(ii)) > 0) vmescalersmap[slot] = SCALER_TYPE_FADC250;
 
-
+  /* issue soft sync reset */
+  if(init_boards)
+  {
+    for(ii=0; ii<nfadc; ii++)
+    {
+      if( (slot=faSlot(ii)) > 0)
+      {
+        faEnable(slot,0,0);
+        faSync(slot);
+        faDisable(slot,0);
+      }
+    }
+  }
 
   /*************/
   /* VSCM INIT */

@@ -112,13 +112,17 @@ struct fadc_struct
   /* 0x01e0 */ volatile unsigned int hitbit_cfg;
   /* 0x01e4 */ volatile unsigned int spare_adc[(0x200-0x1e4)>>2];
 
-  /* 0x0200 */ volatile unsigned int la_ctrl[8];
-  /* 0x0220 */ volatile unsigned int la_cmp_mode0[8];
-  /* 0x0240 */ volatile unsigned int la_cmp_thr0[8];
-  /* 0x0260 */ volatile unsigned int la_cmp_en0[8];
-  /* 0x0280 */ volatile unsigned int la_cmp_val0[8];
-  /* 0x02A0 */ volatile unsigned int la_status[8];
-  /* 0x02C0 */ volatile unsigned int la_data[16];
+  /* 0x0200 */ volatile unsigned short la_ctrl;
+  /* 0x0202 */ volatile unsigned short la_status;
+  /* 0x0204 */ volatile unsigned short adc_scaler_ctrl;
+  /* 0x0206 */ volatile unsigned short spare_adc0[(0x220-0x206)>>1];
+  /* 0x0220 */ volatile unsigned short la_cmp_mode0[16];
+  /* 0x0240 */ volatile unsigned short la_cmp_thr0[16];
+  /* 0x0260 */ volatile unsigned short adc_accumulator0[16];
+  /* 0x0280 */ volatile unsigned short adc_accumulator1[16];
+  /* 0x02A0 */ volatile unsigned short adc_accumulator2[16];
+  /* 0x02C0 */ volatile unsigned short la_data[13];
+  /* 0x02DA */ volatile unsigned short spare_adc1[(0x300-0x2DA)>>1];
 #else
   /* 0x0158 */ volatile unsigned int adc_pedestal[16];
   /* 0x0198 */ volatile unsigned int spare_adc[(0x200-0x198)>>2];
