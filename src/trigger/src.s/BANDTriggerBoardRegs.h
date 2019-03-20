@@ -20,12 +20,14 @@
 
 /* if only one board, set both addresses to the same value !!! */
 
-#define BAND_BOARD_ADDRESS_1			0x11580000
+/*#define BAND_BOARD_ADDRESS_1			0x11580000*/
+#define BAND_BOARD_ADDRESS_1			0x11100000
 
 
 #define BAND_FW_REVISION				0x1000
 #define BAND_CFG_SECTOR					0x1004
 #define BAND_TRIG0_SCALER				0x1008
+#define BAND_TRIG0_LATENCY				0x100C
 
 #define BAND_REVISION				    0x2000
 #define BAND_ENABLE_SCALERS				0x2004

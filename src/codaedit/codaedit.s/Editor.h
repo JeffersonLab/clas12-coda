@@ -58,7 +58,7 @@ Editor_pixmap.c - assign pixmap file
 #define CODA_EB        2
 #define CODA_ET        3
 #define CODA_ETT       4
-#define CODA_UT        5
+#define CODA_L3        5
 #define CODA_ER        6
 #define CODA_LOG       7
 #define CODA_SC        8

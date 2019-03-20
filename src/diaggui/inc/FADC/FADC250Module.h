@@ -135,7 +135,7 @@ public:
 						{"dac15",				REGMEM_DESC_FLAGS_UINT,		{0x006C, 0, 16, 32}},
 					{NULL, 0},
 					{"ptw",						REGMEM_DESC_FLAGS_UINT,		{0x011C, 0, 9, 32}},
-					{"pl",						REGMEM_DESC_FLAGS_UINT,		{0x0120, 0, 10, 32}},
+					{"pl",						REGMEM_DESC_FLAGS_UINT,		{0x0120, 0, 11, 32}},
 					{"nsb",						REGMEM_DESC_FLAGS_UINT,		{0x0124, 0, 9, 32}},
 					{"nsa",						REGMEM_DESC_FLAGS_UINT,		{0x0128, 0, 9, 32}},
 				{NULL, 0},

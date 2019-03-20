@@ -15,6 +15,8 @@
         reaches the number of elements in iarr[]   
 */
 
+#define FADC_UNPACK
+
 #include <stdio.h>
 #include <stdint.h>
 
@@ -62,8 +64,10 @@ typedef struct
 #define NWORDS 1000000
 static int iarr[NWORDS+10];
 
+#include "fadc_decompress.h" /* FADC decompress prosedure from Ed Jastrzembski */
+
 int
-eviofmtdump(int *arr, int nwrd, unsigned short *ifmt, int nfmt, int nextrabytes, char *xml)
+eviofmtdump(int *arr, int nwrd, unsigned short *ifmt, int nfmt, int nextrabytes, int unpack, char *xml)
 {
   int i, imt, ncnf, kcnf, mcnf, lev, iterm;
   long long *b64, *b64end;
@@ -72,7 +76,10 @@ eviofmtdump(int *arr, int nwrd, unsigned short *ifmt, int nfmt, int nextrabytes,
   char *b8, *b8end;
   LV lv[10];
   int xml1 = xml;
-
+#ifdef FADC_UNPACK
+  short *fadc16;
+  int fadcdata;
+#endif
 
   if(nwrd <= 0 || nfmt<=0 || nwrd>NWORDS)
   {
@@ -309,13 +316,14 @@ eviofmtdump(int *arr, int nwrd, unsigned short *ifmt, int nfmt, int nextrabytes,
       if(b64end > (long long *)b8end) b64end = (long long *)b8end;
       while(b64 < b64end)
 	  {
+        *b64 = SWAP64(*b64);
 #ifdef PRINT
         xml += sprintf(xml,"             64bit: 0x%llx(%lld)\n",*b64,*b64);
 #endif
 #ifdef DEBUG
         printf("64bit: 0x%llx(%lld)\n",*b64,*b64);
 #endif
-        *b64++ = SWAP64(*b64);
+        b64 ++;
 	  }
       b8 = (char *)b64;
 #ifdef DEBUG
@@ -329,22 +337,27 @@ eviofmtdump(int *arr, int nwrd, unsigned short *ifmt, int nfmt, int nextrabytes,
       if(b32end > (int *)b8end) b32end = (int *)b8end;
       while(b32 < b32end)
 	  {
+        *b32 = SWAP32(*b32);
 #ifdef PRINT
         xml += sprintf(xml,"             32bit: 0x%08x(%d)\n",*b32,*b32);
 #endif
 #ifdef DEBUG
         printf("32bit: 0x%08x(%d)\n",*b32,*b32);
 #endif
-        *b32++ = SWAP32(*b32);
+        b32 ++;
 	  }
       b8 = (char *)b32;
 #ifdef DEBUG
       printf("32bit: %d elements\n",ncnf);
 #endif
     }
+
     else if(kcnf==4||kcnf==5)       /* 16 bits */
     {
       b16 = (short *)b8;
+#ifdef FADC_UNPACK
+      fadc16 = b16; /*remember fadc data starting pointer*/
+#endif
       b16end = b16 + ncnf;
       if(b16end > (short *)b8end) b16end = (short *)b8end;
 #ifdef PRINT
@@ -353,15 +366,17 @@ eviofmtdump(int *arr, int nwrd, unsigned short *ifmt, int nfmt, int nextrabytes,
 #ifdef DEBUG
       printf("16bit:");
 #endif
+
       while(b16 < b16end)
 	  {
+        *b16 = SWAP16(*b16);
 #ifdef PRINT
         xml += sprintf(xml," 0x%04x(%d)",(unsigned short)*b16,*b16);
 #endif
 #ifdef DEBUG
         printf(" 0x%04x(%d)",*b16,*b16);
 #endif
-        *b16++ = SWAP16(*b16);
+        b16 ++;
 	  }
 #ifdef PRINT
       xml += sprintf(xml,"\n");
@@ -369,11 +384,59 @@ eviofmtdump(int *arr, int nwrd, unsigned short *ifmt, int nfmt, int nextrabytes,
       printf("\n");
 #endif
 #endif
+
+
+
+#ifdef FADC_UNPACK
+	  if(unpack)
+	  {
+        unsigned int data;
+        unsigned short *psdata = (unsigned short *)&data;
+        unsigned short decompressed_array[1024];
+        int iii, nsamples;
+
+        /*xml += sprintf(xml,"            packed:");*/
+        decompress_reset();
+        while(fadc16 < b16end)
+	    {
+          /*xml += sprintf(xml," 0x%04x(%d)",(unsigned short)*fadc16,*fadc16);*/
+          psdata[0] = *fadc16;
+          fadc16 ++;
+          /*xml += sprintf(xml," 0x%04x(%d)",(unsigned short)*fadc16,*fadc16);*/
+          psdata[1] = *fadc16;
+          fadc16 ++;
+          nsamples = decompress(data, decompressed_array);
+	    }
+        /*xml += sprintf(xml,"\n");*/
+
+#ifdef PRINT
+        xml += sprintf(xml,"          unpacked:");
+        for(iii=0; iii<nsamples; iii++)
+		{
+          xml += sprintf(xml," 0x%04x(%d)",decompressed_array[iii],decompressed_array[iii]);
+		}
+        xml += sprintf(xml,"\n");
+#endif
+
+
+	  }
+#endif
+
+
+
+
+
+
+
+
+
+
       b8 = (char *)b16;
 #ifdef DEBUG
       printf("16bit: %d elements\n",ncnf);
 #endif
     }
+
     else if(kcnf==6||kcnf==7||kcnf==3)       /* 8 bits */
     {
 #ifdef PRINT

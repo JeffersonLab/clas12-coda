@@ -109,6 +109,21 @@ XcodaConfigEttButton(Widget parent)
   return pb;
 }
 
+/*sergey*/
+static Widget
+XcodaConfigL3Button(Widget parent)
+{
+  Widget pb;
+  Arg    args[5];
+
+  XtSetArg(args[0], XmNlabelType,  XmPIXMAP);
+  XtSetArg(args[1], XmNlabelPixmap,btn_pixmaps.l3_btn);
+  pb = XtCreateManagedWidget("eb_button", xmPushButtonWidgetClass,
+		      parent, args, 2);
+  manager.l3_btn = pb;
+  return pb;
+}
+
 
 
 static Widget
@@ -268,12 +283,13 @@ XcodaEditorNewButtons(Widget parent)
   pushb[ 2] = XcodaConfigEbButton(form);
   pushb[ 3] = XcodaConfigEtButton(form); /*sergey*/
   pushb[ 4] = XcodaConfigEttButton(form); /*sergey*/
-  pushb[ 5] = XcodaConfigERButton(form);
-  pushb[ 6] = XcodaConfigCFIButton(form);
-  pushb[ 7] = XcodaConfigFIButton(form);
-  pushb[ 8] = XcodaConfigDDButton(form);
-  pushb[ 9] = XcodaConfigDBGButton(form);
-  pushb[10] = XcodaConfigNoneButton(form);
+  pushb[ 5] = XcodaConfigL3Button(form); /*sergey*/
+  pushb[ 6] = XcodaConfigERButton(form);
+  pushb[ 7] = XcodaConfigCFIButton(form);
+  pushb[ 8] = XcodaConfigFIButton(form);
+  pushb[ 9] = XcodaConfigDDButton(form);
+  pushb[10] = XcodaConfigDBGButton(form);
+  pushb[11] = XcodaConfigNoneButton(form);
 
 
   XtSetArg(args[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
@@ -347,10 +363,17 @@ XcodaEditorNewButtons(Widget parent)
 
   XtSetArg(args[ac], XmNtopAttachment, XmATTACH_WIDGET); ac++;
   XtSetArg(args[ac], XmNtopWidget, pushb[9]); ac++;
-  XtSetArg(args[ac], XmNbottomAttachment, XmATTACH_FORM); ac++; /*sergey: that line in last piece only */
   XtSetArg(args[ac], XmNleftAttachment, XmATTACH_FORM); ac++;
   XtSetArg(args[ac], XmNrightAttachment, XmATTACH_FORM); ac++;
   XtSetValues(pushb[10], args, ac);
+  ac = 0;
+
+  XtSetArg(args[ac], XmNtopAttachment, XmATTACH_WIDGET); ac++;
+  XtSetArg(args[ac], XmNtopWidget, pushb[10]); ac++;
+  XtSetArg(args[ac], XmNbottomAttachment, XmATTACH_FORM); ac++; /*sergey: that line in last piece only */
+  XtSetArg(args[ac], XmNleftAttachment, XmATTACH_FORM); ac++;
+  XtSetArg(args[ac], XmNrightAttachment, XmATTACH_FORM); ac++;
+  XtSetValues(pushb[11], args, ac);
   ac = 0;
   
 

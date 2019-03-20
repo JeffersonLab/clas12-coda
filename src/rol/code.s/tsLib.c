@@ -5791,7 +5791,7 @@ tsLive(int sflag)
     }
 
   TSLOCK;
-  vmeWrite32(&TSp->reset,TS_RESET_LATCH_TIMERS);
+  /*vmeWrite32(&TSp->reset,TS_RESET_LATCH_TIMERS);should be done outside*/
   newLive = vmeRead32(&TSp->livetime);
   newBusy = vmeRead32(&TSp->busytime);
 

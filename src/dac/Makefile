@@ -246,6 +246,7 @@ install: install_lib install_bin
 	cp $(MAIN).s/obj.h tmp/
 	cp $(MAIN).s/rolInt.h tmp/
 	cp $(MAIN).s/circbuf.h tmp/
+	cp $(MAIN).s/helicity.h tmp/
 	chmod 664 tmp/*
 	-mkdir -p $(CODA)/common/include
 	cp tmp/* $(CODA)/common/include

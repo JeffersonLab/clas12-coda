@@ -41,6 +41,11 @@ DSC2_CH_TRGDIGITAL   0   40  64    <- channel digital TRG output: channel#, widt
 
 DSC2_ENABLE_DAQ_READOUT 3   <- enables readout by daq and inhibits readout by tcpserver from slot #
 
+DSC2_SCALER_FLAGS  0 <- bit0: 1=Allow Overflow, 0=saturate at 0xffffffff
+                        bit1: 1=clear after read, 0=don't clear after read
+
+DSC2_SCALER_REFPRESCALE 1250 <- reference clock = 125000000 / DSC2_SCALER_REFPRESCALE
+                                1250 => 1MHz reference clock
 */
 
 #if defined(VXWORKS) || defined(Linux_vme)

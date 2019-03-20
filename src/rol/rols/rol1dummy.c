@@ -209,7 +209,7 @@ usrtrig(unsigned long EVTYPE, unsigned long EVSOURCE)
   CEOPEN(EVTYPE, BT_BANKS);
 
   /*usleep(500);*/
-  sleep(1);
+  /*sleep(1);*/
   
 
   /* do nothing 

@@ -77,7 +77,7 @@ static char *names[] = {
   "EB",
   "ET", /*sergey: was 'ANA' */
   "ETT", /*sergey: was 'EBANA' */
-  "UT",
+  "L3", /* sergey: was 'UT' */
   "ER",
   "LOG",
   "SC",

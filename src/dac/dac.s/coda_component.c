@@ -1056,6 +1056,7 @@ CODA_Init(int argc, char **argv)
 		   mysql_host,expid,session,objects);fflush(stdout);
   }
 
+printf("1\n");fflush(stdout);
 
   /* ET name */
   if (et_filename == NULL)
@@ -1069,6 +1070,7 @@ CODA_Init(int argc, char **argv)
     et_name[ET_FILENAME_LENGTH - 1] = '\0';
   }
 
+printf("2\n");fflush(stdout);
 
 #ifdef Linux_vme
   printf("CODA_Init: Connecting to IPC server ..\n");
@@ -1083,9 +1085,11 @@ CODA_Init(int argc, char **argv)
   printf(".. done connecting to IPC server.\n");
 #endif
 
+printf("3\n");fflush(stdout);
 
   dbsock = dbConnect(mysql_host, expid);
-  printf("333333333333333\n");fflush(stdout);
+
+printf("333333333333333\n");fflush(stdout);
 
   /* It would be nice here to set the uid and gid of the process to 
      match that of whoever is running RunControl */
@@ -2354,7 +2358,7 @@ CODAtcpServerWorkTask(TWORK *targ)
 #endif
   /*setHeartBeat(HB_TCP,0,2);*/
 
-  printf("CODAtcpServerWorkTask entry\n");
+  printf("CODAtcpServerWorkTask entry\n");fflush(stdout);
 
   /*
   printf("CODAtcpServerWorkTask: socket=%d address>%s< port=%d\n",

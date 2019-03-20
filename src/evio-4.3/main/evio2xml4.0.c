@@ -134,7 +134,7 @@ static int xmllen;
 static void create_dictionary(char *dictfilename);
 static void startDictElement(void *userData, const char *name, const char **atts);
 static void dump_fragment(unsigned int *buf, int fragment_type);
-static void dump_data(unsigned int *data, int type, int length, int padding, int noexpand);
+static void dump_data(unsigned int *data, int type, int length, int padding, int noexpand, int unpack);
 static int  get_ndata(int type, int nwords, int padding);
 static void indent(int extra);
 static const char *get_matchname();
@@ -240,7 +240,7 @@ int main (int argc, char **argv)
   nevent=0;
   while ((status=evRead(handle,buf,maxbuf))==0) {
     nevent++;
-    if(skip_event>=nevent){printf("cont1\n");continue;}
+    if(skip_event>=nevent){/*printf("cont1\n");*/continue;}
     if(user_event_select(buf)==0){printf("cont2\n");continue;}
     xml[0]='\0';              /* clear xml string buffer */
     evio_xmldump(buf,nevent,xml,maxbuf*sizeof(unsigned int)*EVIO2XML);
@@ -693,7 +693,7 @@ void set_user_frag_select_func( int (*f) (int tag) ) {
  */
 static void dump_fragment(unsigned int *buf, int fragment_type) {
 
-    int length,type,is_a_container,noexpand, padding=0;
+  int length,type,is_a_container,noexpand,unpack, padding=0;
     unsigned short tag;
     unsigned char num;
 
@@ -748,7 +748,6 @@ static void dump_fragment(unsigned int *buf, int fragment_type) {
     myname=(char*)get_matchname();
     noexpand=is_a_container&&(max_depth>=0)&&(depth>max_depth);
 
-
     /* verbose header */
     if(verbose!=0) {
         xml+=sprintf(xml,"\n"); indent(0);
@@ -782,10 +781,16 @@ static void dump_fragment(unsigned int *buf, int fragment_type) {
     }
 
     /* data_type, tag, and num */
-    if(brief==0)xml+=sprintf(xml," data_type=\"0x%x\"",type);
-    if(brief==0)xml+=sprintf(xml," tag=\"%d(0x%04x)\"",tag,tag);
-    if(brief==0)xml+=sprintf(xml," padding=\"%d\"",padding);
-    if((brief==0)&&(fragment_type==BANK))xml+=sprintf(xml," num=\"%d\"",(int)num);
+    if(brief==0) xml+=sprintf(xml," data_type=\"0x%x\"",type);
+
+    if(brief==0)
+	{
+      if(tag==0xe126) {xml+=sprintf(xml," tag=\"%d(0x%04x) (packed)\"",tag,tag); unpack=1;}
+      else            {xml+=sprintf(xml," tag=\"%d(0x%04x)\"",tag,tag); unpack=0;}
+	}	 
+
+    if(brief==0) xml+=sprintf(xml," padding=\"%d\"",padding);
+    if((brief==0)&&(fragment_type==BANK)) xml+=sprintf(xml," num=\"%d\"",(int)num);
 
     /* length, ndata for verbose */
     /*sergey if(verbose!=0) replaced by*/if(brief==0) {
@@ -804,7 +809,7 @@ static void dump_fragment(unsigned int *buf, int fragment_type) {
 	printf("type=%d tag=%d num=%d len=%d\n",type,tag,num,length-fragment_offset[fragment_type]);
 	*/
     dump_data(&buf[fragment_offset[fragment_type]], type,
-               length-fragment_offset[fragment_type], padding, noexpand);
+			  length-fragment_offset[fragment_type], padding, noexpand, unpack);
 
 
     /* xml closing fragment */
@@ -834,7 +839,7 @@ static void dump_fragment(unsigned int *buf, int fragment_type) {
 /*---------------------------------------------------------------- */
 
 static void
-dump_composite(unsigned int *buf)
+dump_composite(unsigned int *buf, int unpack)
 {
 
   int length,type,is_a_container,noexpand;
@@ -864,6 +869,7 @@ dump_composite(unsigned int *buf)
     printf("?error...tagstack/numstack overflow\n");
     exit(EXIT_FAILURE);
   }
+
   tagstack[depth-1]=tag;
   numstack[depth-1]=num;
   is_a_container=evIsContainer(type);
@@ -1009,7 +1015,7 @@ dump_composite(unsigned int *buf)
 
       /*printf("\n\n\n---> befor\n");fflush(stdout);*/
       xml += sprintf(xml,"      <data>\n");
-      xml += eviofmtdump((int *)&buf[index], length, ifmt, nfmt, padding, xml);
+      xml += eviofmtdump((int *)&buf[index], length, ifmt, nfmt, padding, unpack, xml);
       /*printf("---> !!!\n");fflush(stdout);*/
       xml += sprintf(xml,"      </data>\n");
       /*printf("---> after\n\n\n\n");fflush(stdout);*/
@@ -1034,7 +1040,7 @@ dump_composite(unsigned int *buf)
  * @param padding  number of bytes to be ignored at end of data
  * @param noexpand if true, just print data as ints, don't expand as detailed xml
  */
-static void dump_data(unsigned int *data, int type, int length, int padding, int noexpand) {
+static void dump_data(unsigned int *data, int type, int length, int padding, int noexpand, int unpack) {
 
     int i,j,len;
     int p=0;
@@ -1242,7 +1248,7 @@ static void dump_data(unsigned int *data, int type, int length, int padding, int
 
             /* composite */
         case 0xf:
-            dump_composite(&data[0]);
+		  dump_composite(&data[0], unpack);
 			/*
             if(!no_data) {
                 fLen=data[0]&0xffff;

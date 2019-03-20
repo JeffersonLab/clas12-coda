@@ -47,9 +47,10 @@ int mvtStatus(int numFeu);
 int mvtStatusDump(int numFeu,  FILE *fptr);
 int mvtTiStatusDump(int pflag, FILE *fptr);
 
-int mvtManageLogFile( FILE* *fptr, int roc_id );
-int mvtSetLogFilePointer( FILE *fptr );
-int mvtClrLogFilePointer();
+int  mvtManageLogFile( FILE* *fptr, int roc_id, int rol_id, char *caller_id );
+int  mvtSetLogFilePointer( FILE *fptr );
+int  mvtClrLogFilePointer();
+void mvtSetVerbosity( int ver_level );
 
 char *mvtRocId2SysName( int roc_id );
 char *mvtRocId2RocName( int roc_id );

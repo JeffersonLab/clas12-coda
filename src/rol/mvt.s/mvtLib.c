@@ -10,6 +10,7 @@
 *  Revision  1.0 - Initial Revision
 *                  2015/08/27: mvtUploadAll added
 *                  2015/08/28: mvtConfig added
+--                 2019/01/15  IM Verbose parameter added
 *
 *  SVN: $Rev$
 *
@@ -41,17 +42,26 @@ static int first_beu_in_token = -1;
 // configuration file pointer
 static FILE *sys_conf_params_fptr = (FILE *)NULL;
 
+// verbosity level
+static int mvt_lib_verbose = 0;
+// Set verbosity level
+void mvtSetVerbosity( int ver_level )
+{
+  mvt_lib_verbose = ver_level;
+  SysConfig_SetVerbosity( ver_level );
+}
+
 /*
  * Log file management functions
  */
-int mvtManageLogFile( FILE* *fptr, int roc_id )
+int mvtManageLogFile( FILE* *fptr, int roc_id, int rol_id, char *caller_id )
 {
 	// Log file variables
 	char    logfilename[128];
 	char    logfilename_backup[128];
 	char    log_file_perms[16];
 	char    log_message[256];
-	FILE   *mvt_fptr_err_1;
+	FILE   *mvt_fptr_log;
 	struct  stat log_stat;   
 	char   *env_home;
 	char    tmp_dir[512];
@@ -64,38 +74,90 @@ int mvtManageLogFile( FILE* *fptr, int roc_id )
 	// Get current time
 	cur_time = time(NULL);
 	time_struct = localtime(&cur_time);
-	mvt_fptr_err_1 = *fptr;
-	if( mvt_fptr_err_1 == (FILE *)NULL )
+	mvt_fptr_log = *fptr;
+  tmp_dir[0] = '\0';
+	if( mvt_fptr_log == (FILE *)NULL )
 	{
-		if( (env_home = getenv( "HOME" )) == (char *)NULL )
+    // First try to find official log directory
+		if( (env_home = getenv( "CLON_LOG" )) )
 		{
-			fprintf(stderr, "%s: Unable to HOME variable; log file in . directory\n", __FUNCTION__ );
-			sprintf( tmp_dir, "./" );
-		}
-		else
-		{
-			//Check that tmp directory exists and if not create it
-			sprintf( tmp_dir, "%s/mvt/tmp", env_home );
+			//Check that mvt/tmp directory exists and if not create it
+			sprintf( tmp_dir, "%s/mvt/tmp/", env_home );
+		  fprintf( stdout, "%s: attemmpt to work with log dir %s\n", __FUNCTION__, tmp_dir );
 			if( stat( tmp_dir, &log_stat ) )
 			{
 				// create directory
 				sprintf( mkcmd, "mkdir -p %s", tmp_dir );
 				ret = system( mkcmd );
-				if( (ret<0) || (ret==127) )
+				fprintf(stderr, "%s: system call returned with %d\n", __FUNCTION__, ret );
+				if( (ret<0) || (ret==127) || (ret==256) )
 				{
 					fprintf(stderr, "%s: failed to create dir %s with %d\n", __FUNCTION__, tmp_dir, ret );
-					return(-1);
+          tmp_dir[0] = '\0';
 				}
 			}
 			else if( !(S_ISDIR(log_stat.st_mode)) )
 			{
 				fprintf(stderr, "%s: %s file exists but is not directory\n", __FUNCTION__, tmp_dir );
-				return(-1);
+        tmp_dir[0] = '\0';
+			}
+    }
+
+    // If official log directory does not exists
+    if( tmp_dir[0] == '\0' )
+    {
+      fprintf( stdout, "%s: failed with official log, attempt with Home\n", __FUNCTION__ );
+      // Attemept with HOME
+		  if( (env_home = getenv( "HOME" )) )
+			//Check that mvt/tmp directory exists and if not create it
+			sprintf( tmp_dir, "%s/mvt/tmp/", env_home );
+			if( stat( tmp_dir, &log_stat ) )
+			{
+				// create directory
+				sprintf( mkcmd, "mkdir -p %s", tmp_dir );
+				ret = system( mkcmd );
+				fprintf(stderr, "%s: system call returned with %d\n", __FUNCTION__, ret );
+				if( (ret<0) || (ret==127) || (ret==256) )
+				{
+					fprintf(stderr, "%s: failed to create dir %s with %d\n", __FUNCTION__, tmp_dir, ret );
+					tmp_dir[0] = '\0';
+				}
+			}
+			else if( !(S_ISDIR(log_stat.st_mode)) )
+			{
+				fprintf(stderr, "%s: %s file exists but is not directory\n", __FUNCTION__, tmp_dir );
+				tmp_dir[0] = '\0';
 			}
 		}
 
+    // If all of the above failed
+    if( tmp_dir[0] == '\0' )
+    {
+      fprintf(stderr, "%s: CLON_LOG and HOME failed; log file in . directory\n", __FUNCTION__ );
+      sprintf( tmp_dir, "./" );
+      //Check that tmp directory exists and if not create it
+      sprintf( tmp_dir, "%s/mvt/tmp/", env_home );
+      if( stat( tmp_dir, &log_stat ) )
+      {
+        // create directory
+        sprintf( mkcmd, "mkdir -p %s", tmp_dir );
+        ret = system( mkcmd );
+				fprintf(stderr, "%s: system call returned with %d\n", __FUNCTION__, ret );
+				if( (ret<0) || (ret==127) || (ret==256) )
+        {
+          fprintf(stderr, "%s: failed to create dir %s with %d\n", __FUNCTION__, tmp_dir, ret );
+          return(-1);
+        }
+      }
+      else if( !(S_ISDIR(log_stat.st_mode)) )
+      {
+        fprintf(stderr, "%s: %s file exists but is not directory\n", __FUNCTION__, tmp_dir );
+        return(-1);
+      }
+    }
+
 		// Check if log file already exists	
-		sprintf(logfilename, "%s/mvt_roc_%d_rol_1.log", tmp_dir, roc_id);
+		sprintf(logfilename, "%s/%s_roc_%d_rol_%d_%s.log", tmp_dir, mvtRocId2SysName( roc_id ), roc_id, rol_id, caller_id );
 		sprintf(log_file_perms, "a+");
 		if( stat( logfilename, &log_stat ) == 0 )
 		{
@@ -113,7 +175,7 @@ int mvtManageLogFile( FILE* *fptr, int roc_id )
 					time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday,
 					time_struct->tm_hour, time_struct->tm_min
 				);
-  				if( rename(logfilename, logfilename_backup) ) 
+  			if( rename(logfilename, logfilename_backup) ) 
 				{
 					fprintf(stderr, "%s: rename failed from log file %s to %s with %d\n", __FUNCTION__, logfilename, logfilename_backup, errno);
 				 	perror("rename failed");
@@ -124,21 +186,23 @@ int mvtManageLogFile( FILE* *fptr, int roc_id )
 		}
 
 		// Open file
-		if( (mvt_fptr_err_1 = fopen(logfilename, log_file_perms)) == (FILE *)NULL )
+		if( (mvt_fptr_log = fopen(logfilename, log_file_perms)) == (FILE *)NULL )
 		{
 			fprintf(stderr, "%s: fopen failed to open log file %s in %s mode with %d\n", __FUNCTION__, logfilename, log_file_perms, errno);
 		 	perror("fopen failed");
 			return( -1 );
 		}
-		mvtSetLogFilePointer( mvt_fptr_err_1 );
+    // Do this only for rol 1
+    if( rol_id == 1 )
+		  mvtSetLogFilePointer( mvt_fptr_log );
 	}
-	*fptr = mvt_fptr_err_1;
-	if( mvt_fptr_err_1 != (FILE *)NULL )
+	*fptr = mvt_fptr_log;
+	if( mvt_fptr_log != (FILE *)NULL )
 	{
-		fprintf( mvt_fptr_err_1, "**************************************************\n" );
-		fprintf( mvt_fptr_err_1, "%s at %02d%02d%02d %02dH%02d\n", __FUNCTION__,
+		fprintf( mvt_fptr_log, "**************************************************\n" );
+		fprintf( mvt_fptr_log, "%s at %02d%02d%02d %02dH%02d\n", __FUNCTION__,
 			time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday, time_struct->tm_hour, time_struct->tm_min );
-		fflush( mvt_fptr_err_1 );
+		fflush( mvt_fptr_log );
 		return (1);
 	}
 	return (0);
@@ -879,7 +943,7 @@ int mvtConfig( char *sys_conf_params_filename, int run_number, int bec_id )
 				return D_RetCode_Err_FileIO;
 	  		}
 		}
-  	}
+  }
 	fprintf(stdout, "%s: Using configuration file %s\n", __FUNCTION__, filename );
 
 	// Process parameter file
@@ -953,50 +1017,82 @@ int mvtConfig( char *sys_conf_params_filename, int run_number, int bec_id )
 		return ret;
 	}
 
+  // Check if verbosity level was increased in parameter file
+  if( sys_params_ptr->Verbose > mvt_lib_verbose )
+  {
+    fprintf(stdout, "%s: parameters file increases verbosity level from %d to %d\n",
+      __FUNCTION__, mvt_lib_verbose, sys_params_ptr->Verbose );
+    mvtSetVerbosity( sys_params_ptr->Verbose );
+    fprintf(stdout, "%s: verbosity level set to %d\n",
+      __FUNCTION__, mvt_lib_verbose );
+  }
+
 	/**********************
 	 * Copy configuration *
 	 **********************/
-fprintf(stdout, "%s: run_number=%d\n", __FUNCTION__, run_number );
-	 if( run_number >= 0 )
-	 {
-		// Prepare filename for configuration copy 
-		sprintf
-		(
-			copy_filename,
-			"%s/%s_%02d%02d%02d_%02dH%02d",
-			dirname(filename),
-			rootfilename(filename),
-			time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday,
-			time_struct->tm_hour, time_struct->tm_min
-		);
-		if( run_number > 0 )
-			sprintf( filename, "%s_run%d.cnf", copy_filename, run_number );
-		else
-			sprintf( filename, "%s.cnf", copy_filename );
-fprintf(stdout, "%s: Using configuration file copy %s\n", __FUNCTION__, filename );
+  if( mvt_lib_verbose )
+  {
+    fprintf(stdout, "%s: run_number=%d\n", __FUNCTION__, run_number );
+    if( run_number >= 0 )
+    {
+      // Save config data in log file rather than as a separate file
+      if( sys_log_fptr != (FILE *)NULL )
+      {
+        sys_conf_params_fptr = sys_log_fptr;
+        sprintf
+        (
+          copy_filename,
+          "%s/%s_%02d%02d%02d_%02dH%02d",
+          dirname(filename),
+          rootfilename(filename),
+          time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday,
+          time_struct->tm_hour, time_struct->tm_min
+        );
+        fprintf( sys_conf_params_fptr, "%s\n", copy_filename );
+      }
+      else
+      {
+        // Prepare filename for configuration copy 
+        sprintf
+        (
+          copy_filename,
+          "%s/%s_%02d%02d%02d_%02dH%02d",
+          dirname(filename),
+          rootfilename(filename),
+          time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday,
+          time_struct->tm_hour, time_struct->tm_min
+        );
+	      if( run_number > 0 )
+		      sprintf( filename, "%s_run%d.cnf.cpy", copy_filename, run_number );
+	      else
+		      sprintf( filename, "%s.cnf.cpy", copy_filename );
+        fprintf(stdout, "%s: Using configuration file copy %s\n", __FUNCTION__, filename );
 
-		// Open config file to copy configuration
-		if( (sys_conf_params_fptr=fopen(filename, "w")) == NULL )
-		{
-			fprintf( stderr, "%s: fopen failed for config file %s in write mode\n", __FUNCTION__, filename );
-			fprintf( stderr, "%s: fopen failed with %s\n", __FUNCTION__, strerror(errno) );
-			return D_RetCode_Err_FileIO;
-		}
+		    // Open config file to copy configuration
+		    if( (sys_conf_params_fptr=fopen(filename, "w")) == NULL )
+		    {
+			    fprintf( stderr, "%s: fopen failed for config file %s in write mode\n", __FUNCTION__, filename );
+			    fprintf( stderr, "%s: fopen failed with %s\n", __FUNCTION__, strerror(errno) );
+			    return D_RetCode_Err_FileIO;
+		    }
 
-		// Copy configuration to the file
-		fprintf(sys_conf_params_fptr, "%s %s\n", roc_type, roc_name);
-		if( (ret = SysParams_Fprintf( sys_params_ptr, sys_conf_params_fptr )) != D_RetCode_Sucsess )
-		{
-			fprintf( stderr, "%s: SysParams_Fprintf failed for config file %s with %d\n", __FUNCTION__, filename, ret );
-			mvtCleanup();
-			return ret;
-		}
-		fprintf(sys_conf_params_fptr, "%s end\n", roc_type);
 
-		// Close config file
-		fclose( sys_conf_params_fptr );
-		sys_conf_params_fptr = (FILE *)NULL;
-	}
+      }
+	    // Copy configuration to the file
+	    fprintf(sys_conf_params_fptr, "%s %s\n", roc_type, roc_name);
+	    if( (ret = SysParams_Fprintf( sys_params_ptr, sys_conf_params_fptr )) != D_RetCode_Sucsess )
+	    {
+		    fprintf( stderr, "%s: SysParams_Fprintf failed for config file %s with %d\n", __FUNCTION__, filename, ret );
+		    mvtCleanup();
+		    return ret;
+	    }
+	    fprintf(sys_conf_params_fptr, "%s end\n", roc_type);
+		  // Close config file
+      if( sys_log_fptr == (FILE *)NULL )
+		    fclose( sys_conf_params_fptr );
+		  sys_conf_params_fptr = (FILE *)NULL;
+  	} // if( run_number >= 0 )
+  } // if( verbose )
 
 	/**********************
 	 * Configure the system

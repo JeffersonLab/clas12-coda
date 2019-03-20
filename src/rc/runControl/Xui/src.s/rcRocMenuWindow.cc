@@ -1131,7 +1131,7 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
             else if(comp[ncomp_].type == CODA_RCS)      {type_name[ncomp_] = "RCS";      bg_name[ncomp_] = "white";}
             else if(comp[ncomp_].type == CODA_ER)       {type_name[ncomp_] = "ER";       bg_name[ncomp_] = "yellow";}
             else if(comp[ncomp_].type == CODA_UC)       {type_name[ncomp_] = "UC";       bg_name[ncomp_] = "white";}
-            else if(comp[ncomp_].type == CODA_UT)       {type_name[ncomp_] = "UT";       bg_name[ncomp_] = "white";}
+            else if(comp[ncomp_].type == CODA_L3)       {type_name[ncomp_] = "L3";       bg_name[ncomp_] = "yellow";}
             else if(comp[ncomp_].type == CODA_LOG)      {type_name[ncomp_] = "LOG";      bg_name[ncomp_] = "white";}
             else if(comp[ncomp_].type == CODA_SC)       {type_name[ncomp_] = "SC";       bg_name[ncomp_] = "white";}
             else if(comp[ncomp_].type == CODA_FILE)     {type_name[ncomp_] = "FILE";     bg_name[ncomp_] = "white";}

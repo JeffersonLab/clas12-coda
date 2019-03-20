@@ -15,7 +15,7 @@ include $(CODA)/src/Makefile.include
 #-----------------------
 # customize definitions
 #-----------------------
-CLON_FLAGS += -I./src.s -I$(CLON)/src/trigger/ec.s -I$(CLON)/src/trigger/pc.s
+CLON_FLAGS += -I./src.s -I./fadc.s -I$(CLON)/src/trigger/ec.s -I$(CLON)/src/trigger/pc.s
 
 LIBNAMES += -lpthread -lexpat -lz
 

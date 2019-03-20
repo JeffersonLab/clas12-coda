@@ -52,14 +52,14 @@ pad_find(const char *name, daqTab* tab)
 {
   int id,nf=0; 
   daqPad *pad;
-  printf("pad_find():: search hname=%s\n",name);
+  // printf("pad_find():: search hname=%s\n",name);
   for ( int ipad=0; ipad<tab->pads.size(); ipad++ ){
     pad=tab->pads[ipad];
     for (int ihisto=0;ihisto<pad->Hname.size();ihisto++){
-      printf("pad_find():: pad=%d search hist>%s<  current name>%s< \n",ipad,name,pad->Hname[ihisto].c_str());fflush(stdout);
+      // printf("pad_find():: pad=%d search hist>%s<  current name>%s< \n",ipad,name,pad->Hname[ihisto].c_str());fflush(stdout);
       if (STREQ(pad->Hname[ihisto].c_str(),name)){ 
 	  nf++;
-	  printf("pad_find(): FOUND!! pointer=%p, ipad=%d name=%s \n",pad,ipad,name);fflush(stdout);
+	  // printf("pad_find(): FOUND!! pointer=%p, ipad=%d name=%s \n",pad,ipad,name);fflush(stdout);
 	  goto end_pad_find_loop;
 	}
     } 

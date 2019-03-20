@@ -511,6 +511,9 @@ XcodaEditorDrawingArea (Widget parent)
   /*sergey*/
   XtAddEventHandler(manager.ett_btn, EnterWindowMask, False, XcodaEditorActivateAdd, (XtPointer)ADD_ETT_ACTION);
   
+  /*sergey*/
+  XtAddEventHandler(manager.l3_btn, EnterWindowMask, False, XcodaEditorActivateAdd, (XtPointer)ADD_L3_ACTION);
+  
   XtAddEventHandler(manager.er_btn, EnterWindowMask, False, XcodaEditorActivateAdd, (XtPointer)ADD_ER_ACTION);
   XtAddEventHandler(manager.er_btn, LeaveWindowMask, False, XcodaEditorDeactivateAdd, (XtPointer)ADD_ER_ACTION);
 
@@ -1139,6 +1142,7 @@ static void XcodaEditorEnterWindowAction(w,client_data, event)
   case ADD_EB_ACTION:
   case ADD_ET_ACTION:
   case ADD_ETT_ACTION:
+  case ADD_L3_ACTION:
   case ADD_ER_ACTION:
   case ADD_FI_ACTION:
   case ADD_CFI_ACTION:
@@ -3444,6 +3448,9 @@ static drawComp* createDrawComp (graph, type)
     break;
   case ADD_ETT_ACTION:
     q->comp.type = CODA_ETT;
+    break;
+  case ADD_L3_ACTION:
+    q->comp.type = CODA_L3;
     break;
   case ADD_MON_ACTION:
     q->comp.type = CODA_MON;

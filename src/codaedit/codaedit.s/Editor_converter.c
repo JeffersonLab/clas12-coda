@@ -1164,8 +1164,8 @@ setRcNetComp (rcNetComp* comp,
     comp->daq.type = CODA_ER;
   else if(strcasecmp(comp_type,"UC") == 0)
     comp->daq.type = CODA_UC;
-  else if(strcasecmp(comp_type,"UT") == 0)
-    comp->daq.type = CODA_UT;
+  else if(strcasecmp(comp_type,"L3") == 0)
+    comp->daq.type = CODA_L3;
   else if(strcasecmp(comp_type,"LOG") == 0)
     comp->daq.type = CODA_LOG;
   else if(strcasecmp(comp_type,"SC") == 0)

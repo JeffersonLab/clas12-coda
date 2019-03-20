@@ -64,9 +64,10 @@ FADC250_CONF_FILE  <filename> <- another config filename to be processed on next
 
  */
 
-#if defined(VXWORKS) || defined(Linux_vme)
+#if defined(VXWORKS) || defined(Linux)
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "fadc250Config.h"
@@ -111,6 +112,7 @@ static FADC250_CONF fa250[NBOARD+1];
   }
 
 
+
 static char *expid = NULL;
 
 void
@@ -118,6 +120,10 @@ fadc250SetExpid(char *string)
 {
   expid = strdup(string);
 }
+
+
+
+#ifndef OFFLINE
 
 int
 fadc250Config(char *fname)
@@ -151,6 +157,9 @@ fadc250Config(char *fname)
   return(0);
 }
 
+#endif /*OFFLINE*/
+
+
 void
 fadc250InitGlobals()
 {
@@ -159,7 +168,9 @@ fadc250InitGlobals()
   printf("fadc250InitGlobals reached\n");
 
   /*nfadc = 0;*/
+#ifndef OFFLINE
   nfadc = faGetNfadc();
+#endif
   for(jj=0; jj<NBOARD; jj++)
   {
     fa250[jj].mode      = 1;
@@ -187,6 +198,33 @@ fadc250InitGlobals()
   }
 }
 
+void
+fadc250GetParamsForOffline(float ped[6][22][16], int tet[6][22][16], float gain[6][22][16], int nsa[6][22], int nsb[6][22])
+{
+  int ii,jj;
+
+  for(jj=0; jj<NBOARD; jj++)
+  {
+    nsa[0][jj] = fa250[jj].nsa;
+    nsb[0][jj] = fa250[jj].nsb;
+
+    for(ii=0; ii<NCHAN; ii++)
+    {
+     ped[0][jj][ii]  = fa250[jj].ped[ii];
+     tet[0][jj][ii]  = fa250[jj].thr[ii];
+     gain[0][jj][ii] = fa250[jj].gain[ii];
+    }
+  }
+}
+
+
+/* to set host externally */
+static char hosthost[1024];
+void
+fadc250Sethost(char *host)
+{
+  strcpy(hosthost,host);
+}
 
 /* reading and parsing config file */
 int
@@ -202,11 +240,15 @@ fadc250ReadConfigFile(char *filename_in)
   int    slot, slot1, slot2, chan;
   unsigned int  ui1, ui2;
   float f1, fmsk[16];
-  char *getenv();
+  /*char *getenv();*/
   char *clonparms;
   int do_parsing;
 
+#ifndef OFFLINE
   gethostname(host,ROCLEN);  /* obtain our hostname */
+#else
+  strcpy(host,hosthost);
+#endif
   clonparms = getenv("CLON_PARMS");
 
   if(expid==NULL)
@@ -572,6 +614,11 @@ fadc250ReadConfigFile(char *filename_in)
 }
 
 
+
+
+#ifndef OFFLINE
+
+
 /* download setting into all found FADCs */
 int
 fadc250DownloadAll()
@@ -850,6 +897,10 @@ fadc250Mon(int slot)
 
   return;
 }
+
+#endif /*OFFLINE*/
+
+
 
 
 #else /* dummy version*/

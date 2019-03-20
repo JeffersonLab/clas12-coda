@@ -38,6 +38,7 @@ typedef struct _manager
   Widget eb_btn;
   Widget et_btn; /*sergey*/
   Widget ett_btn; /*sergey*/
+  Widget l3_btn; /*sergey*/
   Widget er_btn;
   Widget fi_btn;
   Widget cfi_btn;

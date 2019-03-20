@@ -64,7 +64,7 @@ typedef struct
 
   int ecalpcal_cluster_emin_en;
   int ecalpcal_cluster_emin;
-  int ecalpcal_cluster_width;
+//  int ecalpcal_cluster_width;
   
   int pcal_esum_en;
   int pcal_esum_emin;
@@ -82,20 +82,11 @@ typedef struct
   int dc_width;
 
   int htcc_en;
-  long long htcc_mask;
   int htcc_width;
 
   int ftof_en;
   long long ftof_mask;
   int ftof_width;
-
-  int ctof_en;
-  int ctof_mask;
-  int ctof_width;
-
-  int cnd_en;
-  int cnd_mask;
-  int cnd_width;
 
   int ecalin_cosmic_en;
   int ecalout_cosmic_en;
@@ -106,10 +97,19 @@ typedef struct
   int ftofpcu_width;
   int ftofpcu_match_mask;
 
-  int cndctof_en;
-  int cndctof_width;
-  int cndctof_match_mask;
+  int dcpcal_en;
 } strigger;
+
+typedef struct
+{
+  int width;
+} ss_ecpc;
+
+typedef struct
+{
+  int cluster_width;
+  int cluster_emin;
+} ss_dcpcal;
 
 typedef struct
 {
@@ -156,6 +156,19 @@ typedef struct
   int ft_esum_en;
   int ft_esum_emin;
   int ft_esum_width;
+
+  int ctof_en;
+  int ctof_mask;
+  int ctof_width;
+
+  int cnd_en;
+  int cnd_mask;
+  int cnd_width;
+
+  int cndctof_en;
+  int cndctof_width;
+  int cndctof_match_mask;
+
 } ctrigger;
 
 typedef struct
@@ -291,9 +304,9 @@ typedef struct {
     ss_htcc     htcc;
     ss_ftof     ftof;
     ss_dc       dc;
-    ss_ctof     ctof;
-    ss_cnd      cnd;
     ss_ftofpcu  ftofpcu;
+    ss_ecpc     ecpc;
+    ss_dcpcal   dcpcal;
     int         gtpif_latency;
   } gt;
 
@@ -304,8 +317,6 @@ typedef struct {
     ss_ctof    ctof;
     ss_cnd     cnd;
     ss_cndctof cndctof;
-    int        fanout_en_ctofhtcc;
-    int        fanout_en_cnd;
     int        gtpif_latency;
   } gtc; 
  

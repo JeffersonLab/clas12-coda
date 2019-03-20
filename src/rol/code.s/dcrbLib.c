@@ -2251,8 +2251,7 @@ typedef struct
   int window_width[DCRB_MAX_BOARDS];
   int deadtime[DCRB_MAX_BOARDS];
   int threshold[DCRB_MAX_BOARDS];
-  int trig_hit_width[DCRB_MAX_BOARDS]
-
+  int trig_hit_width[DCRB_MAX_BOARDS];
 } DCRB_CONFIG_STRUCT;
 
 DCRB_CONFIG_STRUCT conf;

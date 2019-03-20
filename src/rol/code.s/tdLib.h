@@ -300,6 +300,12 @@ struct TD_A24RegStruct
 #define TD_FIBERALIGNMENT_HFBR5_IODELAY_MASK   0x00FF0000
 #define TD_FIBERALIGNMENT_HFBR5_SYNCDELAY_MASK 0xFF000000
 
+/* 0xB4 GTPStatusB bits and masks */
+#define TD_GTPSTATUSB_CHANNEL_BONDING_MASK         0x000000FF
+#define TD_GTPSTATUSB_DATA_ERROR_MASK              0x0000FF00
+#define TD_GTPSTATUSB_DISPARITY_ERROR_MASK         0x00FF0000
+#define TD_GTPSTATUSB_DATA_NOT_IN_TABLE_ERROR_MASK 0xFF000000
+
 /* 0xC0 blockStatus bits and masks */
 #define TD_BLOCKSTATUS_NBLOCKS_READY0    0x000000FF
 #define TD_BLOCKSTATUS_NBLOCKS_NEEDACK0  0x0000FF00
@@ -324,6 +330,7 @@ struct TD_A24RegStruct
 #define TD_RESET_JTAG                 (1<<2)
 #define TD_RESET_SFM                  (1<<3)
 #define TD_RESET_SOFT                 (1<<4)
+#define TD_RESET_FIBER                (1<<5)
 #define TD_RESET_BUSYACK              (1<<7)
 #define TD_RESET_CLK250               (1<<8)
 #define TD_RESET_CLK200               (1<<8)
@@ -425,6 +432,8 @@ int    tdGetPortTrigSrcEnabled(int id, int port);
 int    tdGetSlaveBlocklevel(int id, int port);
 int    tdResetMGT(int id);
 int    tdResetMGTRx(int id);
+int    tdResetFiber(int id);
+
 void   tdSlaveStatus(int id, int pflag);
 unsigned int tdGetBlockStatus(int id, int port, int pflag);
 int    tdGetBusyStatus(int id, int port, int pflag);
@@ -438,4 +447,10 @@ int    tdReadFiberFifo(int id, int fiber, volatile unsigned int *data,
 		       int maxwords, int rflag);
 int    tdPrintFiberFifo(int id, int fiber);
 int    tdClearFiberFifo(int id, int fiber);
+unsigned int tdGetTriggerLinkStatus(int id, int pflag);
+int    tdGPrintTriggerLinkStatus();
+
+int    tdGetTranceiverStatus(int id, unsigned int *data, int maxwords);
+int    tdPrintTranceiverStatus(int id);
+
 #endif /* TDLIB_H */

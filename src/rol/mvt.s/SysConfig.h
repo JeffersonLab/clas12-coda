@@ -13,7 +13,7 @@
 -- Tool versions:  
 -- 
 -- Create Date:    0.0 2014/10/13 IM
--- Revision:       
+-- Revision:       1.0 2019/01/15 IM Add verbosity
 --
 -- Comments:
 --
@@ -53,6 +53,7 @@ int  SysScanSlfTrgThresh( char *sys_conf_params_filename );
 int  SysScanFeuMonit( char *sys_conf_params_filename, int store_period_sec );
 void SysConfig_CleanUp();
 int  SysConfig_SetLogFilePointer( FILE *fptr );
+void SysConfig_SetVerbosity( int ver_level );
 int  SysDumpFeuOptLnk();
 
 #endif // #ifndef H_SysConfiguration

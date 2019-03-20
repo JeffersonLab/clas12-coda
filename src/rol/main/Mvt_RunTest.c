@@ -1883,6 +1883,7 @@ int main( int argc, char* *argv )
 	char tmp_dir[512];
 	char dat_dir[512];
 	char mkcmd[512];
+	struct  stat log_stat;   
 
 	// rol1 readout variables
 	int run;
@@ -2139,13 +2140,16 @@ unsigned int *bptr;
 			cleanup(0);
 	}
 
+  // Set verbosity level
+  mvtSetVerbosity( verbose );
+
 	/***********************/
 	/* Download section    */
 	/***********************/
 	// Start by managing the log file
-	if( (ret = mvtManageLogFile( &log_fptr, roc_id ) ) < 0 )
+	if( (ret = mvtManageLogFile( &log_fptr, roc_id, 1, "StdApp" ) ) < 0 )
 	{
-		fprintf( stderr, "%s: Douwnload phase: failed to open log file for %s roc_id %d\n", progname, sys_name, roc_id );
+		fprintf( stderr, "%s: Douwnload phase: mvtManageLogFile failed to open log file 1 for %s roc_id %d\n", progname, sys_name, roc_id );
 		cleanup(0);
 	}
 	mvt_fptr_err_1 = log_fptr;
@@ -2228,8 +2232,96 @@ unsigned int *bptr;
 	// Only in case of composite output
 	if( do_out == 2 )
 	{
+    // Start by managing the log file it could have been closed during the "end" phase
+    if( (ret = mvtManageLogFile( &mvt_fptr_err_2, roc_id, 2, "StdApp" ) ) < 0 )
+    {
+	    fprintf( stderr, "%s: Download phase: mvtManageLogFile failed to open log file 2 for %s roc_id %d\n", progname, sys_name, roc_id );
+	    cleanup(0);
+    }
+/*
 		if( mvt_fptr_err_2 == (FILE *)NULL )
 		{
+		  //Check that tmp directory exists and if not create it
+	    tmp_dir[0] = '\0';
+      // First try to find official log directory
+	    if( (env_home = getenv( "CLON_LOG" )) )
+	    {
+		    //Check that mvt/tmp directory exists and if not create it
+		    sprintf( tmp_dir, "%s/mvt/tmp/", env_home );
+	      fprintf( stdout, "%s: attemmpt to work with log dir %s\n", progname, tmp_dir );
+		    if( stat( tmp_dir, &log_stat ) )
+		    {
+			    // create directory
+			    sprintf( mkcmd, "mkdir -p %s", tmp_dir );
+			    ret = system( mkcmd );
+			    fprintf(stderr, "%s: system call returned with %d\n", progname, ret );
+			    if( (ret<0) || (ret==127) || (ret==256) )
+			    {
+				    fprintf(stderr, "%s: failed to create dir %s with %d\n", progname, tmp_dir, ret );
+            tmp_dir[0] = '\0';
+			    }
+		    }
+		    else if( !(S_ISDIR(log_stat.st_mode)) )
+		    {
+			    fprintf(stderr, "%s: %s file exists but is not directory\n", progname, tmp_dir );
+          tmp_dir[0] = '\0';
+		    }
+      }
+
+      // If official log directory does not exists
+      if( tmp_dir[0] == '\0' )
+      {
+        fprintf( stdout, "%s: failed with official log, attempt with Home\n", progname );
+        // Attemept with HOME
+		    if( (env_home = getenv( "HOME" )) )
+			  //Check that mvt/tmp directory exists and if not create it
+			  sprintf( tmp_dir, "%s/mvt/tmp/", env_home );
+			  if( stat( tmp_dir, &log_stat ) )
+			  {
+				  // create directory
+				  sprintf( mkcmd, "mkdir -p %s", tmp_dir );
+				  ret = system( mkcmd );
+				  fprintf(stderr, "%s: system call returned with %d\n", progname, ret );
+				  if( (ret<0) || (ret==127) || (ret==256) )
+				  {
+					  fprintf(stderr, "%s: failed to create dir %s with %d\n", progname, tmp_dir, ret );
+					  tmp_dir[0] = '\0';
+				  }
+			  }
+			  else if( !(S_ISDIR(log_stat.st_mode)) )
+			  {
+				  fprintf(stderr, "%s: %s file exists but is not directory\n", progname, tmp_dir );
+				  tmp_dir[0] = '\0';
+			  }
+		  }
+
+      // If all of the above failed
+      if( tmp_dir[0] == '\0' )
+      {
+        fprintf(stderr, "%s: CLON_LOG and HOME failed; log file in . directory\n", progname );
+        sprintf( tmp_dir, "./" );
+        //Check that tmp directory exists and if not create it
+        sprintf( tmp_dir, "%s/mvt/tmp/", env_home );
+        if( stat( tmp_dir, &log_stat ) )
+        {
+          // create directory
+          sprintf( mkcmd, "mkdir -p %s", tmp_dir );
+          ret = system( mkcmd );
+				  fprintf(stderr, "%s: system call returned with %d\n", progname, ret );
+				  if( (ret<0) || (ret==127) || (ret==256) )
+          {
+            fprintf(stderr, "%s: failed to create dir %s with %d\n", progname, tmp_dir, ret );
+				    cleanup(0);
+          }
+        }
+        else if( !(S_ISDIR(log_stat.st_mode)) )
+        {
+          fprintf(stderr, "%s: %s file exists but is not directory\n", progname, tmp_dir );
+				  cleanup(0);
+        }
+   	  }
+
+      // create the file
 			sprintf(logfilename, "%s/mvt_roc_%d_rol_2.log", tmp_dir, roc_id);
 			if( (mvt_fptr_err_2 = fopen(logfilename, "w")) == (FILE *)NULL )
 			{
@@ -2244,8 +2336,8 @@ unsigned int *bptr;
 		fprintf( mvt_fptr_err_2, "%s at %02d%02d%02d %02dH%02d\n", __FUNCTION__,
 			time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday, time_struct->tm_hour, time_struct->tm_min );
 		fflush( mvt_fptr_err_2 );
+*/
 	}
-
 	fprintf(stdout, "%s INFO: Download Executed\n", progname ); fflush(stdout);
 
 	if( step_by_step )
@@ -2307,9 +2399,9 @@ unsigned int *bptr;
 	/* Prestart section    */
 	/***********************/
 	// Start by managing the log file it could have been closed during the "end" phase
-	if( (ret = mvtManageLogFile( &log_fptr, roc_id ) ) < 0 )
+	if( (ret = mvtManageLogFile( &log_fptr, roc_id, 1, "StdApp" ) ) < 0 )
 	{
-		fprintf( stderr, "%s: Prestart phase: failed to open log file for %s roc_id %d\n", progname, sys_name, roc_id );
+		fprintf( stderr, "%s: Prestart phase: mvtManageLogFile failed to open log file 1 for %s roc_id %d\n", progname, sys_name, roc_id );
 		cleanup(0);
 	}
 	mvt_fptr_err_1 = log_fptr;
@@ -2452,6 +2544,13 @@ unsigned int *bptr;
 	// Only in case of composite data output
 	if( do_out == 2 )
 	{
+    // Start by managing the log file it could have been closed during the "end" phase
+    if( (ret = mvtManageLogFile( &mvt_fptr_err_2, roc_id, 2, "StdApp" ) ) < 0 )
+    {
+	    fprintf( stderr, "%s: Prestart phase: mvtManageLogFile failed to open log file 2 for %s roc_id %d\n", progname, sys_name, roc_id );
+	    cleanup(0);
+    }
+/*
 		if( mvt_fptr_err_2 == (FILE *)NULL )
 		{
 			sprintf(logfilename, "%s/mvt_roc_%d_rol_2.log", tmp_dir, roc_id);
@@ -2466,7 +2565,7 @@ unsigned int *bptr;
 			fprintf( mvt_fptr_err_2,"%s : Opend at prestart\n", __FUNCTION__ );
 			fflush(  mvt_fptr_err_2 );
 		}
-
+*/
 		if( (MVT_ZS_MODE = mvtGetZSMode(roc_id)) < 0 )
 		{
 			printf("ERROR: MVT ZS mode negative\n");
@@ -2501,7 +2600,7 @@ unsigned int *bptr;
 		fprintf(stdout, "%s: ROL2: rol2_report_raw_data set to %d\n", progname, rol2_report_raw_data );
 	}
 	// Also needed for Raw data prescale
-	if( do_out == 1 )
+	if( do_out == 1 || do_out == 2 )
 	{
 		MVT_PRESCALE = mvtGetPrescale(roc_id);
 		fprintf(stdout,"%s: MVT_PRESCALE=%d\n", __FUNCTION__,  MVT_PRESCALE  );
@@ -2949,15 +3048,18 @@ unsigned int *bptr;
 						}
 						fflush( stdout );
 					}
-					if( (ret=fwrite( out_dabufp, 4, *out_dabufp+1, dat_fptr)) !=  (*out_dabufp+1) )
-					{
-						fprintf( stderr, "%s in Readout: failed to store CMP data of size=%d; ret=%d\n", progname, (*out_dabufp+1), ret );
-						fprintf( stderr, "\n" );
-						vmeBusLock();
-							mvtEnd();
-						vmeBusUnlock();
-						cleanup(0);
-					}
+				  if( ((block_num==1) || ((block_num%MVT_PRESCALE)==0)) && (MVT_PRESCALE!=1000000) )
+				  {
+					  if( (ret=fwrite( out_dabufp, 4, *out_dabufp+1, dat_fptr)) !=  (*out_dabufp+1) )
+					  {
+						  fprintf( stderr, "%s in Readout: failed to store CMP data of size=%d; ret=%d\n", progname, (*out_dabufp+1), ret );
+						  fprintf( stderr, "\n" );
+						  vmeBusLock();
+							  mvtEnd();
+						  vmeBusUnlock();
+						  cleanup(0);
+					  }
+          }
 					cmp_monit_size += (*out_dabufp+1);
 				}
 			}

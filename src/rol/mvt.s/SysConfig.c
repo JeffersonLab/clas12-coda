@@ -13,7 +13,7 @@
 -- Tool versions:  Windows Visual C++ or Linux Make
 -- 
 -- Create Date:    0.0 2014/10/15 IM
--- Revision:       
+-- Revision:       1.0 2019/01/15 IM Add verbosity
 --
 -- Comments:
 --
@@ -51,6 +51,15 @@ static FILE *sys_conf_params_fptr = (FILE *)NULL;
 // monitoring file pointer
 static FILE *monit_fptr[DEF_MAX_NB_OF_FEU];
 static int   monit_fptr_init = 0;
+
+// verbosity level
+static int sys_verbose = 0;
+
+// Set verbosity level
+void SysConfig_SetVerbosity( int ver_level )
+{
+  sys_verbose = ver_level;
+}
 
 int SysConfig_SetLogFilePointer( FILE *fptr )
 {
@@ -186,23 +195,41 @@ int SysConfigFromFile( char *sys_conf_params_filename )
 	/**********************
 	 * Copy configuration *
 	 **********************/
-	// Prepare filename for configuration copy 
-	sprintf
-	(
-		filename,
-		"%s_%02d%02d%02d_%02dH%02d.cfg",
-		rootfilename(sys_conf_params_filename),
-		time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday,
-		time_struct->tm_hour, time_struct->tm_min
-	);
+  if( sys_verbose )
+  {
+    if( sys_log_fptr != (FILE *)NULL )
+    {
+      sys_conf_params_fptr = sys_log_fptr;
+      fprintf
+      (
+        sys_conf_params_fptr,
+        "%s_%02d%02d%02d_%02dH%02d.cfg.cpy\n",
+		    rootfilename(sys_conf_params_filename),
+		    time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday,
+		    time_struct->tm_hour, time_struct->tm_min
+      );
+    }
+    else
+    {
+	    // Prepare filename for configuration copy 
+	    sprintf
+	    (
+		    filename,
+		    "%s_%02d%02d%02d_%02dH%02d.cfg.cpy",
+		    rootfilename(sys_conf_params_filename),
+		    time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday,
+		    time_struct->tm_hour, time_struct->tm_min
+	    );
 
-	// Open config file to copy configuration
-	if( (sys_conf_params_fptr=fopen(filename, "w")) == NULL )
-	{
-		fprintf( stderr, "%s: fopen failed for config file %s in write mode\n", __FUNCTION__, filename );
-		fprintf( stderr, "%s: fopen failed with %s\n", __FUNCTION__, strerror(errno) );
-		return D_RetCode_Err_FileIO;
-	}
+	    // Open config file to copy configuration
+	    if( (sys_conf_params_fptr=fopen(filename, "w")) == NULL )
+	    {
+		    fprintf( stderr, "%s: fopen failed for config file %s in write mode\n", __FUNCTION__, filename );
+		    fprintf( stderr, "%s: fopen failed with %s\n", __FUNCTION__, strerror(errno) );
+		    return D_RetCode_Err_FileIO;
+	    }
+    }
+  }
 
 	// Copy configuration to the file
 	if( (ret = SysParams_Fprintf( &sys_params, sys_conf_params_fptr )) != D_RetCode_Sucsess )
@@ -210,9 +237,10 @@ int SysConfigFromFile( char *sys_conf_params_filename )
 		fprintf( stderr, "%s: SysParams_Fprintf failed for config file %s with %d\n", __FUNCTION__, filename, ret );
 		return ret;
 	}
-	
+
 	// Close config file
-	fclose( sys_conf_params_fptr );
+  if( sys_log_fptr == (FILE *)NULL )
+	  fclose( sys_conf_params_fptr );
 	sys_conf_params_fptr = (FILE *)NULL;
 
 	/*
@@ -589,7 +617,7 @@ int SysConfig( SysParams *params, int configs_to_do )
 					} // for( feu=1; feu<DEF_MAX_NB_OF_FEU; feu++ )
 //fprintf(stdout, "Enter CR to get errors...");
 //getchar();
-		                	reset_links = 0;
+          reset_links = 0;
 					/* Next get error registers */
 					for( feu=1; feu<DEF_MAX_NB_OF_FEU; feu++ )
 					{
@@ -629,13 +657,13 @@ int SysConfig( SysParams *params, int configs_to_do )
 									reset_links++;
 									if( (ret = FeuReset( feu_cur_params, feu, beu, beu_lnk ) ) != D_RetCode_Sucsess )
 									{	
-				                                        		fprintf( stderr,  "%s: FeuReset failed for feu=%d beu=%d lnk=%d with %d\n",
-				                                                		__FUNCTION__, feu, beu, beu_lnk, ret );
+										fprintf( stderr,  "%s: FeuReset failed for feu=%d beu=%d lnk=%d with %d\n",
+										  __FUNCTION__, feu, beu, beu_lnk, ret );
 										if( sys_log_fptr != (FILE *)NULL )
-				                                        		fprintf( sys_log_fptr,  "%s: FeuReset failed for feu=%d beu=%d lnk=%d with %d\n",
-				                                                		__FUNCTION__, feu, beu, beu_lnk, ret );
-				                                        	return D_RetCode_Err_NetIO;
-				                                	}
+										  fprintf( sys_log_fptr,  "%s: FeuReset failed for feu=%d beu=%d lnk=%d with %d\n",
+                      __FUNCTION__, feu, beu, beu_lnk, ret );
+                    return D_RetCode_Err_NetIO;
+                  }
 									usleep( 100000 );
 								}
 							}

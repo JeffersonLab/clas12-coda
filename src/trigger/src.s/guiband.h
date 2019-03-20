@@ -127,9 +127,12 @@ private:
 
    TGTextBuffer *tbufD1[ND], *tbufD2[ND], *tbufD3[ND], *tbufD4[ND], *tbufD5[ND], *tbufD6[ND], *tbufD7[ND], *tbufD8[ND];
    TGTextEntry *tentD1[ND], *tentD2[ND], *tentD3[ND], *tentD4[ND], *tentD5[ND], *tentD6[ND], *tentD7[ND], *tentD8[ND];
+   TGTextBuffer *tbufTrig[2];
+   TGTextEntry *tentTrig[2];
 
    UInt_t D1[16], D2[16], D3[16], D4[16], D5[16], D6[16], D7[16], D8[16];
    UInt_t REF1;
+   UInt_t TRIG[2];
 
    void FillHistos();
 
@@ -257,7 +260,7 @@ private:
    TGButton             *fExitButton;
 
    static const char *const numlabel[13];
-   static const Double_t numinit[13];
+   static /*const*/ Double_t numinit[13];
 
 public:
    RegistersDlg(const TGWindow *p, const TGWindow *main);
@@ -265,6 +268,7 @@ public:
    virtual void CloseWindow();
 
    void SetLimits();
+   void SetTriggerLatency();
    virtual Bool_t ProcessMessage(Long_t msg, Long_t parm1, Long_t);
 };
 

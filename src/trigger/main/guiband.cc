@@ -666,6 +666,19 @@ ScalersDlg::ScalersDlg(const TGWindow *p, GUIMainFrame *main,
      fF6->AddFrame(tentD8[jj]);
    }
 
+   for(jj=0; jj<2; jj++)
+   {
+     // Trig0/1
+     sprintf(buff1, "  Trig[%2d] ->",jj);
+     fF6->AddFrame(new TGLabel(fF6, new TGHotString(buff1)));
+     tbufTrig[jj] = new TGTextBuffer(10); //arg: the number of digits
+     tbufTrig[jj]->AddText(0,"0");
+     tentTrig[jj] = new TGTextEntry(fF6, tbufTrig[jj]);
+     tentTrig[jj]->Resize(80, tentTrig[jj]->GetDefaultHeight()); // 1st arg: the number of pixels
+	 tentTrig[jj]->SetEnabled(kFALSE);
+     tentTrig[jj]->SetFont("-adobe-courier-bold-r-*-*-14-*-*-*-*-*-iso8859-1");
+     fF6->AddFrame(tentTrig[jj]);
+   }
 
    
    fF6->Resize(); // resize to default size
@@ -1000,10 +1013,15 @@ void ScalersDlg::ReadVME()
 	for(jj=0; jj<ND; jj++) D6[jj] = 0;
 	for(jj=0; jj<ND; jj++) D7[jj] = 0;
 	for(jj=0; jj<ND; jj++) D8[jj] = 0;
+	for(jj=0; jj<2; jj++) TRIG[jj] = 0;
 
     tmp = 0x0000;
 	tcp->Write32(BAND_BOARD_ADDRESS_1 + BAND_ENABLE_SCALERS, &tmp);
 
+    /*read trigger scaler*/
+	tcp->Read32(BAND_BOARD_ADDRESS_1 + BAND_TRIG0_SCALER, &TRIG[0]);
+
+    /*read channel scalers*/
 	for(jj=0; jj<ND; jj++) tcp->Read32(BAND_BOARD_ADDRESS_1 + BAND_D1_SCALER_BASE + jj*4, &D1[jj]);
 	for(jj=0; jj<ND; jj++) tcp->Read32(BAND_BOARD_ADDRESS_1 + BAND_D2_SCALER_BASE + jj*4, &D2[jj]);
 	for(jj=0; jj<ND; jj++) tcp->Read32(BAND_BOARD_ADDRESS_1 + BAND_D3_SCALER_BASE + jj*4, &D3[jj]);	
@@ -1012,10 +1030,11 @@ void ScalersDlg::ReadVME()
 	for(jj=0; jj<ND; jj++) tcp->Read32(BAND_BOARD_ADDRESS_1 + BAND_D6_SCALER_BASE + jj*4, &D6[jj]);	
 	for(jj=0; jj<ND; jj++) tcp->Read32(BAND_BOARD_ADDRESS_1 + BAND_D7_SCALER_BASE + jj*4, &D7[jj]);	
 	for(jj=0; jj<ND; jj++) tcp->Read32(BAND_BOARD_ADDRESS_1 + BAND_D8_SCALER_BASE + jj*4, &D8[jj]);	
-	
+
     tcp->Read32(BAND_BOARD_ADDRESS_1 + BAND_REF_SCALER, &REF1);
 
 	printf("REF1=%d\n",REF1);
+	for(jj=0; jj<2; jj++) printf("TRIG[%2d]=%d\n",jj,TRIG[jj]);
 	for(jj=0; jj<ND; jj++) printf("D1[%2d]=%d\n",jj,D1[jj]);
 	for(jj=0; jj<ND; jj++) printf("D2[%2d]=%d\n",jj,D2[jj]);
 	for(jj=0; jj<ND; jj++) printf("D3[%2d]=%d\n",jj,D3[jj]);
@@ -1042,7 +1061,7 @@ void ScalersDlg::ReadVME()
 	  for(jj=0; jj<ND; jj++) D8[jj] = (Int_t)(((Float_t)D8[jj])*norm);
 	}
 
-	
+
 	printf("AAA1\n");fflush(stdout);
     UpdateGUI();
 	printf("AAA2\n");fflush(stdout);
@@ -1098,6 +1117,11 @@ void ScalersDlg::UpdateGUI()
    {
      sprintf(str,"%8d",D8[jj]);
      tentD8[jj]->SetText(str);
+   }
+   for(jj=0; jj<2; jj++)
+   {
+     sprintf(str,"%8d",TRIG[jj]);
+     tentTrig[jj]->SetText(str);
    }
 }
 
@@ -2115,12 +2139,14 @@ Bool_t DelaysDlg::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
 }
 
 
+
+
 /*************************************/
 /* RegistersDlg class implementation */
 
 // TGNumberEntry widget
 const char *const RegistersDlg::numlabel[13] = {
-   "Integer",
+   "Trigger Latency (5ns ticks)",
    "One digit real",
    "Two digit real",
    "Three digit real",
@@ -2135,16 +2161,25 @@ const char *const RegistersDlg::numlabel[13] = {
    "Hex"
 };
 
-const Double_t RegistersDlg::numinit[13] = {
-   12345, 1.0, 1.00, 1.000, 1.0000, 1.2E-12,
+/*const*/ Double_t RegistersDlg::numinit[13] = {
+   1700, 1.0, 1.00, 1.000, 1.0000, 1.2E-12,
    90 * 3600, 120 * 60, 12 * 60, 12 * 3600 + 15 * 60,
    19991121, 19991121, (Double_t) 0xDEADFACE
 };
 
 
+
 RegistersDlg::RegistersDlg(const TGWindow *p, const TGWindow *main)
  : TGTransientFrame(p, main, 10, 10, kHorizontalFrame)
 {
+
+  /* get value(s) from hardware */
+  UInt_t tmp;
+  tcp->Read32(BAND_BOARD_ADDRESS_1 + BAND_TRIG0_LATENCY, &tmp);
+  numinit[0] = (Double_t)tmp;
+  printf("reading trigger_latency=%u (%f)\n",tmp,numinit[0]);
+  
+
    // build widgets
 
    // use hierarchical cleaning
@@ -2234,6 +2269,7 @@ void RegistersDlg::CloseWindow()
 
 void RegistersDlg::SetLimits()
 {
+  printf("SetLimits() reached\n");
    Double_t min = fLimits[0]->GetNumber();
    Bool_t low = (fLowerLimit->GetState() == kButtonDown);
    Double_t max = fLimits[1]->GetNumber();
@@ -2264,33 +2300,85 @@ void RegistersDlg::SetLimits()
    }
 }
 
+void RegistersDlg::SetTriggerLatency()
+{
+  UInt_t tmp;
+
+  printf("SetTriggerLatency() reached\n");
+  Double_t trigger_latency = fNumericEntries[0]->GetNumber();
+  printf("trigger_latency = %f\n",trigger_latency);
+
+  tmp = (UInt_t)trigger_latency;
+  printf("writing trigger_latency=%u\n",tmp);
+  tcp->Write32(BAND_BOARD_ADDRESS_1 + BAND_TRIG0_LATENCY, &tmp);
+
+  tcp->Read32(BAND_BOARD_ADDRESS_1 + BAND_TRIG0_LATENCY, &tmp);
+  printf("reading trigger_latency=%u\n",tmp);
+}
+
 Bool_t RegistersDlg::ProcessMessage(Long_t msg, Long_t parm1, Long_t /*parm2*/)
 {
-   switch (GET_MSG(msg)) {
-   case kC_COMMAND:
-      {
-         switch (GET_SUBMSG(msg)) {
+  printf("Registers 1: msg=%d(%d), parm1=%d\n",msg,GET_MSG(msg),parm1);
+   switch (GET_MSG(msg))
+   {
+     case kC_COMMAND:
+     {
+	 printf("Registers 2\n");
+       switch (GET_SUBMSG(msg))
+       {
          case kCM_BUTTON:
-            {
-               switch (parm1) {
-                  // exit button
-               case 1:
-                  {
-                     CloseWindow();
-                     break;
-                  }
-                  // set button
-               case 2:
-                  {
-                     SetLimits();
-                     break;
-                  }
-               }
+         {
+	 printf("Registers 3\n");
+           switch (parm1)
+           {
+             // exit button
+             case 1:
+             {
+               CloseWindow();
                break;
-            }
+             }
+             // set button
+             case 2:
+             {
+               SetLimits();
+               break;
+             }
+           }
+           break;
          }
-         break;
-      }
+       }
+       break;
+     }
+     case kC_TEXTENTRY:
+     {
+       printf("TEXTENTRY\n");
+       switch (GET_SUBMSG(msg))
+       {
+         case kTE_TEXTCHANGED:
+         {
+           printf("TEXTENTRY_TEXTCHANGED\n");
+           SetTriggerLatency();
+           break;
+		 }
+         case kTE_ENTER:
+         {
+           printf("TEXTENTRY_ENTER\n");
+           break;
+		 }
+         case kTE_TAB:
+         {
+           printf("TEXTENTRY_TAB\n");
+           break;
+		 }
+         case kTE_KEY:
+         {
+           break;
+           printf("TEXTENTRY_KEY\n");
+		 }
+	   }
+       break;
+	 }
+
    }
    return kTRUE;
 }

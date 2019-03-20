@@ -13,7 +13,8 @@
 -- Tool versions:  
 -- 
 -- Create Date:    0.0 2014/09/29 IM
--- Revision:       1.0 2015/08/28 IM: SysParams_Parse added
+-- Revision:       1.0 2015/08/28 IM SysParams_Parse added
+--                     2019/01/15 IM Verbose parameter added
 --
 -- Comments:
 --
@@ -131,6 +132,7 @@ int SysParams_Init( SysParams *params )
 	params->CmpDataFmt        = Sys_CmpDatFmt_UnPacked;
 	params->SelfTrigLat       = 0;
 	params->SelfTrigWin       = 0;
+	params->Verbose           = 0;
 
 	// System topology
 	for( bec=0; bec<DEF_MAX_NB_OF_BEC; bec++ )
@@ -209,6 +211,7 @@ int SysParams_Sprintf( SysParams *params, char *buf  )
 	sprintf( buf, "%sSys CmpDataFmt       %s\n",      buf, SysCmpDataFmt2Str( params->CmpDataFmt )  );
 	sprintf( buf, "%sSys SelfTrigLat      %d # ns\n", buf,                    params->SelfTrigLat   );
 	sprintf( buf, "%sSys SelfTrigWin      %d # ns\n", buf,                    params->SelfTrigWin   );
+	sprintf( buf, "%sSys Verbose          %d\n",      buf,                    params->Verbose       );
 
 //fprintf( stderr, "%s: Global parameters OK\n", __FUNCTION__ );
 
@@ -562,7 +565,7 @@ int SysParams_Prop( SysParams *params )
 			}
 			else if( drm_evt_buf > 8 )
 			{
-				Beu_TrgFifo_Hwm = drm_evt_buf - 4;
+				Beu_TrgFifo_Hwm = drm_evt_buf - 3;
 				Beu_TrgFifo_Lwm = drm_evt_buf - 4;
 			}
 			else if( drm_evt_buf > 4 )
@@ -910,6 +913,16 @@ int SysParams_Parse( SysParams *params, int line_num )
 				{
 					params->SelfTrigWin = 0;
 					fprintf( stderr, "%s: line %d: attempt to set unsupported SelfTrigWin %s; must be in [0;511] ns range \n", __FUNCTION__, line_num, argv[2] ); 
+					return D_RetCode_Err_Wrong_Param;
+				}
+			}
+			else if( strcmp( argv[1], "Verbose" ) == 0 )
+			{
+				params->Verbose = atoi( argv[2] );
+				if( params->Verbose < 0 )
+				{
+					params->Verbose = 0;
+					fprintf( stderr, "%s: line %d: attempt to set negative Verbose %s; must be positive \n", __FUNCTION__, line_num, argv[2] ); 
 					return D_RetCode_Err_Wrong_Param;
 				}
 			}

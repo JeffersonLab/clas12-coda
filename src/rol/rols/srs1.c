@@ -10,10 +10,11 @@
 static int nusertrig, ndone;
 
 
-#define USE_SRS
+#undef USE_SRS
 
 
 #undef DEBUG
+
 
 
 #include <stdio.h>
@@ -192,7 +193,17 @@ extern int rocMask; /* defined in roc_component.c */
 
 
 
-
+/*dummy to resolve reference*/
+int
+getTdcTypes(int *xxx)
+{
+  return(0);
+}
+int
+getTdcSlotNumbers(int *xxx)
+{
+  return(0);
+}
 
 /*sergey: ??? */
 extern struct TI_A24RegStruct *TIp;
@@ -848,9 +859,9 @@ TIMERL_START;
     else
     {
 	  ;
-	  /*	  
+	  /*
       printf("ti: len=%d\n",len);
-      for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
+      for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x (0x%08x)\n",jj,tdcbuf[jj],LSWAP(tdcbuf[jj]));
 	  */
 
 	  

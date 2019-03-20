@@ -1008,6 +1008,8 @@ dbaseReader::setDefaultPriorities (void)
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem LOG has default priority of %d\n", 27);
   compFactory_->subSystemPriority ("TS",  -27);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem TS has default priority of %d\n", -27);
+  compFactory_->subSystemPriority ("L3",  26);
+  reporter->cmsglog (CMSGLOG_INFO1,"Subsystem L3 has default priority of %d\n", 26);
 }
 
 int 

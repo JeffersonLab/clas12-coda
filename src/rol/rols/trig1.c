@@ -852,7 +852,7 @@ TIMERL_START;
 	  */
       *rol->dabufp ++ = LSWAP((0x12<<27)+(event_number&0x7FFFFFF)); /*event header*/
 
-      nwords = 5; /* UPDATE THAT IF THE NUMBER OF DATA WORDS CHANGED BELOW !!! */
+      nwords = 6; /* UPDATE THAT IF THE NUMBER OF DATA WORDS CHANGED BELOW !!! */
       *rol->dabufp ++ = LSWAP((0x14<<27)+nwords); /*head data*/
 
       /* COUNT DATA WORDS FROM HERE */
@@ -862,10 +862,12 @@ TIMERL_START;
       if(ii==(block_level-1))
 	  {
         *rol->dabufp ++ = LSWAP(time(0)); /*event unix time */
-		*rol->dabufp ++ = LSWAP(EVTYPE); /*event type */
+		*rol->dabufp ++ = LSWAP(EVTYPE);  /*event type */
+        *rol->dabufp ++ = 0;              /*reserved for L3 info*/
 	  }
       else
 	  {
+        *rol->dabufp ++ = 0;
         *rol->dabufp ++ = 0;
         *rol->dabufp ++ = 0;
 	  }
@@ -1021,7 +1023,7 @@ vmeBusUnlock();
 	}
 
 
-    /* print and send livetime, event rate, event count */
+    /* print and send livetime, event rate, event count 
     if(syncFlag==1)
 	{
       printf("SYNC: livetime\n");
@@ -1041,6 +1043,7 @@ vmeBusUnlock();
 #endif
       printf("SYNC: livetime - done\n");
 	}
+	*/
 
 
     /* for physics sync event, make sure all board buffers are empty */

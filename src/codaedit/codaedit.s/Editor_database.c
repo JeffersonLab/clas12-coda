@@ -84,7 +84,7 @@ static char* compTypeString[] = {
   "EB",
   "ET", /* sergey: was 'ANA' */
   "ETT", /*sergey: was 'EBANA' */
-  "UT",
+  "L3", /*sergey: was 'UT' */
   "ER",
   "LOG",
   "SC", 
@@ -663,6 +663,16 @@ createPriorityTable (void)
   /* ETT class */
   sprintf (queryString, "insert into %s\n", PRIORITY_TABLE_NAME);  
   strcat  (queryString, "values ('ETT', 27)");
+  if (mysql_query (mysql, queryString) != 0) {
+#ifdef _CODA_DEBUG
+    printf ("Insert priority value error: %s\n", mysql_error(mysql));
+#endif
+    return -1;
+  }
+
+  /* L3 class */
+  sprintf (queryString, "insert into %s\n", PRIORITY_TABLE_NAME);  
+  strcat  (queryString, "values ('L3', 28)");
   if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
     printf ("Insert priority value error: %s\n", mysql_error(mysql));

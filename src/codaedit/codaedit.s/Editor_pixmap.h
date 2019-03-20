@@ -37,6 +37,7 @@ typedef struct _pixmap_s
   Pixmap eb;
   Pixmap et; /*sergey*/
   Pixmap ett; /*sergey*/
+  Pixmap l3; /*sergey*/
   Pixmap ana; /*sergey: remove ? */
   Pixmap ebana; /*sergey: remove ? */
   Pixmap trig;
@@ -44,6 +45,7 @@ typedef struct _pixmap_s
   Pixmap hl_eb;
   Pixmap hl_et; /*sergey*/
   Pixmap hl_ett; /*sergey*/
+  Pixmap hl_l3; /*sergey*/
   Pixmap hl_ana;
   Pixmap hl_ebana;
   Pixmap hl_trig;
@@ -55,6 +57,7 @@ typedef struct _pixmap_s
   Pixmap eb_btn;
   Pixmap et_btn; /*sergey*/
   Pixmap ett_btn; /*sergey*/
+  Pixmap l3_btn; /*sergey*/
   Pixmap ana_btn;
   Pixmap ebana_btn;
   Pixmap er_btn;

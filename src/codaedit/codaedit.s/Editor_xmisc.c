@@ -1462,6 +1462,37 @@ printf("comp->comp.type = %d\n",comp->comp.type);
     else
       XmTextFieldSetString(text_w3, "coda_ett");
   }
+  else if (comp->comp.type == CODA_L3)
+  {
+    if(comp->comp.boot_string != NULL)
+      XmTextFieldSetString(text_w3, comp->comp.boot_string);
+    else
+      XmTextFieldSetString(text_w3, "coda_l3");
+
+    /* replace label 'Readout List 1' by 'Chunk size' */
+    t = XmStringCreateSimple("Chunk size:");
+    ac = 0;
+    XtSetArg(args[ac], XmNlabelString, t); ac++;
+    XtSetValues (label_w4, args, ac);
+    XmStringFree(t);
+
+     if(comp->comp.code[0] != NULL)
+      XmTextFieldSetString(text_w4, comp->comp.code[0]);
+    else
+      XmTextFieldSetString(text_w4, "100");
+
+
+    /* disable label 'Readout List 2' */
+    XtUnmanageChild(label_w5);
+    XtUnmanageChild(text_w5);
+
+    /* disable label 'Readout List 3' */
+    XtUnmanageChild(label_w6);
+    XtUnmanageChild(text_w6);
+
+
+
+  }
   else if (comp->comp.type == CODA_ER)
   {
     if(comp->comp.boot_string != NULL)

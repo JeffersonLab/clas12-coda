@@ -377,10 +377,17 @@ __download()
  * MVT START : __download
  ***************************************************/
 #ifdef USE_MVT
+/*
 	char logfilename[128];
 	// time variables
 	time_t      cur_time;
 	struct tm  *time_struct;
+	char *env_home;
+	char tmp_dir[512];
+	char mkcmd[512];
+	struct  stat log_stat;
+*/
+	int ret;
 #endif // USE_MVT
 /****************************************************
  * MVT START : __download
@@ -403,19 +410,59 @@ __download()
  * MVT START : __download
  ***************************************************/
 #ifdef USE_MVT
+	if( (ret = mvtManageLogFile( &mvt_fptr_err_2, rol->pid, 2, "Coda" ) ) < 0 )
+	{
+		fprintf( stderr, "%s: mvtManageLogFile failed to open log file 2 for %s roc_id %d\n", __FUNCTION__, mvtRocId2SysName( rol->pid ), rol->pid );
+	}
+/*
 	// Get current time
 	cur_time = time(NULL);
 	time_struct = localtime(&cur_time);
 	if( mvt_fptr_err_2 == (FILE *)NULL )
 	{
-	  /* $CLON_LOG/   */
-		sprintf(logfilename, "mvt_roc_%d_rol_2.log", rol->pid);
-		if( (mvt_fptr_err_2 = fopen(logfilename, "w")) == (FILE *)NULL )
-		{
-			fprintf(stderr, "%s: fopen failed to open log file %s in write mode with %d %s\n",
-				__FUNCTION__, logfilename, errno, strerror( errno ));
-		}
-	}
+	  // $CLON_LOG
+		//Check that tmp directory exists and if not create it
+	  tmp_dir[0] = '\0';
+    // First try to find official log directory
+	  if( (env_home = getenv( "CLON_LOG" )) )
+	  {
+		  //Check that mvt/tmp directory exists and if not create it
+		  sprintf( tmp_dir, "%s/mvt/", env_home );
+	    fprintf( stdout, "%s: attemmpt to work with log dir %s\n", __FUNCTION__, tmp_dir );
+		  if( stat( tmp_dir, &log_stat ) )
+		  {
+			  // create directory
+			  sprintf( mkcmd, "mkdir -p %s", tmp_dir );
+			  ret = system( mkcmd );
+			  fprintf(stderr, "%s: system call returned with %d\n", __FUNCTION__, ret );
+			  if( (ret<0) || (ret==127) || (ret==256) )
+			  {
+				  fprintf(stderr, "%s: failed to create dir %s with %d\n", __FUNCTION__, tmp_dir, ret );
+          tmp_dir[0] = '\0';
+			  }
+		  }
+		  else if( !(S_ISDIR(log_stat.st_mode)) )
+		  {
+			  fprintf(stderr, "%s: %s file exists but is not directory\n", __FUNCTION__, tmp_dir );
+        tmp_dir[0] = '\0';
+		  }
+    }
+
+    // If above failed
+    if( tmp_dir[0] == '\0' )
+    {
+      fprintf(stderr, "%s: CLON_LOG failed; log file in . directory\n", __FUNCTION__ );
+      sprintf( tmp_dir, "./" );
+    }
+
+    // Open log file
+		sprintf(logfilename, "%s/mvt_roc_%d_rol_2.log", tmp_dir, rol->pid);
+    if( (mvt_fptr_err_2 = fopen(logfilename, "w")) == (FILE *)NULL )
+    {
+      fprintf(stderr, "%s: fopen failed to open log file %s in write mode with %d %s\n",
+      __FUNCTION__, logfilename, errno, strerror( errno ));
+    }
+  }
 	if( mvt_fptr_err_2 != (FILE *)NULL )
 	{
 		fprintf( mvt_fptr_err_2, "**************************************************\n" );
@@ -424,6 +471,7 @@ __download()
 			time_struct->tm_hour, time_struct->tm_min );
 		fflush(  mvt_fptr_err_2 );
 	}
+*/
 #endif // USE_MVT
 /****************************************************
  * MVT START : __download
@@ -442,10 +490,17 @@ __prestart()
  ***************************************************/
 #ifdef USE_MVT
   int ibeu;
+/*
 	char logfilename[128];
 	// time variables
 	time_t      cur_time;
 	struct tm  *time_struct;
+	char *env_home;
+	char tmp_dir[512];
+	char mkcmd[512];
+	struct  stat log_stat;
+*/
+	int ret;
 #endif // USE_MVT
 /****************************************************
  * MVT START : __prestart
@@ -502,17 +557,59 @@ __prestart()
  * MVT START : __prestart
  ***************************************************/
 #ifdef USE_MVT
+	// Start by managing the log file
+	if( (ret = mvtManageLogFile( &mvt_fptr_err_2, rol->pid, 2, "Coda" ) ) < 0 )
+	{
+		fprintf( stderr, "%s: mvtManageLogFile failed to open log file 2 for %s roc_id %d\n", __FUNCTION__, mvtRocId2SysName( rol->pid ), rol->pid );
+	}
+/*
 	// Get current time
 	cur_time = time(NULL);
 	time_struct = localtime(&cur_time);
 	if( mvt_fptr_err_2 == (FILE *)NULL )
 	{
-		sprintf(logfilename, "mvt_roc_%d_rol_2.log", rol->pid);
-		if( (mvt_fptr_err_2 = fopen(logfilename, "w")) == (FILE *)NULL )
-		{
-			fprintf(stderr, "%s: fopen failed to open log file %s in write mode with %d %s\n",
-				__FUNCTION__, logfilename, errno, strerror( errno ));
-		}
+	  // $CLON_LOG
+		//Check that tmp directory exists and if not create it
+	  tmp_dir[0] = '\0';
+    // First try to find official log directory
+	  if( (env_home = getenv( "CLON_LOG" )) )
+	  {
+		  //Check that mvt/tmp directory exists and if not create it
+		  sprintf( tmp_dir, "%s/mvt/", env_home );
+	    fprintf( stdout, "%s: attemmpt to work with log dir %s\n", __FUNCTION__, tmp_dir );
+		  if( stat( tmp_dir, &log_stat ) )
+		  {
+			  // create directory
+			  sprintf( mkcmd, "mkdir -p %s", tmp_dir );
+			  ret = system( mkcmd );
+			  fprintf(stderr, "%s: system call returned with %d\n", __FUNCTION__, ret );
+			  if( (ret<0) || (ret==127) || (ret==256) )
+			  {
+				  fprintf(stderr, "%s: failed to create dir %s with %d\n", __FUNCTION__, tmp_dir, ret );
+          tmp_dir[0] = '\0';
+			  }
+		  }
+		  else if( !(S_ISDIR(log_stat.st_mode)) )
+		  {
+			  fprintf(stderr, "%s: %s file exists but is not directory\n", __FUNCTION__, tmp_dir );
+        tmp_dir[0] = '\0';
+		  }
+    }
+
+    // If above failed
+    if( tmp_dir[0] == '\0' )
+    {
+      fprintf(stderr, "%s: CLON_LOG failed; log file in . directory\n", __FUNCTION__ );
+      sprintf( tmp_dir, "./" );
+    }
+
+    // Open log file
+		sprintf(logfilename, "%s/mvt_roc_%d_rol_2.log", tmp_dir, rol->pid);
+    if( (mvt_fptr_err_2 = fopen(logfilename, "w")) == (FILE *)NULL )
+    {
+      fprintf(stderr, "%s: fopen failed to open log file %s in write mode with %d %s\n",
+      __FUNCTION__, logfilename, errno, strerror( errno ));
+    }
 	}
 	if( mvt_fptr_err_2 != (FILE *)NULL )
 	{
@@ -522,6 +619,7 @@ __prestart()
 			time_struct->tm_hour, time_struct->tm_min );
 		fflush(  mvt_fptr_err_2 );
 	}
+*/
 	if( (MVT_ZS_MODE = mvtGetZSMode(rol->pid)) < 0 )
 	{
 		printf("ERROR: MVT ZS mode negative\n");
@@ -5234,6 +5332,7 @@ FCCA FCAA
             } // else of if (mvt_error_counter ==0)
         } // else of if ( (mvt_event_number % MVT_PRESCALE ) ||( MVT_PRESCALE == 1000000 ) )
         //CPCLOSE;
+        mvt_event_number++;
     } /* else if(banktag[jj] == 0xe118) /* MVT hardware format */
 #endif // #define USE_MVT
 /****************************************************

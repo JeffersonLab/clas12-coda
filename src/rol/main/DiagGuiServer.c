@@ -453,14 +453,21 @@ vmeBusUnlock();
       static unsigned int gtpbufold[32], fpbufold[32];
       float ref, data1[32], data2[32]; /* 32 scalers per group, 2 groups */
       int nw1, nw2;
+      int livetime;
+      float live_percent;
 
       if(nts==1)
       {
         slot = 21;
 vmeBusLock();
+        tsLatchTimers();
         nw1 = tsReadScalers(gtpbuf, 1); /* second parameter: 1-GTP scalers, 3-FP scalers */
         nw2 = tsReadScalers(fpbuf, 3);
+        livetime = tsLive(0); /* returns 3 digits, for ex 97.5 returned as 975 */
 vmeBusUnlock();
+        live_percent = (float)livetime/10.0;
+	    printf("============= Livetime=%f percent\n",live_percent);
+
         /*printf("nw1=%d nw2=%d\n",nw1,nw2);fflush(stdout);*/
         nw = nw1 + nw2;
         vmescalerslen[slot] = nw;
@@ -479,6 +486,9 @@ vmeBusUnlock();
 
 		sprintf(name,"%s_TSFPSLOT%d",hostname,slot);
         epics_json_msg_send(name, "float", nw2, data2);
+
+		sprintf(name,"%s_TSLIVETIMESLOT%d",hostname,slot);
+        epics_json_msg_send(name, "float", 1, &live_percent);
       }
     }
 #endif
@@ -1609,7 +1619,9 @@ main(int argc, char *argv[])
   {
     epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "dsc2");
   }
-  else if( (!strncmp(hostname,"ADCECAL",7)) || (!strncmp(hostname,"ADCPCAL",7)) || (!strncmp(hostname,"ADCFTOF",7)) )
+  else if( (!strncmp(hostname,"ADCECAL",7)) || (!strncmp(hostname,"ADCPCAL",7)) || (!strncmp(hostname,"ADCFTOF",7)) ||
+           (!strncmp(hostname,"ADCCTOF",7)) || (!strncmp(hostname,"ADCBAND",7)) || (!strncmp(hostname,"ADCCND",6)) ||
+           (!strncmp(hostname,"ADCFT",5)) )
   {
     epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "fadc");
   }

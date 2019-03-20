@@ -1548,11 +1548,14 @@ int FeuMemConfig( char *conf_file_name, int mem_type, int feu_id, int beu_id, in
 				reg_adr = D_PedMem_BramAdr_Set(reg_adr, (mem_adr<<2));
 			else 
 				reg_adr = D_ThreshMem_BramAdr_Set(reg_adr, (mem_adr<<2));
-			wr_val = strtol( argv[0], &end_ptr, 16 );
+			wr_val = strtoll( argv[0], &end_ptr, 16 );
 //			wr_val_swap = strtol( argv[0], &end_ptr, 16 );
 //			wr_val = ((wr_val_swap & 0xFFFF) << 16) + ((wr_val_swap >> 16)&0xFFFF);
+//if( feu_id == 10 )
+//{
 //printf("%s: line_num=%d line=%s reg_adr=0x%08x wr_val=0x%08x\n", __FUNCTION__, line_num, line, reg_adr, wr_val);
 //getchar();
+//}
 			// Write
 			if( (ret = Beu_ReqResp(feu_id, beu_id, beu_lnk_id, reg_adr, wr_val, DEF_FEU_WRITE, &rd_val ) ) < 0 )
 			{

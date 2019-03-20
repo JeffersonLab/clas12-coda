@@ -14,6 +14,7 @@
 -- 
 -- Create Date:    0.0 2014/09/29 IM
 -- Revision:       1.0 2015/08/28 IM: SysParams_Parse added
+--                     2019/01/15 IM Verbose parameter added
 --
 -- Comments:
 --
@@ -79,6 +80,7 @@ typedef struct _SysParams
 	int  CmpDataFmt;
 	int  SelfTrigLat;
 	int  SelfTrigWin;
+  int  Verbose;
 
 	// Parameters for backend crates
 	BecParams Bec_Params[DEF_MAX_NB_OF_BEC];

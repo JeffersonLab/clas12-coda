@@ -2474,6 +2474,30 @@ tdResetMGTRx(int id)
 }
 
 /**
+ * @ingroup Config
+ * @brief Reset the Fiber Tranceivers
+ * @param id Slot number
+ */
+int
+tdResetFiber(int id)
+{
+  if(id==0) id=tdID[0];
+
+  if(TDp[id] == NULL)
+    {
+      printf("%s: ERROR: TD in slot %d not initialized\n",__FUNCTION__,id);
+      return ERROR;
+    }
+
+  TDLOCK;
+  vmeWrite32(&TDp[id]->reset, TD_RESET_FIBER);
+  TDUNLOCK;
+  taskDelay(1);
+
+  return OK;
+}
+
+/**
  * @ingroup Status
  * @brief Print a summary of all fiber port connections to potential TI Slaves
  *
@@ -3190,6 +3214,342 @@ tdClearFiberFifo(int id, int fiber)
   return rwords;
 }
 
+/**
+ * @ingroup Status
+ * @brief Get the error status bits for the trigger links from specified TDs
+ *
+ * @param id Slot number
+ * @param pflag
+ *  - !0: Print to standard out
+ *
+ * @return Trigger Link bits if successful, ERROR otherwise
+ */
+unsigned int
+tdGetTriggerLinkStatus(int id, int pflag)
+{
+  unsigned int GTPStatusB = 0, bitflags = 0;
+  int ibit = 0;
+
+  if(id==0) id=tdID[0];
+  if(TDp[id] == NULL)
+    {
+      printf("%s: ERROR: TD in slot %d not initialized\n",__FUNCTION__,id);
+      return ERROR;
+    }
+
+  TDLOCK;
+  GTPStatusB = vmeRead32(&TDp[id]->GTPStatusB);
+  TDUNLOCK;
+
+  if(pflag)
+    {
+      printf("TD Slot %2d STATUS for Trigger Links\n", id);
+
+      printf("      Connected    RX Data Error      Disparity    NON 8b/10b Data\n");
+      printf("     (12345678)      (12345678)      (12345678)      (12345678)\n");
+      printf("--------------------------------------------------------------------------------\n");
+
+      printf("      ");
+      bitflags = GTPStatusB & TD_GTPSTATUSB_CHANNEL_BONDING_MASK;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+
+      printf("        ");
+      bitflags = (GTPStatusB & TD_GTPSTATUSB_DATA_ERROR_MASK) >> 8;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+
+      printf("        ");
+      bitflags = (GTPStatusB & TD_GTPSTATUSB_DISPARITY_ERROR_MASK) >> 16;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+      printf("        ");
+
+      bitflags = (GTPStatusB & TD_GTPSTATUSB_DATA_NOT_IN_TABLE_ERROR_MASK) >> 24;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+
+      printf("\n");
+    }
+
+  return GTPStatusB;
+
+}
+
+/**
+ * @ingroup Status
+ * @brief Print the error status bits for the trigger links for all initialized TDs
+ *
+ * @return OK if successful, ERROR otherwise
+ *
+ */
+int
+tdGPrintTriggerLinkStatus()
+{
+  unsigned int GTPStatusB[TD_MAX_VME_SLOTS+1], bitflags = 0;
+  int id;
+  int itd = 0, ibit = 0;
+
+  TDLOCK;
+  for(itd = 0; itd < nTD; itd++)
+  {
+    id = tdSlot(itd);
+    GTPStatusB[id] = vmeRead32(&TDp[id/*itd*/]->GTPStatusB); /* sergey: itd->id */
+  }
+  TDUNLOCK;
+
+  printf("STATUS for Trigger Links\n");
+
+  printf("          Connected    RX Data Error      Disparity    NON 8b/10b Data\n");
+  printf("Slot     (12345678)      (12345678)      (12345678)      (12345678)\n");
+  printf("--------------------------------------------------------------------------------\n");
+
+
+  for(itd = 0; itd < nTD; itd++)
+    {
+      printf(" %2d   ", tdSlot(itd));
+      bitflags = GTPStatusB[tdSlot(itd)]
+	& TD_GTPSTATUSB_CHANNEL_BONDING_MASK;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+
+      printf("        ");
+      bitflags = (GTPStatusB[tdSlot(itd)]
+		  & TD_GTPSTATUSB_DATA_ERROR_MASK) >> 8;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+
+      printf("        ");
+      bitflags = (GTPStatusB[tdSlot(itd)]
+		  & TD_GTPSTATUSB_DISPARITY_ERROR_MASK) >> 16;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+      printf("        ");
+
+      bitflags = (GTPStatusB[tdSlot(itd)]
+		  & TD_GTPSTATUSB_DATA_NOT_IN_TABLE_ERROR_MASK) >> 24;
+      for(ibit = 0; ibit < 8; ibit++)
+	{
+	  if( (1<<ibit) & bitflags )
+	    printf("%d", ibit+1);
+	  else
+	    printf("-");
+	}
+
+      printf("\n");
+    }
+
+  return OK;
+}
+
+
+int
+tdGetTranceiverStatus(int id, unsigned int *data, int maxwords)
+{
+  int ibyte, itr;
+  int nreadbytes = 21;
+  unsigned short readbytes[21] =
+    {
+      22, 23, /* Temp */
+      26, 27, /* Voltage */
+      34, 35, 36, 37, 38, 39, 40, 41, /* rxPower */
+      42, 43, 44, 45, 46, 47, 48, 49, /* txBias */
+      86 /* Tx? Disable */
+    };
+  unsigned int ReadVal;
+  int nwords = 0, maxtr = 8;
+  unsigned int *i2cOptp;
+  unsigned int vmeControl_old = 0;
+
+  if(id==0) id=tdID[0];
+
+  if(TDp[id] == NULL)
+    {
+      printf("%s: ERROR: TD in slot %d not initialized\n",__FUNCTION__,id);
+      return ERROR;
+    }
+
+  i2cOptp = (unsigned int *)((unsigned int)TDp[id] + 0x50000);
+
+  TDLOCK;
+  /* set the i2c device address to 0xA0# */
+  vmeControl_old = vmeRead32(&TDp[id]->vmeControl);
+  vmeWrite32(&TDp[id]->vmeControl, 0x00000111);
+
+  for (itr = 0; itr < maxtr; itr++) // loop over the eight transceivers
+    {
+      vmeWrite32(&TDp[id]->fiber, 0x1ff - ((1 << itr) & 0xff));
+
+      for (ibyte = 0; ibyte < nreadbytes; ibyte++) // loop over bytes
+	{
+
+	  ReadVal = vmeRead32(&i2cOptp[(0xC00 + readbytes[ibyte]*4)>>2]);
+	  taskDelay(1);
+
+	  data[nwords++] = (itr << 24) | (readbytes[ibyte] << 16) | (ReadVal & 0xFFFF);
+
+	  if(nwords == maxwords)
+	    goto DONE;
+	}
+
+    }
+
+ DONE:
+  vmeWrite32(&TDp[id]->vmeControl, vmeControl_old);
+
+  TDUNLOCK;
+
+  return nwords;
+}
+
+int
+tdPrintTranceiverStatus(int id)
+{
+  int rval = OK, idata, ndata = 21 * 8, maxtr = 8;
+  unsigned int data[21 * 8];
+  unsigned short reg = 0, value = 0;
+  int itr, Tempt[8], Volt[8];
+  int rxPower[8][4], txBias[8][4];
+  int txDisable[8];
+
+  /* Readout the regs */
+  rval = tdGetTranceiverStatus(id, (unsigned int *)data, ndata);
+  if(rval == ERROR)
+    return ERROR;
+
+  /* Initialize the decoded arrays */
+  memset((char *)Tempt, 0, sizeof(Tempt));
+  memset((char *)Volt, 0, sizeof(Volt));
+
+  memset((char *)rxPower, 0, sizeof(rxPower));
+  memset((char *)txBias, 0, sizeof(txBias));
+
+  memset((char *)txDisable, 0, sizeof(txDisable));
+
+  /* Decode the data into the arrays */
+  for(idata = 0; idata < ndata; idata++)
+    {
+      itr = (data[idata] & 0xFF000000) >> 24;
+      reg = (data[idata] & 0x00FF0000) >> 16;
+      value = (data[idata] & 0x0000FFFF) >> 0;
+
+      if(itr > 7)
+	{
+	  printf("%s: ERROR: Invalid Fiber value (%d). data[%d] = 0x%08x\n",
+		 __func__, itr, idata, data[idata]);
+	  continue;
+	}
+
+      if (reg == 22) Tempt[itr] = (value&0xff) << 8;
+      if (reg == 23) Tempt[itr] |= (value&0xff);
+
+      if (reg == 26) Volt[itr] = (value & 0xff) << 8;
+      if (reg == 27) Volt[itr] |= value&0xff;
+
+      if (reg == 34) rxPower[itr][0] = (value & 0xff) << 8;
+      if (reg == 35) rxPower[itr][0] |= (value & 0xff);
+
+      if (reg == 36) rxPower[itr][1] = (value & 0xff) << 8;
+      if (reg == 37) rxPower[itr][1] |= (value & 0xff);
+
+      if (reg == 38) rxPower[itr][2] = (value & 0xff) << 8;
+      if (reg == 39) rxPower[itr][2] |= (value & 0xff);
+
+      if (reg == 40) rxPower[itr][3] = (value & 0xff) << 8;
+      if (reg == 41) rxPower[itr][3] |= (value & 0xff);
+
+      if (reg == 42) txBias[itr][0] = (value & 0xff) << 8;
+      if (reg == 43) txBias[itr][0] |= (value & 0xff);
+
+      if (reg == 44) txBias[itr][1] = (value & 0xff) << 8;
+      if (reg == 45) txBias[itr][1] |= (value & 0xff);
+
+      if (reg == 46) txBias[itr][2] = (value & 0xff) << 8;
+      if (reg == 47) txBias[itr][2] |= (value & 0xff);
+
+      if (reg == 48) txBias[itr][3] = (value & 0xff) << 8;
+      if (reg == 49) txBias[itr][3] |= (value & 0xff);
+
+      if (reg == 86) txDisable[itr] = (value & 0xff);
+
+    }
+
+  for (itr = 0; itr < maxtr; itr++) // loop over the eight transceivers
+    {
+
+      printf("\n Optic Transceiver #%d ", itr+1);
+      if(Volt[itr] == rxPower[itr][0]) /* Reads back 0xffffffff */
+	{
+	  printf(" - N/A\n");
+	  continue;
+	}
+
+
+      /* Convert register values to physical units */
+      Volt[itr] /= 10; /* mV */
+      Tempt[itr] /= 256;
+
+      int i;
+      for(i = 0; i < 4; i++)
+	{
+	  rxPower[itr][i] /= 10;
+	  txBias[itr][i] *= 2;
+	}
+
+      printf("\n   Module Temp : %7d C    Supply Volt : %6d mV \n",
+	     Tempt[itr], Volt[itr]);
+      printf("   tx0 Disable : %7d      tx1 Disable : %6d\n",
+	     txDisable[itr] & (1<<0),
+	     txDisable[itr] & (1<<1));
+      printf("   tx2 Disable : %7d      tx3 Disable : %6d\n",
+	     txDisable[itr] & (1<<2),
+	     txDisable[itr] & (1<<3));
+
+      for(i = 0; i < 4; i++)
+	printf("   rxPower[%d]  : %7d uW   txBias[%d]   : %6d uA\n",
+	       i, rxPower[itr][i], i, txBias[itr][i]);
+
+      fflush(stdout);
+    }
+
+
+  return OK;
+}
 
 
 

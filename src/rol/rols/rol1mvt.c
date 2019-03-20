@@ -400,14 +400,19 @@ __download()
  * MVT START : Download
  *******************************************************************/
 #ifdef USE_MVT
+	char log_message[256];
+/*
 	char logfilename[128];
 	char logfilename_backup[128];
 	char log_file_perms[16];
-	char log_message[256];
 	struct stat log_stat;   
 	// time variables
 	time_t      cur_time;
 	struct tm  *time_struct;
+	char *env_home;
+	char tmp_dir[512];
+	char mkcmd[512];
+*/
 #endif
 /********************************************************************
  * MVT END : Download
@@ -974,13 +979,57 @@ vmeBusUnlock();
  * MVT START : Download
  *******************************************************************/
 #ifdef USE_MVT
+	// Start by managing the log file
+	if( (ret = mvtManageLogFile( &mvt_fptr_err_1, rol->pid, 1, "Coda" ) ) < 0 )
+	{
+		fprintf( stderr, "%s: mvtManageLogFile failed to open log file 1 for %s roc_id %d\n", __FUNCTION__, mvtRocId2SysName( rol->pid ), rol->pid );
+	}
+/*
 	// Get current time
 	cur_time = time(NULL);
 	time_struct = localtime(&cur_time);
 	if( mvt_fptr_err_1 == (FILE *)NULL )
 	{
-		sprintf(logfilename, "mvt_roc_%d_rol_1.log", rol->pid);
+	  // $CLON_LOG
+		//Check that tmp directory exists and if not create it
+	  tmp_dir[0] = '\0';
+    // First try to find official log directory
+	  if( (env_home = getenv( "CLON_LOG" )) )
+	  {
+		  //Check that mvt/tmp directory exists and if not create it
+		  sprintf( tmp_dir, "%s/mvt/", env_home );
+	    fprintf( stdout, "%s: attemmpt to work with log dir %s\n", __FUNCTION__, tmp_dir );
+		  if( stat( tmp_dir, &log_stat ) )
+		  {
+			  // create directory
+			  sprintf( mkcmd, "mkdir -p %s", tmp_dir );
+			  ret = system( mkcmd );
+			  fprintf(stderr, "%s: system call returned with %d\n", __FUNCTION__, ret );
+			  if( (ret<0) || (ret==127) || (ret==256) )
+			  {
+				  fprintf(stderr, "%s: failed to create dir %s with %d\n", __FUNCTION__, tmp_dir, ret );
+          tmp_dir[0] = '\0';
+			  }
+		  }
+		  else if( !(S_ISDIR(log_stat.st_mode)) )
+		  {
+			  fprintf(stderr, "%s: %s file exists but is not directory\n", __FUNCTION__, tmp_dir );
+        tmp_dir[0] = '\0';
+		  }
+    }
+
+    // If above failed
+    if( tmp_dir[0] == '\0' )
+    {
+      fprintf(stderr, "%s: CLON_LOG failed; log file in . directory\n", __FUNCTION__ );
+      sprintf( tmp_dir, "./" );
+    }
+
+    // Form filename
+		sprintf(logfilename, "%s/mvt_roc_%d_rol_1.log", tmp_dir, rol->pid);
 		sprintf(log_file_perms, "a+");
+
+		// file exists, check its size
 		if( stat( logfilename, &log_stat ) == 0 )
 		{
 			// file exists, check its size
@@ -996,7 +1045,7 @@ vmeBusUnlock();
 					time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday,
 					time_struct->tm_hour, time_struct->tm_min
 				);
-  				if( rename(logfilename, logfilename_backup) ) 
+  		  if( rename(logfilename, logfilename_backup) ) 
 				{
 					fprintf(stderr, "%s: rename failed from log file %s to %s with %d %s\n",
 						__FUNCTION__, logfilename, logfilename_backup, errno, strerror( errno ));
@@ -1020,7 +1069,7 @@ vmeBusUnlock();
 			time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday, time_struct->tm_hour, time_struct->tm_min );
 		fflush( mvt_fptr_err_1 );
 	}
-
+*/
 	printf("\nMVT: start\n\n");
 	printf("\nMVT: !!!!!!!!!!!!!!!!!!!!! confFile=%s, rolnum=%d, rolpid=%d\n\n", rol->confFile,rol->runNumber, rol->pid );
 
@@ -1127,15 +1176,20 @@ __prestart()
  * MVT START : Prestart
  *******************************************************************/
 #ifdef USE_MVT
+	char log_message[256];
+/*
 	// Log file variables
 	char logfilename[128];
 	char logfilename_backup[128];
 	char log_file_perms[16];
 	struct stat log_stat;   
-	char log_message[256];
 	// time variables
 	time_t      cur_time;
 	struct tm  *time_struct;
+	char *env_home;
+	char tmp_dir[512];
+	char mkcmd[512];
+*/
 #endif
 /********************************************************************
  * MVT END : Prestart
@@ -1443,13 +1497,57 @@ vmeBusUnlock();
  * MVT START : Prestart
  *******************************************************************/
 #ifdef USE_MVT
+	// Start by managing the log file
+	if( (ret = mvtManageLogFile( &mvt_fptr_err_1, rol->pid, 1, "Coda" ) ) < 0 )
+	{
+		fprintf( stderr, "%s: mvtManageLogFile failed to open log file 1 for %s roc_id %d\n", __FUNCTION__, mvtRocId2SysName( rol->pid ), rol->pid );
+	}
+/*
 	// Get current time
 	cur_time = time(NULL);
 	time_struct = localtime(&cur_time);
 	if( mvt_fptr_err_1 == (FILE *)NULL )
 	{
-		sprintf(logfilename, "mvt_roc_%d_rol_1.log", rol->pid);
+	  // $CLON_LOG
+		//Check that tmp directory exists and if not create it
+	  tmp_dir[0] = '\0';
+    // First try to find official log directory
+	  if( (env_home = getenv( "CLON_LOG" )) )
+	  {
+		  //Check that mvt/tmp directory exists and if not create it
+		  sprintf( tmp_dir, "%s/mvt/", env_home );
+	    fprintf( stdout, "%s: attemmpt to work with log dir %s\n", __FUNCTION__, tmp_dir );
+		  if( stat( tmp_dir, &log_stat ) )
+		  {
+			  // create directory
+			  sprintf( mkcmd, "mkdir -p %s", tmp_dir );
+			  ret = system( mkcmd );
+			  fprintf(stderr, "%s: system call returned with %d\n", __FUNCTION__, ret );
+			  if( (ret<0) || (ret==127) || (ret==256) )
+			  {
+				  fprintf(stderr, "%s: failed to create dir %s with %d\n", __FUNCTION__, tmp_dir, ret );
+          tmp_dir[0] = '\0';
+			  }
+		  }
+		  else if( !(S_ISDIR(log_stat.st_mode)) )
+		  {
+			  fprintf(stderr, "%s: %s file exists but is not directory\n", __FUNCTION__, tmp_dir );
+        tmp_dir[0] = '\0';
+		  }
+    }
+
+    // If above failed
+    if( tmp_dir[0] == '\0' )
+    {
+      fprintf(stderr, "%s: CLON_LOG failed; log file in . directory\n", __FUNCTION__ );
+      sprintf( tmp_dir, "./" );
+    }
+
+    // Form filename
+		sprintf(logfilename, "%s/mvt_roc_%d_rol_1.log", tmp_dir, rol->pid);
 		sprintf(log_file_perms, "a+");
+
+		// file exists, check its size
 		if( stat( logfilename, &log_stat ) == 0 )
 		{
 			// file exists, check its size
@@ -1488,6 +1586,10 @@ vmeBusUnlock();
 		fprintf( mvt_fptr_err_1,"%s at %02d%02d%02d %02dH%02d\n", __FUNCTION__,
 			time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday,
 			time_struct->tm_hour, time_struct->tm_min );
+  }
+  */
+	if( mvt_fptr_err_1 != (FILE *)NULL )
+	{
 		fprintf( mvt_fptr_err_1,"%s : Information below concerns run %d tiMaster=%d\n", __FUNCTION__, rol->runNumber, tiMaster );
 		fflush(  mvt_fptr_err_1 );
 	}

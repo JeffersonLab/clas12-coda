@@ -66,6 +66,7 @@
 /* you may put more new component type here */
 #define ADD_ET_ACTION                 112
 #define ADD_ETT_ACTION                113
+#define ADD_L3_ACTION                 114
 
 
 #define DELETE_NODE_ACTION            120

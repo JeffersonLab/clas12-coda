@@ -45,8 +45,18 @@ typedef struct {
 
 /* functions */
 
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
+void fadc250GetParamsForOffline(float ped[6][22][16], int tet[6][22][16], float gain[6][22][16], int nsa[6][22], int nsb[6][22]);
+void fadc250Sethost(char *host);
 void fadc250InitGlobals();
 int fadc250ReadConfigFile(char *filename);
 int fadc250DownloadAll();
 int fadc250Config(char *fname);
 void fadc250Mon(int slot);
+
+#ifdef	__cplusplus
+}
+#endif
