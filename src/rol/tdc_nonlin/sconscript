@@ -1,0 +1,8 @@
+Import('env')
+
+for srcname in Glob('*.cc'):
+ exenode = env.Program(srcname)
+ insnode = env.Install('#', exenode)
+ env.Alias('install', '#')
+
+Default('install')

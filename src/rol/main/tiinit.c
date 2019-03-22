@@ -72,7 +72,7 @@ main(int argc, char *argv[])
   stat = vmeOpenDefaultWindows();
   if(stat != OK) exit(1);
 
-  stat = tiInit(0x00A80000,0,0);
+  stat = tiInit(/*0x00A8000*/0,0,0);
   if(stat != OK) exit(1);
   printf("\n-----------------------\n");
   tiGetSerialNumber(&rSN);

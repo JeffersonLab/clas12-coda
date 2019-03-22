@@ -505,8 +505,15 @@ char *error;
   }
 
 
+  /* RIGHT
+#include <gnu/lib-names.h>
+handle = dlopen(LIBM_SO, RTLD_LAZY);
+  */
 
+  /* WRONG */
 handle = dlopen ("libm.so", RTLD_LAZY);
+
+
 if (!handle)
 {
   printf("TEST1: %s\n", dlerror());

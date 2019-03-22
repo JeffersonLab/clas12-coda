@@ -1,0 +1,8 @@
+###########################################################
+# Trigger System Configuration Setup for 12GeV Test Stand #
+###########################################################
+
+HOSTNAME pcal0
+	MODULE MOD_TYPE_TID		0x00A80000	# SLOT 21
+ENDHOST
+

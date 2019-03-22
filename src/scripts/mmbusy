@@ -1,0 +1,3 @@
+tcpClient mvt1 'tiSetBusySource(2,1)'
+tcpClient mvt2 'tiSetBusySource(2,1)'
+tcpClient mmft1 'tiSetBusySource(2,1)'

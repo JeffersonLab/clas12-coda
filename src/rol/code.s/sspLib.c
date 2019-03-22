@@ -2460,7 +2460,7 @@ sspGt_FtDelayScan(int delay_min, int delay_max, int idle)
 
     system("caget IPM2C21A");
     printf("Delay = %4dns, ", delay);
-    system("tcpClient trig2vtp vtpGtPrintScalers | grep -B1 Trigger30");
+    system("tcpClient trig2vtp vtpGtPrintScalers | grep -B4 Trigger23");
   
   }
 }

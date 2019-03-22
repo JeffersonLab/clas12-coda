@@ -37,7 +37,7 @@ static char ssname[80];
 
 
 //#define DEBUG /*FADC*/
-//#define DEBUG1 /*TI/TS*/
+//#define DEBUG1 /*TI*/
 //#define DEBUG2 /*TDC*/
 //#define DEBUG3 /*SSP*/
 //#define DEBUG4 /*VSCM*/
@@ -79,48 +79,6 @@ int mynev; /*defined in tttrans.c */
 #undef SLOTWORKAROUND
 
 #define ABS(x)      ((x) < 0 ? -(x) : (x))
-
-
-
-/* open composite compressed bank */
-#define CCOPENCOMPRESS(btag,fmt,bnum) \
-  /*if it is first board, open bank*/ \
-  if(a_slot_old==-1) \
-  { \
-    { \
-      int len1, n1; \
-      char *ch; \
-      len1 = strlen(fmt); /* format length in bytes */ \
-      n1 = (len1+5)/4; /* format length in words */ \
-      dataout_save1 = dataout ++; /*remember '0xf' bank length location*/ \
-      *dataout++ = (btag<<16) + (0xf<<8) + bnum; /*bank header*/ \
-      /* tagsegment header following by format */ \
-      *dataout++ = (len1<<20) + (0x6<<16) + n1; \
-      ch = (char *)dataout; \
-      strncpy(ch,fmt,len1); \
-      ch[len1]='\0';ch[len1+1]='\4';ch[len1+2]='\4';ch[len1+3]='\4';ch[len1+4]='\4'; \
-      dataout += n1; \
-      /* 'internal' bank header */ \
-      dataout_save2 = dataout ++;  /*remember 'internal' bank length location*/ \
-      *dataout++ = (0<<16) + (0x0<<8) + 0; \
-    } \
-    b08 = (unsigned char *)dataout; \
-  } \
-  /*if new slot, write stuff*/ \
-  if(a_slot != a_slot_old) \
-  { \
-    a_channel_old = -1; /*for new slot, reset a_channel_old to -1*/ \
-    a_slot_old = a_slot; \
-    *b08++ = a_slot; \
-    /*set pointer for the number of channels*/ \
-    mchan = (unsigned int *)b08; \
-    mchan[0] = 0; \
-    b08 += 1; \
-  }
-
-
-
-
 
 /* open composite bank */
 #define CCOPEN(btag,fmt,bnum) \
@@ -392,10 +350,6 @@ rol2trig(int a, int b)
 #ifdef PASS_AS_IS
   int nASIS, iASIS[MAXBANKS];
 #endif
-  int fadc_raw_bank_needed = 0; /* set to 1 if raw bank found on first pass */
-  int fadc_pack_bank_needed = 0; /* set to 1 if pack bank found on first pass */
-  int fadc_pass_number = 0;
-  uint32_t *datain_save;
 
   unsigned int *iw;
   int i, j, k, m, iii, ind, bank, nhits=0, mux_index, rlen, printing, nnE, iev, ibl;
@@ -423,8 +377,6 @@ rol2trig(int a, int b)
   unsigned int *StartOfBank;
   char *ch;
   unsigned int *Nchan, *Npuls, *Nsamp;
-  unsigned int *Npack;
-  unsigned char *mchan, *mpack;
   int islot, ichan, ii, jj, kk;
   int banknum = 0;
   int have_time_stamp, a_nevents2, a_event_type;
@@ -656,7 +608,6 @@ lenE[jj][nB][nE[nB]] - event length in words
         }
         else if( ((datain[ii]>>27)&0x1F) == 0x14) /*window raw data: remember channel#*/
         {
-          fadc_raw_bank_needed = 1;
           a_channel = ((datain[ii]>>23)&0xF);
           a_windowwidth = (datain[ii]&0xFFF);	  
 #ifdef DEBUG
@@ -695,7 +646,6 @@ lenE[jj][nB][nE[nB]] - event length in words
 
         else if( ((datain[ii]>>27)&0x1F) == 0x15) /*compressed*/
         {
-          fadc_pack_bank_needed = 1;
           a_len = ((datain[ii]>>0)&0x7);
 #ifdef DEBUG
 	      printf("[%3d] COMPRESSED: header=0x%08x, a_len=%d\n",ii,datain[ii],a_len);
@@ -1163,9 +1113,7 @@ lenE[jj][nB][nE[nB]] - event length in words
 
 		    if(a_nwords>7)
 		    {
-              int iii;
-		      printf("ERROR1: TI/TS has more then 7 data words (a_nwords=%d) - exit\n",a_nwords);
-              for(iii=-20; iii<20; iii++) printf("[%d] 0x%08x\n",iii,datain[ii+iii]);
+		      printf("ERROR: TS has more then 7 data words - exit\n");
 		      exit(0);
 		    }
 
@@ -3069,27 +3017,12 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
 
 
 
-
-
-
-
       if(banktag[jj] == 0xe109) /* FADC250 hardware format */
 	  {
 #ifdef DEBUG
         printf("SECOND PASS FADC250\n");
 #endif
 
-
-        fadc_pass_number = 0; /* set it to zero before first fadc pass */
-        datain_save = datain;
-
-run_fadc_again:
-
-#ifdef DEBUG
-		printf("fadc_raw_bank_needed=%d fadc_pack_bank_needed=%d fadc_pass_number=%d\n",fadc_raw_bank_needed,fadc_pack_bank_needed,fadc_pass_number);
-#endif
-
-        datain = datain_save;
         a_slot_old = -1;
 
         for(ibl=0; ibl<nB[jj]; ibl++) /*loop over blocks*/
@@ -3140,8 +3073,6 @@ run_fadc_again:
 
 
 
-
-
             else if( ((datain[ii]>>27)&0x1F) == 0x14) /*window raw data: remember channel#*/
             {
               a_channel = ((datain[ii]>>23)&0xF);
@@ -3157,210 +3088,201 @@ run_fadc_again:
               printf("0x%08x: befor CCOPEN(1), dataout=0x%08x\n",b08,dataout);
 #endif
 
-#if 1
-			  if((fadc_raw_bank_needed==0)||(fadc_pass_number==1)) /* do nothing, if raw bank not needed, OR we are on second pass (second pass always for pack bank only) */
-			  {
-	            ii++;
-                while( ((datain[ii]>>31)&0x1) == 0 && ii<rlen ) ii++;
-			  }
-			  else
-#endif
-			  {
-	            CCOPEN(0xe101,"c,i,l,N(c,Ns)",banknum);
+	          CCOPEN(0xe101,"c,i,l,N(c,Ns)",banknum);
 
 #ifdef DEBUG
-                printf("0x%08x: after CCOPEN(1)\n",b08);
-                printf("0x%08x: after CCOPEN(1), dataout=0x%08x\n",b08,dataout);
+              printf("0x%08x: after CCOPEN(1)\n",b08);
+              printf("0x%08x: after CCOPEN(1), dataout=0x%08x\n",b08,dataout);
 #endif
 
 #ifdef DO_PEDS
-                if(mynev==10 && fd==NULL)
+              if(mynev==10 && fd==NULL)
+	          {
+                printf("mynev=%d - opening pedestal file\n",mynev);
+                if((dir=getenv("CLAS")) == NULL)
 	            {
-                  printf("mynev=%d - opening pedestal file\n",mynev);
-                  if((dir=getenv("CLAS")) == NULL)
-	              {
-                    printf("ERROR: environment variable CLAS is not defined - exit\n");
-                    exit(0);
-		          }
-                  if((expid=getenv("EXPID")) == NULL)
-	              {
-                    printf("ERROR: environment variable EXPID is not defined - exit\n");
-                    exit(0);
-		          }
+                  printf("ERROR: environment variable CLAS is not defined - exit\n");
+                  exit(0);
+		        }
+                if((expid=getenv("EXPID")) == NULL)
+	            {
+                  printf("ERROR: environment variable EXPID is not defined - exit\n");
+                  exit(0);
+		        }
 
-                  sprintf(fname,"%s/parms/peds/%s/roc%02d.ped",dir,expid,rol->pid);
-                  fd = fopen(fname,"w");
-                  if(fd==NULL)
-                  {
-                    printf("ttfa: ERROR: cannot open pedestal file >%s<\n",fname);
-		          }
-                  else
-	              {
-                    printf("ttfa: pedestal file >%s< is opened for writing\n",fname);
-                  }
+                sprintf(fname,"%s/parms/peds/%s/roc%02d.ped",dir,expid,rol->pid);
+                fd = fopen(fname,"w");
+                if(fd==NULL)
+                {
+                  printf("ttfa: ERROR: cannot open pedestal file >%s<\n",fname);
+		        }
+                else
+	            {
+                  printf("ttfa: pedestal file >%s< is opened for writing\n",fname);
+                }
 
-                  /*sprintf(cname,"%s/parms/peds/%s/roc%02d.cnf",dir,expid,rol->pid);*/
-                  sprintf(cname,"%s/parms/peds/%s/%s_ped.cnf",dir,expid,getenv("HOST"));
-                  /*sprintf(cname,"%s/parms/fadc250/%s_ped.cnf",dir,getenv("HOST"));*/
-                  fc = fopen(cname,"w");
-                  if(fc==NULL)
-                  {
-                    printf("ttfa: ERROR: cannot open pedestal-cnf file >%s<\n",cname);
-		          }
-                  else
-	              {
-                    printf("ttfa: pedestal-cnf file >%s< is opened for writing\n",cname);
-                    now = time(NULL);
-                    fprintf(fc,"#\n# File generated automatically by DAQ running in RAW mode at %s#\n",ctime(&now));
-                  }
+                /*sprintf(cname,"%s/parms/peds/%s/roc%02d.cnf",dir,expid,rol->pid);*/
+                sprintf(cname,"%s/parms/peds/%s/%s_ped.cnf",dir,expid,getenv("HOST"));
+                /*sprintf(cname,"%s/parms/fadc250/%s_ped.cnf",dir,getenv("HOST"));*/
+                fc = fopen(cname,"w");
+                if(fc==NULL)
+                {
+                  printf("ttfa: ERROR: cannot open pedestal-cnf file >%s<\n",cname);
+		        }
+                else
+	            {
+                  printf("ttfa: pedestal-cnf file >%s< is opened for writing\n",cname);
+                  now = time(NULL);
+                  fprintf(fc,"#\n# File generated automatically by DAQ running in RAW mode at %s#\n",ctime(&now));
+                }
 
-                  for(i=0; i<NSLOTS; i++)
-	              {
-                    for(j=0; j<NCHANS; j++)
-  	                {
-                      npeds[i][j] = 0;
-                      pedval[i][j] = 0.0;
-                      pedrms[i][j] = 0.0;
-		            }
-	              }
+                for(i=0; i<NSLOTS; i++)
+	            {
+                  for(j=0; j<NCHANS; j++)
+  	              {
+                    npeds[i][j] = 0;
+                    pedval[i][j] = 0.0;
+                    pedrms[i][j] = 0.0;
+		          }
 	            }
-                else if(mynev==110 && fd!=NULL && fc!=NULL)
+	          }
+              else if(mynev==110 && fd!=NULL && fc!=NULL)
+	          {
+                printf("mynev=%d - closing pedestal file (Nmeasures=%d (%d %d ..))\n",
+                  mynev,npeds[3][0],npeds[3][1],npeds[4][0]);
+
+                /* check if we have pedestal for at least one channel in current slot */
+                atleastoneslot = 0;
+                for(i=0; i<NSLOTS; i++)
+				{
+                  atleastonechannel[i] = 0;
+                  for(j=0; j<NCHANS; j++)
+				  {
+                    if(npeds[i][j]>0)
+					{
+                      atleastoneslot = 1;
+                      atleastonechannel[i] = 1;
+                      break;
+					}
+				  }
+				}
+
+                if(atleastoneslot)
+				{
+                  fprintf(fc,"FADC250_CRATE %s\n",getenv("HOST"));
+				}
+                for(i=0; i<NSLOTS; i++)
 	            {
-                  printf("mynev=%d - closing pedestal file (Nmeasures=%d (%d %d ..))\n",
-                    mynev,npeds[3][0],npeds[3][1],npeds[4][0]);
-
-                  /* check if we have pedestal for at least one channel in current slot */
-                  atleastoneslot = 0;
-                  for(i=0; i<NSLOTS; i++)
+                  if(atleastonechannel[i])
 				  {
-                    atleastonechannel[i] = 0;
-                    for(j=0; j<NCHANS; j++)
-				    {
-                      if(npeds[i][j]>0)
-					  {
-                        atleastoneslot = 1;
-                        atleastonechannel[i] = 1;
-                        break;
-					  }
-				    }
+                    fprintf(fc,"FADC250_SLOT %d\n",i);
+				    fprintf(fc,"FADC250_ALLCH_PED ");
 				  }
-
-                  if(atleastoneslot)
-				  {
-                    fprintf(fc,"FADC250_CRATE %s\n",getenv("HOST"));
-				  }
-                  for(i=0; i<NSLOTS; i++)
-	              {
-                    if(atleastonechannel[i])
-				    {
-                      fprintf(fc,"FADC250_SLOT %d\n",i);
-				      fprintf(fc,"FADC250_ALLCH_PED ");
-				    }
-                    for(j=0; j<NCHANS; j++)
-                    {
-                      if(npeds[i][j]>0)
-			          {
-                        pedval[i][j] = pedval[i][j] / ((float)npeds[i][j]);
+                  for(j=0; j<NCHANS; j++)
+                  {
+                    if(npeds[i][j]>0)
+			        {
+                      pedval[i][j] = pedval[i][j] / ((float)npeds[i][j]);
 #ifdef VXWORKS
-                        pedrms[i][j] = ( pedrms[i][j]/((float)npeds[i][j]) - (pedval[i][j]*pedval[i][j]) );
+                      pedrms[i][j] = ( pedrms[i][j]/((float)npeds[i][j]) - (pedval[i][j]*pedval[i][j]) );
 #else
-                        pedrms[i][j] = sqrtf( pedrms[i][j]/((float)npeds[i][j]) - (pedval[i][j]*pedval[i][j]) );
+                      pedrms[i][j] = sqrtf( pedrms[i][j]/((float)npeds[i][j]) - (pedval[i][j]*pedval[i][j]) );
 #endif
-                        fprintf(fd,"%2d %2d %5d %6.3f %2d\n",i,j,(int)pedval[i][j],pedrms[i][j],0);
-			          }
-                      /* always print, zero or not */
-                      if(atleastonechannel[i]) fprintf(fc," %8.3f",pedval[i][j]);
-		            }
-                    if(atleastonechannel[i])
-				    {
-                      fprintf(fc,"\n");
-				    }
-	              }
-                  if(atleastoneslot)
+                      fprintf(fd,"%2d %2d %5d %6.3f %2d\n",i,j,(int)pedval[i][j],pedrms[i][j],0);
+			        }
+                    /* always print, zero or not */
+                    if(atleastonechannel[i]) fprintf(fc," %8.3f",pedval[i][j]);
+		          }
+                  if(atleastonechannel[i])
 				  {
-                    fprintf(fc,"FADC250_CRATE end\n");
+                    fprintf(fc,"\n");
 				  }
+	            }
+                if(atleastoneslot)
+				{
+                  fprintf(fc,"FADC250_CRATE end\n");
+				}
 
 #ifndef VXWORKS
-                  /*open files for everybody*/
-                  if(chmod(fname,S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH) != 0)
-                  {
-                    printf("ERROR: cannot change mode on output run config file\n");
-                  }
-                  if(chmod(cname,S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH) != 0)
-                  {
-                    printf("ERROR: cannot change mode on output run config file\n");
-                  }
+                /*open files for everybody*/
+                if(chmod(fname,S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH) != 0)
+                {
+                  printf("ERROR: cannot change mode on output run config file\n");
+                }
+                if(chmod(cname,S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH) != 0)
+                {
+                  printf("ERROR: cannot change mode on output run config file\n");
+                }
 #endif
 
-                  fclose(fd);
-                  printf("ttfa: pedestal file >%s< is closed\n",fname);
-                  fd = NULL;
+                fclose(fd);
+                printf("ttfa: pedestal file >%s< is closed\n",fname);
+                fd = NULL;
 
-                  fclose(fc);
-                  printf("ttfa: pedestal-cnf file >%s< is closed\n",fname);
-                  fc = NULL;
-	            }
+                fclose(fc);
+                printf("ttfa: pedestal-cnf file >%s< is closed\n",fname);
+                fc = NULL;
+	          }
 #endif
 
 
 
 
-	            Nchan[0] ++; /* increment channel counter */
+	          Nchan[0] ++; /* increment channel counter */
 #ifdef DEBUG
-                printf("0x%08x: increment Nchan[0]=%d\n",b08,Nchan[0]);
+              printf("0x%08x: increment Nchan[0]=%d\n",b08,Nchan[0]);
 #endif
 
-                *b08++ = a_channel; /* channel number */
+              *b08++ = a_channel; /* channel number */
 
 #ifdef DEBUG
-                printf("0x%08x: #samples %d\n",b08,a_windowwidth);
+              printf("0x%08x: #samples %d\n",b08,a_windowwidth);
 #endif
-                b32 = (unsigned int *)b08;
-                *b32 = a_windowwidth; /* the number of samples (same as window width) */
+              b32 = (unsigned int *)b08;
+              *b32 = a_windowwidth; /* the number of samples (same as window width) */
+              b08 += 4;
+
+	          ii++;
+
+              /* use first 10% of the window to measure pedestal, or 2 if less then 2 */
+              npedsamples = a_windowwidth / 10;
+              if(npedsamples<2) npedsamples = 2;
+
+              while( ((datain[ii]>>31)&0x1) == 0 && ii<rlen ) /*loop over all samples*/
+	          {
+                a_valid1 = ((datain[ii]>>29)&0x1);
+                a_adc1 = ((datain[ii]>>16)&0xFFF);
+                a_valid2 = ((datain[ii]>>13)&0x1);
+                a_adc2 = (datain[ii]&0xFFF);
+
+#ifdef DEBUG
+                printf("   [%3d] WINDOW RAW DATA: valid1 %d, adc1 0x%04x, valid2 %d, adc2 0x%04x\n",ii,
+                  a_valid1,a_adc1,a_valid2,a_adc2);
+                printf("0x%08x: samples: %d %d\n",b08,a_adc1,a_adc2);
+#endif
+
+                b16 = (unsigned short *)b08;
+                *b16 ++ = a_adc1;
+                *b16 ++ = a_adc2;
                 b08 += 4;
 
-	            ii++;
-
-                /* use first 10% of the window to measure pedestal, or 2 if less then 2 */
-                npedsamples = a_windowwidth / 10;
-                if(npedsamples<2) npedsamples = 2;
-
-                while( ((datain[ii]>>31)&0x1) == 0 && ii<rlen ) /*loop over all samples*/
-	            {
-                  a_valid1 = ((datain[ii]>>29)&0x1);
-                  a_adc1 = ((datain[ii]>>16)&0xFFF);
-                  a_valid2 = ((datain[ii]>>13)&0x1);
-                  a_adc2 = (datain[ii]&0xFFF);
-
-#ifdef DEBUG
-                  printf("   [%3d] WINDOW RAW DATA: valid1 %d, adc1 0x%04x, valid2 %d, adc2 0x%04x\n",ii,
-                    a_valid1,a_adc1,a_valid2,a_adc2);
-                  printf("0x%08x: samples: %d %d\n",b08,a_adc1,a_adc2);
-#endif
-
-                  b16 = (unsigned short *)b08;
-                  *b16 ++ = a_adc1;
-                  *b16 ++ = a_adc2;
-                  b08 += 4;
-
-                  ii++;
+                ii++;
 
 #ifdef DO_PEDS
-                  if(mynev>=10 && mynev<110 && npedsamples>0)
-		          {
-		            /*printf("[%2d][%2d] npedsamples=%d\n",a_slot,a_channel,npedsamples);*/
-                    npedsamples -= 2;
-                    npeds[a_slot][a_channel] += 2;
-                    pedval[a_slot][a_channel] += *(b16-2);
-                    pedval[a_slot][a_channel] += *(b16-1);
-                    pedrms[a_slot][a_channel] += (*(b16-2))*(*(b16-2));
-                    pedrms[a_slot][a_channel] += (*(b16-1))*(*(b16-1));
-		          }
+                if(mynev>=10 && mynev<110 && npedsamples>0)
+		        {
+		          /*printf("[%2d][%2d] npedsamples=%d\n",a_slot,a_channel,npedsamples);*/
+                  npedsamples -= 2;
+                  npeds[a_slot][a_channel] += 2;
+                  pedval[a_slot][a_channel] += *(b16-2);
+                  pedval[a_slot][a_channel] += *(b16-1);
+                  pedrms[a_slot][a_channel] += (*(b16-2))*(*(b16-2));
+                  pedrms[a_slot][a_channel] += (*(b16-1))*(*(b16-1));
+		        }
 #endif
-	            }
-			  }
+	          }
             }
+
 
 
 
@@ -3369,87 +3291,61 @@ run_fadc_again:
             else if( ((datain[ii]>>27)&0x1F) == 0x15) /*compressed*/
             {
               a_len = ((datain[ii]>>0)&0x7);
-			  /*a_n1 = ((datain[ii]>>4)&0xF);*/ /*the number of leading 0's for upper*/
-			  /*a_n2 = ((datain[ii]>>8)&0xFFF);*/ /*offset to all samples (min adc value)*/
+			  a_n1 = ((datain[ii]>>4)&0xF); /*the number of leading 0's for upper*/
+			  a_n2 = ((datain[ii]>>8)&0xFFF); /*offset to all samples (min adc value)*/
 			  /*
               ((datain[ii]>>20)&0x1) overflow bit
               ((datain[ii]>>21)&0x1) highest bit to 'the number of leading 0's' above
 			  */
               a_channel = ((datain[ii]>>23)&0xF); /*channel number*/
 
-#if 1
-			  if( (fadc_pack_bank_needed==0) || ((fadc_raw_bank_needed==1)&&(fadc_pack_bank_needed==1)&&(fadc_pass_number==0)) ) /* do nothing, if pack bank not needed, OR both banks are need AND we are on first pass */
-			  {
-	            ii++; /* skip header */
-	            ii++; /* skip word 1 */
-	            ii++; /* skip word 2 */
-                for(i=0; i<a_len; i++)
-		        {
-                  ii++;  /* skip extra words */
-		        }
-			  }
-			  else /* create pack bank */
+	          CCOPEN(0xe126,"c,i,l,N(c,Ns)",banknum);
+	          Nchan[0] ++; /* increment channel counter */
+              *b08++ = a_channel; /* channel number */
+
+              b32 = (unsigned int *)b08;
+              *b32 = 5 + a_len*2; /* the number of shorts */
+              b08 += 4;
+
+              a_short1 = (a_n1<<12) + a_n2;
+              b16 = (unsigned short *)b08;
+              *b16 = a_short1;
+              b08 += 2;
+#ifdef DEBUG
+	          printf("[%3d] COMPRESSED: header=0x%08x, a_len=%d, a_short1=0x%04x\n",ii,datain[ii],a_len,a_short1);
 #endif
-			  {
-	            CCOPENCOMPRESS(0xe126,"c,m(c,ms)",banknum);
+	          ii++;
 
-	            if(a_channel != a_channel_old)
-	            {
-                  a_channel_old = a_channel;
+              a_word1 = datain[ii];
+              b32 = (unsigned int *)b08;
+              *b32 = a_word1;
+              b08 += 4;
+#ifdef DEBUG
+	          printf("[%3d] COMPRESSED: a_word1 = 0x%08x\n",ii,datain[ii]);
+#endif
+	          ii++;
 
-	              mchan[0] ++; /* increment channel counter */
-                  *b08++ = a_channel; /* channel number */
+              a_word2 = datain[ii];
+              b32 = (unsigned int *)b08;
+              *b32 = a_word2;
+              b08 += 4;
+#ifdef DEBUG
+	          printf("[%3d] COMPRESSED: a_word2 = 0x%08x\n",ii,datain[ii]);
+#endif
+	          ii++;
 
-                  mpack = (unsigned int *)b08;
-                  mpack[0] = 0;
-                  b08 += 1;
-			    }
-
-                mpack[0] += (3+a_len)*2; /* (header+2words+extrawords)*2 - the number of shorts */
-
-                /*a_short1 = (a_n1<<12) + a_n2;*/
+              for(i=0; i<a_len; i++)
+		      {
                 b32 = (unsigned int *)b08;
                 *b32 = datain[ii];
                 b08 += 4;
 #ifdef DEBUG
-	            printf("[%3d] COMPRESSED: header=0x%08x, a_len=%d, a_short1=0x%04x\n",ii,datain[ii],a_len,a_short1);
+	            printf("[%3d] COMPRESSED: data[%d] = 0x%08x\n",ii,i,datain[ii]);
 #endif
-	            ii++;
-
-                a_word1 = datain[ii];
-                b32 = (unsigned int *)b08;
-                *b32 = a_word1;
-                b08 += 4;
-#ifdef DEBUG
-	            printf("[%3d] COMPRESSED: a_word1 = 0x%08x\n",ii,datain[ii]);
-#endif
-	            ii++;
-
-                a_word2 = datain[ii];
-                b32 = (unsigned int *)b08;
-                *b32 = a_word2;
-                b08 += 4;
-#ifdef DEBUG
-	            printf("[%3d] COMPRESSED: a_word2 = 0x%08x\n",ii,datain[ii]);
-#endif
-	            ii++;
-
-                for(i=0; i<a_len; i++)
-		        {
-                  b32 = (unsigned int *)b08;
-                  *b32 = datain[ii];
-                  b08 += 4;
-#ifdef DEBUG
-	              printf("[%3d] COMPRESSED: data[%d] = 0x%08x\n",ii,i,datain[ii]);
-#endif
-                  ii++; 
-		        }
-			  }
-
-
+                ii++; 
+		      }
 
             }
-
 
 
 
@@ -3517,6 +3413,17 @@ run_fadc_again:
 
             }
 
+
+
+
+
+
+
+
+
+
+
+
             else if( ((datain[ii]>>27)&0x1F) == 0x17) /* pulse integral */
             {
               a_channel = ((datain[ii]>>23)&0xF);
@@ -3545,8 +3452,16 @@ run_fadc_again:
 			  }
 #endif
 
+
 	          ii++;
             }
+
+
+
+
+
+
+
 
             else if( ((datain[ii]>>27)&0x1F) == 0x18) /* pulse time */
             {
@@ -3650,8 +3565,26 @@ if(a_pulsenumber == 0)
               b08 += 2;
 #endif
 
+
+
+
 	          ii++;
             }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             else if( ((datain[ii]>>27)&0x1F) == 0x19)
             {
@@ -3660,6 +3593,25 @@ if(a_pulsenumber == 0)
 #endif
 	          ii++;
             }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             else if( ((datain[ii]>>27)&0x1F) == 0x1a) /* Vm Vp */
             {
@@ -3676,6 +3628,21 @@ if(a_pulsenumber == 0)
 
 	          ii++;
             }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             else if( ((datain[ii]>>27)&0x1F) == 0x1D)
             {
@@ -3725,48 +3692,7 @@ if(a_pulsenumber == 0)
 #endif
 
 
-
-#if 1
-		  /* we need to run again if both raw and pack banks are needed, and we ended first fadc pass */
-		  
-          if(fadc_raw_bank_needed && fadc_pack_bank_needed && (fadc_pass_number==0))
-		  {
-            datain = datain_save;
-            fadc_pass_number = 1;
-            goto run_fadc_again;
-		  }
-#endif
-
-
-
-
-
 	  } /* FADC250 hardware format */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -3906,9 +3832,7 @@ if(a_pulsenumber == 0)
 
 		    if(a_nwords>7)
 		    {
-              int iii;
-		      printf("ERROR2: TI/TS has more then 7 data words (a_nwords=%d) - exit\n",a_nwords);
-              for(iii=-20; iii<20; iii++) printf("[%d] 0x%08x\n",iii,datain[ii+iii]);
+		      printf("ERROR: TS has more then 7 data words - exit\n");
 		      exit(0);
 		    }
 
@@ -4424,12 +4348,12 @@ if(a_pulsenumber == 0)
               b08 += 4;
 	          ii++;
 
-	          /*printf("HTCC mask 47-31: 0x%08x\n",datain[ii]);*/
+	          printf("HTCC mask 47-31: 0x%08x\n",datain[ii]);
               *dataout ++ = datain[ii];
               b08 += 4;
 	          ii++;
 
-	          /*printf("HTCC mask 30-00: 0x%08x\n",datain[ii]);*/
+	          printf("HTCC mask 30-00: 0x%08x\n",datain[ii]);
               *dataout ++ = datain[ii];
               b08 += 4;
 	          ii++;
@@ -4479,12 +4403,14 @@ if(a_pulsenumber == 0)
               b08 += 4;
 	          ii++;
 
-              a_hitmask1 =  datain[ii];
+              a_hitmask0 =  datain[ii];
+
               *dataout ++ = datain[ii];
               b08 += 4;
 	          ii++;
 
-              a_hitmask0 =  datain[ii];
+              a_hitmask1 =  datain[ii];
+
               *dataout ++ = datain[ii];
               b08 += 4;
 	          ii++;
@@ -4495,52 +4421,17 @@ if(a_pulsenumber == 0)
 			}
 
 
-            else if( ((datain[ii]>>27)&0x1F) == 0x19) /*CTOF*/
+            else if( ((datain[ii]>>27)&0x1F) == 0x19) /*???*/
             {
-              a_time =   ((datain[ii]>>16)&0x3FF);
-
-              *dataout ++ = datain[ii];
-              b08 += 4;
-	          ii++;
-
-              a_hitmask1 =  datain[ii];
-              *dataout ++ = datain[ii];
-              b08 += 4;
-	          ii++;
-
-              a_hitmask0 =  datain[ii];
-              *dataout ++ = datain[ii];
-              b08 += 4;
-	          ii++;
-
-#ifdef DEBUG7
-	          printf("[%3d] CTOFHIT_(MASK0,MASK1,TIME) %d %d %d\n",ii,a_hitmask0,a_hitmask1,a_time);
-#endif
+              printf("ERROR: VTP UNKNOWN data19: [%3d] 0x%08x\n",ii,datain[ii]);
+              error = 1;
+              ii++;
 			}
-
-
-            else if( ((datain[ii]>>27)&0x1F) == 0x1A) /*CND*/
+            else if( ((datain[ii]>>27)&0x1F) == 0x1A) /*???*/
             {
-              a_time =   ((datain[ii]>>16)&0x3FF);
-
-              a_hitmask2 =  datain[ii]&0x3FF;
-              *dataout ++ = datain[ii];
-              b08 += 4;
-	          ii++;
-
-              a_hitmask1 =  datain[ii]&0x7FFFFFFF;
-              *dataout ++ = datain[ii];
-              b08 += 4;
-	          ii++;
-
-              a_hitmask0 =  datain[ii]&0x7FFFFFFF;
-              *dataout ++ = datain[ii];
-              b08 += 4;
-	          ii++;
-
-#ifdef DEBUG7
-	          printf("[%3d] CNDHIT_(MASK0,MASK1,MASK2,TIME) %d %d %d\n",ii,a_hitmask0,a_hitmask1,a_hitmask2,a_time);
-#endif
+              printf("ERROR: VTP UNKNOWN data1A: [%3d] 0x%08x\n",ii,datain[ii]);
+              error = 1;
+              ii++;
 			}
 
 
@@ -4693,7 +4584,6 @@ if(a_pulsenumber == 0)
 		}
 
 	  } /* VTP hardware format */
-
 
 
 
@@ -4909,7 +4799,7 @@ if(a_pulsenumber == 0)
 			
             if( ((datain[ii]>>27)&0x1F) == VSCM_TYPE_EVTHDR) /*event header*/
 			{
-              a_triggernumber = (datain[ii]&0x3FFFFF);
+              a_triggernumber = (datain[ii]&0x7FFFFFF);
 #ifdef DEBUG4
 		      printf("[%3d] VSCM EVENT HEADER, a_triggernumber = %d\n",ii,a_triggernumber);
 #endif
@@ -4918,10 +4808,10 @@ if(a_pulsenumber == 0)
 
             else if( ((datain[ii]>>27)&0x1F) == VSCM_TYPE_TRGTIME) /*trigger time: remember timestamp*/
             {
-              a_trigtime[1] = (datain[ii]&0xFFFFFF);
+              a_trigtime[0] = (datain[ii]&0xFFFFFF);
 	          ii++;
 
-              a_trigtime[0] = (datain[ii]&0xFFFFFF);
+              a_trigtime[1] = (datain[ii]&0xFFFFFF);
               ii++;
 
 		      timestamp = (((unsigned long long)a_trigtime[0])<<24) | (a_trigtime[1]);
@@ -4970,8 +4860,7 @@ if(a_pulsenumber == 0)
 #endif
 
 
-/* Line below is incorrect - channels must be recorded for each hit */
-/*              if(a_channel != a_channel_old) */
+              if(a_channel != a_channel_old)
               {
                 a_channel_old = a_channel;
 
@@ -5025,22 +4914,11 @@ if(a_pulsenumber == 0)
 #ifdef DEBUG4
 	          printf("[%3d] VSCM TDCEVT: FSSRNUM=%2u TDC=%7u \n",ii,a_fssr_num,a_tdc);
 #endif
-
-              CCOPEN(0xe111,"c,i,l,N(c,c,c,c)",banknum);
-#ifdef DEBUG4
-              printf("0x%08x: CCOPEN(VSCM), dataout=0x%08x\n",b08,dataout);
-#endif
-
-              /* Match composite format of VSCM_TYPE_FSSREVT.
-               * Hardcode half/chip number to 0x80 which is not possible for FSSREVT type to identify TDC data
-               */
-              Nchan[0]++;
-              *b08++ = 0x80;
-              *b08++ = a_fssr_num;
-              *b08++ = (a_tdc>>0) & 0xFF;
-              *b08++ = (a_tdc>>8) & 0xFF;
-  	          ii++;
+	          ii++;
             }
+
+
+
 
 
 
