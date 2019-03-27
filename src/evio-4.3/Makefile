@@ -29,6 +29,7 @@ install: install_lib
 	mkdir tmp
 	cp src.s/evio.h tmp/
 	cp src.s/evioBankUtil.h tmp/
+	cp fadc.s/fadc_decompress.h tmp/
 	chmod 664 tmp/*
 	-mkdir -p $(CODA)/common/include
 	cp tmp/* $(CODA)/common/include
