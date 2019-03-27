@@ -1817,10 +1817,11 @@ vmeBusUnlock();
     }
     else
     {
-	  /*
-      printf("ti: len=%d\n",len);
-      for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
-	  */
+	  if(len != 164)
+	  {
+        printf("ti: len=%d\n",len);
+        for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
+	  }
 	  
       BANKOPEN(0xe10A,1,rol->pid);
       for(jj=0; jj<len; jj++) *rol->dabufp++ = tdcbuf[jj];

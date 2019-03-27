@@ -1165,7 +1165,7 @@ lenE[jj][nB][nE[nB]] - event length in words
 		    {
               int iii;
 		      printf("ERROR1: TI/TS has more then 7 data words (a_nwords=%d) - exit\n",a_nwords);
-              for(iii=-20; iii<20; iii++) printf("[%d] 0x%08x\n",iii,datain[ii+iii]);
+              for(iii=-200; iii<200; iii++) printf("[%d] 0x%08x\n",iii,datain[ii+iii]);
 		      exit(0);
 		    }
 
@@ -3908,7 +3908,7 @@ if(a_pulsenumber == 0)
 		    {
               int iii;
 		      printf("ERROR2: TI/TS has more then 7 data words (a_nwords=%d) - exit\n",a_nwords);
-              for(iii=-20; iii<20; iii++) printf("[%d] 0x%08x\n",iii,datain[ii+iii]);
+              for(iii=-200; iii<200; iii++) printf("[%d] 0x%08x\n",iii,datain[ii+iii]);
 		      exit(0);
 		    }
 

@@ -60,6 +60,8 @@
 #include "Editor_database.h"
 #include "Editor_converter.h"
 
+#include "libdb.h"
+
 #undef _CODA_DEBUG
 
 #define PRIORITY_TABLE_NAME "priority"
