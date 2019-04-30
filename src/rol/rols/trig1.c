@@ -579,7 +579,7 @@ vmeBusUnlock();
 /*
   {
   char portfile[1024];
-  sprintf(portfile,"%s/portnames.txt",getenv("CLON_PARMS"));
+  sprintf(portfile,"%s/portnames_%s.txt",getenv("CLON_PARMS"),getenv("EXPID"));
   printf("Loading port names from file >%s<\n",portfile);
   tdLoadPortNames(portfile);
   }
