@@ -22,6 +22,8 @@
  * </pre>
  *----------------------------------------------------------------------------*/
 
+#ifndef Linux_armv7l
+
 #define _GNU_SOURCE
 
 #define DEVEL
@@ -458,7 +460,7 @@ tipInit(unsigned int mode, int iFlag)
 	{
 	  printf("%s: Fiber Measurement failure.  Check fiber and/or fiber port,\n",
 		 __FUNCTION__);
-	  return ERROR;
+	  /*return ERROR;*/
 	}
 
       tipWrite(&TIPp->syncWidth, 0x24);
@@ -732,6 +734,8 @@ tipStatus(int pflag)
 
   printf("(%s)\n",(ro->vmeControl & TIP_VMECONTROL_BUSY_ON_BUFFERLEVEL)?
 	 "Busy Enabled":"Busy not enabled");
+
+  printf("dataFormat = 0x%08x\n",ro->dataFormat);
 
   if(tipMaster)
     {
@@ -1863,7 +1867,7 @@ tipGetInstantBlockLevelChange()
  * @ingroup Config
  * @brief Set the trigger source
  *     This routine will set a library variable to be set in the TI registers
- *     at a call to tiIntEnable.
+ *     at a call to tipIntEnable.
  *
  *  @param trig - integer indicating the trigger source
  *         - 0: P0
@@ -2231,6 +2235,8 @@ tipSetEventFormat(int format)
 
   tipWrite(&TIPp->dataFormat,formatset);
 
+  printf("tipSetEventFormat: dataFormat=0x%08x\n",tipRead(&TIPp->dataFormat));
+
   TIPUNLOCK;
 
   return OK;
@@ -2423,6 +2429,69 @@ tipDisableRandomTrigger()
   TIPUNLOCK;
   return OK;
 }
+
+
+/*sergey-new function*/
+int
+tipGetRandomTriggerSetting(int trigger)
+{
+  int val;
+#if 0
+  if(TIp==NULL)
+  {
+    printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  if(trigger!=1 && trigger!=2)
+  {
+    logMsg("\ntiSetRandomTrigger: ERROR: Invalid trigger type %d\n",trigger,2,3,4,5,6);
+    return ERROR;
+  }
+
+  TILOCK;
+  val = vmeRead32(&TIp->randomPulser);
+  TIUNLOCK;
+
+  if(trigger==1)
+    return (val>>0) & 0xF;
+  else if(trigger==2)
+    return (val>>8) & 0xF;
+#endif
+  return 0;
+}
+
+/*sergey-new function*/
+int
+tipGetRandomTriggerEnable(int trigger)
+{
+  int val;
+#if 0
+  if(TIp==NULL)
+  {
+    printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  if(trigger!=1 && trigger!=2)
+  {
+    logMsg("\ntiSetRandomTrigger: ERROR: Invalid trigger type %d\n",trigger,2,3,4,5,6);
+    return ERROR;
+  }
+
+  TILOCK;
+  val = vmeRead32(&TIp->randomPulser);
+  TIUNLOCK;
+
+  if((trigger==1) && (val & TI_RANDOMPULSER_TRIG1_ENABLE))
+    return 1;
+  else if((trigger==2) && (val & TI_RANDOMPULSER_TRIG2_ENABLE))
+    return 1;
+#endif
+  return 0;
+}
+
+
 
 int tipTriedAgain=0;
 /**
@@ -4138,6 +4207,39 @@ tipSetBlockBufferLevel(unsigned int level)
   return OK;
 }
 
+
+/*sergey*/
+int
+tipGetBlockBufferLevel()
+{
+  int rval = 0;
+
+#if 0
+  if(TIp == NULL)
+    {
+      printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+      return ERROR;
+    }
+
+  TILOCK;
+  if(vmeRead32(&TIp->vmeControl) & TI_VMECONTROL_USE_LOCAL_BUFFERLEVEL)
+    {
+      rval = vmeRead32(&TIp->blockBuffer) & TI_BLOCKBUFFER_BUFFERLEVEL_MASK;
+    }
+  else
+    {
+      rval = (vmeRead32(&TIp->dataFormat) & TI_DATAFORMAT_BCAST_BUFFERLEVEL_MASK) >> 24;
+    }
+  TIUNLOCK;
+#endif
+
+  return rval;
+}
+
+
+
+
+
 /**
  *  @ingroup Status
  *  @brief Get the block buffer level, as broadcasted from the TS
@@ -4457,7 +4559,7 @@ tipSetFiberDelay(unsigned int delay, unsigned int offset)
       syncDelay = (offset-(delay));
     }
 
-  syncDelay_write = (syncDelay&0xff<<8) | (syncDelay&0xff<<16) | (syncDelay&0xff<<24);  /* set the sync delay according to the fiber latency */
+  syncDelay_write = ((syncDelay&0xff)<<8) | ((syncDelay&0xff)<<16) | ((syncDelay&0xff)<<24);  /* set the sync delay according to the fiber latency */
 
   tipWrite(&TIPp->fiberSyncDelay,syncDelay_write);
 
@@ -4474,7 +4576,7 @@ tipSetFiberDelay(unsigned int delay, unsigned int offset)
 
   TIPUNLOCK;
 
-  printf("%s: Wrote 0x%08x to fiberSyncDelay\n",__FUNCTION__,syncDelay_write);
+  printf("%s: Wrote 0x%08x to fiberSyncDelay. syncDelay = %d\n",__FUNCTION__,syncDelay_write, syncDelay);
 
 }
 
@@ -6637,6 +6739,31 @@ tipPrintTSInputDelay()
   return OK;
 }
 
+/* sergey: add function */
+int
+tipGetTSInputMask()
+{
+  int ret;
+
+#if 0
+  if(TIp == NULL)
+    {
+      printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+      return ERROR;
+    }
+  TILOCK;
+  ret = vmeRead32(&TIp->tsInput) & 0x3F; /* sergey: add 0x3f mask */
+  printf("tiGetTSInputMask: mask=0x%08x\n",ret);
+  TIUNLOCK;
+#endif
+
+  return(ret);
+}
+
+
+
+
+
 /**
  * @ingroup Status
  * @brief Return value of buffer length from GTP
@@ -8161,3 +8288,13 @@ tipGetNumberOfBlocksInBuffer()
   nblocks = (blockBuffer&TIP_BLOCKBUFFER_BLOCKS_READY_MASK)>>8;
   return(nblocks);
 }
+
+
+#else /*Linux_armv7l*/
+
+void
+TIpcieLib_default()
+{
+}
+
+#endif

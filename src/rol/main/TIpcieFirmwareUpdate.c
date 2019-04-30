@@ -22,6 +22,8 @@
     TIpcieFirmwareUpdate tiep92.svf
  */
 
+#if defined(Linux) && !defined(Linux_armv7l) && !defined(Linux_nios2)
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -504,3 +506,13 @@ tipFirmwareUsage()
   printf("\n");
 
 }
+
+
+#else 
+
+int
+main()
+{
+}
+
+#endif

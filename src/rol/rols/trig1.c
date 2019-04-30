@@ -62,7 +62,10 @@ static char ssname[80];
 
 #include "rol.h"
 
+#include "daqLib.h"
+#include "sdLib.h"
 #include "tsLib.h"
+#include "tsConfig.h"
 #include "tdLib.h"
 
 void usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE);
@@ -357,7 +360,7 @@ vmeBusUnlock();
   }
   printf("TDSLOTMASK: tdslotmask=0x%08x (from library 0x%08x)\n",tdslotmask,tdSlotMask());
 
-  sprintf(filename,"%s/portnames.txt",getenv("CLON_PARMS"));
+  sprintf(filename,"%s/portnames_%s.txt",getenv("CLON_PARMS"),getenv("EXPID"));
   printf("loading portnames from file >%s<\n",filename);
   tdLoadPortNames(filename);
 
@@ -709,7 +712,7 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
 
   if(syncFlag) printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
 
-  rol->dabufp = (int *) 0;
+  rol->dabufp = NULL;
 
   /*
 usleep(100);

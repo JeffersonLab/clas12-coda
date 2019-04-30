@@ -64,6 +64,7 @@ other delay scans:
 /*
 #if defined(VXWORKS) || defined(Linux_vme)
 */
+
 #if defined(Linux_vme)
 
  
@@ -83,8 +84,9 @@ other delay scans:
 #endif 
 #include <pthread.h> 
 #include <stdio.h> 
+#include <stdlib.h> 
 #include <string.h> 
- 
+
 #include "sspLib.h"
 #include "xxxConfig.h"
 
@@ -1577,7 +1579,7 @@ sspSendScalers(int id)
 {
   int r = OK;
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
-    return;
+    return(-1);
 
   switch(sspFirmwareType[id])
   {
@@ -2283,7 +2285,7 @@ sspGt_FtofPcuDelayScan(int delay_min, int delay_max, int idle)
       else
         ref = ((float)val) / 100000.0;
 
-       vals = sspReadReg(&pSSP[id]->gt.sspcuftof.Scaler);
+	  vals = sspReadReg(&pSSP[id]->gt.sspcuftof.Scaler[0]); 
 
       sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0);
       SSPUNLOCK();
@@ -6801,7 +6803,7 @@ sspReadBlock(int id, unsigned int *data, int nwrds, int rflag)
     printf("sspReadBlock: vmeAdr=0x%08x (0x%08x - 0x%08x)\n",vmeAdr,(unsigned int)(SSPpf[id]),sspA32Offset);fflush(stdout);
 	*/
 
-    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int *)laddr, (nwrds << 2));
+    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int)laddr, (nwrds << 2));
 
     if (retVal |= 0)
     {
