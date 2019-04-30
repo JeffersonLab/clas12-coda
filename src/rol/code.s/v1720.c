@@ -20,7 +20,6 @@
 #include "v1720.h"
 
 
-
 #ifdef VXWORKS
 /* Define external Functions */
 IMPORT  STATUS sysBusToLocalAdrs(int, char *, char **);
@@ -379,7 +378,7 @@ v1720Config(int options)
   taskDelay(10);
   */
 
-  return;
+  return(0);
 }
 
 
@@ -1272,7 +1271,7 @@ v1720ReadBoard(int iadc, UINT32 *tdata)
 int
 v1720ReadBoardDmaStart(int ib, UINT32 *tdata)
 {
-  volatile UINT32 *vmeAdr;
+  UINT32 vmeAdr;
   int mdata, res;
   int i, nbytes;
   int ndata_save, extra_save;
@@ -1330,7 +1329,7 @@ v1720ReadBoardDmaStart(int ib, UINT32 *tdata)
 
   /*logMsg("vmeAdr=0x%08x\n",vmeAdr,2,3,4,5,6);*/
 
-  res = usrVme2MemDmaStart( (UINT32 *)vmeAdr, (UINT32 *)tdata, nbytes);
+  res = usrVme2MemDmaStart( vmeAdr, (UINT32)tdata, nbytes);
 
   if(res < 0)
   {
@@ -1455,7 +1454,7 @@ v1720ReadListStart(INT32 *adcbuf, INT32 *rlenbuf)
 {
   int ii, jj, nev;
   int iadcbuf;
-  static int *destination[V1720_MAX_MODULES];
+  static int destination[V1720_MAX_MODULES];
   int ndata_save;
   int extra_save;
 
@@ -1525,7 +1524,7 @@ TIMER_VAR;
       nbytes_save[jj] = (ndata_save+extra_save)<<2;
       rlenbuf[jj] = ndata_save+extra_save;
 
-      destination[jj] = &adcbuf[iadcbuf];
+      destination[jj] = (unsigned int)&adcbuf[iadcbuf];
 
       iadcbuf += rlenbuf[jj];
 
@@ -1547,7 +1546,7 @@ logMsg("[%d] ask=%d (%d bytes), got=%d (0x%08x to 0x%08x)\n",
       nbytes_save[jj] = ndata_save<<2;
       rlenbuf[jj] = ndata_save;
 
-      destination[jj] = &adcbuf[iadcbuf];
+      destination[jj] = (unsigned int)&adcbuf[iadcbuf];
 
       iadcbuf += rlenbuf[jj];
 	} 

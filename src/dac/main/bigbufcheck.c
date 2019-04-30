@@ -1,18 +1,21 @@
-#if defined(Linux_armv7l) || defined(Linux_nios2)
-
-int
-bigbufcheck_dummy()
-{
-  return;
-}
-
-#else
 
 /* bigbufcheck.c - test for bigbufcheck function */
 
 #include <stdio.h>
 #include <stdlib.h>
 
+
+#if defined(Linux_armv7l) || defined(Linux_nios2)
+
+int
+main()
+{
+  exit(0);
+}
+
+#else
+
+#include "rolInt.h"
 #include "da.h"
 #include "circbuf.h"
 /*

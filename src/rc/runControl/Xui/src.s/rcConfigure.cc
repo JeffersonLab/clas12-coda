@@ -44,12 +44,12 @@
 #include <rcAudioOutput.h>
 #include "rcConfigure.h"
 
-#define RC_CONFIGURE_NAME "Configure"
-#define RC_CONFIGURE_MSG  "Configure an experiment"
+#define RC_CONFIGURE_NAME (char *)"Configure"
+#define RC_CONFIGURE_MSG  (char *)"Configure an experiment"
 
 rcConfigure::rcConfigure (Widget parent, rcButtonPanel* panel, 
 			  rcClientHandler& handler)
-:rcComdButton (parent, RC_CONFIGURE_NAME, RC_CONFIGURE_MSG, panel, handler,"B")
+:rcComdButton (parent, RC_CONFIGURE_NAME, RC_CONFIGURE_MSG, panel, handler, (char *)"B")
 {
 #ifdef _TRACE_OBJECTS 
   printf ("                   Create rcConfigure Class Object\n");
@@ -78,7 +78,7 @@ rcConfigure::doit (void)
   assert (infoPanel_);
   rcComdOption* option = rcComdOption::option ();
   loadRcDbase (option->dbasename (), option->session ());
-  rcAudio ("configure a run");
+  rcAudio ((char *)"configure a run");
 }
 
 void
@@ -94,7 +94,7 @@ rcConfigure::loadRcDbase (char *dbase, char* session)
   /* get network handler */
   rcClient& client = netHandler_.clientHandler ();
 
-  daqData data ("RCS", "command", "unknown");
+  daqData data ((char *)"RCS", (char *)"command", (char *)"unknown");
 
   /* insert database name + session name into data object */
   char* temp[2];
@@ -114,8 +114,8 @@ rcConfigure::loadRcDbase (char *dbase, char* session)
 	       (void *)this);
   if (status != CODA_SUCCESS)
   {
-    reportErrorMsg ("Cannot send load database command");
-    rcAudio ("can not send load database command");
+    reportErrorMsg ((char *)"Cannot send load database command");
+    rcAudio ((char *)"can not send load database command");
   }
 }
 
@@ -127,8 +127,8 @@ rcConfigure::loadRcDbaseCbk (int status, void* arg, daqNetData* data)
   rcConfigure* obj = (rcConfigure *)arg;
   if (status != CODA_SUCCESS && status != CODA_IGNORED)
   {
-    obj->reportErrorMsg ("rcConfigure::loadRcDbaseCbk: Loading database failed !!!");
-    rcAudio ("rcConfigure::loadRcDbaseCbk: loading database failed");
+    obj->reportErrorMsg ((char *)"rcConfigure::loadRcDbaseCbk: Loading database failed !!!");
+    rcAudio ((char *)"rcConfigure::loadRcDbaseCbk: loading database failed");
   }
   else
   { 

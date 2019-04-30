@@ -19,6 +19,7 @@
 #include <string.h> 
 #include <errno.h> 
 #include <dirent.h> 
+#include <time.h> 
 #include <signal.h> 
 #include <unistd.h> 
 #include <ctype.h> 

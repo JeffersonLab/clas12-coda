@@ -1,5 +1,5 @@
 /* XPM */
-static char * moretype_xpm[] = {
+static const char *moretype_xpm[] = {
 "32 40 3 1",
 " 	s lightBlue	c LightBlue",
 ".	c Red",

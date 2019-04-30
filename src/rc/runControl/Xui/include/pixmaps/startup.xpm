@@ -1,5 +1,5 @@
 /* XPM */
-static char * startup_xpm[] = {
+static const char *startup_xpm[] = {
 "33 32 6 1",
 " 	c #C30BC30BC30B",
 ".	c #FFFFFFFF0000",

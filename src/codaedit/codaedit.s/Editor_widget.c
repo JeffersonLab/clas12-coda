@@ -45,9 +45,11 @@
  *
  *	  
  */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
 #include <Xm/Xm.h>
@@ -57,6 +59,7 @@
 #include <Xm/Label.h>
 #include <Xm/PushB.h>
 
+#include "codaedit.h"
 #include "MixedLabel.h"
 
 #include "Editor_layout.h"
@@ -70,6 +73,7 @@
 #include "Editor_zoom.h"
 #include "Editor_icon_box.h"
 #include "Editor_drawing.h"
+#include "Editor_menu.h"
 
 /*  "NetEditor*.drawing_area.background: NavyBlue",
   "NetEditor*.top_ruler.background: NavyBlue",
@@ -141,7 +145,7 @@ CodaEditor(Widget toplevel, int withExit)
   dbasehost = getenv("MYSQL_HOST");
 
   /* connect to a database server */
-  if (connectToDatabase (dbasehost) == NULL)
+  if (connectToDatabase (dbasehost) == 0)
   {
     fprintf (stderr, "Cannot connect to a CODA database server\n");
     exit(0);/*return;*/

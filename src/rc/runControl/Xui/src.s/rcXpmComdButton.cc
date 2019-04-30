@@ -31,12 +31,13 @@
 #include <codaComdXInterface.h>
 #include <XcodaErrorDialog.h>
 #include <rcButtonPanel.h>
+
 #include "rcXpmComdButton.h"
 
 // initialize error dialog
 XcodaErrorDialog* rcXpmComdButton::errDialog_ = 0;
 
-rcXpmComdButton::rcXpmComdButton (Widget parent, char* name, char **xpm, char* msg,
+rcXpmComdButton::rcXpmComdButton (Widget parent, char* name, const char **xpm, char* msg,
 			    rcButtonPanel* panel,
 			    rcClientHandler& handler)
 :codaXpmpbtnComd (name, xpm, 1), parent_ (parent), bpanel_ (panel), 
@@ -53,7 +54,7 @@ rcXpmComdButton::rcXpmComdButton (Widget parent, char* name, char **xpm, char* m
 rcXpmComdButton::~rcXpmComdButton (void)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("         Delete rcXpmComdButton Class Object\n");
+  printf ("         Delete rcXpmComdButton Class Object\n");fflush(stdout);
 #endif
   delete []helpMsg_;
 }

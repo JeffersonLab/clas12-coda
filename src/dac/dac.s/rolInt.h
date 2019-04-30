@@ -4,6 +4,17 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+typedef int 		(*FUNCPTR) (...);     /* ptr to function returning int */
+typedef void 		(*VOIDFUNCPTR) (...); /* ptr to function returning void */
+#else
+typedef int 		(*FUNCPTR) ();	   /* ptr to function returning int */
+typedef void 		(*VOIDFUNCPTR) (); /* ptr to function returning void */
+#endif			/* _cplusplus */
+
+
+
+
 typedef struct rolParameters *rolParam;     
 typedef struct rolParameters
 {

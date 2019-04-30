@@ -30,12 +30,12 @@
 #include <rcAudioOutput.h>
 #include "rcAbort.h"
 
-#define RC_ABORT_NAME "   Abort  "
-#define RC_ABORT_MSG  "Abort a run"
+#define RC_ABORT_NAME (char *)"   Abort  "
+#define RC_ABORT_MSG  (char *)"Abort a run"
 
 rcAbort::rcAbort (Widget parent, rcButtonPanel* panel, 
 		  rcClientHandler& handler)
-:rcComdButton (parent, RC_ABORT_NAME, RC_ABORT_MSG, panel, handler, "B")
+:rcComdButton (parent, RC_ABORT_NAME, RC_ABORT_MSG, panel, handler, (char *)"B")
 {
 #ifdef _TRACE_OBJECTS
   printf ("              Create rcAbort Class Object\n");
@@ -54,18 +54,18 @@ rcAbort::~rcAbort (void)
 void
 rcAbort::doit (void)
 {
-  rcAudio ("abort this run");
+  rcAudio ((char *)"abort this run");
 
   assert (stWin_);
 
   // get network handler first
   rcClient& client = netHandler_.clientHandler ();
-  daqData data ("RCS", "command", (int)DAABORT);
+  daqData data ((char *)"RCS", (char *)"command", (int)DAABORT);
   if (client.sendCmdCallback (DAABORT, data,
 			      (rcCallback)&(rcAbort::abortCallback),
 			      (void *)this) != CODA_SUCCESS) {
-    reportErrorMsg ("Cannot send abort command to the server.");
-    rcAudio ("can not send abort command");
+    reportErrorMsg ((char *)"Cannot send abort command to the server.");
+    rcAudio ((char *)"can not send abort command");
   }
   else 
     stWin_->start ();
@@ -86,8 +86,8 @@ rcAbort::abortCallback (int status, void* arg, daqNetData* data)
   obj->stWin_->stop ();
 
   if (status != CODA_SUCCESS) {
-    obj->reportErrorMsg ("Aborting a run failed !!!\n");
-    rcAudio ("aborting failed");
+    obj->reportErrorMsg ((char *)"Aborting a run failed !!!\n");
+    rcAudio ((char *)"aborting failed");
   }
 }
 

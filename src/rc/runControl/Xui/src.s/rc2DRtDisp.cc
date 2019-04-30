@@ -48,7 +48,7 @@ rc2DRtDisp::rc2DRtDisp (Widget parent, char* name, double xmin, double ymin,
   plot_ = new cg2DRtPlot (xmin, ymin,
 			  ymax - ymin, bufsize, history);
   plot_->createCgCxt (*disp_);
-  plot_->foregroundColor ("red");
+  plot_->foregroundColor ((char *)"red");
 }
 
 rc2DRtDisp::~rc2DRtDisp (void)

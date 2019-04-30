@@ -1,5 +1,5 @@
 /* XPM */
-static char * rcDisc_xpm[] = {
+static const char* rcDisc_xpm[] = {
 "32 32 2 1",
 " 	s background	c white",
 ".	c blue",

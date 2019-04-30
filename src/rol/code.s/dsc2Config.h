@@ -66,21 +66,51 @@ A_BOARDID		Board Identifier		0x0404	0x44534332 = "DSC2" in ASCII
 #define DSC2_FIRMWARE_REV_MIN      0x000000ff
 
 
-#define UINT32 unsigned int
-#define UINT16 unsigned short
-#define INT32  int
+#ifndef INT16
+#define INT16  short
+#endif
 
+#ifndef UINT16
+#define UINT16 unsigned short
+#endif
+
+#ifndef INT32
+#define INT32  int
+#endif
+
+#ifndef UINT32
+#define UINT32 unsigned int
+#endif
+
+#ifndef STATUS
+#define STATUS int
+#endif
 
 /* Function Prototypes */
-int    dsc2Config         ();
-void   dsc2InitGlobals    ();
-int    dsc2ReadConfigFile (char *fname);
-int    dsc2DownloadAll    ();
+
+
+int dsc2GetNdsc_daq();
+int dsc2Slot_daq(unsigned int id);
+int dsc2Id_daq(unsigned int slot);
+int dsc2GetNdsc_tcp();
+int dsc2Slot_tcp(unsigned int id);
+int dsc2Id_tcp(unsigned int slot);
+void dsc2SetExpid(char *string);
+
+int  dsc2Config(char *fname);
+void dsc2InitGlobals();
+int  dsc2ReadConfigFile(char *filename);
+int  dsc2DownloadAll();
+void dsc2Mon(int slot);
+int  dsc2UploadAll(char *string, int length);
+int  dsc2UploadAllPrint();
+
 int    dsc2DownloadConfig ();
 int    dsc2SetConfig      (char *fname);
 void   dsc2MonAll         ();
 void   dsc2MonConfig      ();
 void   dsc2MonBoard       (int board_number);
+
 /*============================================================*/
 int    dsc2GetBoardID          (UINT32 addr);
 int    dsc2GetFirmwareRevMin   (UINT32 addr);
@@ -152,7 +182,6 @@ UINT32 dsc2GetREFscalerGATE    (UINT32 addr);
 UINT32 dsc2GetValidAddr    (UINT32 addr);
 int    dsc2GetNumberByAddr (UINT32 addr);
 UINT32 dsc2GetAddrByNumber (int board_number);
-
 
 
 #endif /* __DSC2CONFIG__ */

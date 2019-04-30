@@ -10,8 +10,12 @@
 #ifndef __GEN_ROL__
 #define __GEN_ROL__
 
+#if 0
 #define DAQ_READ_CONF_FILE  /*{daqConfig("");    if(strncasecmp(rol->confFile,"none",4)) daqConfig(rol->confFile);}*/
 #define TI_READ_CONF_FILE   /*{tiConfig("");     if(strncasecmp(rol->confFile,"none",4)) tiConfig(rol->confFile);}*/
+#endif
+#define DAQ_READ_CONF_FILE  {daqSetExpid(expid);                        daqConfig("");     if(strncasecmp(rol->confFile,"none",4)) daqConfig(rol->confFile);}
+#define TIP_READ_CONF_FILE  {tipSetExpid(expid);                        tipConfig("");     if(strncasecmp(rol->confFile,"none",4)) tipConfig(rol->confFile);}
 
 #define vmeBusLock()
 #define vmeBusUnlock()
@@ -25,6 +29,12 @@ static unsigned int GENPollValue;
 /*max tested value is 40*/
 static int block_level = /*40*/BLOCKLEVEL;
 static int next_block_level = BLOCKLEVEL;
+
+
+extern char *mysql_host; /* defined in coda_component.c */
+extern char *expid; /* defined in coda_component.c */
+
+extern char configname[128]; /* coda_component.c (need to add it in rolInt.h/ROLPARAMS !!??) */
 
 /* Put any global user defined variables needed here for GEN readout */
 #include "TIpcieLib.h"
@@ -53,7 +63,9 @@ gentinit(int code)
   unsigned int slavemask, connectmask;
 
   tipInit(TRIG_MODE,/*0*/TIP_INIT_SKIP_FIRMWARE_CHECK);
-
+  tipSetBusySource(0,1); /* remove all busy conditions */
+  tipIntDisable();
+  TIP_READ_CONF_FILE;
 
 #ifdef TI_SLAVE
 

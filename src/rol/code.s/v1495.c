@@ -60,6 +60,7 @@ Adjustment for Motorola VME controllers: Sergey Boyarinov April 23 2007
 #include <time.h>
 
 #include "v1495.h"
+#include "jvme.h"
 
 /*sergey*/
 #define EIEIO 

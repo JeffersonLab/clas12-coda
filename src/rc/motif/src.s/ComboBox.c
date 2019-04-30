@@ -92,6 +92,9 @@
  *
  */
 
+#include <stdio.h>
+#include <ctype.h>
+
 #include <X11/IntrinsicP.h>
 #include <X11/StringDefs.h>
 #include <X11/cursorfont.h>
@@ -1257,7 +1260,8 @@ static struct { String Resource; int Flag; }
 	   { XmNbackground,        BACKGROUND        }
        };
 
-static UpdateColors(XmComboBoxWidget w, int flags)
+static void
+UpdateColors(XmComboBoxWidget w, int flags)
 {
     Pixel  Color;
     int    i, size = XtNumber(ColorResources);
@@ -3041,7 +3045,8 @@ Widget XmComboBoxGetLabelWidget(Widget w)
  *   Deleted	    Zeigt an, ob der Eintrag geloescht wurde (True)
  *		    oder sich nur veraenderte (False)
  */
-static UpdateComboBox(XmComboBoxWidget w, int Index, Boolean Deleted)
+static void
+UpdateComboBox(XmComboBoxWidget w, int Index, Boolean Deleted)
 {
     int OldIndex, ItemCount;
     

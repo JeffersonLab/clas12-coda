@@ -92,7 +92,7 @@ rcInfoPanel::init (void)
   // create init panel
 
 
-  initPanel_ = new rcInfoInitPanel (_w, "initInfoPanel", 460, 550);
+  initPanel_ = new rcInfoInitPanel (_w, (char *)"initInfoPanel", 460, 550);
   //initPanel_ = new rcInfoInitPanel (_w, "initInfoPanel", 0, 0);
 
 
@@ -105,7 +105,7 @@ rcInfoPanel::init (void)
 
   // create run info panel
   /* all run control objects (except log messages) will be placed into it (?) */
-  runPanel_ = new rcInfoRunPanel (_w, "runInfoPanel", netHandler_);
+  runPanel_ = new rcInfoRunPanel (_w, (char *)"runInfoPanel", netHandler_);
   runPanel_->init ();
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
 

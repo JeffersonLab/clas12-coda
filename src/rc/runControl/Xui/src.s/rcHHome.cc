@@ -28,9 +28,10 @@
 #include <rcComdOption.h>
 #include "rcHHome.h"
 #include "pixmaps/home.xpm"
+
 rcHHome::rcHHome (Widget parent, rcButtonPanel* panel, 
 		      rcClientHandler& handler)
-  :rcXpmComdButton (parent, "Home", home_xpm,"Go to top html page", panel, handler)
+  :rcXpmComdButton (parent, (char *)"Home", home_xpm, (char *)"Go to top html page", panel, handler)
 {
   appContext_ = XtWidgetToApplicationContext (parent);
 }

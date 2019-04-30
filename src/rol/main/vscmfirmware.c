@@ -13,6 +13,8 @@ vscmfirmware("vscm_rev2_3.bin",0)
 
 #ifdef Linux_vme
 
+#include "jvme.h"
+
 int
 main(int argc, char *argv[])
 {

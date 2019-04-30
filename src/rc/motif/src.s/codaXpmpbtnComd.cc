@@ -32,10 +32,11 @@
 //
 #include <stdio.h>
 #include <string.h>
-#include <codaXpmpbtnComd.h>
-#include <XcodaXpmpbtnInterface.h>
 
-codaXpmpbtnComd::codaXpmpbtnComd(char *name, char **data, int active)
+#include "codaXpmpbtnComd.h"
+#include "XcodaXpmpbtnInterface.h"
+
+codaXpmpbtnComd::codaXpmpbtnComd(char *name, const char **data, int active)
 :codaPbtnComd(name, active)
 {
 #ifdef _TRACE_OBJECTS
@@ -47,9 +48,9 @@ codaXpmpbtnComd::codaXpmpbtnComd(char *name, char **data, int active)
 }
 
 codaXpmpbtnComd::codaXpmpbtnComd(char *name, 
-				 char **data, 
-				 int active, 
-				 char *symbol)
+								 const char **data, 
+				                 int active, 
+				                 char *symbol)
 :codaPbtnComd(name, active)
 {
 #ifdef _TRACE_OBJECTS
@@ -74,7 +75,7 @@ void codaXpmpbtnComd::createXInterface(Widget parent)
 codaXpmpbtnComd::~codaXpmpbtnComd()
 {
 #ifdef _TRACE_OBJECTS
-  printf("Create codaXpmpbtnComd Object \n");
+  printf("Create codaXpmpbtnComd Object \n");fflush(stdout);
 #endif
   if (_bgsymbol)
     delete []_bgsymbol;

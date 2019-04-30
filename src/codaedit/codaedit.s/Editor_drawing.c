@@ -59,6 +59,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
 #include <Xm/Xm.h>
@@ -66,6 +67,7 @@
 #include "Editor_graph.h"
 #include "Editor_drawing.h"
 #include "Editor_pixmap.h"
+#include "Editor_color.h"
 
 #undef DEBUG
 

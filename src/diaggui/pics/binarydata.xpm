@@ -1,5 +1,5 @@
 /* XPM */
-static char *dummy[]={
+const char *dummy[]={
 "16 16 5 1",
 "a c #17325d",
 "# c #919eb5",

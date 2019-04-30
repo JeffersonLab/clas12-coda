@@ -34,6 +34,7 @@ around that problem temporary patches were applied - until fixed (Sergey) */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -51,6 +52,22 @@ typedef      long long       hrtime_t;
 #include "epicsutil.h"
 static char ssname[80];
 #endif
+
+#include "daqLib.h"
+#include "moLib.h"
+#include "v851.h"
+#include "sdLib.h"
+#include "vscmLib.h"
+#include "dcrbLib.h"
+#include "sspLib.h"
+#include "sspConfig.h"
+#include "fadcLib.h"
+#include "fadc250Config.h"
+#include "vetrocLib.h"
+#include "tiLib.h"
+#include "tiConfig.h"
+#include "dsc2Lib.h"
+#include "dsc2Config.h"
 
 #include "circbuf.h"
 
@@ -1334,6 +1351,18 @@ vmeBusLock();
 vmeBusUnlock();
   sleep(1);
 
+
+
+  /* USER RESET - use it because 'SYNC RESET' produces too short pulse, still need 'SYNC RESET' above because 'USER RESET'
+  does not do everything 'SYNC RESET' does (in paticular does not reset event number) */
+vmeBusLock();
+  tiUserSyncReset(1,1);
+  tiUserSyncReset(0,1);
+vmeBusUnlock();
+
+
+
+
 vmeBusLock();
   ret = tiGetSyncResetRequest();
 vmeBusUnlock();
@@ -1761,7 +1790,7 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
 
   if(syncFlag) printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
 
-  rol->dabufp = (int *) 0;
+  rol->dabufp = NULL;
 
   /*
 usleep(100);
@@ -1817,12 +1846,13 @@ vmeBusUnlock();
     }
     else
     {
+	  /*
 	  if(len != 164)
 	  {
         printf("ti: len=%d\n",len);
         for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
 	  }
-	  
+	  */
       BANKOPEN(0xe10A,1,rol->pid);
       for(jj=0; jj<len; jj++) *rol->dabufp++ = tdcbuf[jj];
       BANKCLOSE;

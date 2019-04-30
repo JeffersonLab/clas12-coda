@@ -28,12 +28,17 @@
 //   run control source
 //
 //
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "rcHelpTextW.h"
 
 extern "C" void loadAndOrJump(char *file, char *loc, Boolean store);
+/*
 #ifndef Darwin
 extern "C" char *getenv(char *env);
 #endif
+*/
 
 rcHelpTextW::rcHelpTextW (Widget parent, char* name,
 			  char* title)

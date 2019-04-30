@@ -1,5 +1,5 @@
 /* XPM */
-static char * unlock_xpm[] = {
+static const char *unlock_xpm[] = {
 /* width height ncolors chars_per_pixel */
 "40 20 3 1",
 /* colors */

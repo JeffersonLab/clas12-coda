@@ -28,9 +28,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdint.h>
 #include <string.h>
 #include <pthread.h>
+#include <ctype.h>
+#include <math.h>
+
 #ifdef VXWORKS
 #include <vxWorks.h>
 #include <logLib.h>
@@ -116,7 +120,7 @@ int tdcMaxSlot=-1;                           /* Highest element in use1190 hold 
 int tdcMinSlot=-1;                           /* Lowest element in use1190 holding an TDC */
 
 /* Define Interrupts variables */
-BOOL              c1190IntRunning = FALSE; /* running flag */
+int               c1190IntRunning = FALSE; /* running flag */
 int               c1190IntID      = -1; /* id number of TDC generating interrupts */
 LOCAL VOIDFUNCPTR c1190IntRoutine = NULL; /* user interrupt service routine */
 LOCAL int         c1190IntArg     = 0; /* arg to user routine */
@@ -2839,7 +2843,7 @@ tdc1190ReadBoardDmaStart(int ib, UINT32 *tdata)
 printf("tdc1190ReadBoardDmaStart[%d]: c1190vme=0x%08x, tdata=0x%08x, nbytes=%d\n",
 		 ib,c1190vme[ib],tdata, nbytes);
   */
-  res = usrVme2MemDmaStart( (UINT32 *)c1190vme[ib], (UINT32 *)tdata, nbytes);
+  res = usrVme2MemDmaStart( c1190vme[ib], (unsigned int)tdata, nbytes);
 
   if(res < 0)
   {
@@ -2991,7 +2995,7 @@ repeat_dma:
         itdcbuf += res; /* output buffer index */
 		nbytes_save[jj] = mbytes; /* the number of bytes remains in buffer 'jj' */
 
-        res = usrVme2MemDmaStart( (UINT32 *)c1190vme[jj], &tdcbuf[itdcbuf], mbytes);
+        res = usrVme2MemDmaStart( c1190vme[jj], (unsigned int)&tdcbuf[itdcbuf], mbytes);
         if(res < 0)
         {
           logMsg("tdc1190ReadEventDmaRepeat: ERROR: usrVme2MemDmaStart returned %d\n",res,0,0,0,0,0);
@@ -3024,7 +3028,7 @@ tdc1190ReadListStart(INT32 *tdcbuf, INT32 *rlenbuf)
   int fifodata;
   int ii, jj, nev;
   int itdcbuf;
-  static int *destination[V1190_MAX_MODULES];
+  static unsigned int destination[V1190_MAX_MODULES];
   int ndata_save, extra_save;
 
   /*
@@ -3108,7 +3112,7 @@ TIMER_VAR;
       nbytes_save[jj] = (ndata_save+extra_save)<<2;
       rlenbuf[jj] = ndata_save+extra_save;
 
-      destination[jj] = &tdcbuf[itdcbuf];
+      destination[jj] = (unsigned int)&tdcbuf[itdcbuf];
 
       itdcbuf += rlenbuf[jj];
 
@@ -3130,7 +3134,7 @@ logMsg("[%d] ask=%d (%d bytes), got=%d (0x%08x to 0x%08x)\n",
       nbytes_save[jj] = (ndata_save)<<2;
       rlenbuf[jj] = ndata_save;
 
-      destination[jj] = &tdcbuf[itdcbuf];
+      destination[jj] = (unsigned int)&tdcbuf[itdcbuf];
 
       itdcbuf += rlenbuf[jj];
 	} 

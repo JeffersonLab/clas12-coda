@@ -27,8 +27,8 @@
 #include <rcAudioOutput.h>
 #include "rcCancel.h"
 
-#define RC_CANCEL_NAME "  Cancel  "
-#define RC_CANCEL_MSG  "Cancel Transition"
+#define RC_CANCEL_NAME (char *)"  Cancel  "
+#define RC_CANCEL_MSG  (char *)"Cancel Transition"
 
 rcCancel::rcCancel (Widget parent, rcButtonPanel* panel,
 		    rcClientHandler& handler)
@@ -51,7 +51,7 @@ rcCancel::~rcCancel (void)
 void
 rcCancel::doit (void)
 {
-  rcAudio ("cancel this transition");
+  rcAudio ((char *)"cancel this transition");
 #ifdef _TRACE_OBJECTS
   printf("rcCancel::doit: cancel this transition\n");fflush(stdout);
 #endif
@@ -59,12 +59,12 @@ rcCancel::doit (void)
 
   // get network handler first
   rcClient& client = netHandler_.clientHandler ();
-  daqData data ("RCS", "command", (int)DACANCELTRAN);
+  daqData data ((char *)"RCS", (char *)"command", (int)DACANCELTRAN);
   if (client.sendCmdCallback (DACANCELTRAN, data,
 			      (rcCallback)&(rcCancel::cancelCallback),
 			      (void *)this) != CODA_SUCCESS)
   {
-    reportErrorMsg ("Cannot send download command to the server.");
+    reportErrorMsg ((char *)"Cannot send download command to the server.");
   }
 }
 
@@ -85,7 +85,7 @@ rcCancel::cancelCallback (int status, void* arg, daqNetData* data)
 
   if (status != CODA_SUCCESS)
   {
-    obj->reportErrorMsg ("Cancel a transaction failed !!!\n");
+    obj->reportErrorMsg ((char *)"Cancel a transaction failed !!!\n");
   }
 }
 

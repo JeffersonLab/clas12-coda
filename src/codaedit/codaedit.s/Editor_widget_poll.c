@@ -22,14 +22,16 @@
  *
  *	  
  */
+
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
 #include <Xm/Xm.h>
 
 #include "Ruler.h"
-
 #include "Editor_graph.h"
 
 #define MAX_NUM_WIDGETS 100
@@ -37,11 +39,7 @@
 static Widget widget_poll[MAX_NUM_WIDGETS];
 static int    num_widgets = 0;
 
-#if defined (__STDC__)
 void init_widget_poll (void)
-#else
-void init_widget_poll ()
-#endif
 {
   int i = 0;
 
@@ -49,12 +47,7 @@ void init_widget_poll ()
     widget_poll[i] = 0;
 }
 
-#if defined (__STDC__)
 void add_widget_to_poll (Widget w)
-#else
-void add_widget_to_poll (w)
-Widget w;
-#endif
 {
   if (num_widgets >= MAX_NUM_WIDGETS - 1){
     fprintf(stderr," Cannot hold any more widgets, exit \n");
@@ -63,14 +56,7 @@ Widget w;
   widget_poll[num_widgets++] = w;
 }
 
-#if defined (__STDC__)
 void change_color(Pixel col, Screen* scr,int type)
-#else
-void change_color(col,scr,type)
-Pixel   col;
-Screen  *scr;
-int     type;  /* 0 for foreground, 1 for background */
-#endif
 {
   XGCValues gcv;
   Arg arg[10];
@@ -139,13 +125,7 @@ int     type;  /* 0 for foreground, 1 for background */
   XcodaEditorBgPixmap (sw_geometry.draw_area);
 }
 
-#if defined (__STDC__)
 void saveColor (XColor* col, int type)
-#else
-void saveColor (col, type)
-XColor *col;
-int    type;
-#endif
 {
   char *home;
   char fullname[128], line[128];

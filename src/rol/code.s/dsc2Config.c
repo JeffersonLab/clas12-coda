@@ -59,8 +59,11 @@ DSC2_SCALER_REFPRESCALE 1250 <- reference clock = 125000000 / DSC2_SCALER_REFPRE
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include <ctype.h>
 
 #include "dsc2Lib.h"
 #include "dsc2Config.h"

@@ -20,12 +20,13 @@
 #include <sys/prctl.h>
 #endif
 
+#include "rolInt.h"
 #include "da.h"
 
 #include "circbuf.h"
 #include "bigbuf.h"
 
-
+#include "roc_process.h"
 
 #undef DEBUG
 
@@ -41,13 +42,7 @@
 
 #include "pmc.h"
 
-#ifdef __cplusplus
-typedef void 		(*VOIDFUNCPTR) (...); /* ptr to function returning void */
-#else
-typedef void 		(*VOIDFUNCPTR) (); /* ptr to function returning void */
-#endif			/* _cplusplus */
 
-#include "rolInt.h"
 static ROLPARAMS rolP2;
 
 

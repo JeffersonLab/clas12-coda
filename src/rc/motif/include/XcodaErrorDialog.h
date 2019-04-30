@@ -33,7 +33,7 @@ class XcodaErrorDialog: public XcodaMsgDialog
 {
  public:
   // constructor
-  XcodaErrorDialog(Widget, char *, char *);
+  XcodaErrorDialog(Widget, const char *, const char *);
   virtual const char *className() const {return "XcodaErrorDialog";}
 
  protected:

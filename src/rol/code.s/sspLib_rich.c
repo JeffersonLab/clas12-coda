@@ -1,9 +1,16 @@
-#if defined(Linux_vme)
+
+/* sspLib_rich.c */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "sspLib.h"
+#include <unistd.h>
 
+
+#if defined(Linux_vme)
+
+#include "sspLib.h"
+#include "sspLib_rich.h"
 #include "jvme.h"
 
 // 0x00000000 = primary/failsafe image, 0x01000100 = run image

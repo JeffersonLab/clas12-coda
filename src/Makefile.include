@@ -10,6 +10,7 @@ ifeq ("$(filter VXWORKS,$(MAKECMDGOALS))","VXWORKS")
 else ifeq ("$(filter ARM,$(MAKECMDGOALS))","ARM")
   OSTYPE    = Linux
   MACHINE   = armv7l
+  PLATFORM  = $(MACHINE)
 else ifeq ("$(filter NIOS,$(MAKECMDGOALS))","NIOS")
   OSTYPE    = Linux
   MACHINE   = nios2
@@ -19,6 +20,10 @@ else
   PLATFORM  = $(shell uname -p)
 endif
 
+# arm has 'uname -p'='unknown', set it the same as 'uname -m'
+ifeq ("$(MACHINE)","armv7l")
+  PLATFORM  = $(MACHINE)
+endif
 
 OSTYPE_PLATFORM = $(OSTYPE)_$(PLATFORM)
 
@@ -180,10 +185,13 @@ ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
     CFLAGS = -g
 endif
 
-##FFLAGS = -g
-##CFLAGS = -g
-FFLAGS = -O2
-CFLAGS = -O2
+FFLAGS = -g
+CFLAGS = -g
+##FFLAGS = -O2
+##CFLAGS = -O2
+
+# disable warnings about deprecated stuff
+CFLAGS += -Wno-deprecated
 
     FC = g77
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
@@ -193,7 +201,7 @@ endif
     CFLAGS += -fPIC -DLinux -DLINUX
 ### -D_CODA_DEBUG
 
-    CXXFLAGS = $(CFLAGS)
+    CXXFLAGS = $(CFLAGS) -std=c++11
 
     FFLAGS += -fno-automatic -finit-local-zero \
 			-ffixed-line-length-none -fno-second-underscore -DLinux
@@ -202,16 +210,24 @@ endif
     CC = gcc
     CXX = g++ -g
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-    ##CC = /apps/gcc/4.9.4/bin/gcc
-    ##CXX = /apps/gcc/4.9.4/bin/g++ -g
-    CC = /apps/gcc/4.9.4/bin/gcc -O2
-    CXX = /apps/gcc/4.9.4/bin/g++ -O2
+    ##CC = /apps/gcc/4.9.4/bin/gcc 
+    ##CXX = /apps/gcc/4.9.4/bin/g++ 
+    CC = /apps/gcc/8.3.0/bin/gcc 
+    CXX = /apps/gcc/8.3.0/bin/g++ 
 endif
 ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
-    CC = /apps/gcc/4.9.4/bin/gcc
-    CXX = /apps/gcc/4.9.4/bin/g++ -g
+    ##CC = /apps/gcc/4.9.4/bin/gcc
+    ##CXX = /apps/gcc/4.9.4/bin/g++ 
+    CC = /apps/gcc/8.3.0/bin/gcc
+    CXX = /apps/gcc/8.3.0/bin/g++ 
     CFLAGS += -gdwarf-2
     CXXFLAGS += -gdwarf-2
+endif
+ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
+    ##CC = /apps/gcc/4.9.4/bin/gcc 
+    ##CXX = /apps/gcc/4.9.4/bin/g++ 
+    CC = /apps/gcc/8.3.0/bin/gcc 
+    CXX = /apps/gcc/8.3.0/bin/g++ 
 endif
 
     CPP = $(CC) -E
@@ -225,15 +241,15 @@ endif
 ###    LDCC = $(FC)
     LDFC = $(FC)
 
-ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
-    LDCC = gcc
-    LDFC = gcc
-endif
+#ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+#    LDCC = gcc
+#    LDFC = gcc
+#endif
 
-ifeq ("$(OSTYPE_MACHINE)","Linux_nios2")
-    LDCC = gcc
-    LDFC = gcc
-endif
+#ifeq ("$(OSTYPE_MACHINE)","Linux_nios2")
+#    LDCC = gcc
+#    LDFC = gcc
+#endif
 
 
 #

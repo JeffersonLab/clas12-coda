@@ -57,20 +57,28 @@ LSOCK::recv_handle (HANDLE &fd, char *pbuf, int *len) const
 #if defined (ACE_HAS_STREAMS)
   if ((nbytes = ::recvmsg (this->get_handle (), &recv_msg, 0)) != IPC_SAP::INVALID_HANDLE)
     {
-      if (len != 0)
-	*len = nbytes;
+      if (len != 0) *len = nbytes;
 
       if (nbytes == sizeof a && ((unsigned char) iov.iov_base[0]) == 0xab
-	  && ((unsigned char) iov.iov_base[1]) == 0xcd)
-	return 1;
+	      && ((unsigned char) iov.iov_base[1]) == 0xcd)
+	  {
+	    return 1;
+	  }
       else
-	return 0;
+	  {
+	    return 0;
+	  }
     }
 #else
-  if ((nbytes = ::recvmsg (this->get_handle (), &recv_msg, MSG_PEEK)) != IPC_SAP::INVALID_HANDLE)
+    if ((nbytes = ::recvmsg (this->get_handle (), &recv_msg, MSG_PEEK)) != IPC_SAP::INVALID_HANDLE)
     {
+      printf("LSOCK::recv_handle: suspicious place !!!\n");fflush(stdout);
+exit(0);
+      return(nbytes); /*sergey: check it !!!!!!!!!!!!!!*/
     }
 #endif /* ACE_HAS_STREAMS */
   else
+  {
     return IPC_SAP::INVALID_HANDLE;
+  }
 }

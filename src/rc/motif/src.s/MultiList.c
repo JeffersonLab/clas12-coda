@@ -58,6 +58,10 @@
 
 #include <stdio.h>
 #include <ctype.h>
+
+#include <Xm/XmP.h>
+#include <Xm/DrawP.h>
+
 #include "MultiListP.h"
 
 
@@ -484,6 +488,8 @@ static XtCallbackRec VSCallBack[] =
 
  *===========================================================================*/
 
+/* Sergey: add (XtInitProc) etc casts, see /usr/include/X11/CoreP.h, struct CoreClassPart */
+
 MultiListClassRec multiListClassRec =
 {
   {/* core class fields   */
@@ -493,9 +499,9 @@ MultiListClassRec multiListClassRec =
 	/* class_initialize	*/	NULL,
 	/* class_part_initialize*/	NULL,
 	/* class_inited		*/	FALSE,
-	/* initialize		*/	Initialize,
+	/* initialize		*/	(XtInitProc)Initialize,
 	/* initialize_hook	*/	NULL,
-	/* realize		*/	MultiListRealize,
+	/* realize		*/	(XtRealizeProc)MultiListRealize,
 	/* actions		*/	actions,
 	/* num_actions		*/	XtNumber(actions),
 	/* resources		*/	resources,
@@ -505,10 +511,10 @@ MultiListClassRec multiListClassRec =
 	/* compress_exposure	*/	FALSE,
 	/* compress_enterleave	*/	TRUE,
 	/* visible_interest	*/	FALSE,
-	/* destroy		*/	Destroy,
-	/* resize		*/	Resize,
-	/* expose		*/	Redisplay,
-	/* set_values		*/	SetValues,
+	/* destroy		*/	(XtWidgetProc)Destroy,
+	/* resize		*/	(XtWidgetProc)Resize,
+	/* expose		*/	(XtExposeProc)Redisplay,
+	/* set_values		*/	(XtSetValuesFunc)SetValues,
 	/* set_values_hook	*/	NULL,
 	/* set_values_almost	*/	XtInheritSetValuesAlmost,
 	/* get_values_hook	*/	NULL,
@@ -516,7 +522,7 @@ MultiListClassRec multiListClassRec =
 	/* version		*/	XtVersion,
 	/* callback_private	*/	NULL,
 	/* tm_table		*/	defaultTranslations,
-	/* query_geometry      */	PreferredGeometry,
+	/* query_geometry      */	(XtGeometryHandler)PreferredGeometry,
 	/* display_accelerator */	XtInheritDisplayAccelerator,
 	/* extension           */	NULL,
   }, 
@@ -1033,9 +1039,9 @@ static void DestroyOldData (mlw)
 	{
 	  XtFree(MultiListItemString(MultiListNthItem(mlw,i)));
 	}
-      XtFree(MultiListItemArray(mlw));
+      XtFree((char *)MultiListItemArray(mlw)); /*sergey: cast*/
     }
-  if (MultiListSelArray(mlw) != NULL) XtFree(MultiListSelArray(mlw));
+  if (MultiListSelArray(mlw) != NULL) XtFree((char *)MultiListSelArray(mlw)); /*sergey: cast*/
   MultiListSelArray(mlw) = NULL;
   MultiListNumSelected(mlw) = 0;
   MultiListItemArray(mlw) = NULL;
@@ -1569,6 +1575,8 @@ static void MultiListDrawShadow (mlw, armed)
 {
 
   if (mlw->primitive.shadow_thickness > 0)
+  {
+	/*sergey: replaced by XmeDrawShadows
     _XmDrawShadow (XtDisplay (mlw), XtWindow (mlw), 
 		   (armed
 		    ? mlw -> primitive.bottom_shadow_GC
@@ -1581,6 +1589,35 @@ static void MultiListDrawShadow (mlw, armed)
 		   mlw -> primitive.highlight_thickness,
 		   mlw -> core.width - 2 * mlw->primitive.highlight_thickness,
 		   mlw -> core.height - 2 *mlw->primitive.highlight_thickness);
+	*/
+
+    Display *display = XtDisplay (mlw);
+    Drawable d = XtWindow (mlw);
+    GC top_gc = (armed
+		         ? mlw -> primitive.bottom_shadow_GC
+				 : mlw -> primitive.top_shadow_GC);
+    GC bottom_gc = (armed 
+		            ? mlw -> primitive.top_shadow_GC 
+					: mlw -> primitive.bottom_shadow_GC); 
+    Position x = mlw -> primitive.shadow_thickness;
+    Position y =  mlw -> primitive.highlight_thickness;
+    Dimension width = mlw -> primitive.highlight_thickness;
+    Dimension height = mlw -> core.width - 2 * mlw->primitive.highlight_thickness;
+    Dimension shad_thick =  mlw -> core.height - 2 *mlw->primitive.highlight_thickness;
+    unsigned int shad_type = 0;
+
+    XmeDrawShadows (
+	    display,
+        d,
+        top_gc,
+        bottom_gc,
+        x,
+        y,
+        width,
+        height,
+        shad_thick,
+	    shad_type);         
+  }
 }
 
 /*---------------------------------------------------------------------------*
@@ -3768,7 +3805,7 @@ void MultiListAddItems (w, list, nitems, longest, position, resize, sensitivity_
 
       /* realloc an new array of items MultiListItem */
       items = TypeRealloc(
-			  MultiListItemArray(mlw),
+			  (char *)MultiListItemArray(mlw),
 			  MultiListItem,(nitems+MultiListNumItems(mlw)));
 
       MultiListItemArray(mlw) = items;
@@ -3916,7 +3953,7 @@ int MultiListDeleteItems (w, position, nitems)
 
   /* realloc an new array of items MultiListItem */
   MultiListItemArray(mlw) = TypeRealloc(
-					MultiListItemArray(mlw),
+					(char *)MultiListItemArray(mlw),
 					MultiListItem,(nitems+MultiListNumItems(mlw)));
 
   /* update the MultiListSelArray of selected items :
@@ -4679,7 +4716,7 @@ void MultiListAddItemsWithColor (w, list, nitems, longest, position,
 
       /* realloc an new array of items MultiListItem */
       items = TypeRealloc(
-			  MultiListItemArray(mlw),
+			  (char *)MultiListItemArray(mlw),
 			  MultiListItem,(nitems+MultiListNumItems(mlw)));
 
       MultiListItemArray(mlw) = items;

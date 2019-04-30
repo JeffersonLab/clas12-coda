@@ -298,8 +298,9 @@ extern int   codanetGetIpaddrs(char ***ipAddrs, int *count, char *host);
 extern int   codanetMcastSetIf(int sockfd, const char *ifname, uint32_t ifindex);
 extern int   codanetGetIfNames(char ***ifNames, int *count);
 
-
-    
+/*sergey: to avoid warning compiling et_network.c */
+int   etNetGetIpAddrs(char ***ipAddrs, int *count, char *host);
+   
 
 #ifdef	__cplusplus
 }

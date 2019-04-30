@@ -41,12 +41,14 @@ TS_FIBER_IN 1                                  # fiber number to be used as inpu
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #ifdef Linux_vme
 #include "jvme.h"
 #endif
 
 #include "tsLib.h"
+#include "tsConfig.h"
 #include "xxxConfig.h"
 
 #define FNLEN     128       /* length of config. file name */
@@ -58,7 +60,7 @@ TS_FIBER_IN 1                                  # fiber number to be used as inpu
 static int active;
 
 static int is_slave;
-static nslave, slave_list[MAXSLAVES];
+static int nslave, slave_list[MAXSLAVES];
 static unsigned int delay, offset;
 static int block_level;
 static int buffer_level;

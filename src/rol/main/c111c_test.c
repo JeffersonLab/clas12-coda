@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h> 
+#include <unistd.h> 
 #include <fcntl.h> 
 #include <string.h> 
 #include <pthread.h>
@@ -42,7 +43,7 @@ main(int argc, char *argv[])
   if(sock==0)
   {
     printf("Connection failed \n");
-    return;
+    exit(0);
   }
   
   /*Read the data*/
@@ -94,7 +95,7 @@ main(int argc, char *argv[])
   if (resp != 0)
   {
     printf("ERROR: Negative response from socket server\n");
-    return 0;
+    exit(0);
   }
   
   */

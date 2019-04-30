@@ -73,7 +73,7 @@ rcUpdateIntervalDialog::createFormChildren (void)
   // create label first
   char temp[128];
   ac = 0;
-   XmString t = XmStringCreateSimple ("Apply");
+  XmString t = XmStringCreateSimple ((char *)"Apply");
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNtopOffset, 2); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
@@ -179,7 +179,7 @@ rcUpdateIntervalDialog::sendUpdateInterval (int newval)
   // get client handler
   rcClient& client = netHandler_.clientHandler ();
 
-  daqData data (client.exptname (), "updateInterval", newval);
+  daqData data (client.exptname (), (char *)"updateInterval", newval);
   if (client.setValueCallback (data, 
 			       (rcCallback)&(rcUpdateIntervalDialog::simpleCallback),
 			       (void *)this) != CODA_SUCCESS) {
@@ -193,7 +193,7 @@ rcUpdateIntervalDialog::simpleCallback (int status, void* arg, daqNetData* )
   rcUpdateInterval* obj = (rcUpdateInterval *)arg;
   
   if (status != CODA_SUCCESS) {
-    obj->reportErrorMsg ("Setting new update interval to the server failed !");
+    obj->reportErrorMsg ((char *)"Setting new update interval to the server failed !");
     return;
   }
 }

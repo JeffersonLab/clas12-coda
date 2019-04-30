@@ -151,6 +151,7 @@ main(int argc, char **argv)
   unsigned int word;
   int iet, maxevents;
   int handle1, buflen, recl;
+  size_t size;
 
   int nr,sec,strip,nl,ncol,nrow,i,j, k, ii,jj,kk,l,l1,l2,ichan,nn,mm,iev,nbytes,ind1;
   char title[128], *ch;
@@ -328,7 +329,8 @@ iet=0;
 	  }
 
 
-      et_event_getlength(pe[iet], &len); /*get event length from et*/
+      et_event_getlength(pe[iet], &size); /*get event length from et*/
+      len = size;
 	  /*if(len==2388)*/ printf("event length=%d\n",len);
 
 

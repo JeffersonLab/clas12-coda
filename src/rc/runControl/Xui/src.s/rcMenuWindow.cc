@@ -116,14 +116,13 @@
 #include <rcMastership.h>
 #include <rcComdOption.h>
 #include <XmTabs.h>
-#include <RCLogo.xpm>
-#ifdef USE_TK
-#include <tcl.h>
-#include <tk.h>
-#endif
+
+#include "RCLogo.xpm"
+
 #ifdef USE_CREG
 #include <codaRegistry.h>
 #endif
+
 #include "rcExit.h"
 #include "rcClose.h"
 #include "rcButtonFeedBack.h"
@@ -132,12 +131,10 @@
 #include "rcAnaLogDialog.h"
 #include "rcUpdateIntervalDialog.h"
 
-#if defined (_CODA_2_0_T) || defined (_CODA_2_0)
 #include "rcAudioOption.h"
 #include "rcWidthOption.h"
 #include "rcRcsMsgToDbase.h"
 #include "rcTokenIButton.h"
-#endif
 
 #include "rcCompBootDialog.h"
 #include "rcMonitorParmsDialog.h"
@@ -165,7 +162,7 @@ rcMenuWindow::rcMenuWindow (Widget parent,
 :XcodaMenuWindow (parent, name), netHandler_ (handler)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("         Create rcMenuWindow Class Object\n");
+  printf ("         Create rcMenuWindow Class Object\n");fflush(stdout);
 #endif
 
   // register this panel to net handler
@@ -184,12 +181,10 @@ rcMenuWindow::rcMenuWindow (Widget parent,
   rcipanel_ = 0;
   helpMsgWin_ = 0;
   msgw_ = 0;
-#if defined (_CODA_2_0_T) || defined (_CODA_2_0)
   audio_ = 0;
   Owidth_ = 0;
   serverMsgToDbase_ = 0;
   tokenIButton_ = 0;
-#endif
   ::bzero(pids_,sizeof(pids_));
   setpgid(getpid(),getpid());
 }
@@ -197,7 +192,7 @@ rcMenuWindow::rcMenuWindow (Widget parent,
 rcMenuWindow::~rcMenuWindow (void)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("         Delete rcMenuWindow Class Object\n");
+  printf ("         Delete rcMenuWindow Class Object\n");fflush(stdout);
 #endif
   // remove this panel from nethandler
   netHandler_.removePanel (this);
@@ -215,74 +210,73 @@ rcMenuWindow::~rcMenuWindow (void)
 //   delete helpOverview_;
 //   delete helpAbout_;
 
-#if defined (_CODA_2_0_T) || defined (_CODA_2_0)
   delete audio_;
   delete Owidth_;
   delete serverMsgToDbase_;
   //delete tokenIButton_;
-#endif
 
   // delete network status updater
   if (netStatus_ != 0)
     delete netStatus_;
+#ifdef _TRACE_OBJECTS
+  printf ("         Delete rcMenuWindow Class Object - done\n");fflush(stdout);
+#endif
 }
 
 void
 rcMenuWindow::createMenuPanes (void)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::createMenuPanes\n");fflush(stdout);
+#endif
   codaComdList* list;
   rcComdOption* option = rcComdOption::option ();
 
   // file menu
-  close_ = new rcClose ("Close", 1, "Alt<Key>c", "Alt/C", netHandler_);
-  exit_ = new rcExit ("Exit", 1, "Alt<Key>q", "Alt/Q", netHandler_);
+  close_ = new rcClose ((char *)"Close", 1, (char *)"Alt<Key>c", (char *)"Alt/C", netHandler_);
+  exit_ = new rcExit ((char *)"Exit", 1, (char *)"Alt<Key>q", (char *)"Alt/Q", netHandler_);
 
   list = new codaComdList ();
   list->add (close_);
   list->add (exit_);
 
-  MenuBar->addRegMenuEntry (list, "File", 'F');
+  MenuBar->addRegMenuEntry (list, (char *)"File", 'F');
   delete list;
 
   // preference menu
-  feedBack_ = new rcButtonFeedBack ("Button feedback", 1, "Alt<Key>b",
-				    "Alt/B", 1, netHandler_);
+  feedBack_ = new rcButtonFeedBack ((char *)"Button feedback", 1, (char *)"Alt<Key>b",
+				    (char *)"Alt/B", 1, netHandler_);
 
-#if defined (_CODA_2_0_T) || defined (_CODA_2_0)
   if (option->audio ())
-    audio_ = new rcAudioOption ("Audio messages", 1, "Alt<Key>a",
-				"Alt/A", 1, netHandler_);
+    audio_ = new rcAudioOption ((char *)"Audio messages", 1, (char *)"Alt<Key>a",
+				(char *)"Alt/A", 1, netHandler_);
   else
-    audio_ = new rcAudioOption ("Audio messages", 1, "Alt<Key>a",
-				"Alt/A", 0, netHandler_);
-#endif
-  Owidth_ = new rcWidthOption ("Toggle width", 1, "Alt<Key>w",
-			      "Alt/W", 0, netHandler_);
+    audio_ = new rcAudioOption ((char *)"Audio messages", 1, (char *)"Alt<Key>a",
+				(char *)"Alt/A", 0, netHandler_);
+
+  Owidth_ = new rcWidthOption ((char *)"Toggle width", 1, (char *)"Alt<Key>w",
+			      (char *)"Alt/W", 0, netHandler_);
   if (option->reportMsg ())
-    dispMsg_ = new rcDisplayMsg ("Show server messages", 1, "Alt<Key>s",
-				 "Alt/S", 1, netHandler_);
+    dispMsg_ = new rcDisplayMsg ((char *)"Show server messages", 1, (char *)"Alt<Key>s",
+				 (char *)"Alt/S", 1, netHandler_);
   else
-    dispMsg_ = new rcDisplayMsg ("Show server messages", 1, "Alt<Key>s",
-				 "Alt/S", 0, netHandler_);
+    dispMsg_ = new rcDisplayMsg ((char *)"Show server messages", 1, (char *)"Alt<Key>s",
+				 (char *)"Alt/S", 0, netHandler_);
 
-#if defined (_CODA_2_0_T) || defined (_CODA_2_0)
-  serverMsgToDbase_ = new rcRcsMsgToDbase ("Log Server Message", 0,
-					   "Alt<Key>m", "Alt/M", 0,
+  serverMsgToDbase_ = new rcRcsMsgToDbase ((char *)"Log Server Message", 0,
+					   (char *)"Alt<Key>m", (char *)"Alt/M", 0,
 					   netHandler_);
-#endif
 
-  online_ = new rcOnLine ("Online", 0, "Alt<Key>l",
-			  "Alt/B", 1, netHandler_);
+  online_ = new rcOnLine ((char *)"Online", 0, (char *)"Alt<Key>l",
+			  (char *)"Alt/B", 1, netHandler_);
   list = new codaComdList ();
   list->add (feedBack_);
   list->add (dispMsg_);
-#if defined (_CODA_2_0_T) || defined (_CODA_2_0)
   list->add (audio_);
   list->add (serverMsgToDbase_);
-#endif
   list->add (Owidth_);
   list->add (online_);
-  MenuBar->addRegMenuEntry (list, "Preference", 'P');
+  MenuBar->addRegMenuEntry (list, (char *)"Preference", 'P');
   delete list;
 
   // before return setup pointers of dynamic panels to related command
@@ -305,6 +299,9 @@ extern int root_height;
 void
 rcMenuWindow::handle_tab (Widget w, XtPointer data, XtPointer calldata)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::handle_tab\n");fflush(stdout);
+#endif
   Arg arg[20];
   int ac = 0;
   int state, i, j, tab;
@@ -348,8 +345,12 @@ rcMenuWindow::handle_tab (Widget w, XtPointer data, XtPointer calldata)
 
 
 
-static void childHandler(int sig)
+static void
+childHandler(int sig)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow: static void childHandler\n");fflush(stdout);
+#endif
   int status,pid;
   pid = wait(&status);
   printf("process %d exit with status %d (core dump %d)\n",pid,WEXITSTATUS(status),WCOREDUMP(status));
@@ -358,6 +359,9 @@ static void childHandler(int sig)
 void 
 rcMenuWindow::destroyHandler(Widget w,void *data,XEvent *eventPtr,Boolean *b)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::destroyHandler\n");fflush(stdout);
+#endif
   rcMenuWindow *self = (rcMenuWindow *) data;
   char temp2[100];
 
@@ -391,12 +395,15 @@ void
 rcMenuWindow::crossEventHandler (Widget, XtPointer clientData,
 				 XEvent* event, Boolean)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::crossEventHandler\n");fflush(stdout);
+#endif
   rcMenuWindow* obj = (rcMenuWindow *)clientData;
   XCrossingEvent* cev = (XCrossingEvent *)event;
 
   if (obj->helpMsgWin_) {
     if (cev->type == EnterNotify) 
-      obj->helpMsgWin_->setMessage ("press a button to change page");
+      obj->helpMsgWin_->setMessage ((char *)"press a button to change page");
     else
       obj->helpMsgWin_->eraseMessage ();
   }
@@ -405,6 +412,9 @@ rcMenuWindow::crossEventHandler (Widget, XtPointer clientData,
 Widget 
 rcMenuWindow::createTabFrame (char *name,int pid)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::createTabFrame\n");fflush(stdout);
+#endif
   Widget widget;
   Arg arg[20];
   int ltabs,rtabs,ac = 0;
@@ -452,6 +462,9 @@ rcMenuWindow::createTabFrame (char *name,int pid)
 Widget
 rcMenuWindow::createMenuWindow (Widget parent)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::createMenuWindow\n");fflush(stdout);
+#endif
   Arg arg[20];
   int ac = 0;
 
@@ -530,7 +543,7 @@ rcMenuWindow::createMenuWindow (Widget parent)
   
 
   // create button panel first  
-  rcButtonPanel* bpanel = new rcButtonPanel (lform, "buttonPanel", netHandler_);
+  rcButtonPanel* bpanel = new rcButtonPanel (lform, (char *)"buttonPanel", netHandler_);
 
   bpanel->init ();
 
@@ -579,26 +592,26 @@ rcMenuWindow::createMenuWindow (Widget parent)
   Widget bform = XtCreateWidget ("bform", xmFormWidgetClass, form1, NULL, 0);
 
   // information panel
-  rcipanel_ = new rcInfoPanel (form, "infoPanel", netHandler_);
+  rcipanel_ = new rcInfoPanel (form, (char *)"infoPanel", netHandler_);
   rcipanel_->init ();
 
   // message window panel
-  msgw_ = new rcMsgWindow (form1, "msgWindow", netHandler_);
+  msgw_ = new rcMsgWindow (form1, (char *)"msgWindow", netHandler_);
   msgw_->init ();
 
   // help msg window
-  helpMsgWin_ = new rcHelpMsgWin (bform, "helpMsgWindow");
+  helpMsgWin_ = new rcHelpMsgWin (bform, (char *)"helpMsgWindow");
   helpMsgWin_->init ();
   
   // net status
-  netStatus_ = new rcNetStatus (bform, "netstatus", 150, 10);
+  netStatus_ = new rcNetStatus (bform, (char *)"netstatus", 150, 10);
 
   // mastership button
-  rcMastership* master = new rcMastership (bform, "mastership", netHandler_);
+  rcMastership* master = new rcMastership (bform, (char *)"mastership", netHandler_);
   master->init ();
 
   // create rcLog Image
-  XcodaXpmLabel *log = new XcodaXpmLabel (bform, "      ", RCLogo_xpm);
+  XcodaXpmLabel *log = new XcodaXpmLabel (bform, (char *)"      ", (char **)RCLogo_xpm);
   log->init ();
 
   // set help msg window pointer to button panel
@@ -702,14 +715,14 @@ rcMenuWindow::createMenuWindow (Widget parent)
 
   rcipanel_->popupRateDisplay (this);
 
-  anaLogButton_ = new rcAnaLogDialog (this, "Ana Log Dialog", "Logging File Dialog", netHandler_);
+  anaLogButton_ = new rcAnaLogDialog (this, (char *)"Ana Log Dialog", (char *)"Logging File Dialog", netHandler_);
   
-  updateInterval_ = new rcUpdateIntervalDialog ("updateI","Update Interval", netHandler_); 
+  updateInterval_ = new rcUpdateIntervalDialog ((char *)"updateI",(char *)"Update Interval", netHandler_); 
   
-  bootButton_ = new rcCompBootDialog ("bootC","boot components", netHandler_);
+  bootButton_ = new rcCompBootDialog ((char *)"bootC",(char *)"boot components", netHandler_);
 
   
-  monParmsButton_ = new rcMonitorParmsDialog ("compM","Monitor components", netHandler_);
+  monParmsButton_ = new rcMonitorParmsDialog ((char *)"compM",(char *)"Monitor components", netHandler_);
 					      
   bootButton_->init();
   bootButton_->popup();
@@ -720,13 +733,14 @@ rcMenuWindow::createMenuWindow (Widget parent)
   monParmsButton_->init();
   monParmsButton_->popup();
 
-  zoomButton_ = new rcZoomButton ("Zoom on event information", 0, "Alt<Key>z", "Alt/Z", netHandler_);
+  zoomButton_ = new rcZoomButton ((char *)"Zoom on event information", 0, (char *)"Alt<Key>z", (char *)"Alt/Z", netHandler_);
   
-  tokenIButton_ = new rcTokenIButton ("Token interval value", 0, "Alt<Key>t", "Alt/T", netHandler_);
+  tokenIButton_ = new rcTokenIButton ((char *)"Token interval value", 0, (char *)"Alt<Key>t", (char *)"Alt/T", netHandler_);
   
   
   anaLogButton_->init();
   anaLogButton_->popup();
+
   // return widget
   return formouter;
 }
@@ -734,6 +748,9 @@ rcMenuWindow::createMenuWindow (Widget parent)
 void
 rcMenuWindow::config (int status)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::config\n");fflush(stdout);
+#endif
 
   //  if (status >= DA_CONFIGURED) {
   //    anaLogButton_->activate ();
@@ -768,6 +785,9 @@ rcMenuWindow::config (int status)
 void
 rcMenuWindow::configOnlineOption (int online)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::configOnlineOption\n");fflush(stdout);
+#endif
   if (online) online_->setState (1);
   else        online_->setState (0);
 }
@@ -775,12 +795,18 @@ rcMenuWindow::configOnlineOption (int online)
 void
 rcMenuWindow::configUpdateInterval (int interval)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::configUpdateInterval\n");fflush(stdout);
+#endif
   updateInterval_->setUpdateInterval (interval);
 }
 
 void
 rcMenuWindow::configBoot ()
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::configBoot\n");fflush(stdout);
+#endif
   bootButton_->popdown();
   bootButton_->popup();
 }
@@ -788,6 +814,9 @@ rcMenuWindow::configBoot ()
 void
 rcMenuWindow::configMonParms ()
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::configMonParms\n");fflush(stdout);
+#endif
   monParmsButton_->popdown();
   monParmsButton_->popup();
 }
@@ -796,12 +825,18 @@ rcMenuWindow::configMonParms ()
 void
 rcMenuWindow::configTokenInterval (int interval)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::configTokenInterval\n");fflush(stdout);
+#endif
   tokenIButton_->setTokenInterval (interval);
 }
 
 void
 rcMenuWindow::configRcsMsgToDbase (int state)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::configRcsMsgToDbase\n");fflush(stdout);
+#endif
   serverMsgToDbase_->setState (state);
 }
 
@@ -809,6 +844,9 @@ rcMenuWindow::configRcsMsgToDbase (int state)
 const Widget
 rcMenuWindow::dialogBaseWidget (void)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::dialogBaseWidget\n");fflush(stdout);
+#endif
   assert (rcipanel_);
   return rcipanel_->baseWidget ();
 }
@@ -816,6 +854,9 @@ rcMenuWindow::dialogBaseWidget (void)
 void
 rcMenuWindow::reportErrorMsg (char* msg)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcMenuWindow::reportErrorMsg\n");fflush(stdout);
+#endif
   if (rcMenuWindow::errDialog_ == 0)
   {
     rcMenuWindow::errDialog_ = new XcodaErrorDialog (dialogBaseWidget(),

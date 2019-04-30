@@ -54,11 +54,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <mysql.h>
 
 #include <assert.h>
 #include "Editor_graph.h"
 #include "Editor_database.h"
 #include "Editor_converter.h"
+#include "Editor_misc.h"
+#include "Editor_xmisc.h"
 
 #include "libdb.h"
 
@@ -157,7 +160,8 @@ connectToDatabase (char *host)
   /*initialize MYSQL structure; use 'mysql_options'*/
   mysql = dbConnect(dbaseServerHost, getenv("EXPID"));
 
-  return(mysql);
+  if(mysql==NULL) return(0);
+  else            return(1);
 }
 
 void

@@ -8,6 +8,7 @@ int  daqInit();
 int  daqGetReportRawData();
 int  daqGetExternalVmeReadoutInterval();
 
+void daqSetExpid(char *string);
 int  daqConfig(char *fname);
 int  daqInitGlobals();
 int  daqReadConfigFile(char *filename);

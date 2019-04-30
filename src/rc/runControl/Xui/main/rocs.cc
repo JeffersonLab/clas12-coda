@@ -51,7 +51,7 @@ int root_height;
 XtAppContext app_context;
 Widget toplevel;
 
-char *userPath = "";
+char *userPath = (char *)"";
 extern "C" int getStartupVisual(Widget shell, Visual **visual, int *depth,
 	Colormap *colormap);
 #if !defined(Linux) && !defined(Darwin)
@@ -66,254 +66,254 @@ char *dollar_coda;
 
 static char *fallback_res[] = 
 {
-  "rocs.*.fontList:                        -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
-  "rocs.*.menu_bar.*.fontList:             -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
-  "rocs*.rcMsgWindow.fontList:             -*-courier-medium-r-normal-*-12-*-*-*-*-*-*-*",
-  "rocs.*.runInfoPanel*status.*.fontList:  -*-times-medium-i-*-*-14-*-*-*-*-*-*-*",
-  "rocs*.runcinfo*.time*.fontList:         -*-times-medium-r-*-*-14-*-*-*-*-*-*-*",
-  "rocs*.runcinfo*.fontList:               -*-times-medium-r-*-*-14-*-*-*-*-*-*-*",
-  "rocs*.helpAboutDialog*.fontList:        -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
-  "rocs.*.dataLimitUnit.fontList:          -*-helvetica-medium-i-*-*-14-*-*-*-*-*-*-*",
-  "rocs*.helpMsgWindow.fontList:           -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
-  "rocs*.connectDialogLabel.fontList:      -*-times-medium-i-*-*-14-*-*-*-*-*-*-*",
-  "rocs*.compBootDialogLabel.fontList:     -*-times-medium-i-*-*-14-*-*-*-*-*-*-*",
-  "rocs*.updateDiaLabel.fontList:          -*-times-medium-i-*-*-14-*-*-*-*-*-*-*",
-  "rocs*.analogDialogLabel.fontList:       -*-times-medium-i-*-*-14-*-*-*-*-*-*-*",
-  "rocs*.helpTextW.fontList:               -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
-  "rocs*.datafilename.fontList:            -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
-  "rocs*.OutFrame.*.fontList:              -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*",
-  "rocs*.dialogLabel.fontList:             -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs.*.fontList:                        -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs.*.menu_bar.*.fontList:             -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs*.rcMsgWindow.fontList:             -*-courier-medium-r-normal-*-12-*-*-*-*-*-*-*",
+  (char *)"rocs.*.runInfoPanel*status.*.fontList:  -*-times-medium-i-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs*.runcinfo*.time*.fontList:         -*-times-medium-r-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs*.runcinfo*.fontList:               -*-times-medium-r-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs*.helpAboutDialog*.fontList:        -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs.*.dataLimitUnit.fontList:          -*-helvetica-medium-i-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs*.helpMsgWindow.fontList:           -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs*.connectDialogLabel.fontList:      -*-times-medium-i-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs*.compBootDialogLabel.fontList:     -*-times-medium-i-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs*.updateDiaLabel.fontList:          -*-times-medium-i-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs*.analogDialogLabel.fontList:       -*-times-medium-i-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs*.helpTextW.fontList:               -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs*.datafilename.fontList:            -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
+  (char *)"rocs*.OutFrame.*.fontList:              -*-helvetica-medium-r-*-*-12-*-*-*-*-*-*-*",
+  (char *)"rocs*.dialogLabel.fontList:             -*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*",
 
 
-  /*"rocs*.iEvRateG.foreground:              RoyalBlue4", does not do enything ..*/
-  "rocs*.iEvRateG.fontList:                -*-times-bold-r-*-*-18-*-*-*-*-*-*-*",
-  "rocs*.iDataRateG.fontList:              -*-times-bold-r-*-*-18-*-*-*-*-*-*-*",
-  "rocs*.dEvRateG.fontList:                -*-times-bold-r-*-*-18-*-*-*-*-*-*-*",
-  "rocs*.dDataRateG.fontList:              -*-times-bold-r-*-*-18-*-*-*-*-*-*-*",
+  /*(char *)"rocs*.iEvRateG.foreground:              RoyalBlue4", does not do enything ..*/
+  (char *)"rocs*.iEvRateG.fontList:                -*-times-bold-r-*-*-18-*-*-*-*-*-*-*",
+  (char *)"rocs*.iDataRateG.fontList:              -*-times-bold-r-*-*-18-*-*-*-*-*-*-*",
+  (char *)"rocs*.dEvRateG.fontList:                -*-times-bold-r-*-*-18-*-*-*-*-*-*-*",
+  (char *)"rocs*.dDataRateG.fontList:              -*-times-bold-r-*-*-18-*-*-*-*-*-*-*",
 
 
-  "rocs*.OutFrame.height:              200",
-  "rocs*OutForm*sensitive:              False",
+  (char *)"rocs*.OutFrame.height:              200",
+  (char *)"rocs*OutForm*sensitive:              False",
   /*
-  "rocs*.Xmhelp.width:                      460",
-  "rocs*.Xmhelp.height:                     550",
+  (char *)"rocs*.Xmhelp.width:                      460",
+  (char *)"rocs*.Xmhelp.height:                     550",
   */
-  "rocs*.*foreground:                      white",
-  "rocs*.*background:                      gray20",
-  "rocs*.rcMsgWindow.background:           lightGray",
-  "rocs*.rcMsgWindow*foreground:           black",
-  "rocs*.XmToggleButtonGadget.selectColor: yellow",
-  "rocs*.XmToggleButton.selectColor:       yellow",
-  "rocs*.connectDialog*.foreground:        white ",
-  "rocs*.connectDialog*.background:        gray20",
-  "rocs*.runTypeDialog*.foreground:        white",
-  "rocs*.runTypeDialog*.background:        gray20",
-  "rocs*.runConfigDialog*.foreground:      white",
-  "rocs*.runConfigDialog*.background:      gray20",
-  "rocs*.topShadowColor:                   gray",
-  "rocs*.bottomShadowColor:                black",
-  "rocs*.borderColor:                      gray25",
-  "rocs* runstatusFrame*.borderColor:      blue",
-  "rocs* runstatusFrame*.borderWidth:      2",
-  "rocs*.list*shadowThickness:             2",
-  "rocs*.list.borderWidth:                 4",
-  "rocs.*.initInfoPanelForm.*.Hbar.*.background: lightGrey",
-  "rocs.*.initInfoPanelForm.*.Vbar.*.background: lightGrey",
-  "rocs.*.initInfoPanelForm.*.foreground:        white",
-  "rocs.*.initInfoPanelForm.*.background:        black",
+  (char *)"rocs*.*foreground:                      white",
+  (char *)"rocs*.*background:                      gray20",
+  (char *)"rocs*.rcMsgWindow.background:           lightGray",
+  (char *)"rocs*.rcMsgWindow*foreground:           black",
+  (char *)"rocs*.XmToggleButtonGadget.selectColor: yellow",
+  (char *)"rocs*.XmToggleButton.selectColor:       yellow",
+  (char *)"rocs*.connectDialog*.foreground:        white ",
+  (char *)"rocs*.connectDialog*.background:        gray20",
+  (char *)"rocs*.runTypeDialog*.foreground:        white",
+  (char *)"rocs*.runTypeDialog*.background:        gray20",
+  (char *)"rocs*.runConfigDialog*.foreground:      white",
+  (char *)"rocs*.runConfigDialog*.background:      gray20",
+  (char *)"rocs*.topShadowColor:                   gray",
+  (char *)"rocs*.bottomShadowColor:                black",
+  (char *)"rocs*.borderColor:                      gray25",
+  (char *)"rocs* runstatusFrame*.borderColor:      blue",
+  (char *)"rocs* runstatusFrame*.borderWidth:      2",
+  (char *)"rocs*.list*shadowThickness:             2",
+  (char *)"rocs*.list.borderWidth:                 4",
+  (char *)"rocs.*.initInfoPanelForm.*.Hbar.*.background: lightGrey",
+  (char *)"rocs.*.initInfoPanelForm.*.Vbar.*.background: lightGrey",
+  (char *)"rocs.*.initInfoPanelForm.*.foreground:        white",
+  (char *)"rocs.*.initInfoPanelForm.*.background:        black",
   
-  "rocs.*.runInfoPanel.*.runPanelsessStatFrame.foreground: lightGrey",
-  "rocs.*.runInfoPanel.*.runstatusLabel.fontList:  -*-times-bold-i-*-*-16-*-*-*-*-*-*-*",
+  (char *)"rocs.*.runInfoPanel.*.runPanelsessStatFrame.foreground: lightGrey",
+  (char *)"rocs.*.runInfoPanel.*.runstatusLabel.fontList:  -*-times-bold-i-*-*-16-*-*-*-*-*-*-*",
   
-  "rocs.*.runInfoPanel.*.runinfoLabel.foreground: lightGrey",
-  "rocs.*.runInfoPanel.*.runinfoLabel.fontList:  -*-times-bold-i-*-*-16-*-*-*-*-*-*-*",
+  (char *)"rocs.*.runInfoPanel.*.runinfoLabel.foreground: lightGrey",
+  (char *)"rocs.*.runInfoPanel.*.runinfoLabel.fontList:  -*-times-bold-i-*-*-16-*-*-*-*-*-*-*",
   
-  "rocs.*.runInfoPanel.*.runsprogressLabel.foreground: lightGrey",
-  "rocs.*.runInfoPanel.*.runsprogressLabel.fontList:  -*-times-bold-i-*-*-16-*-*-*-*-*-*-*",
+  (char *)"rocs.*.runInfoPanel.*.runsprogressLabel.foreground: lightGrey",
+  (char *)"rocs.*.runInfoPanel.*.runsprogressLabel.fontList:  -*-times-bold-i-*-*-16-*-*-*-*-*-*-*",
   
-  "rocs.*.runInfoPanel.*.datafn.topShadowColor:   red",
-  "rocs.*.runInfoPanel.*.datafilename.foreground: red",
-  "rocs.*.runInfoPanel.*.datafilename.background: lightGrey",
-  "rocs.*.runInfoPanel.*.datafilename.fontList:  -*-times-bold-i-*-*-16-*-*-*-*-*-*-*",
+  (char *)"rocs.*.runInfoPanel.*.datafn.topShadowColor:   red",
+  (char *)"rocs.*.runInfoPanel.*.datafilename.foreground: red",
+  (char *)"rocs.*.runInfoPanel.*.datafilename.background: lightGrey",
+  (char *)"rocs.*.runInfoPanel.*.datafilename.fontList:  -*-times-bold-i-*-*-16-*-*-*-*-*-*-*",
   
-  "rocs.*.runInfoPanel.*.datacn.topShadowColor:   red",
-  "rocs.*.runInfoPanel.*.conffilename.foreground: red",
-  "rocs.*.runInfoPanel.*.conffilename.background: lightGrey",
-  "rocs.*.runInfoPanel.*.conffilename.fontList:  -*-times-bold-i-*-*-16-*-*-*-*-*-*-*",
+  (char *)"rocs.*.runInfoPanel.*.datacn.topShadowColor:   red",
+  (char *)"rocs.*.runInfoPanel.*.conffilename.foreground: red",
+  (char *)"rocs.*.runInfoPanel.*.conffilename.background: lightGrey",
+  (char *)"rocs.*.runInfoPanel.*.conffilename.fontList:  -*-times-bold-i-*-*-16-*-*-*-*-*-*-*",
  
-  "rocs.*.runInfoPanel.*.evnbFrame2.topShadowColor: red",
-  "rocs.*.runInfoPanel.*.evNumLabel.foreground: red",
-  "rocs.*.runInfoPanel.*.evNumLabel.fontList:  -*-times-bold-r-*-*-16-*-*-*-*-*-*-*",
+  (char *)"rocs.*.runInfoPanel.*.evnbFrame2.topShadowColor: red",
+  (char *)"rocs.*.runInfoPanel.*.evNumLabel.foreground: red",
+  (char *)"rocs.*.runInfoPanel.*.evNumLabel.fontList:  -*-times-bold-r-*-*-16-*-*-*-*-*-*-*",
   
-  "rocs.*.runInfoPanel*simpleInfoPanel.foreground:  blue",
-  "rocs.*.runInfoPanel*limitframe.foreground:       red",
-  "rocs.*.runInfoPanel*limitframe.topShadowColor:   red",
-  "rocs.*.runInfoPanel*eventLimitFrame.foreground:  white",
-  "rocs.*.runInfoPanel*dataLimitFrame.foreground:   white",
+  (char *)"rocs.*.runInfoPanel*simpleInfoPanel.foreground:  blue",
+  (char *)"rocs.*.runInfoPanel*limitframe.foreground:       red",
+  (char *)"rocs.*.runInfoPanel*limitframe.topShadowColor:   red",
+  (char *)"rocs.*.runInfoPanel*eventLimitFrame.foreground:  white",
+  (char *)"rocs.*.runInfoPanel*dataLimitFrame.foreground:   white",
   
-  "rocs.*.runInfoPanel.*.iEvDispFrame.topShadowColor: red",
+  (char *)"rocs.*.runInfoPanel.*.iEvDispFrame.topShadowColor: red",
   
-  "rocs.*.runInfoPanel*runNumber.*.background:   lightGrey",
-  "rocs.*.runInfoPanel*runNumber.*.foreground:   black",
+  (char *)"rocs.*.runInfoPanel*runNumber.*.background:   lightGrey",
+  (char *)"rocs.*.runInfoPanel*runNumber.*.foreground:   black",
   
-  "rocs.*.runInfoPanel*runNumber.*.background:   lightGrey",
-  "rocs.*.runInfoPanel*runNumber.*.foreground:   black",
+  (char *)"rocs.*.runInfoPanel*runNumber.*.background:   lightGrey",
+  (char *)"rocs.*.runInfoPanel*runNumber.*.foreground:   black",
 
-  "rocs.*.runInfoPanel*database.*.background:    lightGrey",
-  "rocs.*.runInfoPanel*exptname.*.background:    lightGrey",
-  "rocs.*.runInfoPanel*runType.*.background:     lightGrey",
-  "rocs.*.runInfoPanel*runConfig.*.background:   lightGrey",
-  "rocs.*.runInfoPanel*hostname.*.background:    lightGrey",
-  "rocs.*.runInfoPanel*status.*.background:      lightGrey",
-  "rocs.*.runInfoPanel*status.*.foreground:      black",
-  "rocs.*.runInfoPanel*startTimeG.*.background:   lightGrey",
-  "rocs.*.runInfoPanel*startTimeG.*.foreground:   black",
-  "rocs.*.runInfoPanel*endTimeG.*.background:     lightGrey",
-  "rocs.*.runInfoPanel*endTimeG.*.foreground:     black",
-  "rocs.*.runInfoPanel*eventLimit.*.background:  lightGrey",
-  "rocs.*.runInfoPanel*eventLimit.*.foreground:  black",
-  "rocs.*.runInfoPanel*dataLimit.*.background:   lightGrey",
-  "rocs.*.runInfoPanel*dataLimit.*.foreground:   black",
-  "rocs.*.runInfoPanel*status.*.foreground:      black",
-  "rocs.*.runInfoPanel*timeG.*.background:       lightGrey",
-  "rocs.*.runInfoPanel*timeG.*.foreground:       black",
-  "rocs.*.runInfoPanel*exptname.*.foreground:    RoyalBlue4",
+  (char *)"rocs.*.runInfoPanel*database.*.background:    lightGrey",
+  (char *)"rocs.*.runInfoPanel*exptname.*.background:    lightGrey",
+  (char *)"rocs.*.runInfoPanel*runType.*.background:     lightGrey",
+  (char *)"rocs.*.runInfoPanel*runConfig.*.background:   lightGrey",
+  (char *)"rocs.*.runInfoPanel*hostname.*.background:    lightGrey",
+  (char *)"rocs.*.runInfoPanel*status.*.background:      lightGrey",
+  (char *)"rocs.*.runInfoPanel*status.*.foreground:      black",
+  (char *)"rocs.*.runInfoPanel*startTimeG.*.background:   lightGrey",
+  (char *)"rocs.*.runInfoPanel*startTimeG.*.foreground:   black",
+  (char *)"rocs.*.runInfoPanel*endTimeG.*.background:     lightGrey",
+  (char *)"rocs.*.runInfoPanel*endTimeG.*.foreground:     black",
+  (char *)"rocs.*.runInfoPanel*eventLimit.*.background:  lightGrey",
+  (char *)"rocs.*.runInfoPanel*eventLimit.*.foreground:  black",
+  (char *)"rocs.*.runInfoPanel*dataLimit.*.background:   lightGrey",
+  (char *)"rocs.*.runInfoPanel*dataLimit.*.foreground:   black",
+  (char *)"rocs.*.runInfoPanel*status.*.foreground:      black",
+  (char *)"rocs.*.runInfoPanel*timeG.*.background:       lightGrey",
+  (char *)"rocs.*.runInfoPanel*timeG.*.foreground:       black",
+  (char *)"rocs.*.runInfoPanel*exptname.*.foreground:    RoyalBlue4",
   
-  "rocs.*.runInfoPanel*runType.*.foreground:     red",
-  "rocs.*.runInfoPanel*runType.*.fontList:       -*-times-bold-r-*-*-16-*-*-*-*-*-*-*",
+  (char *)"rocs.*.runInfoPanel*runType.*.foreground:     red",
+  (char *)"rocs.*.runInfoPanel*runType.*.fontList:       -*-times-bold-r-*-*-16-*-*-*-*-*-*-*",
   
-  "rocs.*.runInfoPanel*runConfig.*.foreground:   red",
-  "rocs.*.runInfoPanel*runConfig.*.fontList:     -*-times-bold-r-*-*-16-*-*-*-*-*-*-*",
+  (char *)"rocs.*.runInfoPanel*runConfig.*.foreground:   red",
+  (char *)"rocs.*.runInfoPanel*runConfig.*.fontList:     -*-times-bold-r-*-*-16-*-*-*-*-*-*-*",
   
-  "rocs.*.runInfoPanel*exptid.*.foreground:      RoyalBlue4",
-  "rocs.*.runInfoPanel*hostname.*.foreground:    RoyalBlue4",
-  "rocs.*.runInfoPanel*database.*.foreground:    RoyalBlue4",
-  "rocs.*.runInfoPanel*session.*.foreground:     RoyalBlue4",
-  "rocs.*.runInfoPanel*cinfoSubForm.*.alignment: alignment_center",
-  "rocs.*.runInfoPanel*eventNumber.*.background: lightGrey",
-  "rocs.*.runInfoPanel*eventNumber.*.foreground: black",
+  (char *)"rocs.*.runInfoPanel*exptid.*.foreground:      RoyalBlue4",
+  (char *)"rocs.*.runInfoPanel*hostname.*.foreground:    RoyalBlue4",
+  (char *)"rocs.*.runInfoPanel*database.*.foreground:    RoyalBlue4",
+  (char *)"rocs.*.runInfoPanel*session.*.foreground:     RoyalBlue4",
+  (char *)"rocs.*.runInfoPanel*cinfoSubForm.*.alignment: alignment_center",
+  (char *)"rocs.*.runInfoPanel*eventNumber.*.background: lightGrey",
+  (char *)"rocs.*.runInfoPanel*eventNumber.*.foreground: black",
   
-  "rocs.*.evrateDisplay.background:     lightGrey",
+  (char *)"rocs.*.evrateDisplay.background:     lightGrey",
   
-  "rocs.*.datarateDisplay.background:     lightGrey",
+  (char *)"rocs.*.datarateDisplay.background:     lightGrey",
   
-  "rocs.*.ratioDisplay.background:     lightGrey",
+  (char *)"rocs.*.ratioDisplay.background:     lightGrey",
   
-  "rocs.*.otherDisplay.background:     lightGrey",
-  "rocs.*.runInfoPanel*iEvRate.*.background:     lightGrey",
-  "rocs.*.runInfoPanel*iEvRate.*.background:     lightGrey",
-  "rocs.*.runInfoPanel*iEvRate.*.foreground:     black",
-  "rocs.*.runInfoPanel*dEvRate.*.background:     lightGrey",
-  "rocs.*.runInfoPanel*dEvRate.*.foreground:     black",
-  "rocs.*.runInfoPanel*iDataRate.*.background:   lightGrey",
-  "rocs.*.runInfoPanel*iDataRate.*.foreground:   black",
-  "rocs.*.runInfoPanel*dDataRate.*.background:   lightGrey",
-  "rocs.*.runInfoPanel*dDataRate.*.foreground:   black",
-  "rocs.*.runInfoPanel.*background:              gray20",
-  "rocs.*.runInfoPanel.*foreground:              white",
-  "rocs.*.runInfoPanel*optionPulldown*foreground:white",
-  "rocs.*.runInfoPanel*runtype*foreground:       white",
-  "rocs.*.runInfoPanel*runconfig*foreground:     white",
-  "rocs.*.runInfoPanel*eventNumberG.*.background:lightGrey",
-  "rocs.*.runInfoPanel*eventNumberG.foreground:  RoyalBlue4",
-  "rocs.*.runInfoPanel*eventNumberG.fontList:       -*-times-bold-r-*-*-18-*-*-*-*-*-*-*",
-  "rocs.*.runInfoPanel*eventNumberG.*borderWidth:1",
-  "rocs.*.runInfoPanel*netstatus.*background:    daykGray",
-  "rocs.*.rocTab.tabcolor:                    gray20",
-  "rocs.*.menu_bar.background:                   gray20",
-  "rocs.*.menu_bar.*.foreground:                 white",
-  "rocs.*.XmPushButton*highlightThickness:       0",
-  "rocs.*.XmPushButtonGadget*highlightThickness: 0",
-  "rocs.*.XmTextField*highlightThickness:        0",
-  "rocs.*.XmLabel*highlightThickness:            0",
-  "rocs.*.XmLabelGadget*highlightThickness:      0",
-  "rocs.*.XmToggleButtonGadget*highlightThickness: 0  ",
-  "rocs.*.XmToggleButton*highlightThickness:     0  ",
-  "rocs.*.XmRowColumn*spacing:                   0",
-  "rocs*.scale_red*troughColor:                  RoyalBlue4",
-  "rocs*.scale_green*troughColor:                Green",
-  "rocs*.scale_blue*troughColor:                 Blue",
-  "rocs*.highlightThickness:                     0",
-  "rocs*.XmRowColumn*spacing:                    0",
-  "rocs*.selectColor:                            RoyalBlue4",
-  "rocs*.rocTab.shadowThickness:              2",
-  "rocs*.rocTab.tabWidthPercentage:           10",
-  "rocs*.rocTab.cornerwidth:                  2",
-  "rocs*.rocTab.cornerheight:                 2",
-  "rocs*.rocTab.textmargin:                   4",
-  "rocs*.rocTab.foreground:                   blue",
-  "rocs*.rocTab.tabcolor:                     lightGrey",
+  (char *)"rocs.*.otherDisplay.background:     lightGrey",
+  (char *)"rocs.*.runInfoPanel*iEvRate.*.background:     lightGrey",
+  (char *)"rocs.*.runInfoPanel*iEvRate.*.background:     lightGrey",
+  (char *)"rocs.*.runInfoPanel*iEvRate.*.foreground:     black",
+  (char *)"rocs.*.runInfoPanel*dEvRate.*.background:     lightGrey",
+  (char *)"rocs.*.runInfoPanel*dEvRate.*.foreground:     black",
+  (char *)"rocs.*.runInfoPanel*iDataRate.*.background:   lightGrey",
+  (char *)"rocs.*.runInfoPanel*iDataRate.*.foreground:   black",
+  (char *)"rocs.*.runInfoPanel*dDataRate.*.background:   lightGrey",
+  (char *)"rocs.*.runInfoPanel*dDataRate.*.foreground:   black",
+  (char *)"rocs.*.runInfoPanel.*background:              gray20",
+  (char *)"rocs.*.runInfoPanel.*foreground:              white",
+  (char *)"rocs.*.runInfoPanel*optionPulldown*foreground:white",
+  (char *)"rocs.*.runInfoPanel*runtype*foreground:       white",
+  (char *)"rocs.*.runInfoPanel*runconfig*foreground:     white",
+  (char *)"rocs.*.runInfoPanel*eventNumberG.*.background:lightGrey",
+  (char *)"rocs.*.runInfoPanel*eventNumberG.foreground:  RoyalBlue4",
+  (char *)"rocs.*.runInfoPanel*eventNumberG.fontList:       -*-times-bold-r-*-*-18-*-*-*-*-*-*-*",
+  (char *)"rocs.*.runInfoPanel*eventNumberG.*borderWidth:1",
+  (char *)"rocs.*.runInfoPanel*netstatus.*background:    daykGray",
+  (char *)"rocs.*.rocTab.tabcolor:                    gray20",
+  (char *)"rocs.*.menu_bar.background:                   gray20",
+  (char *)"rocs.*.menu_bar.*.foreground:                 white",
+  (char *)"rocs.*.XmPushButton*highlightThickness:       0",
+  (char *)"rocs.*.XmPushButtonGadget*highlightThickness: 0",
+  (char *)"rocs.*.XmTextField*highlightThickness:        0",
+  (char *)"rocs.*.XmLabel*highlightThickness:            0",
+  (char *)"rocs.*.XmLabelGadget*highlightThickness:      0",
+  (char *)"rocs.*.XmToggleButtonGadget*highlightThickness: 0  ",
+  (char *)"rocs.*.XmToggleButton*highlightThickness:     0  ",
+  (char *)"rocs.*.XmRowColumn*spacing:                   0",
+  (char *)"rocs*.scale_red*troughColor:                  RoyalBlue4",
+  (char *)"rocs*.scale_green*troughColor:                Green",
+  (char *)"rocs*.scale_blue*troughColor:                 Blue",
+  (char *)"rocs*.highlightThickness:                     0",
+  (char *)"rocs*.XmRowColumn*spacing:                    0",
+  (char *)"rocs*.selectColor:                            RoyalBlue4",
+  (char *)"rocs*.rocTab.shadowThickness:              2",
+  (char *)"rocs*.rocTab.tabWidthPercentage:           10",
+  (char *)"rocs*.rocTab.cornerwidth:                  2",
+  (char *)"rocs*.rocTab.cornerheight:                 2",
+  (char *)"rocs*.rocTab.textmargin:                   4",
+  (char *)"rocs*.rocTab.foreground:                   blue",
+  (char *)"rocs*.rocTab.tabcolor:                     lightGrey",
   
 
   /*sergey: testing*/
-  "rocs*.rocFrame.foreground:                   Blue",
-  "rocs*.rocFrame.background:                   LightGreen",
-  "rocs* rocFrame*.borderColor:      blue",
-  "rocs* rocFrame*.borderWidth:      2",
+  (char *)"rocs*.rocFrame.foreground:                   Blue",
+  (char *)"rocs*.rocFrame.background:                   LightGreen",
+  (char *)"rocs* rocFrame*.borderColor:      blue",
+  (char *)"rocs* rocFrame*.borderWidth:      2",
   /*sergey: testing*/
 
 
 
-  "rocs*.top_ruler.background:                   lightGrey",
-  "rocs*.left_ruler.background:                  lightGrey",
-  "rocs*.top_ruler.foreground:                   White",
-  "rocs*.left_ruler.foreground:                  White",
-  "rocs*.top_ruler.tickerColor:                  White",
-  "rocs*.left_ruler.tickerColor:                 White  ",
-  "rocs*.edit_popup.*.background:                White",
-  "rocs*.top_ruler.indicatorColor:               RoyalBlue4",
-  "rocs*.left_ruler.indicatorColor:              RoyalBlue4",
+  (char *)"rocs*.top_ruler.background:                   lightGrey",
+  (char *)"rocs*.left_ruler.background:                  lightGrey",
+  (char *)"rocs*.top_ruler.foreground:                   White",
+  (char *)"rocs*.left_ruler.foreground:                  White",
+  (char *)"rocs*.top_ruler.tickerColor:                  White",
+  (char *)"rocs*.left_ruler.tickerColor:                 White  ",
+  (char *)"rocs*.edit_popup.*.background:                White",
+  (char *)"rocs*.top_ruler.indicatorColor:               RoyalBlue4",
+  (char *)"rocs*.left_ruler.indicatorColor:              RoyalBlue4",
   
-  "rocs*icon_sw*background:                      lightGray",
-  "rocs*icon_sw*foreground:                      black",
+  (char *)"rocs*icon_sw*background:                      lightGray",
+  (char *)"rocs*icon_sw*foreground:                      black",
   
-  "rocs*htext*background:                        lightGray",
-  "rocs*htext*foreground:                        black",
-  "rocs*anaLogFile.background:                   lightGrey",
-  "rocs*anaLogFile.foreground:                   black",
-  "rocs*anaLogFile.fontList:  -*-times-bold-i-*-*-16-*-*-*-*-*-*-*",
+  (char *)"rocs*htext*background:                        lightGray",
+  (char *)"rocs*htext*foreground:                        black",
+  (char *)"rocs*anaLogFile.background:                   lightGrey",
+  (char *)"rocs*anaLogFile.foreground:                   black",
+  (char *)"rocs*anaLogFile.fontList:  -*-times-bold-i-*-*-16-*-*-*-*-*-*-*",
 
-  "rocs.*.fileFr.topShadowColor:   red",
-  "rocs.*.bootFr.topShadowColor:   red",
-  "rocs.*.updFr.topShadowColor:   red",
-  "rocs.*.monFr.topShadowColor:   red",
+  (char *)"rocs.*.fileFr.topShadowColor:   red",
+  (char *)"rocs.*.bootFr.topShadowColor:   red",
+  (char *)"rocs.*.updFr.topShadowColor:   red",
+  (char *)"rocs.*.monFr.topShadowColor:   red",
 
-  "rocs*runInfoPanel*statuspanel.*.background:    lightGrey",
+  (char *)"rocs*runInfoPanel*statuspanel.*.background:    lightGrey",
 
-  "rocs*runNumber*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
-  "rocs*startTime*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
-  "rocs*endTime*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
-  "rocs*eventLimit*backgroundPixmap:              XmUNSPECIFIED_PIXMAP",
-  "rocs*dataLimit*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
-  "rocs*status*backgroundPixmap:                  XmUNSPECIFIED_PIXMAP",
-  "rocs*time*backgroundPixmap:                    XmUNSPECIFIED_PIXMAP",
-  "rocs*exptname*backgroundPixmap:                XmUNSPECIFIED_PIXMAP",
-  "rocs*runType*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
-  "rocs*runConfig*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
-  "rocs*exptid*backgroundPixmap:                  XmUNSPECIFIED_PIXMAP",
-  "rocs*hostname*backgroundPixmap:                XmUNSPECIFIED_PIXMAP",
-  "rocs*database*backgroundPixmap:                XmUNSPECIFIED_PIXMAP",
-  "rocs*session*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
-  "rocs*eventNumber*backgroundPixmap:             XmUNSPECIFIED_PIXMAP",
-  "rocs*iDataRate*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
-  "rocs*dDataRate*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
-  "rocs*iEvRate*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
-  "rocs*dEvRate*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
-  "rocs*top_ruler*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
-  "rocs*left_ruler*backgroundPixmap:              XmUNSPECIFIED_PIXMAP",
-  "rocs*icon_sw*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
-  "rocs*htext*backgroundPixmap:                   XmUNSPECIFIED_PIXMAP",
-  "rocs*initInfoPanelForm*backgroundPixmap:       XmUNSPECIFIED_PIXMAP",
-  "rocs*eventNumberG*backgroundPixmap:            XmUNSPECIFIED_PIXMAP",
-  "rocs*rcMsgWindow*backgroundPixmap:             XmUNSPECIFIED_PIXMAP",
-  "rocs*rcRateDisplay*backgroundPixmap:           XmUNSPECIFIED_PIXMAP",
-  "rocs*rcRateDisplay*foreground:                 black",
-  "rocs*icon_sw*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
-  "rocs*icon_box*backgroundPixmap:                XmUNSPECIFIED_PIXMAP",
-  "rocs*icon*backgroundPixmap:                    XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*runNumber*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*startTime*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*endTime*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*eventLimit*backgroundPixmap:              XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*dataLimit*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*status*backgroundPixmap:                  XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*time*backgroundPixmap:                    XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*exptname*backgroundPixmap:                XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*runType*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*runConfig*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*exptid*backgroundPixmap:                  XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*hostname*backgroundPixmap:                XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*database*backgroundPixmap:                XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*session*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*eventNumber*backgroundPixmap:             XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*iDataRate*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*dDataRate*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*iEvRate*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*dEvRate*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*top_ruler*backgroundPixmap:               XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*left_ruler*backgroundPixmap:              XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*icon_sw*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*htext*backgroundPixmap:                   XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*initInfoPanelForm*backgroundPixmap:       XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*eventNumberG*backgroundPixmap:            XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*rcMsgWindow*backgroundPixmap:             XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*rcRateDisplay*backgroundPixmap:           XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*rcRateDisplay*foreground:                 black",
+  (char *)"rocs*icon_sw*backgroundPixmap:                 XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*icon_box*backgroundPixmap:                XmUNSPECIFIED_PIXMAP",
+  (char *)"rocs*icon*backgroundPixmap:                    XmUNSPECIFIED_PIXMAP",
   
-  "rocs.*.RbuttonFrame.topShadowColor:   red",
-  "rocs.*.LbuttonFrame.topShadowColor:   blue",
+  (char *)"rocs.*.RbuttonFrame.topShadowColor:   red",
+  (char *)"rocs.*.LbuttonFrame.topShadowColor:   blue",
 
   NULL,
 };
@@ -559,7 +559,7 @@ main(int argc, char** argv)
 
 
 
-  rcRocW* window  = new rcRocW ("Rocs", netHandler);
+  rcRocW* window  = new rcRocW ((char *)"Rocs", netHandler);
 
   
   app->initialize (&argc, argv);
@@ -576,15 +576,15 @@ main(int argc, char** argv)
 
 #if 1
   /* set resizing for 'rframe_' */
-  rec.string = "resize";
+  rec.string = (char *)"resize";
   rec.proc = resize;
   XtAppAddActions (app_context, &rec, 1);
   XtOverrideTranslations(menW->rframe_, XtParseTranslationTable ("<Configure>: resize()")); /* call resize() when parent window resized */
   XtOverrideTranslations(menW->rframe_, XtParseTranslationTable ("<Expose>: resize()")); /* call resize() when exposed (for example tabs switched) */
 #endif
 
-  menW->createXterms (menW->xtermsFrame_[0], "00_");
-  menW->createXterms (menW->xtermsFrame_[1], "01_");
+  menW->createXterms (menW->xtermsFrame_[0], (char *)"00_");
+  menW->createXterms (menW->xtermsFrame_[1], (char *)"01_");
 
 
 
@@ -642,7 +642,7 @@ main(int argc, char** argv)
   {
     printf("EMBEDDED !!!!!!!!!!!!!!!!!!!!!!!\n");
 
-    static char *embedded_name = "rocs";
+    static char *embedded_name = (char *)"rocs";
 
     int ac, ix;
     Arg args[10];
@@ -654,7 +654,7 @@ main(int argc, char** argv)
 
 
     printf("CREG 1\n");
-    parent = NULL;
+    parent = 0;
     if (embedded)
     {
 	  printf("wwwwwwwwwwwwwwwwwwwww CREG wwwwwwwwwwwwwww (-embed)\n");
@@ -680,10 +680,10 @@ main(int argc, char** argv)
       printf("cmd >%s<\n",cmd);
 
       /* second parameter is the same as in parent's call 'codaSendInit(toplevel,"RUNCONTROL")' */
-      coda_Send(XtDisplay(toplevel),"RUNCONTROL",cmd);
+      coda_Send(XtDisplay(toplevel),(char *)"RUNCONTROL",cmd);
 
 	  /* was in codaedit:*/
-      codaSendInit(toplevel,"ALLROCS"); /* does NOT triggers 'motifHandler'->'resizeHandler' calls in codaRegistry */ 
+      codaSendInit(toplevel,(char *)"ALLROCS"); /* does NOT triggers 'motifHandler'->'resizeHandler' calls in codaRegistry */ 
       codaRegisterMsgCallback((void *)messageHandler);
       XtAddEventHandler(toplevel, StructureNotifyMask, False, Xhandler, NULL); /*Xhandler will exit if window was destroyed*/
 

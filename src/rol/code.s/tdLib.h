@@ -453,4 +453,6 @@ int    tdGPrintTriggerLinkStatus();
 int    tdGetTranceiverStatus(int id, unsigned int *data, int maxwords);
 int    tdPrintTranceiverStatus(int id);
 
+int tdGetNtds();
+
 #endif /* TDLIB_H */

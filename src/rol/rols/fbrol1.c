@@ -20,6 +20,7 @@ static int nusertrig, ndone;
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -36,6 +37,13 @@ typedef      long long       hrtime_t;
 #include "epicsutil.h"
 static char ssname[80];
 #endif
+
+/*#include "sfiTrigLib.h"*/
+void sfiEnableSequencer();
+
+#include "daqLib.h"
+#include "tiLib.h"
+#include "tiConfig.h"
 
 #include "circbuf.h"
 
@@ -446,7 +454,7 @@ vmeBusUnlock();
 
   for(slot = 4;slot < MAX_SLOTS; slot++)
   {
-    unsigned long mod_id;
+    unsigned int mod_id;
     int status;
     /* initialize card */
 vmeBusLock();
@@ -461,7 +469,7 @@ vmeBusUnlock();
     /* read back CSR0 */
     mod_id = 0;
 vmeBusLock();
-    status = fprc(slot, 0x00000000, &mod_id);
+ status = fprc(slot, 0x00000000, (unsigned int *)&mod_id);
 vmeBusUnlock();
     if(status != 0)
     {
@@ -859,7 +867,7 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
 
   if(syncFlag) printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
 
-  rol->dabufp = (int *) 0;
+  rol->dabufp = NULL;
 
   /*
 usleep(100);

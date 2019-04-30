@@ -32,9 +32,9 @@
 
 typedef struct _daq_state
 {
-  char *string_;
+  const char *string_;
   int  state_;
-}_daq_state;
+} _daq_state;
 
 class daqState
 {

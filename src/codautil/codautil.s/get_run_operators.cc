@@ -39,8 +39,8 @@ get_run_operators(char *mysql_database, char *session)
   char *user = "hpsshiftbot";
   char *passwd = "88hIMrBzLqwKHQaO";
   */
-  char *user = "shiftbot";
-  char *passwd = "manageshiftdb";
+  const char *user = "shiftbot";
+  const char *passwd = "manageshiftdb";
   static char chres[1000];
 
   chres[0] = '\0';

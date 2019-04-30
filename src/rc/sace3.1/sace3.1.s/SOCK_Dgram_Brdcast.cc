@@ -55,7 +55,7 @@ SOCK_Dgram_Brdcast::mk_broadcast (void)
 
   if (ioctl (s, SIOCGIFCONF, (char *)&ifc) < 0) 
     LM_ERROR_RETURN ((LOG_ERROR, "%p\n", 
-		      "SOCK_Dgram_Brdcast::mk_broadcast: ioctl (get interface configuration)"),
+					  "SOCK_Dgram_Brdcast::mk_broadcast: ioctl (get interface configuration)"),
 		     IPC_SAP::INVALID_HANDLE);
 
   ifr = ifc.ifc_req;

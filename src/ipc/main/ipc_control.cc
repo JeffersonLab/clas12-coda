@@ -58,7 +58,7 @@ using namespace std;
 
 char *app  = getenv("EXPID");
 char *dest = NULL;
-char *help = "\nusage:\n\n   ipc_control [-a application] [-d destination] command\n\n\n";
+const char *help = "\nusage:\n\n   ipc_control [-a application] [-d destination] command\n\n\n";
 
 IpcServer &server = IpcServer::Instance();
 
@@ -127,8 +127,8 @@ main(int argc, char **argv)
   printf("app >%s<, dest >%s<\n",app,dest);
 
 
-  server.AddSendTopic(app, getenv("SESSION"), "daq", dest);
-  server.AddRecvTopic(app, getenv("SESSION"), "daq", "ignore");
+  server.AddSendTopic(app, getenv("SESSION"), (char *)"daq", dest);
+  server.AddRecvTopic(app, getenv("SESSION"), (char *)"daq", (char *)"ignore");
   server.Open();
 
   server << clrm << "command:ipc_control";

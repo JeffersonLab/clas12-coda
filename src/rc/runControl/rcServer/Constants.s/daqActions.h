@@ -32,9 +32,9 @@
 
 typedef struct _daq_action
 {
-  char *string_;
+  const char *string_;
   int  action_;
-}_daq_action;
+} _daq_action;
 
 class daqActions
 {

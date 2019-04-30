@@ -70,6 +70,14 @@
 #include "Editor_newConfig.h"
 #include "Editor_opendbaseDialog.h"
 #include "Editor_menu.h"
+#include "Editor_graph_cmd.h"
+#include "Editor_rmconfigSel.h"
+#include "Editor_converter.h"
+#include "Editor_icon_box.h"
+#include "Editor_miscinfo.h"
+#include "Editor_xmisc.h"
+#include "Editor_rmdbaseSel.h"
+
 
 /*
 static char *file_menus[]={
@@ -472,35 +480,35 @@ XcodaEditorCreatePopupMenu(Widget parent)
     {
       XtAddEventHandler(parent, ButtonPressMask, False, (XtEventHandler)popup_edit_menu, menu);
       
-      XtAddCallback(edit_b[0], XmNactivateCallback, (XtCallbackProc)XcodaEditorSetDeleteCompMode,
+      XtAddCallback(edit_b[0], XmNactivateCallback, XcodaEditorSetDeleteCompMode,
 		    (XtPointer)DELETE_NODE_ACTION);
       manager.pop_delete_comp_menu = edit_b[0];
       
-      XtAddCallback(edit_b[1], XmNactivateCallback, (XtCallbackProc)XcodaEditorSetDeleteArcMode,
+      XtAddCallback(edit_b[1], XmNactivateCallback, XcodaEditorSetDeleteArcMode,
 		    (XtPointer)DELETE_ARC_ACTION);
       manager.pop_delete_arc_menu = edit_b[1];
       
-      XtAddCallback(edit_b[2], XmNactivateCallback, (XtCallbackProc)XcodaEditorDeleteAllArcs,
+      XtAddCallback(edit_b[2], XmNactivateCallback, XcodaEditorDeleteAllArcs,
 		    (XtPointer)NULL);
       manager.pop_delete_allarc_menu = edit_b[2];
       
-      XtAddCallback(edit_b[3], XmNactivateCallback, (XtCallbackProc)XcodaEditorDeleteAll,
+      XtAddCallback(edit_b[3], XmNactivateCallback, XcodaEditorDeleteAll,
 		    (XtPointer)NULL);
       manager.pop_delete_all_menu = edit_b[3];
       
-      XtAddCallback(edit_b[4], XmNactivateCallback, (XtCallbackProc)XcodaEditorUndoAction,
+      XtAddCallback(edit_b[4], XmNactivateCallback, XcodaEditorUndoAction,
 		    (XtPointer)UNDO_ACTION);
       manager.pop_undo_menu = edit_b[4];
       
-      XtAddCallback(edit_b[5], XmNactivateCallback, (XtCallbackProc)XcodaEditorRedraw,
+      XtAddCallback(edit_b[5], XmNactivateCallback, XcodaEditorRedraw,
 		    (XtPointer)NULL);
       manager.pop_redraw_menu = edit_b[5];
       
-      XtAddCallback(edit_b[6], XmNactivateCallback, (XtCallbackProc)XcodaEditorResizeComp,
+      XtAddCallback(edit_b[6], XmNactivateCallback, XcodaEditorResizeComp,
 		    (XtPointer)RESIZE_COMP_ACTION);
       manager.pop_resize_comp_menu = edit_b[6];
       
-      XtAddCallback(edit_b[7], XmNactivateCallback, (XtCallbackProc)XcodaEditorConn2Cols,
+      XtAddCallback(edit_b[7], XmNactivateCallback, XcodaEditorConn2Cols,
 		    (XtPointer)CONN_2COLS_ACTION);
       manager.pop_connect2cols_menu = edit_b[7];
     }
@@ -511,7 +519,7 @@ XcodaEditorCreatePopupMenu(Widget parent)
 static void
 popdown_dialog(Widget w, 
 			   XtPointer client_data, 
-			   XmAnyCallbackStruct* cbs)
+			   XtPointer callback_data)
 {
   XtDestroyWidget(XtParent(w));
 }
@@ -519,7 +527,7 @@ popdown_dialog(Widget w,
 void
 XcodaEditorDeleteAllArcs(Widget w, 
 						 XtPointer client_data, 
-						 XmAnyCallbackStruct* cbs) 
+						 XtPointer callback_data) 
 {
   Widget warning_dialog;
   XmString yes, no;
@@ -543,8 +551,8 @@ XcodaEditorDeleteAllArcs(Widget w,
   XmStringFree(message);
   XtUnmanageChild(XmMessageBoxGetChild(warning_dialog, XmDIALOG_HELP_BUTTON));
 		  
-  XtAddCallback(warning_dialog, XmNokCallback, (XtCallbackProc)delete_all_arcs, (XtPointer)NULL);
-  XtAddCallback(warning_dialog, XmNcancelCallback, (XtCallbackProc)popdown_dialog, (XtPointer)NULL);
+  XtAddCallback(warning_dialog, XmNokCallback, delete_all_arcs, (XtPointer)NULL);
+  XtAddCallback(warning_dialog, XmNcancelCallback, popdown_dialog, (XtPointer)NULL);
   XtManageChild(warning_dialog);
   XtPopup(XtParent(warning_dialog), XtGrabNone);
 }
@@ -552,7 +560,7 @@ XcodaEditorDeleteAllArcs(Widget w,
 void
 XcodaEditorDeleteAll(Widget w, 
 			  XtPointer client_data, 
-			  XmAnyCallbackStruct* cbs)
+			  XtPointer callback_data)
 {
   Widget warning_dialog;
   XmString yes, no;
@@ -577,9 +585,9 @@ XcodaEditorDeleteAll(Widget w,
   XmStringFree(message);
   XtUnmanageChild(XmMessageBoxGetChild(warning_dialog, XmDIALOG_HELP_BUTTON));
 		  
-  XtAddCallback(warning_dialog, XmNokCallback, (XtCallbackProc)delete_everything,
+  XtAddCallback(warning_dialog, XmNokCallback, delete_everything,
 		(XtPointer)NULL);
-  XtAddCallback(warning_dialog, XmNcancelCallback, (XtCallbackProc)popdown_dialog,
+  XtAddCallback(warning_dialog, XmNcancelCallback, popdown_dialog,
 		(XtPointer)NULL);
   XtManageChild(warning_dialog);
   XtPopup(XtParent(warning_dialog), XtGrabNone);
@@ -597,7 +605,7 @@ XcodaEditorDeleteAll(Widget w,
 void
 XcodaEditorNewConfigCbk (Widget w, 
 			      XtPointer clientData, 
-			      XmAnyCallbackStruct* cbs)
+			      XtPointer callback_data)
 {
   XcodaEditorResetGraphCmd();
 
@@ -613,8 +621,9 @@ XcodaEditorNewConfigCbk (Widget w,
 void
 XcodaEditorOpenConfigCbk (Widget w, 
 			       XtPointer clientData, 
-			       XmAnyCallbackStruct* cbs)
+			       XtPointer callback_data)
 {
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
 #ifdef DEBUG
   printf("XcodaEditorOpenConfigCbk reached\n");
 #endif
@@ -634,7 +643,7 @@ XcodaEditorOpenConfigCbk (Widget w,
 void
 XcodaEditorRemoveConfigCbk (Widget w, 
 				 XtPointer clientData, 
-				 XmAnyCallbackStruct* cbs)
+				 XtPointer callback_data)
 {
   XcodaEditorResetGraphCmd();
 
@@ -657,9 +666,11 @@ typedef struct config_widget{
 
 static void
 confirm_overwrite(Widget w, 
-			      ConfigWidgets* info, 
-			      XmAnyCallbackStruct* cbs)
+			      XtPointer data, 
+			      XtPointer callback_data)
 {
+  ConfigWidgets* info = (ConfigWidgets *)data;
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
   char *config_name;
 
   if(cbs->reason == XmCR_OK)
@@ -717,8 +728,8 @@ saveConfigOverwritePopup(Widget w,
     help_b = XmMessageBoxGetChild(q_dialog, XmDIALOG_HELP_BUTTON);
     XtUnmanageChild(help_b);
   
-    XtAddCallback(q_dialog, XmNokCallback, (XtCallbackProc)confirm_overwrite, info);
-    XtAddCallback(q_dialog, XmNcancelCallback, (XtCallbackProc)confirm_overwrite, info);
+    XtAddCallback(q_dialog, XmNokCallback, confirm_overwrite, info);
+    XtAddCallback(q_dialog, XmNcancelCallback, confirm_overwrite, info);
 
     XtManageChild(q_dialog);
   }
@@ -744,7 +755,7 @@ saveConfigOverwritePopup(Widget w,
 static void
 saveConfig (Widget w, 
 			XtPointer clientData, 
-			XmAnyCallbackStruct* cbs)
+			XtPointer callback_data)
 {
   char *config;
   ConfigWidgets* obj = (ConfigWidgets *)clientData;
@@ -782,7 +793,7 @@ saveConfig (Widget w,
 static void
 popdownSaveConfigDialog (Widget w, 
 				     XtPointer clientData, 
-				     XmAnyCallbackStruct* cbs)
+				     XtPointer callback_data)
 {
   ConfigWidgets* obj = (ConfigWidgets *)clientData;
   XtPopdown (XtParent (obj->dialog_));
@@ -794,7 +805,7 @@ static ConfigWidgets saveInfoW;
 void
 XcodaEditorSaveConfig(Widget w, 
 			   XtPointer client_data, 
-			   XmAnyCallbackStruct* cbs)
+			   XtPointer callback_data)
 {
   Widget sep, pushb0, pushb1;
   Widget label, top_label, act_form;
@@ -898,9 +909,9 @@ XcodaEditorSaveConfig(Widget w,
 
     /* add callbacks for all push buttons */
     XtAddCallback (saveInfoW.ok_, XmNactivateCallback,
-		   (XtCallbackProc)saveConfig, (XtPointer)&(saveInfoW));
+		   saveConfig, (XtPointer)&(saveInfoW));
     XtAddCallback (saveInfoW.cancel_, XmNactivateCallback,
-		   (XtCallbackProc)popdownSaveConfigDialog, (XtPointer)&(saveInfoW));
+		   popdownSaveConfigDialog, (XtPointer)&(saveInfoW));
 
     XtManageChild(act_form);
     XtManageChild(saveInfoW.dialog_);
@@ -923,8 +934,9 @@ void *Editor_rc_object = NULL;
 void
 XcodaEditorSaveDefault(Widget w, 
 			    XtPointer client_data, 
-			    XmAnyCallbackStruct* cbs)
+			    XtPointer callback_data)
 {
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
   XcodaEditorResetGraphCmd();
 
   if(isEmptyGraph(&coda_graph))
@@ -958,7 +970,7 @@ XcodaEditorSaveDefault(Widget w,
 static void
 popdown_shell(Widget w, 
 			  XtPointer client_data, 
-			  XmAnyCallbackStruct* cbs)
+			  XtPointer callback_data)
 {
   Widget shell = XtParent(XtParent(w));
 
@@ -968,8 +980,9 @@ popdown_shell(Widget w,
 static void
 saveAction(Widget w, 
 		       XtPointer client_data, 
-		       XmAnyCallbackStruct* cbs)
+		       XtPointer callback_data)
 {
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
   popdown_shell(w, client_data, cbs);
   XcodaEditorSaveConfig(w, client_data, cbs);
 }
@@ -977,9 +990,10 @@ saveAction(Widget w,
 static void
 noSaveAction(Widget w, 
 			 XtPointer client_data, 
-			 XmAnyCallbackStruct* cbs)
+			 XtPointer callback_data)
 {
   int type = (int)client_data;
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
 
   delete_everything(w, client_data, cbs);
   delete_everyicons( );
@@ -998,7 +1012,6 @@ popupSaveQDialog(Widget parent,
   Widget   pushb0, pushb1, pushb2;
   Arg      args[15];
   int      ac = 0;
-  int      pas = (int)client_data;
 
   yes = XmStringCreateSimple("Yes");
   no = XmStringCreateSimple("No");
@@ -1050,7 +1063,7 @@ popupSaveQDialog(Widget parent,
   XtSetArg(args[ac], XmNbottomOffset, 5); ac++;
   pushb0 = XtCreateManagedWidget("ok", xmPushButtonWidgetClass, form,
 				 args, ac);
-  XtAddCallback(pushb0, XmNactivateCallback, (XtCallbackProc)saveAction, (XtPointer)pas);
+  XtAddCallback(pushb0, XmNactivateCallback, saveAction, client_data);
   ac = 0;
   XmStringFree(yes);
 
@@ -1066,7 +1079,7 @@ popupSaveQDialog(Widget parent,
   XtSetArg(args[ac], XmNbottomOffset, 5); ac++;
   pushb1 = XtCreateManagedWidget("no", xmPushButtonWidgetClass, form,
 				 args, ac);
-  XtAddCallback(pushb1, XmNactivateCallback, (XtCallbackProc)noSaveAction, (XtPointer)pas);
+  XtAddCallback(pushb1, XmNactivateCallback, noSaveAction, client_data);
   ac = 0;
   XmStringFree(no);
 
@@ -1082,7 +1095,7 @@ popupSaveQDialog(Widget parent,
   XtSetArg(args[ac], XmNbottomOffset, 5); ac++;
   pushb2 = XtCreateManagedWidget("cancel", xmPushButtonWidgetClass, form,
 				 args, ac);
-  XtAddCallback(pushb2, XmNactivateCallback, (XtCallbackProc)popdown_shell, (XtPointer)NULL);
+  XtAddCallback(pushb2, XmNactivateCallback, popdown_shell, (XtPointer)NULL);
   ac = 0;
   XmStringFree(cancel);    
   
@@ -1115,7 +1128,7 @@ static int numOptions = 0;
 
 static void
 saveOptions (Widget w, XtPointer clientData, 
-			 XmAnyCallbackStruct* cbs)
+			 XtPointer callback_data)
 {
 #ifdef DEBUG
   printf("Editor_menu::saveOptions reached\n");
@@ -1128,7 +1141,7 @@ saveOptions (Widget w, XtPointer clientData,
 
 static void
 cancelOptionDialog (Widget w, XtPointer clientData, 
-				XmAnyCallbackStruct* cbs)
+				XtPointer callback_data)
 {     
 #ifdef DEBUG
   printf("Editor_menu::cancelOptionDialog reached\n");
@@ -1295,7 +1308,7 @@ XcodaEditorSaveConfigOption (char* runtype)
       
 void
 XcodaEditorConfigOption (Widget w, XtPointer client_data,
-						 XmAnyCallbackStruct* cbs)
+						 XtPointer callback_data)
 {
   Widget form, sep;
   Widget ok, cancel, subform, subform1;
@@ -1482,9 +1495,9 @@ XcodaEditorConfigOption (Widget w, XtPointer client_data,
     opW.shell = XtParent (form);
 
     /* add callback for ok and cancel */
-    XtAddCallback (ok, XmNactivateCallback, (XtCallbackProc)saveOptions,
+    XtAddCallback (ok, XmNactivateCallback, saveOptions,
 		   (XtPointer)&opW);
-    XtAddCallback (cancel, XmNactivateCallback, (XtCallbackProc)cancelOptionDialog,
+    XtAddCallback (cancel, XmNactivateCallback, cancelOptionDialog,
 		   (XtPointer)&opW);
   }
 
@@ -1510,7 +1523,7 @@ typedef struct _newdbase_info
 static void
 openNewDatabase (Widget w, 
 			     XtPointer clientData,
-			     XmAnyCallbackStruct* cbs)
+			     XtPointer callback_data)
 {
   char* str;
   char  msg[80];
@@ -1542,7 +1555,7 @@ openNewDatabase (Widget w,
 static void
 popdownNdbaseDialog (Widget w, 
 				 XtPointer clientData, 
-				 XmAnyCallbackStruct* cbs)
+				 XtPointer callback_data)
 {
   newDbaseDialog* obj = (newDbaseDialog *)clientData;
 
@@ -1651,9 +1664,9 @@ XcodaEditorNewDbaseEntry (Widget w)
 
     /* add callbacks */
     XtAddCallback (ndbaseDialog.ok_, XmNactivateCallback, 
-		   (XtCallbackProc)openNewDatabase, (XtPointer)&(ndbaseDialog));
+		   openNewDatabase, (XtPointer)&(ndbaseDialog));
     XtAddCallback (ndbaseDialog.cancel_, XmNactivateCallback,
-		   (XtCallbackProc)popdownNdbaseDialog, (XtPointer)&(ndbaseDialog));
+		   popdownNdbaseDialog, (XtPointer)&(ndbaseDialog));
 
     XtManageChild (act_form);
     XtManageChild (ndbaseDialog.dialog_);
@@ -1664,7 +1677,7 @@ XcodaEditorNewDbaseEntry (Widget w)
 void
 XcodaEditorNewDbaseCbk(Widget w, 
 			    XtPointer client_data, 
-			    XmAnyCallbackStruct* cbs)
+				XtPointer callback_data)
 {
   if (isEmptyGraph (&coda_graph))
     XcodaEditorNewDbaseEntry (sw_geometry.draw_area);
@@ -1682,7 +1695,7 @@ XcodaEditorNewDbaseCbk(Widget w,
 void
 XcodaEditorOpenDbaseCbk(Widget w, 
 			     XtPointer client_data, 
-			     XmAnyCallbackStruct* cbs)
+			     XtPointer callback_data)
 {
   XcodaEditorResetGraphCmd();
   
@@ -1702,7 +1715,7 @@ XcodaEditorOpenDbaseCbk(Widget w,
 void
 XcodaEditorRemoveDbaseCbk(Widget w, 
 			       XtPointer client_data, 
-			       XmAnyCallbackStruct* cbs)
+			       XtPointer callback_data)
 {
   XcodaEditorResetGraphCmd();
 
@@ -1718,7 +1731,7 @@ XcodaEditorRemoveDbaseCbk(Widget w,
 void
 XcodaEditorCleanDbase (Widget w, 
 			    XtPointer client_data, 
-			    XmAnyCallbackStruct* cbs)
+			    XtPointer callback_data)
 {
   /* check all the components inside icon list
      forward task to iconlist
@@ -1730,8 +1743,10 @@ XcodaEditorCleanDbase (Widget w,
 static void
 exit_coda_editor(Widget w, 
 			     XtPointer client_data, 
-			     XmAnyCallbackStruct* cbs)
+			     XtPointer callback_data)
 {
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
+
   XFreeGC(xgc.dpy, xgc.erase_gc);
   XFreeGC(xgc.dpy, xgc.r_gc);
   XFreeGC(xgc.dpy, xgc.xor_gc);
@@ -1785,7 +1800,7 @@ exit_coda_editor(Widget w,
 void
 XcodaEditorExitMenuCbk(Widget w, 
 			    XtPointer client_data, 
-			    XmAnyCallbackStruct* cbs)
+			    XtPointer callback_data)
 {
   Widget dialog, help_w;
   XmString message, yes, no;
@@ -1810,8 +1825,8 @@ XcodaEditorExitMenuCbk(Widget w,
   help_w = XmMessageBoxGetChild(dialog, XmDIALOG_HELP_BUTTON);
   XtSetSensitive(help_w, False);
   
-  XtAddCallback(dialog, XmNokCallback, (XtCallbackProc)exit_coda_editor,(XtPointer)NULL);
-  XtAddCallback(dialog, XmNcancelCallback, (XtCallbackProc)popdown_dialog, (XtPointer)NULL);
+  XtAddCallback(dialog, XmNokCallback, exit_coda_editor,(XtPointer)NULL);
+  XtAddCallback(dialog, XmNcancelCallback, popdown_dialog, (XtPointer)NULL);
   
   XtManageChild(dialog);
   XtPopup(XtParent(dialog), XtGrabNone);

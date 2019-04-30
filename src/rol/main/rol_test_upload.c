@@ -1,4 +1,6 @@
 
+/* rol_test_upload.c */
+
 #ifdef Linux_vme
 
 #include <stdio.h>
@@ -6,6 +8,7 @@
 #include <stdlib.h>
 
 #include "fadcLib.h"
+#include "fadc250Config.h"
 
 #define NDIM 10000
 
@@ -21,9 +24,9 @@ main()
 
 #else
 
+int
 main()
 {
-  return;
 }
 
 #endif

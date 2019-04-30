@@ -386,6 +386,7 @@ extern int retrieveConfigInfoFromDbase (char* config, ConfigInfo** comp,
 
 /*sergey: get 'code' from 'defaults' table */
 extern int getDefaultCodeFromDbase (char* type, char *rols[3]);
+extern int getAllOptionInfos (char* config, char*** names, char*** values);
 
 
 /*****************************************************************************
@@ -396,6 +397,7 @@ extern int getDefaultCodeFromDbase (char* type, char *rols[3]);
  ****************************************************************************/
 extern int compInConfigTables (char* name);
 
+extern int setCompInuseField(char *compname, int portnum);
 
 
 #ifdef __cplusplus

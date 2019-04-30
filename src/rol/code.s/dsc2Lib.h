@@ -226,7 +226,30 @@ typedef struct dsc_struct
 #define DSC_SCALERCFG_REFPRESCALE_MASK  0xFFFF0000
 #define DSC_SCALERCFG_REFPRESCALE_SHIFT 16
 
+
+
 /* Function Prototypes */
+
+#ifndef INT16
+#define INT16  short
+#endif
+
+#ifndef UINT16
+#define UINT16 unsigned short
+#endif
+
+#ifndef INT32
+#define INT32  int
+#endif
+
+#ifndef UINT32
+#define UINT32 unsigned int
+#endif
+
+#ifndef STATUS
+#define STATUS int
+#endif
+
 int dsc2GetNdsc();
 DSC2 *dsc2Getdscp(int id);
 int  dsc2Init(unsigned int addr, unsigned int addr_incr, int ndsc, int iFlag);
@@ -279,6 +302,18 @@ int dsc2GetScalerConfigFlags(unsigned int id);
 
 int dsc2ResetScalersGroupA(unsigned int id);
 int dsc2ResetScalersGroupB(unsigned int id);
+
+int dsc2UpdateFirmwareAll(const char *filename);
+int dsc2Id(unsigned int slot);
+int dsc2GetTestInput(UINT32 id);
+UINT16 dsc2GetTRGOutWidth(UINT32 id, UINT16 channel);
+UINT16 dsc2GetTRGOutDelay(UINT32 id, UINT16 channel);
+int dsc2SetTRGOutSource(UINT32 id, UINT16 selMask, UINT16 bypMask);
+
+int dsc2SetTRGOutSource(UINT32 id, UINT16 selMask, UINT16 bypMask);
+UINT16 dsc2GetTRGOutSource(UINT32 id, int mode);
+unsigned int dsc2GetA32MaxAddress();
+
 
 #endif /* __DSC2__ */
 

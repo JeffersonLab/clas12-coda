@@ -16,8 +16,11 @@
 #include <sys/time.h>
 #endif
 
-#include "circbuf.h"
+#include "daqLib.h"
 #include "vtpLib.h"
+#include "vtpConfig.h"
+
+#include "circbuf.h"
 
 /*****************************/
 /* former 'crl' control keys */
@@ -262,7 +265,7 @@ usrtrig(unsigned long EVTYPE, unsigned long EVSOURCE)
 
   if(syncFlag) printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
 
-  rol->dabufp = (long *) 0;
+  rol->dabufp = NULL;
 
 TIMERL_START;
 

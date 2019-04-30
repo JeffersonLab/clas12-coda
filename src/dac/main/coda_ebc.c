@@ -1,10 +1,13 @@
 
 /* coda_ebc.c */
 
+#include <stdio.h>
+
+
 #if defined(Linux_armv7l)
 
-void
-coda_eb()
+int
+main()
 {
   printf("coda_eb is dummy for ARM etc\n");
 }
@@ -19,19 +22,30 @@ coda_eb()
 
 /* INCLUDES */
 
-#include <stdio.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <pthread.h>
 #include <time.h>
 #include <dlfcn.h>
 #include <sys/mman.h>
 
 #include "rc.h"
+#include "rolInt.h"
 #include "da.h"
 #include "circbuf.h"
 
 #include "CODA_format.h"
 #include "libdb.h"
+
+/************/
+/* ET stuff */
+
+#include "et_private.h"
+extern char	et_name[ET_FILENAME_LENGTH];
+static et_sys_id	et_sys;
+static int		et_locality;
+size_t          et_eventsize;
+static int		et_init = 0, et_reinit = 0;
 
 /*static*/ char confFile[256];
 
@@ -41,9 +55,10 @@ void *handle_build();
 static int nthreads = 1;
 static int chunk = 100; /* 100; MUST BE LESS THEN NCHUNKMAX !!! */
 
-
+/* defined in et_private.h
 #define CODA_ERROR 1
 #define CODA_OK 0
+*/
 
 #define SOFT_TRIG_FIX_EB \
   /*printf("befor: typ=%d\n",typ);*/ \
@@ -76,9 +91,11 @@ static unsigned int *hpsbuf;
   for(ii=0; ii<nevents2put; ii++) \
   { \
     int jjj, status, handle1; \
+    size_t size; \
     unsigned int *ptr; \
     ptr = (unsigned int *)etevents[ii]->pdata; \
-    et_event_getlength(etevents[ii], &len); /*get event length from et*/ \
+    et_event_getlength(etevents[ii], &size); /*get event length from et*/ \
+    len = size; \
     /*printf("[%3d] len1=%d\n",ii,len);*/ \
     memcpy((char *)hpsbuf, (char *)ptr, len); /*copy event from et to the temporary buffer*/ \
     /*for(jjj=0; jjj<(len/4); jjj++) printf("HACK [%3d] 0x%08x\n",jjj,ptr[jjj]);*/ \
@@ -184,14 +201,14 @@ extern char configname[128]; /* coda_component.c */
 
 
 /* param struct for building thread */
-typedef struct thread_args *trArg;
+typedef struct thread_args *ebArg;
 typedef struct thread_args
 {
   objClass object;
   int *interp_obsolete;
   int *thread_exit;
   int id;
-} TRARGS;
+} EBARGS;
 
 
 typedef struct EBpriv *EBp;
@@ -244,6 +261,8 @@ typedef struct bank_part
 
 typedef int (*IFUNCPTR) ();
 
+/* local functions */
+static int debcloselinks();
 
 /****************************************************************************/
 /***************************** tcpServer functions **************************/
@@ -327,14 +346,6 @@ rocStatus()
 
 
 
-/************/
-/* ET stuff */
-
-#include <et_private.h>
-extern char	et_name[ET_FILENAME_LENGTH];
-static et_sys_id	et_sys;
-static int		et_locality, et_eventsize;
-static int		et_init = 0, et_reinit = 0;
 
 /* ET Initialization */    
 int
@@ -448,7 +459,7 @@ tmpUpdateStatistics()
 #define NPROF2 100
 
 void *
-handle_build(trArg arg)
+handle_build(ebArg arg)
 {
   objClass object;
   DATA_DESC descriptors[MAX_ROCS];
@@ -474,8 +485,8 @@ handle_build(trArg arg)
   int nevbuf, nevrem;
   int nphys;
 
-  hrtime_t start1, end1, start2, end2, time1=NULL, time2=NULL, time3=NULL;
-  hrtime_t nevtime1=NULL, nevtime2=NULL, nevchun=NULL;
+  hrtime_t start1, end1, start2, end2, time1=0, time2=0, time3=0;
+  hrtime_t nevtime1=0, nevtime2=0, nevchun=0;
 
   int status;
   et_event *cevent = NULL;
@@ -712,6 +723,7 @@ printf("[%1d] .. done\n",id);fflush(stdout);
 
     if(print_rocs_report)
     {
+      printf("ROC_MASK0:\n");
       Print128(&roc_mask); Print128(&roc_linked);
       printf("[%1d] all ROCs reported\n",arg->id);
       fflush(stdout);
@@ -1569,7 +1581,7 @@ if(++nevtime2 == NPROF2)
 
   /* zero thread pointer; 'deb_end' will wait
   until all thread pointers are zero */
-  ebp->idth[id] = NULL;
+  ebp->idth[id] = 0;
 
 
   /* detach a thread */
@@ -1592,7 +1604,7 @@ if(++nevtime2 == NPROF2)
   /* terminate calling thread */
   pthread_exit(NULL);
 
-  return;
+  return(NULL);
 }
 
 
@@ -1604,10 +1616,10 @@ if(++nevtime2 == NPROF2)
     printf("cancel building threads\n"); \
     for(id=0; id<ebp->nthreads; id++) \
     { \
-      if(ebp->idth[id] != NULL) \
+      if(ebp->idth[id] != 0) \
       { \
         pthread_t build_thread = ebp->idth[id]; \
-        ebp->idth[id] = NULL; \
+        ebp->idth[id] = 0; \
         pthread_cancel(build_thread); \
         itmp = pthread_join(ebp->idth[id], &status); \
         printf("status is 0x%08x, itmp=%d\n",status,itmp); \
@@ -1730,7 +1742,7 @@ deb_constructor()
 
   /* building threads did not started yet */
   ebp->nthreads = 0;
-  for(i=0; i<NTHREADMAX; i++) ebp->idth[i] = NULL;
+  for(i=0; i<NTHREADMAX; i++) ebp->idth[i] = 0;
 
   /* allocate and initialize .. */
   for(i=0; i<MAX_ROCS; i++)
@@ -1788,7 +1800,7 @@ deb_constructor()
     pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED);
     pthread_attr_setscope(&detached_attr, PTHREAD_SCOPE_SYSTEM);
 
-    res = pthread_create( (unsigned int *) &thread1, &detached_attr,
+    res = pthread_create( &thread1, &detached_attr,
 		   (void *(*)(void *)) eb_ended_loop, (void *) NULL);
 
     printf("pthread_create returned %d\n",res);fflush(stdout);
@@ -2212,7 +2224,7 @@ codaPrestart()
   int i, j, ix, id, async, numRows;
   int waitforET = 2*(ET_MON_SEC + 1);
 static char temp[100];
-static trArg args[NTHREADMAX];
+static ebArg args[NTHREADMAX];
   void *status;
   char tmp[1000], tmpp[1000];
   MYSQL *dbsocket;
@@ -2303,8 +2315,8 @@ static trArg args[NTHREADMAX];
 
 
   /* init events ordering queues */
-  id_in_index = NULL;
-  id_out_index = NULL;
+  id_in_index = 0;
+  id_out_index = 0;
   for(id=0; id<NIDMAX; id++)
   {
     id_in[id] = id;
@@ -2404,14 +2416,13 @@ static trArg args[NTHREADMAX];
   Copy128(&roc_mask_local, &ebp->roc_mask);
   Print128(&roc_mask_local);
 
-
-
   /**********************************************/
   /* set roc mask in mysql so TS can read it out */
   /**********************************************/
-  strcpy(temp,String128(&ebp->roc_mask));
+  String128((WORD128 *)&ebp->roc_mask, temp, 99);
+printf("mysql request temp >%s<\n",temp);fflush(stdout);
   sprintf(tmpp,"SELECT name,value FROM %s_option WHERE name='rocMask'",configname);
-printf("mysql request >%s< (temp>%s<)\n",tmpp,temp);
+printf("mysql request >%s< (temp>%s<)\n",tmpp,temp);fflush(stdout);
   if(mysql_query(dbsocket, tmpp) != 0)
   {
     printf("ERROR in mysql_query\n");
@@ -2481,7 +2492,7 @@ printf("mysql request >%s< (temp>%s<)\n",tmpp,temp);
 
     printf("Start building thread [%1d]\n",id);
 
-    args[id] = (trArg) calloc(sizeof(TRARGS),1);
+    args[id] = (ebArg) calloc(sizeof(EBARGS),1);
     args[id]->object = object;
     args[id]->id = id;
     pthread_create(&ebp->idth[id], /*Sergey: try to detach NULL*/&detached_attr,
@@ -2612,7 +2623,7 @@ printf("codaEnd 9\n");fflush(stdout);
     itmp = 0;
     for(i=0; i<ebp->nthreads; i++)
     {
-      if(ebp->idth[i] != NULL) itmp ++;
+      if(ebp->idth[i] != 0) itmp ++;
     }
     if(itmp>0)
     {
@@ -2649,7 +2660,7 @@ printf("codaEnd 11\n");fflush(stdout);
     if(count > 110) /* ????? */
     {
       printf("DEB_END: thread(s) do not respond - do not wait any more\n");
-      for(i=0; i<NTHREADMAX; i++) ebp->idth[i] = NULL;
+      for(i=0; i<NTHREADMAX; i++) ebp->idth[i] = 0;
       break;
 	}
 	

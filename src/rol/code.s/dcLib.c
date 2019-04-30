@@ -564,7 +564,7 @@ dcSetClockSource(int id, int clkSrc)
   if((id<=0) || (id>21) || (DCp[id] == NULL)) 
     {
       printf("dcStatus: ERROR : DC in slot %d is not initialized \n",id);
-      return;
+      return(-1);
     }
 
   if(clkSrc>0x1)
@@ -2594,7 +2594,7 @@ dcTriggerPulseWidth(int id, unsigned int width)
   if((id<=0) || (id>21) || (DCp[id] == NULL)) 
   {
     printf("dcSoftTrig: ERROR : DC in slot %d is not initialized \n",id);
-    return;
+    return(-1);
   }
 
   width /= 8;
@@ -2614,7 +2614,7 @@ dcLinkStatus(int id)
   if((id<=0) || (id>21) || (DCp[id] == NULL)) 
   {
     printf("dcSoftTrig: ERROR : DC in slot %d is not initialized \n",id);
-    return;
+    return(-1);
   }
 
   return( ( (vmeRead32(&(DCp[id]->GtpStatus)))&0x1000 )>>12 );
@@ -2628,7 +2628,7 @@ dcLinkReset(int id)
   if((id<=0) || (id>21) || (DCp[id] == NULL)) 
   {
     printf("dcSoftTrig: ERROR : DC in slot %d is not initialized \n",id);
-    return;
+    return(-1);
   }
 
   vmeWrite32(&(DCp[id]->GtpCtrl), 0x203);

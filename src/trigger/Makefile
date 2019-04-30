@@ -28,7 +28,6 @@ CLON_FLAGS += -I./src.s -I$(CODA)/common/include
 
 ifneq ("$(OSTYPE)","VXWORKS")
   LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/librol.a
-  LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
 #####  LIBNAMES += $(CODA)/src/rol/jvme/libjvme.so
 
   LIBNAMES += $(ROOTGLIBS)

@@ -865,6 +865,11 @@ resetCharsets(TScreen * screen)
 
 extern int last_written_col, last_written_row;
 
+#ifdef DO_EXPECT
+extern void codaSendCommand(int fd);
+extern void codaCheckResponse(char *str, int len);
+#endif
+
 static void
 VTparse(void)
 {
@@ -914,6 +919,7 @@ VTparse(void)
 
     for (;;) {
 	int thischar = -1;
+
 
 #ifdef DO_EXPECT
 	codaSendCommand(screen->respond);

@@ -65,7 +65,29 @@ struct mo_struct
 #define MO_INIT_NOINIT      (1<<0)
 #define MO_INIT_NOFWCHECK   (1<<1)
 
+
 /* Function prototypes */
+
+#ifndef INT16
+#define INT16  short
+#endif
+
+#ifndef UINT16
+#define UINT16 unsigned short
+#endif
+
+#ifndef INT32
+#define INT32  int
+#endif
+
+#ifndef UINT32
+#define UINT32 unsigned int
+#endif
+
+#ifndef STATUS
+#define STATUS int
+#endif
+
 int  moInit(uint32_t tAddr, uint32_t iFlag);
 int  moConfigCommon(int divider, int duty_mode);
 int  moSyncDividers();

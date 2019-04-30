@@ -22,9 +22,14 @@
  *
  *	  
  */
+
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "Editor.h"
 #include "Editor_script_dialog.h"
 #include "Editor_misc.h"
+
 #include <Xm/Form.h>
 #include <Xm/LabelG.h>
 #include <Xm/TextF.h>
@@ -35,15 +40,15 @@
 #define EDITOR_TAB_HT          30
 #define EDITOR_EXTRA_TABS      2
 
-static char* codaStates[]=
+static char* codaStates[] =
 {
-  {"boot"},
-  {"configure"},
-  {"download"},
-  {"prestart"},
-  {"go"},
-  {"pause"},
-  {"end"}
+  "boot",
+  "configure",
+  "download",
+  "prestart",
+  "go",
+  "pause",
+  "end"
 };
 
 typedef struct _script_widgets
@@ -53,19 +58,14 @@ typedef struct _script_widgets
   Widget shell;
   char*  cache[EDITOR_NUM_STATES][EDITOR_MAX_NUM_SCRIPTS];
   drawComp* comp;
-}scriptWidget;
+} scriptWidget;
 
 static int    firstTime = 1;
 static scriptWidget swidgets;
 static int    curr = 1;
 
 static void
-#if defined (__STDC__)
 update_scripts (drawComp* comp)
-#else
-update_scripts (comp)
-     drawComp* comp;
-#endif
 {
   int created = 0;
   int i, j;
@@ -103,12 +103,7 @@ update_scripts (comp)
  
 
 static void
-#if defined (__STDC__)
 reset_tab_resources (drawComp* comp)
-#else
-reset_tab_resources (comp)
-     drawComp* comp;
-#endif
 {
   Arg arg[20];
   int ac = 0;
@@ -164,23 +159,16 @@ reset_tab_resources (comp)
   
 
 static void
-#if defined (__STDC__)
 handle_tab (Widget w, XtPointer data, XtPointer calldata)
-#else
-handle_tab (w, data, calldata)
-     Widget w;
-     XtPointer data;
-     XtPointer calldata;
-#endif
 {
   Arg arg[20];
   int ac = 0;
-  int state, i, j, tab;
+  int state, i, j;
   char* tmp;
   AttrWidgets* atws = (AttrWidgets *)data;
 
   /* get tab data */
-  tab = (int)calldata;
+  /*int*/long tab = (/*int*/long)calldata;
 
   if (tab == 0)
     return;
@@ -240,14 +228,7 @@ handle_tab (w, data, calldata)
 
 
 void
-#if defined (__STDC__)
 popup_script_dialog (drawComp* comp, Widget parent, AttrWidgets* atws)
-#else
-popup_script_dialog (comp, parent, atws)
-     drawComp* comp;
-     Widget    parent;
-     AttrWidgets* atws;
-#endif
 {
   Arg      arg[20];  
   int      ac = 0;

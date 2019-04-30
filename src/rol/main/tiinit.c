@@ -29,6 +29,7 @@
 #else
 #include "jvme.h"
 #endif
+
 #include "tiLib.h"
 
 
@@ -75,13 +76,13 @@ main(int argc, char *argv[])
   stat = tiInit(/*0x00A8000*/0,0,0);
   if(stat != OK) exit(1);
   printf("\n-----------------------\n");
-  tiGetSerialNumber(&rSN);
+  tiGetSerialNumber((char **)&rSN);
   printf("\n-----------------------\n");
   tiStatus(1);
 
   vmeCloseDefaultWindows();
 
-  return OK;
+  exit(0);
 }
 
 #else
@@ -89,7 +90,6 @@ main(int argc, char *argv[])
 int
 main()
 {
-  return(0);
 }
 
 #endif

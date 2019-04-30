@@ -28,8 +28,9 @@
 #if defined (__STDC__)
 extern Widget XcodaEditorZoomWidget(Widget parent, Pixel fg, Pixel bg);
 extern void   set_zoomscale        (Widget w, 
-				    XtPointer client_data, 
-				    XmArrowButtonCallbackStruct* cbs);
+				    XtPointer client_data,
+                    XtPointer callback_data 
+				    );
 #else
 extern Widget XcodaEditorZoomWidget();
 extern void   set_zoomscale        ();

@@ -1,5 +1,10 @@
 /* UNIX version only */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
 #if defined(VXWORKS) || defined(Linux_armv7l)
 
 int
@@ -18,11 +23,7 @@ main()
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <libtcp.h>
+#include "libtcp.h"
 
 #define F_NAME    100       /* length of config. file name */
 #define TEXT_STR  20000     /* size of some text strings */

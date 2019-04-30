@@ -40,12 +40,14 @@ TI_FIBER_IN 1                                  # fiber number to be used as inpu
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #ifdef Linux_vme
 #include "jvme.h"
 #endif
 
 #include "tiLib.h"
+#include "tiConfig.h"
 #include "xxxConfig.h"
 
 #define FNLEN     128       /* length of config. file name */
@@ -57,7 +59,7 @@ TI_FIBER_IN 1                                  # fiber number to be used as inpu
 static int active;
 
 static int is_slave;
-static nslave, slave_list[MAXSLAVES];
+static int nslave, slave_list[MAXSLAVES];
 static unsigned int delay, offset;
 /*static unsigned int sync_delay, sync_width;*/
 static int block_level;
@@ -160,6 +162,15 @@ tiReadConfigFile(char *filename)
   char *clonparms;
   
   gethostname(host,ROCLEN);  /* obtain our hostname */
+  for(jj=0; jj<strlen(host); jj++)
+  {
+    if(host[jj] == '.')
+    {
+      host[jj] = '\0';
+      break;
+    }
+  }
+
   clonparms = getenv("CLON_PARMS");
 
   if(expid==NULL)

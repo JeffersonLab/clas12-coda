@@ -1,5 +1,5 @@
 /* XPM */
-static char * Button4_xpm[] = {
+static const char* Button4_xpm[] = {
 "97 72 26 1",
 " 	c #BEFBBAEABEFB",
 ".	c #AEBAAAAAAEBA",

@@ -27,8 +27,8 @@
 #include <rcAudioOutput.h>
 #include "rcDisc.h"
 
-#define RC_DISC_NAME "Disconnect"
-#define RC_DISC_MSG  "Disconnect from the Server"
+#define RC_DISC_NAME (char *)"Disconnect"
+#define RC_DISC_MSG  (char *)"Disconnect from the Server"
 
 rcDisc::rcDisc (Widget parent, rcButtonPanel* panel, rcClientHandler& handler)
 :rcComdButton (parent, RC_DISC_NAME, RC_DISC_MSG, panel, handler), dialog_ (0)
@@ -51,13 +51,13 @@ rcDisc::~rcDisc (void)
 void
 rcDisc::doit (void)
 {
-  rcAudio ("dis connect from the server");
+  rcAudio ((char *)"dis connect from the server");
 
   if (!dialog_) {
     char temp[80];
     sprintf (temp, "Disconnect from the RunControl server,\n");
     strcat  (temp, "Are you sure?");
-    dialog_ = new rcDiscDialog (this, "disconnectDialog", "Disconnect Dialog",
+    dialog_ = new rcDiscDialog (this, (char *)"disconnectDialog", (char *)"Disconnect Dialog",
 				netHandler_);
     dialog_->init ();
     dialog_->alignment (XmALIGNMENT_CENTER);

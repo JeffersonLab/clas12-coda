@@ -33,6 +33,8 @@
 //
 //
 
+#include <stdio.h>
+
 #include <Xm/Form.h>
 #include <Xm/PushBG.h>
 #include <Xm/SeparatoG.h>
@@ -90,7 +92,7 @@ rcMonitorParmsDialog::createFormChildren (void)
 				   _w, arg, ac);
   ac = 0;
 
-  t = XmStringCreateSimple ("  Ok   ");
+  t = XmStringCreateSimple ((char *)"  Ok   ");
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNleftAttachment, XmATTACH_FORM); ac++;
@@ -104,7 +106,7 @@ rcMonitorParmsDialog::createFormChildren (void)
   XmStringFree (t);
 
   // create a toggle button to signal auto end or not when something is wrong
-  t = XmStringCreateSimple ("End a run automatically when errors are found");
+  t = XmStringCreateSimple ((char *)"End a run automatically when errors are found");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
@@ -120,8 +122,10 @@ rcMonitorParmsDialog::createFormChildren (void)
   // Create as scale to change monitoring timer interval
   ac = 0;
   
+  /*sergey ??? */
   // t = XmStringCreateSimple ("Monitor interval (Sec)");
   // XtSetArg (arg[ac], XmNtitleString, t); ac++;
+
   XtSetArg (arg[ac], XmNminimum, 10); ac++;
   XtSetArg (arg[ac], XmNmaximum, 600); ac++;
   XtSetArg (arg[ac], XmNorientation, XmHORIZONTAL); ac++;
@@ -139,8 +143,11 @@ rcMonitorParmsDialog::createFormChildren (void)
   timer_ = XtCreateManagedWidget ("scale", xmScaleWidgetClass,
 				  _w, arg, ac);
   ac = 0;
-  XmStringFree (t);
-  
+
+  /*sergey ??? */
+  //XmStringFree (t);
+
+
   // create a row column widget with two row in it
   XtSetArg (arg[ac], XmNpacking, XmPACK_COLUMN); ac++;
   XtSetArg (arg[ac], XmNnumColumns, 5); ac++;
@@ -291,7 +298,7 @@ rcMonitorParmsDialog::okCallback (Widget, XtPointer data,
 
   // get network handler
   rcClient& client = obj->netHandler_.clientHandler (); 
-  daqData data2 (client.exptname (), "command", (daqArbStruct *)&monInfo);
+  daqData data2 (client.exptname (), (char *)"command", (daqArbStruct *)&monInfo);
 
   if (client.sendCmdCallback (DAMONITOR_PARM, data2,
 		      (rcCallback)&(rcMonitorParmsDialog::monitorParmsCbk),

@@ -29,7 +29,7 @@
 
 daqState* codaDaqState = 0;
 
-static _daq_state states_[]=
+const _daq_state states_[]=
 {
   {"dormant", CODA_DORMANT},
   {"booting", CODA_BOOTING},
@@ -78,4 +78,5 @@ daqState::stateString (int state) const
     if (state == states_[i].state_)
       return states_[i].string_;
   }
+  return "UNKNOWN"; /*sergey*/
 }

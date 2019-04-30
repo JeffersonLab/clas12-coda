@@ -1,5 +1,5 @@
 /* XPM */
-static char * eb_btn_xpm[] = {
+static const char *eb_btn_xpm[] = {
 "33 32 16 1",
 " 	c #820782078207",
 ".	c #820700008207",

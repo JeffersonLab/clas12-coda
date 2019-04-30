@@ -52,6 +52,8 @@
 #ifdef sun
 #include <sys/filio.h>
 #endif
+
+#include "etCommonNetwork.h"
 #include "et_network.h"
 
 

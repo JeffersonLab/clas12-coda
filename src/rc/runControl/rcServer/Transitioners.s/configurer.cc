@@ -26,8 +26,6 @@
 #include <daqSubSystem.h>
 #include "configurer.h"
 
-#define _TRACE_OBJECTS
-
 configurer::configurer (daqSystem* system)
 :transitioner (system)
 {

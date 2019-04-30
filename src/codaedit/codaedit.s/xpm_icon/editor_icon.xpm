@@ -1,5 +1,5 @@
 /* XPM */
-static char * editor_icon_xpm[] = {
+static const char *editor_icon_xpm[] = {
 "48 48 5 1",
 " 	s LightBlue	c LightBlue",
 ".	c Grey",

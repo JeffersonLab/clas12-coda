@@ -28,67 +28,50 @@
 #ifndef _EDITOR_MENU_H
 #define _EDITOR_MENU_H
 
-#if defined (__STDC__)
 extern void  XcodaEditorCreateMenus    (Widget menu_bar, int withExit);
-extern void  XcodaEditorDeleteAllArcs  (Widget w, 
-					XtPointer client_data, 
-					XmAnyCallbackStruct* cbs);
-extern void  XcodaEditorDeleteAll      (Widget w, 
-					XtPointer client_data, 
-					XmAnyCallbackStruct* cbs);
-extern void  XcodaEditorNewConfigCbk   (Widget w, 
-					XtPointer clientData, 
-					XmAnyCallbackStruct* cbs);
-extern void  XcodaEditorOpenConfigCbk  (Widget w, 
-					XtPointer clientData, 
-					XmAnyCallbackStruct* cbs);
-extern void  XcodaEditorRemoveConfigCbk(Widget w, 
-					XtPointer clientData, 
-					XmAnyCallbackStruct* cbs);
-extern void  XcodaEditorSaveConfig     (Widget w, 
-					XtPointer client_data, 
-					XmAnyCallbackStruct* cbs);
-extern void  XcodaEditorSaveDefault    (Widget w, 
-					XtPointer client_data, 
-					XmAnyCallbackStruct* cbs);
+extern void XcodaEditorCreatePopupMenu(Widget parent);
 extern void  XcodaEditorResetOptionDialog (void);
 extern void  XcodaEditorSaveConfigOption (char* runtype);
-extern void  XcodaEditorConfigOption   (Widget w, XtPointer client_data,
-					XmAnyCallbackStruct* cbs);
 extern void  XcodaEditorNewDbaseEntry  (Widget w);
+
+extern void  XcodaEditorDeleteAllArcs  (Widget w, 
+					XtPointer client_data, 
+					XtPointer callback_data);
+extern void  XcodaEditorDeleteAll      (Widget w, 
+					XtPointer client_data, 
+					XtPointer callback_data);
+extern void  XcodaEditorNewConfigCbk   (Widget w, 
+					XtPointer clientData, 
+					XtPointer callback_data);
+extern void  XcodaEditorOpenConfigCbk  (Widget w, 
+					XtPointer clientData, 
+					XtPointer callback_data);
+extern void  XcodaEditorRemoveConfigCbk(Widget w, 
+					XtPointer clientData, 
+					XtPointer callback_data);
+extern void  XcodaEditorSaveConfig     (Widget w, 
+					XtPointer client_data, 
+					XtPointer callback_data);
+extern void  XcodaEditorSaveDefault    (Widget w, 
+					XtPointer client_data, 
+					XtPointer callback_data);
+extern void  XcodaEditorConfigOption   (Widget w,
+                    XtPointer client_data,
+					XtPointer callback_data);
 extern void  XcodaEditorNewDbaseCbk    (Widget w, 
 					XtPointer client_data, 
-					XmAnyCallbackStruct* cbs);
+					XtPointer callback_data);
 extern void  XcodaEditorOpenDbaseCbk   (Widget w, 
 					XtPointer client_data, 
-					XmAnyCallbackStruct* cbs);
+					XtPointer callback_data);
 extern void  XcodaEditorRemoveDbaseCbk (Widget w, 
 					XtPointer client_data, 
-					XmAnyCallbackStruct* cbs);
+					XtPointer callback_data);
 extern void  XcodaEditorCleanDbase     (Widget w, 
 					XtPointer client_data, 
-					XmAnyCallbackStruct* cbs);
+					XtPointer callback_data);
 extern void  XcodaEditorExitMenuCbk    (Widget w, 
 					XtPointer client_data, 
-					XmAnyCallbackStruct* cbs);
-#else
-extern void  XcodaEditorCreateMenus    ();
-extern void  XcodaEditorDeleteAllArcs  ();
-extern void  XcodaEditorDeleteAll      ();
-extern void  XcodaEditorNewConfigCbk   ();
-extern void  XcodaEditorOpenConfigCbk  ();
-extern void  XcodaEditorRemoveConfigCbk();
-extern void  XcodaEditorSaveConfig     ();
-extern void  XcodaEditorSaveDefault    ();
-extern void  XcodaEditorResetOptionDialog ();
-extern void  XcodaEditorSaveConfigOption ();
-extern void  XcodaEditorConfigOption   ();
-extern void  XcodaEditorNewDbaseEntry  ();
-extern void  XcodaEditorNewDbaseCbk    ();
-extern void  XcodaEditorOpenDbaseCbk   ();
-extern void  XcodaEditorRemoveDbaseCbk();
-extern void  XcodaEditorCleanDbase     ();
-extern void  XcodaEditorExitMenuCbk    ();
-#endif
+					XtPointer callback_data);
 
 #endif

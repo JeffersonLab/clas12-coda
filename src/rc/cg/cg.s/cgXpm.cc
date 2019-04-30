@@ -115,7 +115,7 @@ cgXpm::getPixmap (void)
       }
       else{
 	col_symbol[numsymbols].name = NULL;
-	col_symbol[numsymbols].value = "none";
+	col_symbol[numsymbols].value = (char *)"none";
 	col_symbol[numsymbols++].pixel = disp_->bg ();
 
 	attr.colormap = disp_->cmap ();

@@ -34,8 +34,7 @@ class XcodaXpmLabel: public XcodaUi
 {
 public:
   // constructor and destructor
-  XcodaXpmLabel (Widget parent, char* name, char** pix = 0, 
-		 char* bgsymbol = 0);
+  XcodaXpmLabel (Widget parent, char* name, char** pix = 0, char* bgsymbol = 0);
   virtual ~XcodaXpmLabel (void);
 
   // init all widgets

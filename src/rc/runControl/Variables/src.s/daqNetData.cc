@@ -540,7 +540,10 @@ daqNetData::~daqNetData (void)
     case CODA_INT32:
     case CODA_FLT:
     case CODA_DBL:
-      delete []u_.data;
+	  {
+      double *ddata = (double *)u_.data;
+      delete []ddata;
+	  }
       break;
     case CODA_STR:
       {
@@ -585,7 +588,10 @@ daqNetData::freeBufferMemory (void)
   case CODA_INT32:
   case CODA_FLT:
   case CODA_DBL:
-    delete []u_.data;
+	{
+      double *ddata = (double *)u_.data;
+      delete []ddata;
+	}
     break;
   case CODA_STR:
     {

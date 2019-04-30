@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 /****************************************************************************/
 /****************************************************************************/
@@ -184,7 +185,7 @@ lb_write_grab(LARGEBUF **lbh)
   if((lbh == NULL)||(*lbh == NULL))
   {
     printf("lb_write_grab ERROR 1\n"); 
-    return(-1);
+    return(NULL);
   }
 
   if(lbp->cleanup)
@@ -254,7 +255,7 @@ lb_write_release(LARGEBUF **lbh)
   if((lbh == NULL)||(*lbh == NULL))
   {
     printf("lb_write_release ERROR 1\n");
-    return(-1);
+    return(NULL);
   }
 
   if(lbp->cleanup)
@@ -292,13 +293,13 @@ lb_read_grab(LARGEBUF **lbh, int icb)
   if((lbh == NULL)||(*lbh == NULL))
   {
     printf("[%d] lb_read_grab ERROR 1\n",icb); 
-    return(-1);
+    return(NULL);
   }
 
   if((icb<0)||(icb>=lbp->nbufs))
   {
     printf("[%d] lb_read_grab ERROR 2\n",icb); 
-    return(-2);
+    return(NULL);
   }
 
   if(lbp->cleanup)
@@ -359,13 +360,13 @@ lb_read_release(LARGEBUF **lbh, int icb)
   if((lbh == NULL)||(*lbh == NULL))
   {
     printf("[%d] lb_read_release ERROR 1\n",icb); 
-    return(-1);
+    return(NULL);
   }
 
   if((icb<0)||(icb>=lbp->nbufs))
   {
     printf("[%d] lb_read_release ERROR 2\n",icb); 
-    return(-2);
+    return(NULL);
   }
 
   if(lbp->cleanup)

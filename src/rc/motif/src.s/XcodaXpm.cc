@@ -120,7 +120,7 @@ Pixmap XcodaXpm::createPixmapFromXpm()
   }
  else{
     col_symbol[numsymbols].name = NULL;
-    col_symbol[numsymbols].value = "none";
+    col_symbol[numsymbols].value = (char *)"none";
     col_symbol[numsymbols++].pixel = bg;
 
     attr.colormap = _cmap;

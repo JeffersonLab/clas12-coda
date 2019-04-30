@@ -26,6 +26,8 @@ sspfirmware fe_ssp_hallb_gt.bin
 
 #ifdef Linux_vme
 
+#include "jvme.h"
+
 int
 main(int argc, char *argv[])
 {

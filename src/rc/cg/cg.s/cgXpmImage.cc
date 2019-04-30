@@ -43,7 +43,7 @@ cgXpmImage::cgXpmImage (char* name, char** pix, char* bgsymbol, int alignment)
     xpm_ = new cgXpm (pix);
   else
     xpm_ = new cgXpm (pix, bgsymbol);
-  string_ = new cgString (name, CG_DEFAULT_FONT, alignment_);
+  string_ = new cgString (name, (char *)CG_DEFAULT_FONT, alignment_);
 };
 
 cgXpmImage::cgXpmImage (char* name, double x, double y,
@@ -57,7 +57,7 @@ cgXpmImage::cgXpmImage (char* name, double x, double y,
     xpm_ = new cgXpm (pix);
   else
     xpm_ = new cgXpm (pix, bgsymbol);
-  string_ = new cgString (name, CG_DEFAULT_FONT, x, y, alignment_);
+  string_ = new cgString (name, (char *)CG_DEFAULT_FONT, x, y, alignment_);
 };
 
 cgXpmImage::~cgXpmImage (void)

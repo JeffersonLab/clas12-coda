@@ -196,6 +196,8 @@ tsInit(unsigned int tAddr, unsigned int mode, int iFlag)
   int noBoardInit=0, noFirmwareCheck=0;
   int tsType=0;
 
+  printf("tsInit reached\n");
+
   /* Check VME address */
   if(tAddr<0 || tAddr>0xffffff)
     {
@@ -4465,6 +4467,7 @@ tsSetBlockBufferLevel(unsigned int level)
 
   return OK;
 }
+
 
 
 /*sergey*/

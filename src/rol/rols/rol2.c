@@ -33,7 +33,10 @@
 static char ssname[80];
 #endif
 
+#include "daqLib.h"
 #include "circbuf.h"
+int getTdcTypes(int *typebyslot);
+int getTdcSlotNumbers(int *slotnumbers);
 
 
 //#define DEBUG /*FADC*/
@@ -113,7 +116,7 @@ int mynev; /*defined in tttrans.c */
     a_slot_old = a_slot; \
     *b08++ = a_slot; \
     /*set pointer for the number of channels*/ \
-    mchan = (unsigned int *)b08; \
+    mchan = (unsigned char *)b08; \
     mchan[0] = 0; \
     b08 += 1; \
   }
@@ -168,8 +171,8 @@ int mynev; /*defined in tttrans.c */
 #define CCCLOSE \
 { \
   unsigned int padding; \
-  dataout = (unsigned int *) ( ( ((unsigned int)b08+3)/4 ) * 4); \
-  padding = (unsigned int)dataout - (unsigned int)b08; \
+  dataout = (unsigned int *) ( ( ((unsigned long int)b08+3)/4 ) * 4); \
+  padding = (unsigned long int)dataout - (unsigned long int)b08; \
   /*dataout_save1[1] |= (padding&0x3)<<14;*/ \
   dataout_save2[1] |= (padding&0x3)<<14; \
   /*printf("CCCLOSE: 0x%08x %d --- 0x%08x %d --> padding %d\n",dataout,dataout,b08,b08,((dataout_save2[1])>>14)&0x3);*/ \
@@ -3400,7 +3403,7 @@ run_fadc_again:
 	              mchan[0] ++; /* increment channel counter */
                   *b08++ = a_channel; /* channel number */
 
-                  mpack = (unsigned int *)b08;
+                  mpack = (unsigned char *)b08;
                   mpack[0] = 0;
                   b08 += 1;
 			    }

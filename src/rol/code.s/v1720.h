@@ -125,3 +125,50 @@ struct v1720_ROM_struct {
 #define V1720_ALIGN64                0x020
 #define V1720_RELOC                  0x040
 #define V1720_BLT_RANGE              0x100 /*undocumented*/
+
+
+/* functions */
+
+int v1720Init(UINT32 addr, UINT32 addr_inc, int nadc, int iFlag);
+STATUS v1720Config(int options);
+STATUS v1720Status(int id);
+STATUS v1720Clear(int id);
+STATUS v1720Reset(int id);
+STATUS v1720SetChannelZSThreshold(int id, int ch, int logic, int threshold);
+STATUS v1720SetChannelZSNsamples(int id, int ch, int nsamples);
+STATUS v1720SetChannelThreshold(int id, int ch, int threshold);
+STATUS v1720SetChannelNdataOverUnderThreshold(int id, int ch, int ndata);
+STATUS v1720SetChannelDACOffset(int id, int ch, int offset);
+STATUS v1720SetAllChannels(int id, int zero_supr, int pack25, int trig_out, int mem_access, int test_pattern, int trig_overlap);
+STATUS v1720SetBuffer(int id, int code);
+STATUS v1720FreeBuffer(int id, int nblocks);
+STATUS v1720SetBufferSizePerEvent(int id, int nloc);
+STATUS v1720SetAcquisition(int id, int trig_count, int stop_run, int mode);
+STATUS v1720GenerateSoftwareTrigger(int id);
+STATUS v1720SetTriggerEnableMask(int id, int sw_trig, int ext_trig, int coinc_level, int chan_mask);
+STATUS v1720SetFontPanelTriggerOutEnableMask(int id, int sw_trig, int ext_trig, int chan_mask);
+STATUS v1720SetPostTrigger(int id, int mask);
+STATUS v1720SetFrontPanelIOData(int id, int data);
+STATUS v1720SetChannelEnableMask(int id, int mask);
+STATUS v1720SetMonitorDAC(int id, int mask);
+STATUS v1720SetMonitorMode(int id, int mask);
+STATUS v1720SetGeoAddress(int id, UINT16 geoaddr);
+int v1720GetGeoAddress(int id);
+STATUS v1720SetBLTEventNumber(int id, int nevents);
+int v1720GetBLTEventNumber(int id);
+int v1720StatusFull(int id);
+int v1720GetBusError(int id);
+int v1720Dready(int id);
+int v1720GetNextEventSize(int id);
+int v1720SetBusError(int id, UINT32 flag);
+int v1720SetAlign64(int id, UINT32 flag);
+int v1720SetRelocation(int id, UINT32 flag);
+int v1720SetBLTRange(int id, UINT32 flag);
+STATUS v1720SetRelocationAddress(int id, UINT32 address);
+unsigned int v1720GetRelocationAddress(int id);
+int v1720ReadBoard(int iadc, UINT32 *tdata);
+int v1720ReadBoardDmaStart(int ib, UINT32 *tdata);
+int v1720ReadBoardDmaDone(int ib);
+int v1720ReadStart(INT32 *adcbuf, INT32 *rlenbuf);
+int v1720ReadListStart(INT32 *adcbuf, INT32 *rlenbuf);
+int v1720ReadDone();

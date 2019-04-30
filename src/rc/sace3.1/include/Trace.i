@@ -32,11 +32,11 @@ Trace::set_nesting_indent (int indent)
    is entered. */
 
 INLINE
-Trace::Trace (char *n, int line, char *file)
+Trace::Trace (char *n, int line, const char *file)
 {
   if (Trace::enable_tracing_)
     Log_Msg::log (LOG_INFO, "%*s(%t) calling %s in file `%s' on line %d\n",
-		  nesting_indent_ * nesting_depth_++, "", this->name_ = n, file, line);
+				  nesting_indent_ * nesting_depth_++, "", this->name_ = n, file, line);
 }
 
 /* Perform the second part of the trace, which prints out 
@@ -47,7 +47,7 @@ Trace::~Trace (void)
 {
   if (Trace::enable_tracing_)
     Log_Msg::log (LOG_INFO, "%*s(%t) leaving %s\n", 
-		  nesting_indent_ * --nesting_depth_, "", this->name_);
+				  nesting_indent_ * --nesting_depth_, "", this->name_);
 }
 
 

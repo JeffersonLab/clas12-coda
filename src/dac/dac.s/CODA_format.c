@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <pthread.h>
 
+#include "rolInt.h"
 #include "da.h"
 #include "CODA_format.h"
 #include "circbuf.h"

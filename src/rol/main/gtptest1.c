@@ -1,6 +1,12 @@
 
 /* gtptest1.c - gets gtp configuration string using tcpClientCmd */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
+
 #if defined(VXWORKS) || defined(Linux_armv7l)
 
 int
@@ -11,11 +17,7 @@ main()
 
 #else
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <libtcp.h>
+#include "libtcp.h"
 
 
 #define F_NAME    100       /* length of config. file name */

@@ -1,5 +1,6 @@
 #include "sysincludes.h"
 
+/*sergey: comment it out
 // There must be a better way to do this...
 #ifdef Linux
 #ifdef RLIMIT_OFILE
@@ -8,6 +9,7 @@
 #   define RLIMIT_NOFILE 200
 #endif
 #endif
+*/
 
 /* Make the current process a UNIX daemon.  This is based 
    on Stevens code from APUE! */

@@ -25,6 +25,7 @@
  *	  
  */ 
 #include <stdio.h>
+
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
 #include <Xm/Xm.h>
@@ -38,12 +39,7 @@
 #include "Editor_graph.h"
 
 /* return form  widget */
-#if defined (__STDC__)
 Widget XcodaEditorDataLinkButtons(Widget parent)
-#else
-Widget XcodaEditorDataLinkButtons(parent)
-     Widget parent;
-#endif
 {
   Widget form, pb[10];
   Arg    args[20];
@@ -94,11 +90,7 @@ Widget XcodaEditorDataLinkButtons(parent)
 static int move_node_mode = 0;
 static int conn_node_mode = 0;
 
-#if defined (__STDC__)
 void XcodaEditorResetGraphCmd (void)
-#else
-void XcodaEditorResetGraphCmd ()
-#endif
 {
   Arg arg[10];
   int ac = 0;
@@ -126,23 +118,16 @@ void XcodaEditorResetGraphCmd ()
  * Description:                                                   *
  *     change selected arc direction                              *
  *****************************************************************/
-#if defined (__STDC__)
 void XcodaEditorExecGraphCmd(Widget w, 
 			     XtPointer client_data, 
 			     XmAnyCallbackStruct* cbs)
-#else
-void XcodaEditorExecGraphCmd(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
 {
   Arc    *selected_arc;
   ipPort *temp;
   int    temp_int;
   XPoint new_edge[4];
   int    i;
-  int    type = (int)client_data;
+  /*int*/long    type = (/*int*/long)client_data;
   Arg    arg[10];
   int    ac = 0;
 

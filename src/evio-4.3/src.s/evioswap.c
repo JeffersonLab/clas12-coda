@@ -68,32 +68,12 @@
 
 
 /* include files */
-#include <evio.h>
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "evio.h"
+#include "eviofmt.h"
 
-// from Sergey's composite swap library
-int eviofmt(char *fmt, unsigned char *ifmt, int ifmtLen);
-int eviofmtswap(int *iarr, int nwrd, unsigned char *ifmt, int nfmt, int tolocal, int padding);
-
-
-
-/* entry points */
-void evioswap(uint32_t *buffer, int tolocal, uint32_t*dest);
-int32_t swap_int32_t_value(int32_t val);
-uint32_t *swap_int32_t(uint32_t *data, unsigned int length, uint32_t *dest);
-
-
-/* internal prototypes */
-/*static*/ void swap_bank(uint32_t *buf, int tolocal, uint32_t *dest);
-/*static*/ void swap_segment(uint32_t *buf, int tolocal, uint32_t *dest);
-/*static*/ void swap_tagsegment(uint32_t *buf, int tolocal, uint32_t *dest);
-/*static*/ void swap_data(uint32_t *data, int type, int length, int tolocal, uint32_t *dest);
-/*static*/ void swap_int64_t(uint64_t *data, int length, uint64_t *dest);
-/*static*/ void swap_short(uint16_t *data, int length, uint16_t *dest);
-/*static*/ void copy_data(uint32_t *data, int length, uint32_t *dest);
-/*static*/ void swap_composite_t(uint32_t *data, int tolocal, uint32_t *dest);
 
 
 /*--------------------------------------------------------------------------*/
@@ -387,7 +367,7 @@ swap_composite_t(uint32_t *data, int tolocal, uint32_t *dddd)
     char *formatString;
     uint32_t *pData, *dest;
     int nfmt, padding;
-    unsigned char ifmt[1024];
+    unsigned short ifmt[1024];
 
     /* swap in place or copy ? */
     dest = (dddd == NULL) ? data : dddd;

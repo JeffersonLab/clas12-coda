@@ -69,7 +69,7 @@
 #ifdef Linux_x86_64
 #define MAX_ROCS 127 /* must accomodate biggest roc id, not the number of rocs !!! */
 #else
-#define MAX_ROCS 85
+#define MAX_ROCS 77/*85*/
 #endif
 
 #define QSIZE 8 /* the number of buffers in EB, normally 8, was set to 6 trying to decrease memory usage on clondaq5 */
@@ -141,6 +141,7 @@ extern "C" {
 
 CIRCBUF *new_cb(int roc, char *name, char *parent);
 void     cb_init(int roc);
+void     cb_delete(int roc);
 void     delete_cb(CIRCBUF **cbp);
 int      put_cb_data(int fd, CIRCBUF **cbp, void *data);
 int      get_cb_data(CIRCBUF **cbp, int id, int chunk,

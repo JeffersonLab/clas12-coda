@@ -65,9 +65,10 @@ main(int argc, char **argv)
   unsigned int ret, word;
   unsigned long long timestamp, timestamp_old;
   unsigned char *end, *start;
-  char *input_filename_full[1024];
+  char input_filename_full[1024];
   FILE *fd;
-  char *ch, str_tmp[STRLEN];
+  char str_tmp[STRLEN];
+  char ch;
   GET_PUT_INIT;
 
   if(argc!=3)

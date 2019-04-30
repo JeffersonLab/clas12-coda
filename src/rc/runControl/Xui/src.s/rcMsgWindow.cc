@@ -75,7 +75,7 @@ rcMsgWindow::init (void)
   XtSetArg (arg[ac], XmNcursorPositionVisible, FALSE); ac++;
 
 
-  textw_ = XmCreateScrolledText (parent_, "rcMsgWindow", arg, ac); 
+  textw_ = XmCreateScrolledText (parent_, (char *)"rcMsgWindow", arg, ac); 
   //textw_ = XmCreateText (parent_, "rcMsgWindow", arg, ac); 
 
 

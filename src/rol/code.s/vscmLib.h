@@ -18,8 +18,8 @@ typedef unsigned int uintptr_t;
 
 /* Macros to help with register spacers */
 #define MERGE_(a,b)  a##b
-#define LABEL_(a) MERGE_(uint32_t vscmblank, a)
-#define BLANK LABEL_(__LINE__)
+#define LABELVSCM_(a) MERGE_(uint32_t vscmblank, a)
+#define BLANKVSCM LABELVSCM_(__LINE__)
 
 
 #define VSCM_MAX_BOARDS     20
@@ -124,17 +124,17 @@ typedef struct
 /* 0x000C */ volatile uint32_t SpiStatus;
 /* 0x0010 */ volatile uint32_t Reboot;
 /* 0x0014 */ volatile uint32_t SpiRev2;
-/* 0x0018 */ BLANK[(0x20-0x18)/4];
+/* 0x0018 */ BLANKVSCM[(0x20-0x18)/4];
 /* 0x0020 */ volatile uint32_t SemHeartbeatCnt;
 /* 0x0024 */ volatile uint32_t SemErrorCnt;
-/* 0x0028 */ BLANK[(0x100-0x28)/4];
+/* 0x0028 */ BLANKVSCM[(0x100-0x28)/4];
 } VSCM_CFG_REGS;
 
 typedef struct
 {
 /* 0x0000 */ volatile uint32_t Ctrl;
 /* 0x0004 */ volatile uint32_t Status;
-/* 0x0008 */ BLANK[(0x100-0x8)/4];
+/* 0x0008 */ BLANKVSCM[(0x100-0x8)/4];
 } VSCM_CLKRST_REGS;
 
 #define VSCM_SCALER_SYSCLK50      0
@@ -155,16 +155,16 @@ typedef struct
 /* 0x000C */ volatile uint32_t SyncCtrl;
 /* 0x0010 */ volatile uint32_t TrigoutCtrl;
 /* 0x0014 */ volatile uint32_t FpOutputCtrl[4];
-/* 0x0024 */ BLANK[(0x80-0x24)/4];
+/* 0x0024 */ BLANKVSCM[(0x80-0x24)/4];
 /* 0x0080 */ volatile uint32_t PulserPeriod;
 /* 0x0084 */ volatile uint32_t PulserLowCycles;
 /* 0x0088 */ volatile uint32_t PulserNPulses;
 /* 0x008C */ volatile uint32_t PulserStart;
 /* 0x0090 */ volatile uint32_t PulserDone;
-/* 0x0094 */ BLANK[(0x100-0x94)/4];
+/* 0x0094 */ BLANKVSCM[(0x100-0x94)/4];
 /* 0x0104 */ volatile uint32_t ScalerLatch;
 /* 0x0108 */ volatile uint32_t Scalers[15];
-/* 0x0140 */ BLANK[(0x200-0x140)/4];
+/* 0x0140 */ BLANKVSCM[(0x200-0x140)/4];
 } VSCM_SD_REGS;
 
 /* Event Builder */
@@ -194,7 +194,7 @@ typedef struct
 /* 0x0024 */ volatile uint32_t FifoWordCnt;
 /* 0x0028 */ volatile uint32_t FifoEventCnt;
 /* 0x002C */ volatile uint32_t TrigCntBusyThr;
-/* 0x0030 */ BLANK[(0x100-0x30)/4];
+/* 0x0030 */ BLANKVSCM[(0x100-0x30)/4];
 } VSCM_EB_REGS;
 
 typedef struct
@@ -202,12 +202,12 @@ typedef struct
 /* 0x0000 */ volatile uint32_t SerCtrl;
 /* 0x0004 */ volatile uint32_t AddrH1;
 /* 0x0008 */ volatile uint32_t AddrH2;
-/* 0x000C */ BLANK[(0x10-0xC)/4];
+/* 0x000C */ BLANKVSCM[(0x10-0xC)/4];
 /* 0x0010 */ volatile uint32_t SerData[4];
 /* 0x0020 */ volatile uint32_t SerClk;
 /* 0x0024 */ volatile uint32_t ClkCtrl;
 /* 0x0028 */ volatile uint32_t Status;
-/* 0x002C */ BLANK[(0x100-0x2C)/4];
+/* 0x002C */ BLANKVSCM[(0x100-0x2C)/4];
 } VSCM_FSSR_CTRL_REGS;
 
 typedef struct
@@ -215,7 +215,7 @@ typedef struct
 /* 0x0000 */ volatile uint32_t Ctrl;
 /* 0x0004 */ volatile uint32_t HistCtrl;
 /* 0x0008 */ volatile uint32_t HistCnt;
-/* 0x000C */ BLANK[(0x40-0x0C)/4];
+/* 0x000C */ BLANKVSCM[(0x40-0x0C)/4];
 /* 0x0040 */ volatile uint32_t LastDataWord;
 /* 0x0044 */ volatile uint32_t LastStatusWord;
 /* 0x0048 */ volatile uint32_t ScalerStatusWord;
@@ -228,7 +228,7 @@ typedef struct
 /* 0x0064 */ volatile uint32_t ScalerChipIdErr;
 /* 0x0068 */ volatile uint32_t ScalerGotHit;
 /* 0x006C */ volatile uint32_t ScalerCoreTalking;
-/* 0x0070 */ BLANK[(0x100-0x70)/4];
+/* 0x0070 */ BLANKVSCM[(0x100-0x70)/4];
 } VSCM_FSSR_REGS;
 
 typedef struct
@@ -238,16 +238,16 @@ typedef struct
 /* 0x0008 */ volatile uint32_t Ch0;
 /* 0x000C */ volatile uint32_t Ch1;
 /* 0x0010 */ volatile uint32_t TrigCtrl;
-/* 0x0014 */ BLANK[(0x100-0x14)/4];
+/* 0x0014 */ BLANKVSCM[(0x100-0x14)/4];
 } VSCM_DAC_REGS;
 
 typedef struct
 {
 /* 0x0000 */ volatile uint32_t Ctrl;
 /* 0x0004 */ volatile uint32_t DeadCycles;
-/* 0x0008 */ BLANK[(0xC-0x8)/4];
+/* 0x0008 */ BLANKVSCM[(0xC-0x8)/4];
 /* 0x000C */ volatile uint32_t TrgHitWidth;
-/* 0x0010 */ BLANK[(0x100-0x10)/4];
+/* 0x0010 */ BLANKVSCM[(0x100-0x10)/4];
 } VSCM_TDC_REGS;
 
 typedef struct
@@ -257,9 +257,9 @@ typedef struct
 /* 0x0200-0x03FF */ VSCM_SD_REGS        Sd;
 /* 0x0400-0x04FF */ VSCM_EB_REGS        Eb;
 /* 0x0500-0x05FF */ VSCM_FSSR_CTRL_REGS FssrCtrl;
-/* 0x0600-0x0FFF */ BLANK[(0x1000-0x0600)/4];
+/* 0x0600-0x0FFF */ BLANKVSCM[(0x1000-0x0600)/4];
 /* 0x1000-0x17FF */ VSCM_FSSR_REGS      Fssr[8];
-/* 0x1800-0x1FFF */ BLANK[(0x2000-0x1800)/4];
+/* 0x1800-0x1FFF */ BLANKVSCM[(0x2000-0x1800)/4];
 /* 0x2000-0x20FF */ VSCM_DAC_REGS       Dac;
 /* 0x2100-0x21FF */ VSCM_TDC_REGS       Tdc;
 } VSCM_regs;
@@ -278,6 +278,8 @@ int vscmFirmwareVerify(int id, const char *filename);
 int vscmFirmwareUpdateVerify(int id, const char *filename);
 int vscmFirmwareRead(int id, const char *filename);
 uint32_t vscmFirmwareRev(int id);
+void vscmFirmware(char *filename, int slot);
+
 
 int vscmInit(uintptr_t addr, uint32_t addr_inc, int numvscm, int flag);
 int vscmIsNotInit(int *id, const char *func);
@@ -291,6 +293,7 @@ int  vscmSetTriggerWindowOffset(int id);
 void vscmInitGlobals();
 int  vscmReadConfigFile(char *filename);
 int  vscmDownloadAll();
+void vscmSetExpid(char *string);
 int  vscmConfig(char *fname);
 void vscmMon(int slot);
 int  vscmUploadAll(char *string, int length);
@@ -305,6 +308,7 @@ uint32_t vscmGBReady();
 int vscmGetSerial(int id);
 int vscmConfigDownload(int id, char *fname);
 void vscmStat(int id);
+void vscmGStat();
 uint32_t vscmGetInputTriggers(int id);
 uint32_t vscmGetAcceptedTriggers(int id);
 void vscmFifoClear(int id);
@@ -313,6 +317,8 @@ void vscmSetHitMask(int id, uint8_t mask, uint8_t trig_width);
 uint8_t vscmGetHitMask(int id);
 uint8_t vscmGetHitMaskWidth(int id);
 
+void vscmRebootFpga(int id);
+void vscmGRebootFpga();
 
 
 
@@ -418,6 +424,17 @@ void fssrSCR(int id, int chip);
 void fssrInternalPulserEnable(int id, int chip);
 void fssrSetInternalPulserAmp(int id, int chip, uint8_t mask);
 uint8_t fssrGetInternalPulserAmp(int id, int chip);
+
+void fssrSetActiveLines_Asic(int id, int chip, unsigned int lines);
+void vscmPrestart(char *fname);
+
+void fssrGainScan(int id, char *filename,
+                  int beg_chip, int end_chip,
+                  int beg_chan, int end_chan,
+				  int start_thr, int chan_mult);
+
+int fssrParseControl(int id, int chip, char *s);
+uint32_t fssrGetChipID(int id, int chip);
 
 #endif
 

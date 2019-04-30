@@ -139,7 +139,7 @@ typedef struct _ip_port{
   unsigned short width, height;
   int      left_selected;
   int      right_selected;
-#if defined (__STDC__)
+
   void     (*arm)(struct _ip_port* port, Display* dpy, Drawable win);
   void     (*input_high_light)(struct _ip_port* port, Display* dpy, Drawable win);
   void     (*output_high_light)(struct _ip_port* port, Display* dpy, Drawable win);
@@ -149,16 +149,6 @@ typedef struct _ip_port{
   void     (*erase_name)(struct _ip_port* port, Display* dpy, Drawable win);
   void     (*move_name)(struct _ip_port* port, Display* dpy, Drawable win,
 			int x, int y, Dimension wd, Dimension ht);
-#else
-  void     (*arm)();
-  void     (*input_high_light)();
-  void     (*output_high_light)();
-  void     (*disarm)();
-  void     (*set_attributes)();
-  void     (*write_name)();
-  void     (*erase_name)();
-  void     (*move_name)();
-#endif
 }ipPort;
 
 typedef struct _arc{
@@ -170,18 +160,12 @@ typedef struct _arc{
   int      to_row, to_col;
   ipPort   *from;
   ipPort   *to;
-#if defined (__STDC__)
+
   void     (*draw_original)(struct _arc* arc, Display* dpy, Drawable win);
   void     (*draw_rubber_arc)(struct _arc* arc, Display* dpy, Drawable win,
 			      int x, int y);	
   void     (*high_light)(struct _arc* arc, Display* dpy, Drawable win);
   void     (*erase)(struct _arc* arc, Display* dpy, Drawable win);
-#else
-  void     (*draw_original)();
-  void     (*draw_rubber_arc)();
-  void     (*high_light)();
-  void     (*erase)();
-#endif
 }Arc;
 
 typedef struct _arc_list{
@@ -202,7 +186,7 @@ typedef struct _editor_drawcomp{
   int         num_row, num_col;     /* number of row occupied etc */
   int         selected;             /* selected, 0 no            */
   codaScript* scripts;              /* run time user scripts     */
-#if defined (__STDC__)
+
   void        (*draw_original)(struct _editor_drawcomp* comp, 
     Display* dpy,
     Drawable win,
@@ -251,21 +235,7 @@ typedef struct _editor_drawcomp{
     Widget base,
     XEvent* event,
     int     type);/* setup attributes dialog   */
-#else
-  void        (*draw_original)();   /* draw original comp        */
-  void        (*draw_rubber_comp)();/* draw rubber component     */
-  void        (*erase)();           /* erase component           */
-  void        (*resize)();          /* resize drawing            */
-  void        (*high_light)();      /* selection of comp         */
-  void        (*unhigh_light)();    /* unselect of comp          */
-  void        (*write_name)();      /* draw comp name            */
-  void        (*erase_name)();      /* erase comp name           */
-  void        (*move_name)();       /* draw movable name         */
-  void        (*write_hostname)();  /* draw host name            */
-  void        (*erase_hostname)();  /* erase host name           */
-  void        (*move_hostname)();   /* move hostname             */
-  void        (*set_attributes)();  /* setup attributes dialog   */
-#endif
+
 }drawComp;
 
 typedef struct _comp_list{
@@ -298,7 +268,7 @@ typedef struct _editor_graph {
   Arc      *selected_arc;      /* selected arc         */
   Arc      *current_arc;       /* current_arc          */
   ipPort   *from_port;         /* first cliked port    */
-#if defined (__STDC__)
+
   int     (*select_comp)(struct _editor_graph* graph,
     Widget w, XEvent* event);   /* left btn1 click      */
   void     (*highlight_ip_ports)(struct _editor_graph* graph,
@@ -316,59 +286,59 @@ typedef struct _editor_graph {
     Widget w, XEvent* event);   /* delete compoent      */
   void     (*delete_arc)(struct _editor_graph* graph,
     Widget w, XEvent* event);    /* delete an arc        */
-#else
-  void     (*select_comp)();   /* left btn1 click      */
-  void     (*highlight_ip_ports)();
-                               /* high light all connected ports */
-  void     (*redisplay)();     /* expose event         */
-  void     (*zoom_scroll)();   /* zoom + scrolled event*/
-  void     (*add_comp)();      /* add component        */
-  void     (*add_existing_comp)(); /* add an existing comp */
-  void     (*delete_comp)();   /* delete compoent      */
-  void     (*delete_arc)();    /* delete an arc        */
-#endif
-}XcodaEditorGraph;
+
+} XcodaEditorGraph;
   
 extern SwGeometry        sw_geometry;
 extern XpointerPosition  xp_pos;
 extern XGC               xgc;
 extern XcodaEditorGraph  coda_graph;
 
+
 /* functions usable for other functions */
-#if defined (__STDC__)
 extern void reset_scrollbar_res             (void);
 extern void XcodaEditorTrackPointerPosition (Widget w,
 					     XtPointer clientData,
-					     XEvent* event);
+						 XEvent* event,
+						 Boolean* opt);
 extern void XcodaEditorUpdateEditableFlag   (XcodaEditorGraph* graph);
 extern Widget XcodaEditorDrawingArea        (Widget parent);
+
+
+
+
 extern void XcodaEditorResizeComp           (Widget w,
 					     XtPointer clientData,
-					     XmAnyCallbackStruct* cbs);
+					     XtPointer callback_data);
 extern void XcodaEditorConn2Cols            (Widget w,
 					     XtPointer clientData,
-					     XmAnyCallbackStruct* cbs);
+					     XtPointer callback_data);
 extern void XcodaEditorBgPixmap             (Widget w);
-extern void XcodaEditorAddCompNodeMode      (Widget w, XtPointer data,
-					     XmAnyCallbackStruct* cbs);
+extern void XcodaEditorAddCompNodeMode      (Widget w,
+                         XtPointer data,
+					     XtPointer callback_data);
 extern void XcodaEditorSetDeleteArcMode     (Widget w,
 					     XtPointer clientData,
-					     XmAnyCallbackStruct* cbs);
+					     XtPointer callback_data);
 extern void XcodaEditorSetDeleteCompMode    (Widget w,
 					     XtPointer clientData,
-					     XmAnyCallbackStruct* cbs);
+					     XtPointer callback_data);
 extern void XcodaEditorRedraw               (Widget w,
 					     XtPointer clientData,
-					     XmAnyCallbackStruct* cbs);
+					     XtPointer callback_data);
 extern void XcodaEditorUndoAction           (Widget w,
 					     XtPointer clientData,
-					     XmAnyCallbackStruct* cbs);
+					     XtPointer callback_data);
 extern void delete_all_arcs                 (Widget w,
 					     XtPointer clientData,
-					     XmAnyCallbackStruct* cbs);
+					     XtPointer callback_data);
 extern void delete_everything               (Widget w,
 					     XtPointer clientData,
-					     XmAnyCallbackStruct* cb);
+					     XtPointer callback_data);
+
+
+
+
 extern void removeArcFromWholeArcList       (XcodaEditorGraph* graph,
 					     Arc *arc);
 extern void setup_drawcomp_func             (drawComp* comp);
@@ -412,43 +382,9 @@ extern int  isEmptyGraph                    (XcodaEditorGraph* graph);
 extern drawComp *XcodaEditorGetSelectedNode (XcodaEditorGraph* graph);
 extern drawComp *findDrawCompFromPort       (XcodaEditorGraph* graph,
 					     ipPort* port);
-#else
-extern void reset_scrollbar_res             ();
-extern void XcodaEditorTrackPointerPosition ();
-extern void XcodaEditorUpdateEditableFlag   ();
-extern Widget XcodaEditorDrawingArea        ();
-extern void XcodaEditorResizeComp           ();
-extern void XcodaEditorConn2Cols            ();
-extern void XcodaEditorBgPixmap             ();
-extern void XcodaEditorAddCompNodeMode      ();
-extern void XcodaEditorSetDeleteArcMode     ();
-extern void XcodaEditorSetDeleteCompMode    ();
-extern void XcodaEditorRedraw               ();
-extern void XcodaEditorUndoAction           ();
-extern void delete_all_arcs                 ();
-extern void delete_everything               ();
-extern void removeArcFromWholeArcList       ();
-extern void setup_drawcomp_func             ();
-extern void setup_ipport_func               ();
-extern void insertNodeToCompList            ();
-extern void removeNodeFromCompList          ();
-extern void insertArcToWholeArcList         ();
-extern void free_daqcomp_res                ();
-extern void free_ipPort_res                 ();
-extern Arc  **XcodaEditorGetFromArcs        ();
-extern Arc  **XcodaEditorGetToArcs          ();
-extern Arc  *XcodaEditorGetSelectedArc      ();
-extern Arc  *XcodaEditorGetArcBetweenPorts  ();
-extern char **XcodaEditorCompGetAllInputs   ();
-extern int  compHasOutputs                  ();
-extern char **XcodaEditorCompGetAllOutputs  ();
-extern int  isOneCoverAnother               ();
-extern void update_arc_geometry             ();
-extern int  isEmptyGraph                    ();
-extern drawComp *XcodaEditorGetSelectedNode ();
-extern drawComp *findDrawCompFromPort       ();
-#endif
 
+extern void SplitEbana (drawComp* comp);
+extern void setup_arc_func(Arc *arc);
 
 #endif
   

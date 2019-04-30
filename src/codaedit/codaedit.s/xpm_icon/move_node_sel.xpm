@@ -1,5 +1,5 @@
 /* XPM */
-static char * move_node_sel_xpm[] = {
+static const char *move_node_sel_xpm[] = {
 "41 34 5 1",
 " 	c #AEBADB6CE79D",
 ".	c #000000000000",

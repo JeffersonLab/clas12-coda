@@ -50,7 +50,7 @@ public:
 
 public:
   static int open (const char *prog_name, int flags = Log_Msg::STDERR, const char *logger_key = 0);
-  static ssize_t log (Log_Priority, char *format, ...);
+  static ssize_t log (Log_Priority, const char *format, ...);
   static void sync (const char *program_name);
 
 private:

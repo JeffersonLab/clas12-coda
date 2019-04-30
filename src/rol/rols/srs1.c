@@ -33,6 +33,10 @@ static int nusertrig, ndone;
 static char ssname[80];
 #endif
 
+#include "TIpcieLib.h"
+#include "tipConfig.h"
+#include "daqLib.h"
+
 #include "circbuf.h"
 
 /* from fputil.h */
@@ -107,7 +111,6 @@ void usrtrig_done();
 #endif
 
 #define PULSER_RANDOM_FREQ   0x7 /*0x6 ~15kHz */
-
 
 
 
@@ -251,6 +254,7 @@ __download()
   printf("srs1: ... done.\n");
   */
 
+
   /**/
   CTRIGINIT;
   CDOINIT(GEN,TIR_SOURCE);
@@ -259,13 +263,15 @@ __download()
   /************/
   /* init daq */
 
-  /*FOR NOW
+  /*FOR NOW*/
   daqInit();
   DAQ_READ_CONF_FILE;
-  */
+  
 
   /*************************************/
   /* redefine TI settings if neseccary */
+
+  tipSetUserSyncResetReceive(1);
 
 #ifndef TI_SLAVE
   /* TS 1-6 create physics trigger, no sync event pin, no trigger 2 */
@@ -523,13 +529,18 @@ tiSetBusySource(TIP_BUSY_LOOPBACK,0);
 vmeBusUnlock();
 #endif
 
+
 #ifdef TI_SLAVE
 vmeBusLock();
 tipSetBusySource(TIP_BUSY_FP_FADC, 0);
- /* tipSetBusySource(0, 1); */
- printf("TIpcie: Setting SyncSrc to HFBR1 and Loopback\n");
- tipSetSyncSource(TIP_SYNC_HFBR1 | TIP_SYNC_LOOPBACK);
- tipSetInstantBlockLevelChange(1);
+  /* tipSetBusySource(0, 1); */
+  printf("TIpcie: Setting SyncSrc to HFBR1 and Loopback\n");
+  tipSetSyncSource(TIP_SYNC_HFBR1 | TIP_SYNC_LOOPBACK);
+
+  /*sergey: tipSetSyncSource() resets register 0x24 (sync), so we'll loose UserSyncReset enabling, reinstall it*/
+  tipSetUserSyncResetReceive(1);
+
+  tipSetInstantBlockLevelChange(1);
 vmeBusUnlock();
 
 #endif
@@ -803,7 +814,7 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
 
   if(syncFlag) printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
 
-  rol->dabufp = (int *) 0;
+  rol->dabufp = NULL;
 
   /*
 usleep(100);
@@ -859,10 +870,10 @@ TIMERL_START;
     else
     {
 	  ;
-	  /*
+	  
       printf("ti: len=%d\n",len);
       for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x (0x%08x)\n",jj,tdcbuf[jj],LSWAP(tdcbuf[jj]));
-	  */
+	  
 
 	  
       BANKOPEN(0xe10A,1,rol->pid);
@@ -1067,7 +1078,7 @@ vmeBusUnlock();
 
       int livetime, live_percent;
 vmeBusLock();
-      tiLatchTimers();
+      tipLatchTimers();
       livetime = tipLive(0);
 vmeBusUnlock();
       live_percent = livetime/10;

@@ -57,10 +57,10 @@ void cgButton2Proc (Widget w, XEvent* event, String* params, Cardinal* num);
 
 static XtActionsRec actions[]=
 {
-  {"Select", cgSelectProc},
-  {"Action", cgActionProc},
-  {"GlobalAction3", cgButton3Proc},
-  {"GlobalAction2", cgButton2Proc},
+  {(char *)"Select", cgSelectProc},
+  {(char *)"Action", cgActionProc},
+  {(char *)"GlobalAction3", cgButton3Proc},
+  {(char *)"GlobalAction2", cgButton2Proc},
 };
 
 // translations of pick or action
@@ -334,7 +334,7 @@ cgDispDev::cmap (void) const
   assert (colorCxt_);
   //assert (xcc_);
   //return XCCGetColormap (xcc_);
-  return NULL;
+  return 0/*NULL*/;
 }
 
 Drawable

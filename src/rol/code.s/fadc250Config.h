@@ -10,7 +10,6 @@
 #define FNLEN     128       /* length of config. file name */
 #define STRLEN    250       /* length of str_tmp */
 #define ROCLEN     80       /* length of ROC_name */
-#define NBOARD     21
 #define NCHAN      16
 
 
@@ -49,6 +48,7 @@ typedef struct {
 extern "C" {
 #endif
 
+  void fadc250SetExpid(char *string);
 void fadc250GetParamsForOffline(float ped[6][22][16], int tet[6][22][16], float gain[6][22][16], int nsa[6][22], int nsb[6][22]);
 void fadc250Sethost(char *host);
 void fadc250InitGlobals();
@@ -56,6 +56,7 @@ int fadc250ReadConfigFile(char *filename);
 int fadc250DownloadAll();
 int fadc250Config(char *fname);
 void fadc250Mon(int slot);
+int fadc250UploadAll(char *string, int length);
 
 #ifdef	__cplusplus
 }

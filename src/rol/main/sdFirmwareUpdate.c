@@ -147,16 +147,21 @@ main(int argc, char *argv[])
   if(res!=OK)
     goto CLOSE;
 
+  printf("tiInit called ...%d\n");fflush(stdout);
+
   res = tiInit(21<<19,0,1);
+  printf("tiInit returns %d\n",res);
   if(res!=OK)
     {
       /* try tsInit, instead */
+	  printf("trying TS instead of TI ..\n");
       res = tsInit(21<<19,0,1);
-      if(res!=OK)
-	goto CLOSE;
+      printf("tsInit returns %d\n",res);
+      if(res!=OK) goto CLOSE;
     }
   
   res = sdInit(SD_INIT_IGNORE_VERSION);
+  printf("sdInit returns %d\n",res);
   if(res!=OK)
     goto CLOSE;
 

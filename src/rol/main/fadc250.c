@@ -1,6 +1,12 @@
 
 /* fadc250.c */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <libtcp.h>
+
 #if defined(VXWORKS) || defined(Linux_armv7l)
 
 int
@@ -10,13 +16,6 @@ main()
 }
 
 #else
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <libtcp.h>
-
 
 #define F_NAME    100       /* length of config. file name */
 #define TEXT_STR  50000     /* size of some text strings */

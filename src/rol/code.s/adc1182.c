@@ -57,6 +57,9 @@ const ADCADR1 = 0xe0190000
 
 #if defined(VXWORKS) || defined(Linux_vme)
 
+#include <stdio.h>
+#include <string.h>
+
 #ifdef VXWORKS
 #include <vxWorks.h>
 /*sergey#include "vxCompat.h"*/
@@ -65,8 +68,8 @@ const ADCADR1 = 0xe0190000
 #include <pthread.h>
 #include "jvme.h"
 #endif
-#include <stdio.h>
-#include <string.h>
+
+
 #ifdef VXWORKS
 #include <logLib.h>
 #include <taskLib.h>
@@ -152,7 +155,7 @@ adc1182init(unsigned int *addr, int nboards)
 void
 adc1182reset(int id)
 {
-  vmeWrite16(vmeaddress[id],0x0104);
+  vmeWrite16((unsigned short *)vmeaddress[id],0x0104);
 
   return;
 }
@@ -165,7 +168,7 @@ adc1182cip(int id)
 {
   short ret;
 
-  ret = vmeRead16(vmeaddress[id]) & 0x0002;
+  ret = vmeRead16((unsigned short *)vmeaddress[id]) & 0x0002;
 
   return(ret);
 }
@@ -178,7 +181,7 @@ adc1182ready(int id)
 {
   short ret;
 
-  ret = vmeRead16(vmeaddress[id]) & 0x0001;
+  ret = vmeRead16((unsigned short *)vmeaddress[id]) & 0x0001;
 
   return(ret);
 }
@@ -194,7 +197,7 @@ adc1182read(int id, int chan)
 
   adrtmp = vmeaddress[id] + 0x0100 + chan*2;
 
-  buf = vmeRead16(adrtmp);
+  buf = vmeRead16((unsigned short *)adrtmp);
 
   ret = (buf & 0x0fff) + (chan<<17);
 

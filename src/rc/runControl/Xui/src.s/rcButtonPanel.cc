@@ -94,8 +94,6 @@
 
 #include "rcButtonPanel.h"
 
-#define _TRACE_OBJECTS
-
 rcButtonPanel::rcButtonPanel (Widget parent,
 			      char* name,
 			      rcClientHandler& handler)
@@ -136,7 +134,8 @@ rcButtonPanel::~rcButtonPanel (void)
   // remove this panel from net handler
   netHandler_.removePanel (this);
 }
-extern "C" Pixmap XcodaCreatePixmapFromXpm(Widget,char**,int);
+
+//extern "C" Pixmap XcodaCreatePixmapFromXpm(Widget,char**,int);
 //extern "C" void *Editor_save_callback;
 //extern "C" void *Editor_rc_object;
 
@@ -167,7 +166,7 @@ rcButtonPanel::init (void)
   // create frame title
   
   ac = 0;
-  XmString t = XmStringCreateSimple ("Run control Buttons");
+  XmString t = XmStringCreateSimple ((char *)"Run control Buttons");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget rnplabel = XtCreateManagedWidget ("rcButtonFrameLabel",
@@ -199,7 +198,7 @@ rcButtonPanel::init (void)
   // create frame title
   
   ac = 0;
-  t = XmStringCreateSimple ("Control");
+  t = XmStringCreateSimple ((char *)"Control");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget leftlabel = XtCreateManagedWidget ("rcLeftFrameLabel",
@@ -242,7 +241,7 @@ rcButtonPanel::init (void)
   // create frame title
   
   ac = 0;
-  t = XmStringCreateSimple ("Transition");
+  t = XmStringCreateSimple ((char *)"Transition");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget rightlabel = XtCreateManagedWidget ("rcRightFrameLabel",

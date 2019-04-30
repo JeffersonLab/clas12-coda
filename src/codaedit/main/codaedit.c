@@ -59,6 +59,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <stdint.h>
 
 #include <X11/Intrinsic.h>
@@ -74,6 +75,7 @@
 #include "codaRegistry.h"
 #endif
 
+#include "codaedit.h"
 #include "MixedLabel.h"
 #include "Editor_layout.h"
 #include "Editor_pixmap.h"
@@ -87,7 +89,7 @@
 #include "Editor_icon_box.h"
 #include "Editor_drawing.h"
 #include "./xpm_icon/stone.xpm"
-#include "XcodaXpm.h"
+#include "XcodaXpm_codaedit.h"
 
 static String fallback_resources[]={
   
@@ -128,14 +130,14 @@ Manager manager;          /* x-window layout manager */
 XtAppContext app_context;
 Widget toplevel;
 
-int
+void/*int*/
 Xhandler(Widget w, XtPointer p, XEvent *e, Boolean *b)
 {
   if (e->type == DestroyNotify) {
     printf("CEDIT:X window was destroyed\n");
     exit(0);
   }
-  return 0;
+  /*return 0;*/
 }
 
 void
@@ -167,6 +169,7 @@ messageHandler(char *message)
   }
 }
 
+int
 main(int argc, char **argv)
 {
   Arg    args[10];

@@ -82,6 +82,8 @@ INET_Addr::set (unsigned short port_number, const char host_name[], int encode)
 #ifdef DEBUG
   printf("INET_Addr.i: INET_Addr::set 4\n");
 #endif
+
+  return(0); /*sergey*/
 }
 
 /* Initializes a INET_Addr from a PORT_NAME and the remote HOST_NAME. */

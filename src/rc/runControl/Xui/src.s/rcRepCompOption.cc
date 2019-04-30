@@ -66,7 +66,7 @@ rcRepCompOption::manage (void)
 
   /* add monitor on callbacks for active components */
   rcClient& client = netHandler_.clientHandler ();
-  if (client.monitorOnCallback (client.exptname (), "components",
+  if (client.monitorOnCallback (client.exptname (), (char *)"components",
                                 (rcCallback)&(rcRepCompOption::compCallback),
                                 (void *)this) != CODA_SUCCESS)
     fprintf (stderr, "Cannot register monitor on components callback\n");
@@ -79,7 +79,7 @@ rcRepCompOption::unmanage (void)
 
   /* add monitor off callback */
   rcClient& client = netHandler_.clientHandler ();
-  if (client.monitorOffCallback (client.exptname (), "components",
+  if (client.monitorOffCallback (client.exptname (), (char *)"components",
 				 (rcCallback)&(rcRepCompOption::compCallback),
 				 (void *)this,
 				 (rcCallback)&(rcRepCompOption::offCallback),

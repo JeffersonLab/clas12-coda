@@ -34,7 +34,7 @@
 
 #include "rcHelpAboutDialog.h"
 
-#include <RCLogo.xpm>
+#include "RCLogo.xpm"
 
 rcHelpAboutDialog::rcHelpAboutDialog (rcHelpAbout* base,
 				      char* name,
@@ -72,7 +72,7 @@ rcHelpAboutDialog::createFormChildren (void)
 				    _w, arg, ac);
   ac = 0;
 
-  log_ = new XcodaXpmLabel (leftform, "       ", RCLogo_xpm);
+  log_ = new XcodaXpmLabel (leftform, (char *)"       ", (char **)RCLogo_xpm);
   log_->init ();
 
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
@@ -81,7 +81,7 @@ rcHelpAboutDialog::createFormChildren (void)
   XtSetValues (log_->baseWidget (), arg, ac);
   ac = 0;
 
-  XmString t = XmStringCreateSimple ("RunControl");
+  XmString t = XmStringCreateSimple ((char *)"RunControl");
 
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_WIDGET); ac++;
@@ -131,7 +131,7 @@ rcHelpAboutDialog::createFormChildren (void)
   ac = 0;
   XmStringFree (t);
 
-  t = XmStringCreateSimple ("ok");
+  t = XmStringCreateSimple ((char *)"ok");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNtopOffset, 5); ac++;

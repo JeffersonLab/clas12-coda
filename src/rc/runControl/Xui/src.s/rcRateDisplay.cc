@@ -289,7 +289,7 @@ rcRateDisplay::init (rcMenuWindow *menW)
 
 
 
-  Widget _wid = menW->createTabFrame("Options",0);
+  Widget _wid = menW->createTabFrame((char *)"Options",0);
   Widget children[5];      /* Children to manage */
   Arg al[64];                    /* Arg List */
   XrmValue from_value, to_value; /* For resource conversion */
@@ -301,7 +301,7 @@ rcRateDisplay::init (rcMenuWindow *menW)
 
   if (DefaultDepthOfScreen(DefaultScreenOfDisplay(XtDisplay(_wid))) != 1)
   {
-    from_value.addr = "yellow";
+    from_value.addr = (char *)"yellow";
     from_value.size = strlen( from_value.addr ) + 1;
     to_value.addr = NULL;
     XtConvertAndStore (_wid, XmRString, &from_value, XmRPixel, &to_value);
@@ -320,13 +320,13 @@ rcRateDisplay::init (rcMenuWindow *menW)
   XtSetArg (al[ac], XmNleftOffset, 2); ac++;
   XtSetArg (al[ac], XmNrightAttachment, XmATTACH_FORM); ac++;
   XtSetArg (al[ac], XmNrightOffset, 2); ac++;
-  OutFrame = XmCreateFrame ( _wid, "OutFrame", al, ac );
+  OutFrame = XmCreateFrame ( _wid, (char *)"OutFrame", al, ac );
 
   ac = 0;
-  xmstrings[0] = XmStringCreateLtoR ( "Run Control Options", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
+  xmstrings[0] = XmStringCreateLtoR ( (char *)"Run Control Options", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
   XtSetArg(al[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   XtSetArg(al[ac], XmNlabelString, xmstrings[0]); ac++;
-  OutLabel = XmCreateLabel ( OutFrame, "OutLabel", al, ac );
+  OutLabel = XmCreateLabel ( OutFrame, (char *)"OutLabel", al, ac );
   XmStringFree ( xmstrings [ 0 ] );
 
   outForm = XtCreateManagedWidget ("outForm", xmFormWidgetClass, OutFrame, arg, ac);
@@ -334,13 +334,13 @@ rcRateDisplay::init (rcMenuWindow *menW)
   // File name frame
   ac = 0;
   XtSetArg (al[ac], XmNheight, 60); ac++;
-  fileFr = XmCreateFrame ( outForm, "fileFr", al, ac );
+  fileFr = XmCreateFrame ( outForm, (char *)"fileFr", al, ac );
 
   ac = 0;
-  xmstrings[0] = XmStringCreateLtoR ( "File name", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
+  xmstrings[0] = XmStringCreateLtoR ( (char *)"File name", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
   XtSetArg(al[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   XtSetArg(al[ac], XmNlabelString, xmstrings[0]); ac++;
-  fileLabel = XmCreateLabel ( fileFr, "fileLabel", al, ac );
+  fileLabel = XmCreateLabel ( fileFr, (char *)"fileLabel", al, ac );
   XmStringFree ( xmstrings [ 0 ] );
 
   ac = 0;
@@ -354,29 +354,29 @@ rcRateDisplay::init (rcMenuWindow *menW)
   XmStringFree ( xmstrings [ 0 ] );
   ac = 0;
   */
-  bootFr = XmCreateFrame ( outForm, "bootFr", al, ac );
+  bootFr = XmCreateFrame ( outForm, (char *)"bootFr", al, ac );
 
   ac = 0;
-  xmstrings[0] = XmStringCreateLtoR ( "Auto boot control", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
+  xmstrings[0] = XmStringCreateLtoR ( (char *)"Auto boot control", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
   XtSetArg(al[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   XtSetArg(al[ac], XmNlabelString, xmstrings[0]); ac++;
-  bootLabel = XmCreateLabel ( bootFr, "bootLabel", al, ac );
+  bootLabel = XmCreateLabel ( bootFr, (char *)"bootLabel", al, ac );
   XmStringFree ( xmstrings [ 0 ] );
   ac = 0;
-  updFr = XmCreateFrame ( outForm, "updFr", al, ac );
+  updFr = XmCreateFrame ( outForm, (char *)"updFr", al, ac );
   ac = 0;
-  xmstrings[0] = XmStringCreateLtoR ( "Server poll rate", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
+  xmstrings[0] = XmStringCreateLtoR ( (char *)"Server poll rate", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
   XtSetArg(al[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   XtSetArg(al[ac], XmNlabelString, xmstrings[0]); ac++;
-  updLabel = XmCreateLabel ( updFr, "updLabel", al, ac );
+  updLabel = XmCreateLabel ( updFr, (char *)"updLabel", al, ac );
   XmStringFree ( xmstrings [ 0 ] );
   ac = 0;
-  monFr = XmCreateFrame ( outForm, "monFr", al, ac );
+  monFr = XmCreateFrame ( outForm, (char *)"monFr", al, ac );
   ac = 0;
-  xmstrings[0] = XmStringCreateLtoR ( "Component monitoring", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
+  xmstrings[0] = XmStringCreateLtoR ( (char *)"Component monitoring", (XmStringCharSet)XmFONTLIST_DEFAULT_TAG );
   XtSetArg(al[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   XtSetArg(al[ac], XmNlabelString, xmstrings[0]); ac++;
-  monLabel = XmCreateLabel ( monFr, "monLabel", al, ac );
+  monLabel = XmCreateLabel ( monFr, (char *)"monLabel", al, ac );
   XmStringFree ( xmstrings [ 0 ] );
   ac = 0;
   XtSetArg(al[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
@@ -482,11 +482,11 @@ rcRateDisplay::init (rcMenuWindow *menW)
   
 
   /* create plotes */
-  evlist_ = SciPlotListCreateFromDouble (evrate_, 0, evx_, evy_, "evRate");
-  datalist_ = SciPlotListCreateFromDouble (datarate_, 0, dx_, dy_, "dataRate");
-  lvlist_ = SciPlotListCreateFromDouble (other_, 0, lvx_, lvy_, "livetime"); //sergey
-  ratiolist_ = SciPlotListCreateFromDouble (ratio_, 0, rx_, ry_, "ratio");
-  revlist_ = SciPlotListCreateFromDouble (rates_, 0, evx_, evy_, "evRate");
+  evlist_ = SciPlotListCreateFromDouble (evrate_, 0, evx_, evy_, (char *)"evRate");
+  datalist_ = SciPlotListCreateFromDouble (datarate_, 0, dx_, dy_, (char *)"dataRate");
+  lvlist_ = SciPlotListCreateFromDouble (other_, 0, lvx_, lvy_, (char *)"livetime"); //sergey
+  ratiolist_ = SciPlotListCreateFromDouble (ratio_, 0, rx_, ry_, (char *)"ratio");
+  revlist_ = SciPlotListCreateFromDouble (rates_, 0, evx_, evy_, (char *)"evRate");
 
 
   /* set X scale */
@@ -506,11 +506,11 @@ rcRateDisplay::init (rcMenuWindow *menW)
 
 
   /* set colors */
-  int evc = SciPlotAllocNamedColor (evrate_, "Red");
-  int dc  = SciPlotAllocNamedColor (datarate_, "Blue");
-  int rc  = SciPlotAllocNamedColor (ratio_, "Green");
-  int lvc = SciPlotAllocNamedColor (other_, "Green"); //sergey
-  int revc = SciPlotAllocNamedColor (rates_, "Red");
+  int evc = SciPlotAllocNamedColor (evrate_, (char *)"Red");
+  int dc  = SciPlotAllocNamedColor (datarate_, (char *)"Blue");
+  int rc  = SciPlotAllocNamedColor (ratio_, (char *)"Green");
+  int lvc = SciPlotAllocNamedColor (other_, (char *)"Green"); //sergey
+  int revc = SciPlotAllocNamedColor (rates_, (char *)"Red");
 
 
   /* set line style */
@@ -860,13 +860,13 @@ rcRateDisplay::cleanDisplay (void)
   
   rcClient& client = netHandler_.clientHandler ();
 
-  client.monitorOffCallback (client.exptname (), "components",
+  client.monitorOffCallback (client.exptname (), (char *)"components",
 				 (rcCallback)&(rcRateDisplay::compCallback),
 				 (void *)this,
 				 (rcCallback)&(rcRateDisplay::offCallback),
 				 (void *)this);
 
-  client.monitorOnCallback (client.exptname (), "components",
+  client.monitorOnCallback (client.exptname (), (char *)"components",
 			    (rcCallback)&(rcRateDisplay::compCallback),
 			    (void *)this);
   

@@ -1,16 +1,21 @@
 
-#if defined(Linux_vme) || defined(Linux_armv7l)
+/* DiagGuiServer.c */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <ctype.h>
 #include <sys/mman.h>
 #include <sys/signal.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+
+
+#if defined(Linux_vme) || defined(Linux_armv7l)
+
 #include "CrateMsgTypes.h"
 
 #include "ipc.h"
@@ -1136,10 +1141,10 @@ ScalersReadoutStart()
     pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
 
 #ifdef Linux_vme
-    pthread_create(&id, &attr, vmeReadTask, NULL);
+    pthread_create(&id, &attr, (void *)vmeReadTask, NULL);
 #endif
 #ifdef Linux_armv7l
-    pthread_create(&id, &attr, vtpReadTask, NULL);
+    pthread_create(&id, &attr, (void *)vtpReadTask, NULL);
 #endif
   }
 #endif
@@ -1152,9 +1157,14 @@ static int
 ScalersReadoutStop()
 {
   /* TODO: END TASK HERE !!!!!!!!!!!!!!!!!!!!!!!! */
+  int ii;
 
+  for(ii=0; ii<MAXBOARDS; ii++) free(vmescalers[ii]);
+  for(ii=0; ii<MAXBOARDS; ii++) free(vmedata[ii]);
+  /*error
   free(vmescalers);
   free(vmedata);
+  */
 
 #ifdef VXWORKS
   semGive(vmescalers_lock);
@@ -1726,9 +1736,9 @@ sig_handler(int signo)
 
 #else
 
+int
 main()
 {
-  return;
 }
 
 #endif

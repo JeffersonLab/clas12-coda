@@ -84,7 +84,7 @@ alarmHandler(int sig)
 * -> tcpClient croctest2 i
 ****************************************************************************/
 
-
+int
 main(int argc, char *argv[])
 {
   struct hostent *hptr;

@@ -15,21 +15,21 @@ int
 main()
 {
   // connect to ipc server
-  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", "hist");
-  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "hist");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"daq", (char *)"hist");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"daq", (char *)"hist");
   server.Open();
 
   
-  uthbook1(1, "clonpc0:test1", 100, 0.0, 100.0);
+  uthbook1(1, (char *)"clonpc0:test1", 100, 0.0, 100.0);
   for(int i=0; i<100; i++)
   {
     uthfill(1, ((float)i), 0.0, ((float)i)*2.);
   }
   /*uthprint(1);*/
-  uthist2ipc(1, "uthbook_send");
+  uthist2ipc(1, (char *)"uthbook_send");
   
   
-  uthbook2(2, "clonpc0:test2", 100, 0.0, 100.0, 100, 0.0, 100.0);
+  uthbook2(2, (char *)"clonpc0:test2", 100, 0.0, 100.0, 100, 0.0, 100.0);
   for(int i=0; i<100; i++)
   {
     for(int j=0; j<100; j++)
@@ -39,7 +39,7 @@ main()
   }
   
 
-  uthist2ipc(2, "uthbook_send");
+  uthist2ipc(2, (char *)"uthbook_send");
 
   server.Close();
 }

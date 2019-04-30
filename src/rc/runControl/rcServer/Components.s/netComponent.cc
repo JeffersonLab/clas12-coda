@@ -481,34 +481,34 @@ netComponent::boot (void)
       {
 		// create bootString
 	    char msg[256];
-	    char *rshCmd = "rsh";
-	    char *bootCmd = "echo";
+	    char *rshCmd = (char *)"rsh";
+	    char *bootCmd = (char *)"echo";
 
 	    if (::strcmp(type_,"RCS") == 0)
         {
-	      bootCmd = "rcServer";
+	      bootCmd = (char *)"rcServer";
 	    }
 	    else if  (::strcmp(type_,"EB") == 0)
         {
-	      bootCmd = "coda_ebc";
+	      bootCmd = (char *)"coda_ebc";
 	    }
 	    else if (::strcmp(type_,"ROC") == 0)
         {
-	      bootCmd = "coda_roc";
+	      bootCmd = (char *)"coda_roc";
 	    }
 	    else if (::strcmp(type_,"ER") == 0)
         {
-	      bootCmd = "coda_erc";
+	      bootCmd = (char *)"coda_erc";
 	    }
 	    else if (::strcmp(type_,"TS") == 0)
         {
-	      bootCmd = "coda_ts";
+	      bootCmd = (char *)"coda_ts";
 	    } 
 
 	    char *realType = type_;
 	    if (::strcmp(type_,"EB") == 0)
         {
-	      realType = "CDEB";
+	      realType = (char *)"CDEB";
 	    }
 	    daqRun* run = subsys_.system().run();
 

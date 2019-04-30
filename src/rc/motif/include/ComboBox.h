@@ -34,7 +34,7 @@
 extern "C" {
 #endif
 
-#define XmNselectionCallback		"selectionCallback"
+//#define XmNselectionCallback		"selectionCallback"
 #define XmCSelectionCallback		"SelectionCallback"
 #define XmNunselectionCallback		"unselectionCallback"
 #define XmCUnselectionCallback		"UnselectionCallback"
@@ -73,8 +73,8 @@ extern "C" {
 /*
  * alles fuer das Label...
  */
-#define XmNshowLabel			"showLabel"
-#define XmCShowLabel			"ShowLabel"
+//#define XmNshowLabel			"showLabel"
+//#define XmCShowLabel			"ShowLabel"
 #define XmNdropDownOffset		"dropDownOffset"
 #define XmCDropDownOffset		"DropDownOffset"
 

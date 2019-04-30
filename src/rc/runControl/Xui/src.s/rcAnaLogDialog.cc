@@ -97,11 +97,10 @@ rcAnaLogDialog::createFormChildren (void)
   Widget apply = XtCreateManagedWidget ("anaLogApply", xmPushButtonGadgetClass,
 					actionForm, arg, ac);
   ac = 0;
-  XmStringFree (t);  
-  */
+  XmStringFree (t);  */
 
   // create a toggle button
-  XmString t = XmStringCreateSimple ("Log events to a file");
+  XmString t = XmStringCreateSimple ((char *)"Log events to a file");
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNtopOffset, 5); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
@@ -133,7 +132,7 @@ rcAnaLogDialog::createFormChildren (void)
   ac = 0;
 
   // create a label associated with text entry
-  t = XmStringCreateSimple ("File name:");
+  t = XmStringCreateSimple ((char *)"File name:");
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNtopOffset, 2); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
@@ -182,26 +181,26 @@ rcAnaLogDialog::changeAnaLogInfo (void)
   if (XmToggleButtonGadgetGetState (toggle_)) {
     char *log = XmTextFieldGetString (file_);
     if (!log || !*log) {
-      button_->reportErrorMsg ("Need file name to write events");
+      button_->reportErrorMsg ((char *)"Need file name to write events");
       return;
     }
 
-    daqData sdata (client.exptname (), "logFileDescriptor", log);
+    daqData sdata (client.exptname (), (char *)"logFileDescriptor", log);
     if (client.setValueCallback (sdata, 
 				 (rcCallback)&(rcAnaLogDialog::anaLogCallback),
 				 (void *)this) != CODA_SUCCESS) {
-      button_->reportErrorMsg ("Cannot send set value command"); 
+      button_->reportErrorMsg ((char *)"Cannot send set value command"); 
       XtFree (log);
       return;
     }    
     XtFree (log);
   }
   else {
-    daqData sdata (client.exptname (), "logFileDescriptor", "unknown");
+    daqData sdata (client.exptname (), (char *)"logFileDescriptor", (char *)"unknown");
     if (client.setValueCallback (sdata, 
 				 (rcCallback)&(rcAnaLogDialog::anaLogCallback),
 				 (void *)this) != CODA_SUCCESS) {
-      button_->reportErrorMsg ("Cannot send set value command"); 
+      button_->reportErrorMsg ((char *)"Cannot send set value command"); 
       return;
     }    
   }
@@ -213,7 +212,7 @@ rcAnaLogDialog::anaLogCallback (int status, void* arg, daqNetData* data)
   rcAnaLogDialog* obj = (rcAnaLogDialog *)arg;
 
   if (status != CODA_SUCCESS) 
-    obj->button_->reportErrorMsg ("Setting log file name failed");
+    obj->button_->reportErrorMsg ((char *)"Setting log file name failed");
 }
 #else
 
@@ -531,14 +530,14 @@ rcAnaLogDialog::changeAnaLogInfo (void)
   if (XmToggleButtonGadgetGetState (toggle_)) {
     char *log = XmTextFieldGetString (file_);
     if (!log || !*log) {
-      button_->reportErrorMsg ("Need file name to write events");
+      button_->reportErrorMsg ((char *)"Need file name to write events");
       return;
     }
     daqData sdata (compname, DYN_ANA_LOG, log);
     if (client.setValueCallback (sdata, 
 				 (rcCallback)&(rcAnaLogDialog::anaLogCallback),
 				 (void *)this) != CODA_SUCCESS) {
-      button_->reportErrorMsg ("Cannot send set value command"); 
+      button_->reportErrorMsg ((char *)"Cannot send set value command"); 
       return;
     }
     XtFree (log);
@@ -550,7 +549,7 @@ rcAnaLogDialog::changeAnaLogInfo (void)
     if (client.setValueCallback (sdata, 
 				 (rcCallback)&(rcAnaLogDialog::anaLogCallback),
 				 (void *)this) != CODA_SUCCESS) {
-      button_->reportErrorMsg ("Cannot send set value command"); 
+      button_->reportErrorMsg ((char *)"Cannot send set value command"); 
       return;
     }
   }
@@ -561,7 +560,7 @@ rcAnaLogDialog::anaLogCallback (int status, void* arg, daqNetData* data)
 {
   if (status != CODA_SUCCESS) {
     rcAnaLogDialog* obj = (rcAnaLogDialog *)arg;
-    obj->button_->reportErrorMsg ("Changing name of an ANA log file failed !");
+    obj->button_->reportErrorMsg ((char *)"Changing name of an ANA log file failed !");
   }
 }
 #endif

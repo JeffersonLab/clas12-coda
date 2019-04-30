@@ -140,7 +140,7 @@ rcMsgReporter::reportMessage (char *format, ...)
 }
 
 void
-rcMsgReporter::cmsglog (int msg_class,char *format, ...)
+rcMsgReporter::cmsglog (int msg_class, const char *format, ...)
 {
   va_list argp;
   char tag[20];

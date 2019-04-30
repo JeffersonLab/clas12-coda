@@ -23,6 +23,27 @@ static void __status ();
 static int32_t theIntHandler ();
 
 
+#ifndef INT16
+#define INT16  short
+#endif
+
+#ifndef UINT16
+#define UINT16 unsigned short
+#endif
+
+#ifndef INT32
+#define INT32  int
+#endif
+
+#ifndef UINT32
+#define UINT32 unsigned int
+#endif
+
+#ifndef STATUS
+#define STATUS int
+#endif
+
+
 /*************************************************************************************/
 /* Include the memory partition structures and routines (former libpart.h/mempart.h) */
 #ifndef NULL
@@ -112,11 +133,11 @@ static int event_number;
 { \
   uint32_t padding; \
   /*printf("CPCLOSE: dataout before = 0x%016x, b08=0x%016x (0x%016x)\n",dataout,b08,(uint64_t)b08);*/ \
-  dataout = (uint32_t *) ( ( ((uint64_t)b08+3)/4 ) * 4); \
-  padding = (uint64_t)dataout - (uint64_t)b08; \
+  dataout = (uint32_t *) ( ( ((unsigned long int)b08+3)/4 ) * 4); \
+  padding = (unsigned long int)dataout - (unsigned long int)b08; \
   dataout_save1[1] |= (padding&0x3)<<14; /*update bank header (2nd word) with padding info*/ \
   /*printf("CPCLOSE: 0x%016x(%d) --- 0x%016x(%d) --> padding %d\n",dataout,dataout,b08,b08,((dataout_save1[1])>>14)&0x3);*/ \
-  *dataout_save1 = ((uint64_t)dataout-(uint64_t)dataout_save1)/4 - 1; /*write bank length in 32bit words*/ \
+  *dataout_save1 = ((unsigned long int)dataout-(unsigned long int)dataout_save1)/4 - 1; /*write bank length in 32bit words*/ \
   /*printf("CPCLOSE: *dataout_save1 = 0x%016x (0x%016x 0x%016x)\n",*dataout_save1,dataout,dataout_save1);*/ \
   lenout += (*dataout_save1+1); \
   lenev += (*dataout_save1+1); \
@@ -668,7 +689,7 @@ static unsigned int Tcode;
   source##_ASYNC(code); \
   logMsg("CTRIGRSA: set handler and done, code=%d\n",code,2,3,4,5,6);	\
   logMsg("CTRIGRSA: 0x%08x 0x%08x 0x%08x 0x%08x\n", \
-		(uint64_t)doneRtns,(uint64_t)trigRtns,Tcode,(uint64_t)ttypeRtns,5,6);	   \
+		(unsigned long int)doneRtns,(unsigned long int)trigRtns,Tcode,(unsigned long int)ttypeRtns,5,6);	   \
 }
 
 #define CTRIGRSS(source,code,handler,done) \
@@ -681,7 +702,7 @@ static unsigned int Tcode;
   source##_SYNC(code); \
   logMsg("CTRIGRSS_##source: set handler and done, code=%d\n",code,2,3,4,5,6); \
   logMsg("CTRIGRSS_##source: 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n", \
-		(uint64_t)doneRtns,(uint64_t)trigRtns,(uint64_t)syncTRtns,Tcode,(uint64_t)ttypeRtns,6);			   \
+		(unsigned long int)doneRtns,(unsigned long int)trigRtns,(unsigned long int)syncTRtns,Tcode,(unsigned long int)ttypeRtns,6);			   \
 }
 
 

@@ -48,13 +48,13 @@ rcRcsMsgToDbase::doit (void)
 {
   rcClient& client = netHandler_.clientHandler ();
   if (state () > 0) {  // after button pressed
-    daqData data (netHandler_.exptname (), "rcsMsgToDbase", 1);
+    daqData data (netHandler_.exptname (), (char *)"rcsMsgToDbase", 1);
     client.setValueCallback (data, 
 			     &(rcRcsMsgToDbase::rcsMsgToDbaseCbk0),
 			     (void *)this);
   }
   else {
-    daqData data (netHandler_.exptname (), "rcsMsgToDbase", 0);
+    daqData data (netHandler_.exptname (), (char *)"rcsMsgToDbase", 0);
     client.setValueCallback (data, 
 			     &(rcRcsMsgToDbase::rcsMsgToDbaseCbk1),
 			     (void *)this);

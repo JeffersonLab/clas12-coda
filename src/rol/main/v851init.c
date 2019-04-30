@@ -11,6 +11,7 @@
 
 #ifdef Linux_vme
 
+#include "jvme.h"
 #include "v851.h"
 
 
@@ -54,7 +55,6 @@ vmeBusUnlock();
 int
 main()
 {
-  return(0);
 }
 
 #endif

@@ -51,7 +51,7 @@ main(int argc, char **argv)
   decode_command_line(argc,argv);
 
 
-  server.AddSendTopic(getenv("EXPID"), NULL, NULL, "ipc_msg");
+  server.AddSendTopic(getenv("EXPID"), NULL, NULL, (char *)"ipc_msg");
   server.Open();
 
 

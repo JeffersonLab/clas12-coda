@@ -51,6 +51,9 @@ v1495firmware(0x90a00000,"v1495vtop.rbf",0,1)
 
 #ifdef Linux_vme
 
+#include "jvme.h"
+#include "v1495.h"
+
 int
 main(int argc, char *argv[])
 {

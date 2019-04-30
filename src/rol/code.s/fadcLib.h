@@ -776,6 +776,14 @@ typedef struct
 
 int faMeasureChannelPedestal(int id, unsigned int chan, fa250Ped *ped);
 
+int faGetChThreshold(int id, int ch);
+int faSetChThreshold(int id, int ch, int threshold);
+
+void faSetA32BaseAddress(unsigned int addr);
+unsigned int faGetMinA32MB(int id);
+unsigned int faGetMaxA32MB(int id);
+
+
 #endif
 
 

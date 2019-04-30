@@ -33,12 +33,12 @@
 #include <rcComdOption.h>
 #include "rcLoad.h"
 
-#define RC_LOAD_NAME "   Load   "
-#define RC_LOAD_MSG  "Load database to the Server"
+#define RC_LOAD_NAME (char *)"   Load   "
+#define RC_LOAD_MSG  (char *)"Load database to the Server"
 
 #if defined (_CODA_2_0_T) || defined (_CODA_2_0)
 rcLoad::rcLoad (Widget parent, rcButtonPanel* panel, rcClientHandler& handler)
-:rcComdButton (parent, RC_LOAD_NAME, RC_LOAD_MSG, panel, handler,"B")
+:rcComdButton (parent, RC_LOAD_NAME, RC_LOAD_MSG, panel, handler, (char *)"B")
 {
 #ifdef _TRACE_OBJECTS
   printf ("              Create rcLoad Class Object\n");
@@ -96,7 +96,7 @@ rcLoad::loadRcDbase (char *dbase, char* session)
   // get network handler
   rcClient& client = netHandler_.clientHandler ();
 
-  daqData data ("RCS", "command", "unkown");
+  daqData data ((char *)"RCS", (char *)"command", (char *)"unkown");
   // insert database name + session name into data object
   char* temp[2];
   temp[0] = new char[::strlen (dbase) + 1];
@@ -112,7 +112,7 @@ rcLoad::loadRcDbase (char *dbase, char* session)
 				       (rcCallback)&(rcLoad::loadCallback), 
 				       (void *)this);
   if (status != CODA_SUCCESS) 
-    reportErrorMsg ("Cannot send load database command");
+    reportErrorMsg ((char *)"Cannot send load database command");
 }
 #else
 void
@@ -137,7 +137,7 @@ rcLoad::loadRcDbase (char *dbase)
 				       (rcCallback)&(rcLoad::loadCallback), 
 				       (void *)this);
   if (status != CODA_SUCCESS) 
-    reportErrorMsg ("Cannot send load database command");
+    reportErrorMsg ((char *)"Cannot send load database command");
 }
 #endif
 
@@ -146,5 +146,5 @@ rcLoad::loadCallback (int status, void* arg, daqNetData* data)
 {
   rcLoad* obj = (rcLoad *)arg;
   if (status != CODA_SUCCESS && status != CODA_IGNORED)
-    obj->reportErrorMsg ("Loading database failed !!!");
+    obj->reportErrorMsg ((char *)"Loading database failed !!!");
 }

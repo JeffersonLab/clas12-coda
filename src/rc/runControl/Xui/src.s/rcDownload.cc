@@ -35,8 +35,8 @@
 #include <rcInfoPanel.h>
 #include <rcRunConfigDialog.h>
 
-#define RC_DOWNLOAD_NAME " Download "
-#define RC_DOWNLOAD_MSG  "Download object code"
+#define RC_DOWNLOAD_NAME (char *)" Download "
+#define RC_DOWNLOAD_MSG  (char *)"Download object code"
 
 /*
 #define DEBUG_MSGS
@@ -44,7 +44,7 @@
 
 rcDownload::rcDownload (Widget parent, rcButtonPanel* panel,
 			rcClientHandler& handler)
-:rcComdButton (parent, RC_DOWNLOAD_NAME, RC_DOWNLOAD_MSG, panel, handler, "B")
+:rcComdButton (parent, RC_DOWNLOAD_NAME, RC_DOWNLOAD_MSG, panel, handler, (char *)"B")
 {
   printf ("rcDownload::rcDownload: Create rcDownload Class Object\n");
   // empty
@@ -64,7 +64,7 @@ rcDownload::doit (void)
   printf("rcDownload::doit reached\n");
 #endif
 
-  rcAudio ("download a run");
+  rcAudio ((char *)"download a run");
 
   assert (stWin_);
 
@@ -93,7 +93,7 @@ rcDownload::doit (void)
 #ifdef DEBUG_MSGS
     printf("rcDownload::doit 1\n");
 #endif
-    reportErrorMsg ("Cannot send download command to the server.");
+    reportErrorMsg ((char *)"Cannot send download command to the server.");
     rcAudio ("cannot send download command");
   }
   else
@@ -142,8 +142,8 @@ rcDownload::downloadCallback (int status, void* arg, daqNetData* data)
 
   if (status != CODA_SUCCESS && status != CODA_IGNORED)
   {
-    obj->reportErrorMsg ("Downloading a run failed !!!\n");
-    rcAudio ("downloading failed");
+    obj->reportErrorMsg ((char *)"Downloading a run failed !!!\n");
+    rcAudio ((char *)"downloading failed");
   }  
 
 }

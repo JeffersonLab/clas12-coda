@@ -271,6 +271,11 @@ typedef struct
 
 // /* Function Prototypes */
 // 
+int vetrocSlot(unsigned int id);
+int vetrocId(unsigned int slot);
+int vetrocTriggerPulseWidth(int id, unsigned int width);
+int vetrocLinkReset(int id);
+
 STATUS vetrocInit (UINT32 addr, UINT32 addr_inc, int nvetroc, int iFlag);
 int vetrocSetClockSource(int id, int clkSrc);
 void vetrocStatus(int id, int sflag);
@@ -301,5 +306,10 @@ void vetrocSync(int id);
 void vetrocGSync(int id);
 void vetrocTrig(int id);
 void vetrocGStatus(int sflag);
+
+int vetrocFirmwareUpdateVerify(int id, const char *filename);
+int vetrocFirmwareUpdate(int id, const char *filename);
+int vetrocFirmwareVerify(int id, const char *filename);
+
 
 #endif /* __VETROCLIB__ */

@@ -26,7 +26,7 @@
 //
 #include <XcodaErrorDialog.h>
 
-XcodaErrorDialog::XcodaErrorDialog(Widget parent, char *name, char *title)
+XcodaErrorDialog::XcodaErrorDialog(Widget parent, const char *name, const char *title)
 :XcodaMsgDialog(parent, name, title)
 {
 #ifdef _TRACE_OBJECTS

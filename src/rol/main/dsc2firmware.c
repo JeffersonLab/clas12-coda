@@ -18,11 +18,12 @@ VXWORKS:
 #include <stdlib.h>
 #include <string.h>
 
-#include "dsc2Lib.h"
-
-
 
 #ifdef Linux_vme
+
+#include "jvme.h"
+#include "dsc2Lib.h"
+#include "dsc2Config.h"
 
 int
 main(int argc, char *argv[])

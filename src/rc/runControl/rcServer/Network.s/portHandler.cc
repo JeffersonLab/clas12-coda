@@ -256,7 +256,7 @@ portHandler::handle_input (int)
           not only when we are active (probably need to do it only when it changed ???); it used mostly
           to send state to codaedit, see rcClient.cc */
           serverData = 0;
-          if(dataManager.findData (compName, "state", serverData) == CODA_SUCCESS)
+          if(dataManager.findData (compName, (char *)"state", serverData) == CODA_SUCCESS)
           {
             *serverData = theState; /* '=' is overloaded for daqData class, calls 'notifyChannels()', and 'write' if needed ? */
           }
@@ -264,7 +264,7 @@ portHandler::handle_input (int)
           /* sergey: do it even we are not ACTIVE, so for example in prestart used see zero event count,
              rather then the number of events from previous run */
           serverData = 0;
-          if(dataManager.findData (compName, "nevents", serverData) == CODA_SUCCESS)
+          if(dataManager.findData (compName, (char *)"nevents", serverData) == CODA_SUCCESS)
           {
             *serverData = nev;
           }
@@ -272,18 +272,18 @@ portHandler::handle_input (int)
           serverData = 0;
           if(daqrun_->status() == DA_ACTIVE)
           {   
-            if(dataManager.findData (compName, "nlongs", serverData) == CODA_SUCCESS)
+            if(dataManager.findData (compName, (char *)"nlongs", serverData) == CODA_SUCCESS)
             {
               *serverData = nlong;
             }
 
-            if(dataManager.findData (compName, "erate", serverData) == CODA_SUCCESS)
+            if(dataManager.findData (compName, (char *)"erate", serverData) == CODA_SUCCESS)
             {
               *serverData = evrate;
 			  /*printf("portHandler: >%s< erate=%f\n",compName,evrate);*/
             }
 
-            if(dataManager.findData (compName, "drate", serverData) == CODA_SUCCESS)
+            if(dataManager.findData (compName, (char *)"drate", serverData) == CODA_SUCCESS)
             {
               *serverData = nlongrate;
             }
@@ -326,7 +326,7 @@ portHandler::handle_input (int)
 printf("portHandler: sending ..\n");fflush(stdout);
 	  */
             daqData* serverData = 0;
-            if(dataManager.findData (compName, "livetime", serverData) == CODA_SUCCESS)
+            if(dataManager.findData (compName, (char *)"livetime", serverData) == CODA_SUCCESS)
             {
               *serverData = livetime;
 	  /*

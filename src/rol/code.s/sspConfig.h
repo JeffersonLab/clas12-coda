@@ -329,11 +329,17 @@ typedef struct {
   
 } SSP_CONF;
 
+
 /* functions */
+
+void sspSetExpid(char *string);
+int  sspConfig(char *fname);
 void sspInitGlobals();
-int sspReadConfigFile(char *filename);
-int sspDownloadAll();
-int sspConfig(char *fname);
+int  sspReadConfigFile_CheckArgs(int sscan_ret, int req, char *keyword);
+int  sspReadConfigFile(char *filename);
+int  sspDownloadAll();
+int  sspUploadAll(char *string, int length);
+int  sspUploadAllPrint();
 void sspMon(int slot);
 
 #endif

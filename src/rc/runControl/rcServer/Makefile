@@ -24,20 +24,31 @@ ifeq ("$(OSTYPE)","SunOS")
   CFLAGS = -g -KPIC -mt -DSunOS -DOSTYPE="SunOS"
 endif
 
+CLON_FLAGS += -D_TRACE_OBJECTS
 
 ###CLON_FLAGS += -DNEW_STUFF
 
 CLON_FLAGS += -I./src.s -I../Variables/src.s -I../Common/src.s  \
 	-I./Components.s -I./Constants.s -I./Network.s -I./Transitioners.s \
 	-I./pixmaps -I$(CODA)/common/include -I../../cg/cg.s -I../../motif/include \
-	-I../../sace3.1/include -I../../XmHTML-1.1.4/include $(X11INCDIR)
+	-I../../sace3.1/include $(X11INCDIR)
 
 LIBNAMES += ../Common/$(OSTYPE_MACHINE)/lib/libCommon.a
 LIBNAMES += ../Variables/$(OSTYPE_MACHINE)/lib/libVariables.a
 
 LIBNAMES += ../../sace3.1/$(OSTYPE_MACHINE)/lib/libsace3.1.a
 
-LIBNAMES += $(globallib)/libmysql4.1.20.a
+LIBNAMES += $(globallib)/libcodautil.a
+
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+endif
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
+  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+endif
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+endif
 
 LIBNAMES += $(X11LIBS)
 LIBNAMES += $(SYSLIBS)

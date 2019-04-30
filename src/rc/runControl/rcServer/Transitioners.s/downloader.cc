@@ -32,8 +32,6 @@
 #include <daqSubSystem.h>
 #include "downloader.h"
 
-#define _TRACE_OBJECTS
-
 downloader::downloader (daqSystem* system)
 :transitioner (system), timeoutCache_ (0)
 {

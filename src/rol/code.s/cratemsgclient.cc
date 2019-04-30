@@ -119,7 +119,7 @@ int CrateMsgClient::SendRaw(const void* buffer, int length/*, ESendRecvOptions o
     return(0);
   }
  
-
+  return(0);
 }
 
 

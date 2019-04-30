@@ -1,5 +1,5 @@
 /* XPM */
-static char * eth_input_sel_xpm[] = {
+static const char *eth_input_sel_xpm[] = {
 "32 32 10 1",
 " 	c #C30BC30BC30B",
 ".	c #000000000000",

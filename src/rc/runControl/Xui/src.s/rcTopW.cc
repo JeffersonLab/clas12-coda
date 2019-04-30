@@ -34,17 +34,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include <rcMenuWindow.h>
-#include "rcTopW.h"
-/*#include <XmHTML.h>*/
 
-//Sergey extern "C" _XmHTMLRaiseFormWidgets(Widget html);;
+#include "rcMenuWindow.h"
+#include "rcTopW.h"
+
 
 rcTopW::rcTopW (char* name, rcClientHandler& handler)
 :XcodaTopLevel (name), window_ (0), netHandler_ (handler)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("         Create rcTopW Class Object\n");
+  printf ("         Create rcTopW Class Object\n"); fflush(stdout);
 #endif
   // empty
 }
@@ -52,7 +51,7 @@ rcTopW::rcTopW (char* name, rcClientHandler& handler)
 rcTopW::~rcTopW (void)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("         Delete rcTopW Class Object\n");
+  printf ("         Delete rcTopW Class Object\n"); fflush(stdout);
 #endif
   // menu window will be destroyed by Xt destroy callback
   if (netHandler_.connected ())
@@ -65,13 +64,17 @@ rcTopW::CreateBaseWidget (Widget parent)
   Arg arg[20];
   int ac = 0;
   char	  help_file[1000];
+
+#ifdef _TRACE_OBJECTS
+  printf ("rcTopW::CreateBaseWidget\n"); fflush(stdout);
+#endif
   
   ac = 0;
   XtSetArg (arg[ac], XtNheight, HeightOfScreen(XtScreen(parent))); ac++;
   XtSetArg (arg[ac], XtNwidth, WidthOfScreen(XtScreen(parent))); ac++;
   XtSetValues (parent, arg, ac);
 
-  window_ = new rcMenuWindow (parent, "rcTopWindow", netHandler_);
+  window_ = new rcMenuWindow (parent, (char *)"rcTopWindow", netHandler_);
   window_->init ();
 
   return window_->baseWidget ();
@@ -80,5 +83,8 @@ rcTopW::CreateBaseWidget (Widget parent)
 Widget
 rcTopW::RightWindow ()
 {
+#ifdef _TRACE_OBJECTS
+  printf ("rcTopW::RightWindow\n"); fflush(stdout);
+#endif
   return window_->rframe_;
 }

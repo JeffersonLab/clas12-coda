@@ -1,5 +1,5 @@
 /* XPM */
-static char * roc_btn_xpm[] = {
+static const char *roc_btn_xpm[] = {
 "36 32 35 1",
 " 	c #7DF77DF77DF7",
 ".	c #7DF77DF77DF7",

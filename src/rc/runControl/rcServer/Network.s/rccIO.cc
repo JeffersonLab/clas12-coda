@@ -93,7 +93,7 @@ rccIO::handle_close (int, Reactor_Mask)
   run_->updateClientInfo (this);
   if (master_) {
     master_ = 0;
-    run_->updateMasterInfo ("unknown");
+    run_->updateMasterInfo ((char *)"unknown");
     run_->updateControlDispInfo (0);
   }
   delete this;
@@ -190,7 +190,7 @@ rccIO::handle_input (int)
         case DABECOMEMASTER:
         {
 	      funcst = requestMastership ();
-	      daqNetData data (run_->exptname(), "command", funcst);
+	      daqNetData data (run_->exptname(), (char *)"command", funcst);
 	      sendResult (recver->type(), data, recver->reqId ());
 	      delete recver;
         }
@@ -199,7 +199,7 @@ rccIO::handle_input (int)
         case DACANCELMASTER:
         {
 	      funcst = giveupMastership ();
-	      daqNetData data (run_->exptname(), "command", funcst);
+	      daqNetData data (run_->exptname(), (char *)"command", funcst);
 	      sendResult (recver->type(), data, recver->reqId ());
 	      delete recver;
         }
@@ -209,7 +209,7 @@ rccIO::handle_input (int)
         {
 	      if (isMaster ()) funcst = CODA_SUCCESS;
 	      else             funcst = CODA_ERROR;
-	      daqNetData data (run_->exptname (), "command", funcst);
+	      daqNetData data (run_->exptname (), (char *)"command", funcst);
 	      sendResult (recver->type (), data, recver->reqId ());
 	      delete recver;
         }
@@ -219,7 +219,7 @@ rccIO::handle_input (int)
         {
 	      run_->online ();
 	      run_->startUpdatingDynamicVars ();
-	      daqNetData data (run_->exptname (), "command", CODA_SUCCESS);
+	      daqNetData data (run_->exptname (), (char *)"command", CODA_SUCCESS);
 	      sendResult (recver->type (), data, recver->reqId ());
 	      delete recver;
         }
@@ -229,7 +229,7 @@ rccIO::handle_input (int)
         {
 	      run_->stopUpdatingDynamicVars ();
 	      run_->offline ();
-	      daqNetData data (run_->exptname (), "command", CODA_SUCCESS);
+	      daqNetData data (run_->exptname (), (char *)"command", CODA_SUCCESS);
 	      sendResult (recver->type (), data, recver->reqId ());
 	      delete recver;
         }
@@ -238,7 +238,7 @@ rccIO::handle_input (int)
         case DACANCELTRAN:
         {
 	      run_->cancelTransition ();
-	      daqNetData data (run_->exptname (), "command", CODA_SUCCESS);
+	      daqNetData data (run_->exptname (), (char *)"command", CODA_SUCCESS);
 	      sendResult (recver->type (), data, recver->reqId ());
 	      delete recver;
         }
@@ -258,21 +258,21 @@ rccIO::handle_input (int)
 	      int status = run_->ask_component (this, recver, &result);
 	      if (status != CODA_SUCCESS)
           {
-	        daqNetData data (run_->exptname (), "command", (char *) "ERROR");
+	        daqNetData data (run_->exptname (), (char *)"command", (char *) "ERROR");
 	        sendResult (recver->type (), data, recver->reqId ());
 	      }
           else
           {
 	        if (result)
             {
-	          daqNetData data (run_->exptname (), "command", result);
+	          daqNetData data (run_->exptname (), (char *)"command", result);
 	          sendResult (recver->type () , data, recver->reqId ());
 	          // result is allocated inside the tcl part, has to free it
 	          free (result);
             }
             else
             {
-	          daqNetData data (run_->exptname (), "command", "OK");
+	          daqNetData data (run_->exptname (), (char *)"command", (char *)"OK");
 	          sendResult (recver->type () , data, recver->reqId ());
 	        }
 	      }
@@ -345,7 +345,7 @@ rccIO::accessViolation (int command, long id)
 {
   assert (run_);
 
-  daqNetData res (run_->exptname(), "command", (int)CODA_ACCESS_VIOLATION);
+  daqNetData res (run_->exptname(), (char *)"command", (int)CODA_ACCESS_VIOLATION);
   rcMsg msg (command, res, id);
   int n = clientStream_ << msg;
   if (n <= 0) {
@@ -443,7 +443,7 @@ rccIO::giveupMastership (void)
     master_ = 0;
 
     assert (run_);
-    run_->updateMasterInfo ("unknown");
+    run_->updateMasterInfo ((char *)"unknown");
     run_->updateControlDispInfo (0);
 
     return CODA_SUCCESS;

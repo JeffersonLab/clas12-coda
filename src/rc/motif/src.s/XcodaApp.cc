@@ -43,17 +43,20 @@
 //
 //
 #include <stdio.h>
-#include "XcodaApp.h"
-#include "XcodaTopLevel.h"
 #include <assert.h>
 #include <X11/xpm.h>
-#include <stone.xpm>
+
+#include "XcodaApp.h"
+#include "XcodaTopLevel.h"
+
+#include "stone.xpm"
+
 /*
 #define _TRACE_OBJECTS
 */
 extern "C" void exit(int);
 
-extern "C" Pixmap XcodaCreatePixmapFromXpm(Widget,char**,int);
+extern "C" Pixmap XcodaCreatePixmapFromXpm(Widget, const char**, int);
 
 Pixmap bg_pixmap;
 
@@ -80,7 +83,7 @@ XcodaApp::XcodaApp ( char *appClassName )
   _fallback_resources = 0;
 }
 
-XcodaApp::XcodaApp ( char *appClassName, char **res)
+XcodaApp::XcodaApp (char *appClassName, char **res)
 :XcodaUi ( appClassName ), _listLocked (0)
 {
 #ifdef _TRACE_OBJECTS
@@ -191,10 +194,10 @@ void XcodaApp::initialize ( unsigned int *argcp, char **argv )
   XtRealizeWidget ( _w );
     
   // Install background pixmaps
-  bg_pixmap =  XcodaCreatePixmapFromXpm(_w,magick, 1);
+  bg_pixmap =  XcodaCreatePixmapFromXpm(_w, magick, 1);
   XImage *image = XGetImage(XtDisplay(_w), bg_pixmap, 0, 0, 159, 160, AllPlanes, XYPixmap);
   // image->depth = 1;
-  XmInstallImage (image, "bg_pixmap1");
+  XmInstallImage (image, (char *)"bg_pixmap1");
   
   XSetErrorHandler (Xhandler);
 
@@ -211,7 +214,7 @@ void XcodaApp::initialize ( unsigned int *argcp, char **argv )
 XcodaApp::~XcodaApp (void)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("XcodaApp Destroy Itself\n");
+  printf ("XcodaApp Destroy Itself\n");fflush(stdout);
 #endif
   delete []_applicationClass;
   removeAllWindows ();

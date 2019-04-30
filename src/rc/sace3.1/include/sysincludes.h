@@ -87,7 +87,9 @@ typedef int ssize_t;
 #endif /* ACE_HAS_CPLUSPLUS_HEADERS */
 
 #if !defined (ACE_HAS_RTLD_LAZY_V)
+#ifndef RTLD_LAZY /*sergey: defined in /usr/include/bits/dlfcn.h */
 #define RTLD_LAZY 1
+#endif /*sergey*/
 #endif /* !ACE_HAS_RTLD_LAZY_V */
 
 #if defined (ACE_HAS_PTHREADS)

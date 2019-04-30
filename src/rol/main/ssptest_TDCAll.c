@@ -35,6 +35,12 @@ int sspRich_GetNmarocAll();
 int gmap[8][32][3][64];// slot, fiber, asic, channel
 unsigned int dabuf[BUFSIZE];
 
+//----------------------------------------
+int GetGain(int slot,int fiber,int asic,int channel){
+//----------------------------------------
+
+  return gmap[slot][fiber][asic][channel];
+}
 
 //----------------------------------------
 int main(int argc, char *argv[]){
@@ -671,12 +677,6 @@ int LoadGains(){
   return 0;
 }
 
-//----------------------------------------
-int GetGain(int slot,int fiber,int asic,int channel){
-//----------------------------------------
-
-  return gmap[slot][fiber][asic][channel];
-}
 
 
 #else

@@ -1,3 +1,11 @@
+
+/* vtpserver.c */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 #if defined(Linux_armv7l)
 
 #include <sys/mman.h>
@@ -6,17 +14,14 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 
 #include "ipc.h"
 #include "vtpLib.h"
 
 void sig_handler(int signo);
 
-int load_firmware()
+int
+load_firmware()
 {
   FILE *f;
   char buf[1000], host[100], hostfile[100], z7file[100], v7file[100];
@@ -86,7 +91,6 @@ main(int argc, char *argv[])
     exit(0);
   }
 
-
   stat = vtpOpen(VTP_FPGA_OPEN|VTP_I2C_OPEN|VTP_SPI_OPEN);
   if(stat != (VTP_FPGA_OPEN|VTP_I2C_OPEN|VTP_SPI_OPEN))
     goto CLOSE;
@@ -130,7 +134,7 @@ CLOSE:
   vtpClose(VTP_FPGA_OPEN|VTP_I2C_OPEN|VTP_SPI_OPEN);
   printf("vtpClose'd\n");
   
-  return 0;
+  exit(0);
 }
 
 void
@@ -155,9 +159,9 @@ sig_handler(int signo)
 
 #else
 
+int
 main()
 {
-  return;
 }
 
 #endif

@@ -84,7 +84,7 @@ void
 rcRunTypeOption::startMonitoringRunTypes (void)
 {
   rcClient& client = netHandler_.clientHandler ();
-  if (client.monitorOnCallback (client.exptname (), "allRunTypes",
+  if (client.monitorOnCallback (client.exptname (), (char *)"allRunTypes",
 				(rcCallback)&(rcRunTypeOption::runTypesCallback),
 				(void *)this) != CODA_SUCCESS)
   {
@@ -98,7 +98,7 @@ void
 rcRunTypeOption::endMonitoringRunTypes (void)
 {
   rcClient& client = netHandler_.clientHandler ();
-  if (client.monitorOffCallback (client.exptname (), "allRunTypes",
+  if (client.monitorOffCallback (client.exptname (), (char *)"allRunTypes",
 				 (rcCallback)&(rcRunTypeOption::runTypesCallback),
 				 (void *)this,
 				 (rcCallback)&(rcRunTypeOption::offCallback),

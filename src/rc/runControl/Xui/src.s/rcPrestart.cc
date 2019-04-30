@@ -30,12 +30,12 @@
 #include <rcAudioOutput.h>
 #include "rcPrestart.h"
 
-#define RC_PRESTART_NAME " Prestart "
-#define RC_PRESTART_MSG  "Prestart a run"
+#define RC_PRESTART_NAME (char *)" Prestart "
+#define RC_PRESTART_MSG  (char *)"Prestart a run"
 
 rcPrestart::rcPrestart (Widget parent, rcButtonPanel* panel,
 			rcClientHandler& handler)
-:rcComdButton (parent, RC_PRESTART_NAME, RC_PRESTART_MSG, panel, handler, "B")
+:rcComdButton (parent, RC_PRESTART_NAME, RC_PRESTART_MSG, panel, handler, (char *)"B")
 {
 #ifdef _TRACE_OBJECTS
   printf ("              Create rcPrestart Class Object\n");
@@ -54,18 +54,18 @@ rcPrestart::~rcPrestart (void)
 void
 rcPrestart::doit (void)
 {
-  rcAudio ("prestart a run");
+  rcAudio ((char *)"prestart a run");
 
   assert (stWin_);
 
   // get network handler first
   rcClient& client = netHandler_.clientHandler ();
-  daqData data ("RCS", "command", (int)DAPRESTART);
+  daqData data ((char *)"RCS", (char *)"command", (int)DAPRESTART);
   if (client.sendCmdCallback (DAPRESTART, data,
 			      (rcCallback)&(rcPrestart::prestartCallback),
 			      (void *)this) != CODA_SUCCESS){
-    reportErrorMsg ("Cannot send prestart command to the server.");
-    rcAudio ("can not send prestart");
+    reportErrorMsg ((char *)"Cannot send prestart command to the server.");
+    rcAudio ((char *)"can not send prestart");
   }
   else {
     stWin_->start ();
@@ -89,8 +89,8 @@ rcPrestart::prestartCallback (int status, void* arg, daqNetData* data)
   obj->bpanel_->activateTransitionPanel ();
 
   if (status != CODA_SUCCESS) {
-    obj->reportErrorMsg ("Prestarting a run failed !!!\n");
-    rcAudio ("prestarting failed");
+    obj->reportErrorMsg ((char *)"Prestarting a run failed !!!\n");
+    rcAudio ((char *)"prestarting failed");
   }
 }
 

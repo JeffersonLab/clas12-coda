@@ -31,3 +31,8 @@ typedef struct v1495_struct
 } V1495;
 
 #define V1495_BOARD_ID   0x01 /*  */
+
+
+/* functions */
+
+int v1495firmware(unsigned int baseaddr, char *filename, int page, int user_vme);

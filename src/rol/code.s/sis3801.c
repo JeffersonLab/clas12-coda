@@ -646,7 +646,7 @@ static char lookup[30][10] = {
 
 
 int
-l2_init(id)
+l2_init(int id)
 {
   L2SCALERID = id;
 

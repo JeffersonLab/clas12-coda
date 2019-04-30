@@ -790,12 +790,21 @@ static int et_start_heartbeat(et_id *id)
     err_abort(status, "Thread attr init");
   }
   
+  printf("1\n");fflush(stdout);
+  sleep(10);
+  printf("2\n");fflush(stdout);
+
   status = pthread_create(&id->sys->proc[id->proc].hbeat_thd_id,
                           &attr, et_heartbeat, (void *) id);
   if(status != 0) {
+    printf("ERROR: pthread_create returned status=%d\n",status);fflush(stdout);
     err_abort(status, "Start heartbeat");
   }
   
+
+
+
+
   status = pthread_attr_destroy(&attr);
   if(status != 0) {
     err_abort(status, "Thread attr destroy");

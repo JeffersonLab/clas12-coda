@@ -30,16 +30,45 @@
    with those used in vxWorks
 */
 /* \{ */
+
+#ifndef INT16
 #define INT16  short
+#endif
+
+#ifndef UINT16
 #define UINT16 unsigned short
+#endif
+
+#ifndef INT32
 #define INT32  int
+#endif
+
+#ifndef UINT32
 #define UINT32 unsigned int
+#endif
+
+#ifndef STATUS
 #define STATUS int
+#endif
+
+#ifndef TRUE
 #define TRUE  1
+#endif
+
+#ifndef FALSE
 #define FALSE 0
+#endif
+
+#ifndef OK
 #define OK    0
+#endif
+
+#ifndef ERROR
 #define ERROR -1
+#endif
+
 #define LOCAL 
+
 #ifndef _ROLDEFINED
 typedef void            (*VOIDFUNCPTR) ();
 typedef int             (*FUNCPTR) ();

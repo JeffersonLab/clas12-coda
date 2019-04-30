@@ -148,12 +148,86 @@ put_cb_data(int fd, CIRCBUF **cbh, void *data)
 #endif
   if((cbh == NULL)||(*cbh == NULL)) return(-1);
 
-/*sergey: temporary until resolved*/
-if(cbp <100000)
-{
-  printf("[%2d] PUT: ERROR return on chb<100000\n",fd);fflush(stdout);
-  return(-11);
-}
+
+  /*
+>>>>> close link from >mvt2< link=0x08978588
+debCloseLink: theLink=0x08978588 -> closing
+debCloseLink reached, fd=18 sock=17
+11: shutdown fd=18
+[18] LINK_sized_read(): closed
+[18] handle_link(): LINK_sized_read() returns 0
+[18] handle_link(): put_cb_data calling ...
+12
+debCloseLink: socket fd=18 sock=17 connection closed
+903
+903-1 18
+904
+904-1 18
+905
+905-1 18
+906
+
+
+[18] PUT: fifo is being emptied !
+[18] handle_link(): put_cb_data called
+[18] handle_link(): thread exit
+[18] 907
+debCloseLink: link is down
+debCloseLink: free memory
+debCloseLink: done.
+
+=c====
+
+
+
+
+
+>>>>> close link from >adcctof1< link=0x089786c0
+debCloseLink: theLink=0x089786c0 -> closing
+debCloseLink reached, fd=20 sock=19
+11: shutdown fd=20
+[20] LINK_sized_read(): closed
+[20] handle_link(): LINK_sized_read() returns 0
+[20] handle_link(): put_cb_data calling ...
+12
+debCloseLink: socket fd=20 sock=19 connection closed
+903
+903-1 20
+904
+904-1 20
+905
+905-1 20
+906
+
+
+debCloseLink: link is down
+debCloseLink: free memory
+debCloseLink: done.
+=cc============================================
+=cc============================================
+[20] PUT: ERROR return on chb<100000
+[20] handle_link(): put_cb_data called
+[20] handle_link(): thread exit
+[20] 907
+=cc============================================
+
+
+  */
+
+
+
+
+  /*sergey: temporary until resolved (seems happens running EB on vme controllers)*/
+  if(cbp <(CIRCBUF *)100000)
+  {
+    printf("[%2d] PUT: ERROR return on chb<100000\n",fd);fflush(stdout);
+    /*return(-11);*/
+    exit(1);
+  }
+
+
+
+
 
 #ifdef DEBUG
   printf("[%2d] PUT: 2\n",fd);
@@ -212,7 +286,7 @@ if(cbp <100000)
 
   /*****************************************************************/
   /* if data pointer is valid, get some info and set write pointer */
-  if((int)cbp->data[icb] != -1/*(int)data > 0 || (int)data < -120000000*/) /* can be -1 which means no buffer !!! */
+  if((long)cbp->data[icb] != -1/*(int)data > 0 || (int)data < -120000000*/) /* can be -1 which means no buffer !!! */
   {
     int lll;
     buf = (unsigned int *)data;
@@ -378,7 +452,7 @@ get_cb_count(CIRCBUF **cbh)
 	  { \
         bbb = evptr[jj]; \
         printf("[%1d] INFO(%d): roc %d, jj=%d: nw = %d, sync=%d tag=0x%02x typ=0x%02x num=%d\n",id,flag,i,jj,bbb[0],(bbb[1]>>24)&0xff,(bbb[1]>>16)&0xff,(bbb[1]>>8)&0xff,(bbb[1])&0xff); \
-		}*/ \																
+		}*/ \
 	} \
 	else \
 	{ \
@@ -493,7 +567,7 @@ cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk,
     }
 
 
-    if((int)cbp->data[icb] != -1 /*(int)cbp->data[icb] > 0 || (int)cbp->data[icb] < -120000000*/ )
+    if((long)cbp->data[icb] != -1 /*(int)cbp->data[icb] > 0 || (int)cbp->data[icb] < -120000000*/ )
     {
       if(icb_next_available)
       {
@@ -593,7 +667,7 @@ cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk,
 
     /* if buffer pointer is greater then zero then process the buffer */ 
     /* -1 means no buffer !!! */ 
-    if((int)cbp->data[icb] != -1 /*(int)cbp->data[icb] > 0 || (int)cbp->data[icb] < -120000000*/ ) 
+    if((long)cbp->data[icb] != -1 /*(int)cbp->data[icb] > 0 || (int)cbp->data[icb] < -120000000*/ ) 
     {
       nevbuf = nev; 
 
@@ -854,9 +928,9 @@ get_cb_data(CIRCBUF **cbh, int id, int chunk,
   *rocid  = cbp->rocid;
 
 #ifdef Linux
-  if((int)cbp->data[icb] != -1) 
+  if((long)cbp->data[icb] != -1) 
 #else
-  if((int)cbp->data[icb] > 0)
+  if((long)cbp->data[icb] > 0)
 #endif
   {
     /* get the number of events will be returned; it cannot be more then
@@ -882,9 +956,9 @@ get_cb_data(CIRCBUF **cbh, int id, int chunk,
   /* if buffer pointer is greater then zero then process the buffer */
   /* -1 which means no buffer !!! */
 #ifdef Linux
-  if((int)cbp->data[icb] != -1)
+  if((long)cbp->data[icb] != -1)
 #else
-  if((int)cbp->data[icb] > 0)
+  if((long)cbp->data[icb] > 0)
 #endif
   {
     nevbuf = nev;

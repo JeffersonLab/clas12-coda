@@ -2337,7 +2337,7 @@ faGetChanMask(int id)
   if((id<=0) || (id>21) || (FAp[id] == NULL)) 
     {
       logMsg("faGetChanMask: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-      return;
+      return(0);
     }
 
   fadcChanDisable[id] = cmask;  /* Set Global Variable */
@@ -3509,7 +3509,7 @@ faGetChannelDAC(int id, unsigned int chan)
   if((id<=0) || (id>21) || (FAp[id] == NULL)) 
     {
       logMsg("faGetChannelDAC: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-      return;
+      return(0);
     }
 
   FALOCK;
@@ -3692,7 +3692,7 @@ faSetHitbitTrigMask(int id, unsigned short chmask)
   if((id<=0) || (id>21) || (FAp[id] == NULL))
     {
       logMsg("faSetHitbitTrigMask: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-      return;
+      return(-1);
     }
 
   FALOCK;
@@ -3711,7 +3711,7 @@ faGetHitbitTrigMask(int id)
   if((id<=0) || (id>21) || (FAp[id] == NULL))
     {
       logMsg("faGetHitbitTrigMask: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-      return;
+      return(0);
     }
 
   FALOCK;
@@ -3748,7 +3748,7 @@ faGetHitbitMinTOT(int id)
   if((id<=0) || (id>21) || (FAp[id] == NULL))
     {
       logMsg("faGetHitbitTrigWidth: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-      return;
+      return(-1);
     }
 
   FALOCK;
@@ -3766,7 +3766,7 @@ faSetHitbitMinTOT(int id, unsigned short width)
   if((id<=0) || (id>21) || (FAp[id] == NULL))
     {
       logMsg("faSetHitbitTrigWidth: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-      return;
+      return(-1);
     }
 
   FALOCK;
@@ -3786,7 +3786,7 @@ faGetHitbitMinMultiplicity(int id)
   if((id<=0) || (id>21) || (FAp[id] == NULL))
     {
       logMsg("faGetHitbitTrigWidth: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-      return;
+      return(-1);
     }
 
   FALOCK;
@@ -3804,7 +3804,7 @@ faSetHitbitMinMultiplicity(int id, unsigned short mult)
   if((id<=0) || (id>21) || (FAp[id] == NULL))
     {
       logMsg("faSetHitbitTrigWidth: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-      return;
+      return(-1);
     }
 
   FALOCK;
@@ -3823,7 +3823,7 @@ faSetHitbitTrigWidth(int id, unsigned short width)
   if((id<=0) || (id>21) || (FAp[id] == NULL))
     {
       logMsg("faSetHitbitTrigWidth: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-      return;
+      return(-1);
     }
 
   FALOCK;
@@ -3842,7 +3842,7 @@ faGetHitbitTrigWidth(int id)
   if((id<=0) || (id>21) || (FAp[id] == NULL))
     {
       logMsg("faGetHitbitTrigWidth: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-      return;
+      return(0);
     }
 
   FALOCK;
@@ -3862,7 +3862,7 @@ faThresholdIgnore(int id, unsigned short chmask)
   if((id<=0) || (id>21) || (FAp[id] == NULL)) 
     {
       logMsg("faThresholdIgnore: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-      return;
+      return(-1);
     }
 
   FALOCK;
@@ -3898,7 +3898,7 @@ faGetThresholdIgnoreMask(int id)
   if((id<=0) || (id>21) || (FAp[id] == NULL)) 
   {
     logMsg("faGetThresholdIgnoreMask: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-    return;
+    return(0);
   }
 
   FALOCK;

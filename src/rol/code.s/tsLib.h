@@ -753,4 +753,11 @@ int  tsDuplGetBusyTime();
 unsigned int tsDuplGetBusyStatus();
 int  tsDuplPrintBusyStatus();
 
+/* sergey */
+unsigned int tsGetFPInput();
+unsigned int tsGetGTPInput();
+unsigned int tsGetBlockBufferLevel();
+int tsEnableTriggerSource();
+/* sergey */
+
 #endif /* TSLIB_H */

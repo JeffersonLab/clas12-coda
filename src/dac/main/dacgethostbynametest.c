@@ -3,6 +3,10 @@
 
 #include <stdio.h>
 
+#include "rolInt.h"
+#include "da.h"
+
+int
 main()
 {
   char ipaddress[20];

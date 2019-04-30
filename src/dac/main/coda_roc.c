@@ -17,6 +17,10 @@
 #include <sys/prctl.h>
 #endif
 
+#ifdef Linux_vme
+#include "jvme.h"
+#endif
+
 #define MYCLOCK NANOMICRO
 
 
@@ -32,9 +36,13 @@ int tcpServer(char *name, char *mysqlhost);
 
 
 #include "rc.h"
+#include "rolInt.h"
 #include "da.h"
 #include "circbuf.h"
 #include "bigbuf.h"
+
+#include "roc_process.h"
+#include "roc_network.h"
 
 
 static unsigned int tloop1=0;
@@ -48,15 +56,6 @@ static unsigned int tloop6=0;
 #define CODA_ERROR 1
 #define CODA_OK 0
 
-
-#ifdef __cplusplus
-typedef void 		(*VOIDFUNCPTR) (...); /* ptr to function returning void */
-#else
-typedef void 		(*VOIDFUNCPTR) (); /* ptr to function returning void */
-#endif			/* _cplusplus */
-
-
-#include "rolInt.h"
 
 
 typedef struct roc_private_store *rocParam;
@@ -205,6 +204,14 @@ static pthread_mutex_t transition_lock;
 /*static*/ pthread_mutex_t sendbuffer_lock;
 #define SENDBUFFER_LOCK pthread_mutex_lock(&sendbuffer_lock)
 #define SENDBUFFER_UNLOCK pthread_mutex_unlock(&sendbuffer_lock)
+
+
+/* local functions */
+int codaDownload(char *confname);
+int codaEnd();
+int codaPrestart();
+int codaGo();
+
 
 /****************************************************************************/
 /***************************** tcpServer functions **************************/

@@ -96,7 +96,7 @@ rcConnectDialog::createFormChildren (void)
   ac = 0;  
 
   // create label first
-  XmString t = XmStringCreateSimple ("Start or locate rcServer.");
+  XmString t = XmStringCreateSimple ((char *)"Start or locate rcServer.");
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNtopOffset, 2); ac++;
   XtSetArg (arg[ac], XmNleftAttachment, XmATTACH_FORM); ac++;
@@ -136,9 +136,9 @@ rcConnectDialog::createFormChildren (void)
 				      _w, arg, ac);
   XtManageChild (actionForm);
   // create all command buttons
-  rcXpmComdButton *open = new rcXpmComdButton(actionForm,"Connect",NULL,"connect",NULL,netHandler_);
-  rcXpmComdButton *spawn = new rcXpmComdButton(actionForm,"New",NULL,"spawn an rcServer",NULL,netHandler_);
-  rcXpmComdButton *cancel = new rcXpmComdButton(actionForm,"Cancel",NULL,"cancel dialog",NULL,netHandler_);
+  rcXpmComdButton *open = new rcXpmComdButton(actionForm,(char *)"Connect",NULL,(char *)"connect",NULL,netHandler_);
+  rcXpmComdButton *spawn = new rcXpmComdButton(actionForm,(char *)"New",NULL,(char *)"spawn an rcServer",NULL,netHandler_);
+  rcXpmComdButton *cancel = new rcXpmComdButton(actionForm,(char *)"Cancel",NULL,(char *)"cancel dialog",NULL,netHandler_);
 
   open->init();
   spawn->init();
@@ -248,7 +248,7 @@ rcConnectDialog::createFormChildren (void)
 
   ac = 0;
 
-  t = XmStringCreateSimple ("rcServer host");
+  t = XmStringCreateSimple ((char *)"rcServer host");
   XtSetArg (arg[ac], XmNleftAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
@@ -273,7 +273,7 @@ rcConnectDialog::createFormChildren (void)
  
   ac = 0;
   
-  t = XmStringCreateSimple ("Experiment");
+  t = XmStringCreateSimple ((char *)"Experiment");
   XtSetArg (arg[ac], XmNleftAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
@@ -297,7 +297,7 @@ rcConnectDialog::createFormChildren (void)
 				   tsubf1, arg, ac);
   ac = 0;
 
-  t = XmStringCreateSimple ("Session");
+  t = XmStringCreateSimple ((char *)"Session");
   XtSetArg (arg[ac], XmNleftAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
@@ -362,12 +362,12 @@ rcConnectDialog::popup (void)
   if (option->session())
     XmComboBoxSetString (exptname_, option->session ());
   else
-    XmComboBoxSetString (exptname_, "");
+    XmComboBoxSetString (exptname_, (char *)"");
 
   if (option->dbasename())
     XmComboBoxSetString (exptid_, option->dbasename ());
   else
-    XmComboBoxSetString (exptid_, "");
+    XmComboBoxSetString (exptid_, (char *)"");
 }
 
 extern int doTk;
@@ -412,8 +412,8 @@ rcConnectDialog::storeRcServerInfo (void)
 
 printf("CEDIT 2\n");
 #ifdef USE_CREG
-    coda_Send(XtDisplay(_w),"CEDIT",cmd);
-    coda_Send(XtDisplay(_w),"ALLROCS",cmd);
+    coda_Send(XtDisplay(_w),(char *)"CEDIT",cmd);
+    coda_Send(XtDisplay(_w),(char *)"ALLROCS",cmd);
 #endif
   }
   XtFree (dbasename);
@@ -441,8 +441,8 @@ rcConnectDialog::connect (void)
 
 
   if (connect_->connect ( ) != CODA_SUCCESS) {
-    reportError ("Cannot connect to the RunControl Server");
-    rcAudio ("can not connect to run control server");
+    reportError ((char *)"Cannot connect to the RunControl Server");
+    rcAudio ((char *)"can not connect to run control server");
   }
 }
 
@@ -466,22 +466,22 @@ rcConnectDialog::dbaseDropDownCbk (Widget w, XtPointer data,
   if (cbs->reason == XmCR_SHOW_LIST) {
     // try to connect to database
     if (dbaseHandler->connect (msqldhost) != CODA_SUCCESS) {
-      dialog->reportError ("Cannot connect to msql database server");
-      rcAudio ("can not connect to msql database server");
+      dialog->reportError ((char *)"Cannot connect to msql database server");
+      rcAudio ((char *)"can not connect to msql database server");
       return;
     }
     // first to remove all old items
     XmComboBoxDeleteAllItems (dialog->exptid_);
     // get all databases from dbase handler
     if (dbaseHandler->listAllDatabases () != CODA_SUCCESS) {
-      dialog->reportError ("Listing all databases from msql database failed");
+      dialog->reportError ((char *)"Listing all databases from msql database failed");
       return;
     }
     int numdbases = 0;
     char **dbases = dbaseHandler->allDatabases (numdbases);
 
     if (numdbases <= 0) {
-      dialog->reportError ("No databases have been found");
+      dialog->reportError ((char *)"No databases have been found");
       return;
     }
     
@@ -518,13 +518,13 @@ rcConnectDialog::sessionDropDownCbk (Widget w, XtPointer data,
   if (cbs->reason == XmCR_SHOW_LIST) {
     // try to connect to database
     if (dbaseHandler->connect (msqldhost) != CODA_SUCCESS) {
-      dialog->reportError ("Cannot connect to msql database server");
+      dialog->reportError ((char *)"Cannot connect to msql database server");
       return;
     }
     // select database selected from the list
     char* dbase = XmComboBoxGetString (dialog->exptid_);
     if (!dbase || !*dbase){
-      dialog->reportError ("Fatal: Cannot find selected database");
+      dialog->reportError ((char *)"Fatal: Cannot find selected database");
       XtFree (dbase);
       return;
     }
@@ -535,7 +535,7 @@ rcConnectDialog::sessionDropDownCbk (Widget w, XtPointer data,
 
     /* get all databases from dbase handler */
     if (dbaseHandler->listAllSessions () != CODA_SUCCESS) {
-      dialog->reportError ("Listing all sessions from msql database failed");
+      dialog->reportError ((char *)"Listing all sessions from msql database failed");
       return;
     }
     int numSessions = 0;

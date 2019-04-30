@@ -1601,20 +1601,25 @@ listSplit(char *list, char *separator, int *argc, char argv[NCODACOMMANDS][128])
   char *p, str[1024];
   strcpy(str,list);
   p = strtok(str,separator);
-  *argc = 0;
+  int count = 0;
   while(p != NULL)
   {
-    /*printf("1[%d]: >%s< (%d)\n",*argc,p,strlen(p));*/
-    strcpy((char *)&argv[*argc][0], (char *)p);
-    /*printf("2[%d]: >%s< (%d)\n",*argc,(char *)&argv[*argc][0],strlen((char *)&argv[*argc][0]));*/
-    (*argc) ++;
-    if( (*argc) >= NCODACOMMANDS)
+    /*printf("1[%d]: >%s< (%d)\n",count,p,strlen(p));*/
+    strncpy((char *)&argv[count][0], (char *)p, 127);
+    /*printf("2[%d]: >%s< (%d)\n",count,(char *)&argv[count][0],strlen((char *)&argv[count][0]));*/
+
+    count ++;
+	printf("count=%d\n",count);
+    if( count >= NCODACOMMANDS)
 	{
-      printf("listSplit ERROR: too many args\n");
+      printf("listSplit ERROR: too many args, count=%d\n",count);
       return(0);
 	}
+
     p = strtok(NULL,separator);
   }
+
+  *argc = count;
 
   return(0);
 }
@@ -1689,7 +1694,9 @@ messageHandler(char *message)
 
 
 
-
+#ifdef DO_CREG
+#include "codaRegistry.h"
+#endif
 
 
 int
@@ -2213,7 +2220,7 @@ ctermlib(int argc, char *argv[]ENVP_ARG)
 		{
           int ii, jj, ncommands;
           int  listArgc;
-          char listArgv[2][128];	
+          char listArgv[NCODACOMMANDS][128];	
 
 	      command_to_expect = ++argv;
           argc--;
@@ -2535,6 +2542,7 @@ ctermlib(int argc, char *argv[]ENVP_ARG)
 	}
 
 #ifdef DO_CREG
+
     else if (strlen(embedded_name)>1)
     {
       Widget w;
@@ -4202,7 +4210,7 @@ printf("179-error\n");
 		(void) strncpy(lastlog.ll_host,
 			       XDisplayString(screen->display),
 			       sizeof(lastlog.ll_host));
-		time(&lastlog.ll_time);
+		time((time_t *)&lastlog.ll_time);
 		lseek(i, (long) (screen->uid * sizeof(struct lastlog)), 0);
 		write(i, (char *) &lastlog, sizeof(struct lastlog));
 		close(i);

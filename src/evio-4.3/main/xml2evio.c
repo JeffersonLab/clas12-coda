@@ -123,7 +123,13 @@ static int debug          = 0;
 void decode_command_line(int argc, char **argv);
 void create_dictionary(void);
 void set_dict_defaults(void);
+
+#ifdef _MSC_VER
 FILE *open_xml_file(char *xmlfilename);
+#else
+gzFile open_xml_file(char *xmlfilename);
+#endif
+
 void startDictElement(void *userData, const char *name, const char **atts);
 void startDataElement(void *userData, const char *name, const char **atts);
 void endDataElement(void *userData, const char *name);
@@ -143,12 +149,16 @@ const char *get_char_tag(const char **atts, const int natt, const char *tag);
 /*--------------------------------------------------------------------------*/
 
 
-int main (int argc, char **argv) {
-
+int
+main (int argc, char **argv)
+{
   int status,l;
   size_t len;
+#ifdef _MSC_VER
   FILE *xmlfile;
-  
+#else
+  gzFile xmlfile;
+#endif  
 
   /* decode command line */
   decode_command_line(argc,argv);
@@ -159,14 +169,14 @@ int main (int argc, char **argv) {
 
 
   /* open xml input file */
-  if((xmlfile=open_xml_file(xmlfilename))==NULL) {
+  if((xmlfile = open_xml_file(xmlfilename))==NULL) {
     printf("\n ?Unable to open xml data file %s\n\n",xmlfilename);
     exit(EXIT_FAILURE);
   }
 
 
   /* open evio (binary) output file */
-  if((status=evOpen(eviofilename,"w",&eviohandle))!=0) {
+  if((status = evOpen(eviofilename,"w",&eviohandle))!=0) {
     printf("\n ?Unable to open evio output file %s, status=%d\n\n",eviofilename,status);
     exit(EXIT_FAILURE);
   }
@@ -185,9 +195,9 @@ int main (int argc, char **argv) {
   /* read event fragments from file and pass to parser */
   while (!done) {
 #ifdef _MSC_VER
-    len=(int)read(xmlfile,xmlbuf,MAXXMLBUF);
+    len = (int)read(xmlfile, xmlbuf, MAXXMLBUF);
 #else
-    len=(int)gzread(xmlfile,xmlbuf,MAXXMLBUF);
+    len = (int)gzread(xmlfile, xmlbuf, MAXXMLBUF);
 #endif
     XML_Parse(xmlParser,xmlbuf,len,len<MAXXMLBUF/4);
     done=done||(len<MAXXMLBUF/4);
@@ -279,16 +289,28 @@ void startDictElement(void *userData, const char *name, const char **atts) {
 /*---------------------------------------------------------------- */
 
 
-FILE *open_xml_file(char *xmlfilename) {
-
+#ifdef _MSC_VER
+FILE *
+#else
+gzFile
+#endif
+open_xml_file(char *xmlfilename)
+{
   int i=strspn(xmlfilename," \n\t");
 
-
   if(xmlfilename[i]=='-') {
+#ifdef _MSC_VER
     return(stdin);  /* no gzip input allowed from stdin */
+#else
+    return(NULL);
+#endif
 
   } else if(xmlfilename[i]=='|') {
+#ifdef _MSC_VER
     return(popen(xmlfilename+i+1,"r"));
+#else
+    return(NULL);
+#endif
 
   } else {
 #ifdef _MSC_VER

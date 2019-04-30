@@ -196,10 +196,10 @@ cgRotString::height (const cgScene* s) const
     // free font structure without unloading this font
     XFreeFontInfo (0, font, 1);
 
-    if (xp) {
+    if (xp)
+    {
       int devh = xp[0].y - xp[1].y;
-      if (devh == 0)
-	return 0.0;
+      if (devh == 0) return 0.0;
       // arbitrarily assign begining pont at 0, 0
       cgPoint devp0;
       cgPoint devp1 (0.0, devh);
@@ -208,9 +208,12 @@ cgRotString::height (const cgScene* s) const
       // remember X widnow inverse y direction
       return -winp1.givy () + winp0.givy ();
     }
+    return 0.0; /*sergey*/
   }
   else
+  {
     return 0.0;
+  }
 }
 
 double
@@ -234,11 +237,11 @@ cgRotString::width (const cgScene* s) const
     // free font structure without unloading this font
     XFreeFontInfo (0, font, 1);
 
-    if (xp) {
+    if (xp)
+    {
       int devw = xp[3].x - xp[0].x;
 
-      if (devw == 0)
-	return 0.0;
+      if (devw == 0) return 0.0;
       // arbitrarily assign begining pont at 0, 0
       cgPoint devp0;
       cgPoint devp1 (devw, 0.0);
@@ -246,6 +249,7 @@ cgRotString::width (const cgScene* s) const
       cgPoint winp1 = s->givwv().dev_win (devp1);
       return winp1.givx () - winp0.givx ();    
     }
+    return 0.0; /*sergey*/
   }
   else
     return 0.0;

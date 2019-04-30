@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     bvec.push_back(i);
   }
   for(int i=0; i<3; i++) ca[i]=sca[i].c_str();
-  char *fred="fred";
+  const char *fred = "fred";
 
   
   try {

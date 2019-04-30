@@ -33,11 +33,11 @@
 #include "rcAudioOutput.h"
 #include "rcEnd.h"
 
-#define RC_END_NAME "End Run"
-#define RC_END_MSG  "End a run"
+#define RC_END_NAME (char *)"End Run"
+#define RC_END_MSG  (char *)"End a run"
 
 rcEnd::rcEnd (Widget parent, rcButtonPanel* panel, rcClientHandler& handler)
-:rcComdButton (parent, RC_END_NAME, RC_END_MSG, panel, handler, "B")
+:rcComdButton (parent, RC_END_NAME, RC_END_MSG, panel, handler, (char *)"B")
 {
 #ifdef _TRACE_OBJECTS
   printf ("              Create rcEnd Class Object\n");
@@ -56,17 +56,17 @@ rcEnd::~rcEnd (void)
 void
 rcEnd::doit (void)
 {
-  rcAudio ("end this run");
+  rcAudio ((char *)"end this run");
   assert (stWin_);
 
   // get network handler first
   rcClient& client = netHandler_.clientHandler ();
-  daqData data ("RCS", "command", (int)DAEND);
+  daqData data ((char *)"RCS", (char *)"command", (int)DAEND);
   if (client.sendCmdCallback (DAEND, data,
 			      (rcCallback)&(rcEnd::endCallback),
 			      (void *)this) != CODA_SUCCESS) {
-    reportErrorMsg ("Cannot send end command to the server.");
-    rcAudio ("can not send end command");
+    reportErrorMsg ((char *)"Cannot send end command to the server.");
+    rcAudio ((char *)"can not send end command");
   }
   else {
     stWin_->start ();
@@ -90,8 +90,8 @@ rcEnd::endCallback (int status, void* arg, daqNetData* data)
   obj->bpanel_->activateTransitionPanel ();
 
   if (status != CODA_SUCCESS) {
-    obj->reportErrorMsg ("Ending a run failed !!!\n");
-    rcAudio ("ending this run failed");
+    obj->reportErrorMsg ((char *)"Ending a run failed !!!\n");
+    rcAudio ((char *)"ending this run failed");
   }
 }
 

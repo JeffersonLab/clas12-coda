@@ -31,7 +31,7 @@
 
 rcBackButton::rcBackButton (Widget parent, rcButtonPanel* panel, 
 		      rcClientHandler& handler)
-  :rcXpmComdButton (parent, "Back", back_xpm, "Go back one html page", panel, handler)
+  :rcXpmComdButton (parent, (char *)"Back", back_xpm, (char *)"Go back one html page", panel, handler)
 {
   appContext_ = XtWidgetToApplicationContext (parent);
 }

@@ -22,12 +22,16 @@
 
 /* ********************************************************************** */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
 #include <stdio.h>
 #include <math.h>
+
 #include "rotated.h"
 
 
@@ -126,7 +130,6 @@ static struct style_template {
 
 /* ---------------------------------------------------------------------- */
 
-#if defined (__STDC__)
 static char            *my_strdup(char* str);
 static char            *my_strtok(char* str1, char* str2);
 
@@ -181,28 +184,6 @@ static void             XRotFreeTextItem(Display* dpy,
 					 RotatedTextItem* item);
 static XImage          *XRotMagnifyImage(Display* dpy,
 					 XImage* ximage);
-#else
-static char            *my_strdup();
-static char            *my_strtok();
-
-float                   XRotVersion();
-void                    XRotSetMagnification();
-void                    XRotSetBoundingBoxPad();
-int                     XRotDrawString();
-int                     XRotDrawImageString();
-int                     XRotDrawAlignedString();
-int                     XRotDrawAlignedImageString();
-XPoint                 *XRotTextExtents();
-
-static XImage          *MakeXImage();
-static int              XRotPaintAlignedString();
-static int              XRotDrawHorizontalString();
-static RotatedTextItem *XRotRetrieveFromCache();
-static RotatedTextItem *XRotCreateTextItem();
-static void             XRotAddToLinkedList();
-static void             XRotFreeTextItem();
-static XImage          *XRotMagnifyImage();
-#endif
 
 
 /* ---------------------------------------------------------------------- */
@@ -211,12 +192,7 @@ static XImage          *XRotMagnifyImage();
 /**************************************************************************/
 /* Routine to mimic `strdup()' (some machines don't have it)              */
 /**************************************************************************/
-#if defined (__STDC__)
 static char *my_strdup(char* str)
-#else
-static char *my_strdup(str)
-    char *str;
-#endif
 {
     char *s;
     
@@ -238,12 +214,7 @@ static char *my_strdup(str)
 /* Routine to replace `strtok' : this one returns a zero length string if */
 /* it encounters two consecutive delimiters                               */
 /**************************************************************************/
-#if defined (__STDC__)
 static char *my_strtok(char* str1, char* str2)
-#else
-static char *my_strtok(str1, str2)
-    char *str1, *str2;
-#endif
 {
     char *ret;
     int i, j, stop;
@@ -293,13 +264,7 @@ static char *my_strtok(str1, str2)
 /* Return version/copyright information                                   */
 /**************************************************************************/
 
-#if defined (__STDC__)
 float XRotVersion(char* str, int n)
-#else
-float XRotVersion(str, n)
-    char *str;
-    int n;
-#endif
 {
     if(str!=NULL)
 	strncpy(str, XV_COPYRIGHT, n);
@@ -313,12 +278,7 @@ float XRotVersion(str, n)
 /**************************************************************************/
 /* Set the font magnification factor for all subsequent operations        */
 /**************************************************************************/
-#if defined (__STDC__)
 void XRotSetMagnification(float m)
-#else
-void XRotSetMagnification(m)
-    float m;
-#endif
 {
     if(m>0.)
 	style.magnify=m;
@@ -332,12 +292,7 @@ void XRotSetMagnification(m)
 /* Set the padding used when calculating bounding boxes                   */
 /**************************************************************************/
 
-#if defined (__STDC__)
 void XRotSetBoundingBoxPad(int p)
-#else
-void XRotSetBoundingBoxPad(p)
-    int p;
-#endif
 {
     if(p>=0)
 	style.bbx_pad=p;
@@ -351,13 +306,7 @@ void XRotSetBoundingBoxPad(p)
 /*  Create an XImage structure and allocate memory for it                 */
 /**************************************************************************/
 
-#if defined (__STDC__)
 static XImage *MakeXImage(Display* dpy, int w, int h)
-#else
-static XImage *MakeXImage(dpy, w, h)
-    Display *dpy;
-    int w, h;
-#endif
 {
     XImage *I;
     char *data;
@@ -386,20 +335,9 @@ static XImage *MakeXImage(dpy, w, h)
 /*      -no alignment, no background                                      */
 /**************************************************************************/
 
-#if defined (__STDC__)
 int XRotDrawString(Display* dpy, XFontStruct* font, 
 		   float angle, Drawable drawable, 
 		   GC gc, int x, int y, char* str)
-#else
-int XRotDrawString(dpy, font, angle, drawable, gc, x, y, str)
-    Display *dpy;
-    XFontStruct *font;
-    float angle;
-    Drawable drawable;
-    GC gc;
-    int x, y;
-    char *str;
-#endif
 {
     return (XRotPaintAlignedString(dpy, font, angle, drawable, gc,
 				   x, y, str, NONE, 0));
@@ -414,20 +352,9 @@ int XRotDrawString(dpy, font, angle, drawable, gc, x, y, str)
 /*      -no alignment, paints background                                  */
 /**************************************************************************/
 
-#if defined (__STDC__)
 int XRotDrawImageString(Display* dpy, XFontStruct* font, 
 			float angle, Drawable drawable, 
 			GC gc, int x, int y, char* str)
-#else
-int XRotDrawImageString(dpy, font, angle, drawable, gc, x, y, str)
-    Display *dpy;
-    XFontStruct *font;
-    float angle;
-    Drawable drawable;
-    GC gc;
-    int x, y;
-    char *str;
-#endif
 {
     return(XRotPaintAlignedString(dpy, font, angle, drawable, gc,
 				  x, y, str, NONE, 1));
@@ -442,22 +369,10 @@ int XRotDrawImageString(dpy, font, angle, drawable, gc, x, y, str)
 /*      -does alignment, no background                                    */
 /**************************************************************************/
 
-#if defined (__STDC__)
 int XRotDrawAlignedString(Display* dpy, XFontStruct* font, 
 			  float angle, Drawable drawable, 
 			  GC gc, int x, int y, 
 			  char* text, int align)
-#else
-int XRotDrawAlignedString(dpy, font, angle, drawable, gc, x, y, text, align)
-    Display *dpy;
-    XFontStruct *font;
-    float angle;
-    Drawable drawable;
-    GC gc;
-    int x, y;
-    char *text;
-    int align;
-#endif
 {
     return(XRotPaintAlignedString(dpy, font, angle, drawable, gc,
 				  x, y, text, align, 0));
@@ -472,23 +387,10 @@ int XRotDrawAlignedString(dpy, font, angle, drawable, gc, x, y, text, align)
 /*      -does alignment, paints background                                */
 /**************************************************************************/
 
-#if defined (__STDC__)
 int XRotDrawAlignedImageString(Display* dpy, XFontStruct* font, 
 			       float angle, Drawable drawable, 
 			       GC gc, int x, int y, 
 			       char* text, int align)
-#else
-int XRotDrawAlignedImageString(dpy, font, angle, drawable, gc, x, y, text,
-			       align)
-    Display *dpy;
-    XFontStruct *font;
-    float angle;
-    Drawable drawable;
-    GC gc;
-    int x, y;
-    char *text;
-    int align;
-#endif
 {
     return(XRotPaintAlignedString(dpy, font, angle, drawable, gc,
 				  x, y, text, align, 1));
@@ -502,25 +404,11 @@ int XRotDrawAlignedImageString(dpy, font, angle, drawable, gc, x, y, text,
 /*  Aligns and paints a rotated string                                    */
 /**************************************************************************/
 
-#if defined (__STDC__)
 static int XRotPaintAlignedString(Display* dpy, XFontStruct* font, 
 				  float angle, Drawable drawable, 
 				  GC gc, int x, int y, 
 				  char* text,  
 				  int align, int bg)
-#else
-static int XRotPaintAlignedString(dpy, font, angle, drawable, gc, x, y, text,
-				  align, bg)
-    Display *dpy;
-    XFontStruct *font;
-    float angle;
-    Drawable drawable;
-    GC gc;
-    int x, y;
-    char *text;
-    int align;
-    int bg;
-#endif
 {
     int i;
     GC my_gc;
@@ -752,24 +640,11 @@ static int XRotPaintAlignedString(dpy, font, angle, drawable, gc, x, y, text,
 /*  Draw a horizontal string in a quick fashion                           */
 /**************************************************************************/
 
-#if defined (__STDC__)
 static int XRotDrawHorizontalString(Display* dpy, XFontStruct* font, 
 				    Drawable drawable, GC gc, 
 				    int x, int y, 
 				    char* text, 
 				    int align, int bg)
-#else
-static int XRotDrawHorizontalString(dpy, font, drawable, gc, x, y, text, 
-			     align, bg)
-    Display *dpy;
-    XFontStruct *font;
-    Drawable drawable;
-    GC gc;
-    int x, y;
-    char *text;
-    int align;
-    int bg;
-#endif
 {
     GC my_gc;
     int nl=1, i;
@@ -864,46 +739,37 @@ static int XRotDrawHorizontalString(dpy, font, drawable, gc, x, y, text,
 /*       request, otherwise arrange for its creation                      */
 /**************************************************************************/
 
-#if defined (__STDC__)
 static RotatedTextItem *XRotRetrieveFromCache(Display* dpy, 
 					      XFontStruct* font, 
 					      float angle, 
 					      char* text, 
 					      int align)
-#else
-static RotatedTextItem *XRotRetrieveFromCache(dpy, font, angle, text, align)
-    Display *dpy;
-    XFontStruct *font;
-    float angle;
-    char *text;
-    int align;
-#endif
 {
     Font fid;
-    char *font_name=NULL;
-    unsigned /*sergey long*/int    name_value;
+    char *font_name = NULL;
+    long unsigned int    name_value;
     RotatedTextItem *item=NULL;
     RotatedTextItem *i1=first_text_item;
     
     /* get font name, if it exists */
     if(XGetFontProperty(font, XA_FONT, &name_value)) {
-	DEBUG_PRINT1("got font name OK\n");
-	font_name=XGetAtomName(dpy, name_value);
-	fid=0;
+	  DEBUG_PRINT1("got font name OK\n");
+	  font_name=XGetAtomName(dpy, name_value);
+	  fid=0;
     }
 #ifdef CACHE_FID
     /* otherwise rely (unreliably?) on font ID */
     else {
-	DEBUG_PRINT1("can't get fontname, caching FID\n");
-	font_name=NULL;
-	fid=font->fid;
+	  DEBUG_PRINT1("can't get fontname, caching FID\n");
+	  font_name=NULL;
+	  fid=font->fid;
     }
 #else
     /* not allowed to cache font ID's */
     else {
-	DEBUG_PRINT1("can't get fontname, can't cache\n");
-	font_name=NULL;
-	fid=0;
+	  DEBUG_PRINT1("can't get fontname, can't cache\n");
+	  font_name=NULL;
+	  fid=0;
     }
 #endif /*CACHE_FID*/
     
@@ -1021,20 +887,11 @@ static RotatedTextItem *XRotRetrieveFromCache(dpy, font, angle, text, align)
 /*  Create a rotated text item                                            */
 /**************************************************************************/
 
-#if defined (__STDC__)
 static RotatedTextItem *XRotCreateTextItem(Display* dpy, 
 					   XFontStruct* font, 
 					   float angle, 
 					   char* text, 
 					   int align)
-#else
-static RotatedTextItem *XRotCreateTextItem(dpy, font, angle, text, align)
-    Display *dpy;
-    XFontStruct *font;
-    float angle;
-    char *text;
-    int align;
-#endif
 {
     RotatedTextItem *item=NULL;
     Pixmap canvas;
@@ -1327,13 +1184,7 @@ static RotatedTextItem *XRotCreateTextItem(dpy, font, angle, text, align)
 /*      from the front as required to keep cache size below limit         */
 /**************************************************************************/
 
-#if defined (__STDC__)
 static void XRotAddToLinkedList(Display* dpy, RotatedTextItem* item)
-#else
-static void XRotAddToLinkedList(dpy, item)
-    Display *dpy;
-    RotatedTextItem *item;
-#endif
 {
     
   static /*sergey long*/ int current_size=0;
@@ -1441,13 +1292,7 @@ static void XRotAddToLinkedList(dpy, item)
 /*  Free the resources used by a text item                                */
 /**************************************************************************/
 
-#if defined (__STDC__)
 static void XRotFreeTextItem(Display* dpy, RotatedTextItem* item)
-#else
-static void XRotFreeTextItem(dpy, item)
-    Display *dpy;
-    RotatedTextItem *item;
-#endif
 {
     free(item->text);
 
@@ -1474,13 +1319,7 @@ static void XRotFreeTextItem(dpy, item)
 /* Magnify an XImage using bilinear interpolation                         */
 /**************************************************************************/
 
-#if defined (__STDC__)
 static XImage *XRotMagnifyImage(Display* dpy, XImage* ximage)
-#else
-static XImage *XRotMagnifyImage(dpy, ximage)
-    Display *dpy;
-    XImage *ximage;
-#endif
 {
     int i, j;
     float x, y;
@@ -1591,19 +1430,9 @@ static XImage *XRotMagnifyImage(dpy, ximage)
 /* Calculate the bounding box some text will have when painted            */
 /**************************************************************************/
 
-#if defined (__STDC__)
 XPoint *XRotTextExtents(Display* dpy, XFontStruct* font, 
 			float angle, int x, int y, 
 			char* text, int align)
-#else
-XPoint *XRotTextExtents(dpy, font, angle, x, y, text, align)
-    Display *dpy;
-    XFontStruct *font;
-    float angle;
-    int x, y;
-    char *text;
-    int align;
-#endif
 {
     register int i;
     char *str1, *str2, *str3;

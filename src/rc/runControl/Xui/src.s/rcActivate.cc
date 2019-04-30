@@ -30,12 +30,12 @@
 #include <rcAudioOutput.h>
 #include "rcActivate.h"
 
-#define RC_ACTIVATE_NAME "    Go    "
-#define RC_ACTIVATE_MSG  "Activate a run"
+#define RC_ACTIVATE_NAME (char *)"    Go    "
+#define RC_ACTIVATE_MSG  (char *)"Activate a run"
 
 rcActivate::rcActivate (Widget parent, rcButtonPanel* panel, 
 			rcClientHandler& handler)
-:rcComdButton (parent, RC_ACTIVATE_NAME, RC_ACTIVATE_MSG, panel, handler, "B")
+:rcComdButton (parent, RC_ACTIVATE_NAME, RC_ACTIVATE_MSG, panel, handler, (char *)"B")
 {
 #ifdef _TRACE_OBJECTS
   printf ("              Create rcActivate Class Object\n");
@@ -54,18 +54,18 @@ rcActivate::~rcActivate (void)
 void
 rcActivate::doit (void)
 {
-  rcAudio ("activate a run");
+  rcAudio ((char *)"activate a run");
 
   assert (stWin_);
 
   // get network handler first
   rcClient& client = netHandler_.clientHandler ();
-  daqData data ("RCS", "command", (int)DAGO);
+  daqData data ((char *)"RCS", (char *)"command", (int)DAGO);
   if (client.sendCmdCallback (DAGO, data,
 			      (rcCallback)&(rcActivate::activateCallback),
 			      (void *)this) != CODA_SUCCESS) {
-    reportErrorMsg ("Cannot send activate command to the server.");
-    rcAudio ("can not send go command");
+    reportErrorMsg ((char *)"Cannot send activate command to the server.");
+    rcAudio ((char *)"can not send go command");
   }
   else {
     stWin_->start ();
@@ -89,8 +89,8 @@ rcActivate::activateCallback (int status, void* arg, daqNetData* data)
   obj->bpanel_->activateTransitionPanel ();
 
   if (status != CODA_SUCCESS) {
-    obj->reportErrorMsg ("Activating a run failed !!!\n");
-    rcAudio ("activating a run failed");
+    obj->reportErrorMsg ((char *)"Activating a run failed !!!\n");
+    rcAudio ((char *)"activating a run failed");
   }
 }
 

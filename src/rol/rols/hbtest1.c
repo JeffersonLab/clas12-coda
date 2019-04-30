@@ -56,6 +56,7 @@ coda_roc_gef -s clasprod -o "adcecal1 ROC" -i
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -66,6 +67,22 @@ coda_roc_gef -s clasprod -o "adcecal1 ROC" -i
 typedef      long long       hrtime_t;
 */
 #endif
+
+#include "daqLib.h"
+#include "moLib.h"
+#include "v851.h"
+#include "sdLib.h"
+#include "vscmLib.h"
+#include "dcrbLib.h"
+#include "sspLib.h"
+#include "sspConfig.h"
+#include "fadcLib.h"
+#include "fadc250Config.h"
+#include "vetrocLib.h"
+#include "tiLib.h"
+#include "tiConfig.h"
+#include "dsc2Lib.h"
+#include "dsc2Config.h"
 
 #include "circbuf.h"
 
@@ -1121,7 +1138,7 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
 
   /*printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);*/
 
-  rol->dabufp = (int *) 0;
+  rol->dabufp = NULL;
 
   CEOPEN(EVTYPE, BT_BANKS);
 

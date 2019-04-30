@@ -1,10 +1,13 @@
 
 /* coda_erc.c - CODA format */
 
+#include <stdio.h>
+
+
 #if defined(Linux_armv7l)
 
-void
-coda_er()
+int
+main()
 {
   printf("coda_er is dummy for ARM etc\n");
 }
@@ -32,11 +35,12 @@ coda_er()
 
 /* INCLUDES */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #ifdef Linux
 #include <sys/prctl.h>
@@ -48,7 +52,10 @@ coda_er()
 #include <unistd.h> /* for usleep() */
 #endif
 
+#include "evio.h"
+
 #include "rc.h"
+#include "rolInt.h"
 #include "da.h"
 #include "libdb.h"
 
@@ -140,6 +147,11 @@ static unsigned int hpsbuf[MAXBUF];
 
 /****************************************************************************/
 /***************************** tcpServer functions **************************/
+
+
+/* local functions */
+static int erFlushET();
+
 
 static int tcpState = DA_UNKNOWN;
 
@@ -545,6 +557,7 @@ outputEvents(ERp erp, et_event **pe, int start, int stop)
 {
   int handle1, i, buflen, len, tmp, status=0;
   unsigned int *buffer, *ptr;
+  size_t size;
 
   /* evio file output */
   for (i=start; i <= stop; i++)
@@ -560,7 +573,8 @@ outputEvents(ERp erp, et_event **pe, int start, int stop)
 
 
 	
-    et_event_getlength(pe[i], &len);
+    et_event_getlength(pe[i], &size);
+    len = size;
     ptr = (unsigned int *)pe[i]->pdata;
     ptr += 8;
     len -= 32;
@@ -818,7 +832,8 @@ codaDownload(char *conf)
   ERp erp = (ERp) object->privated;
   static char tmp[1000];
   static char tmp2[1000];
-  int  ix;  
+  int  ix;
+  int split;
   int  listArgc;
   char listArgv[LISTARGV1][LISTARGV2];
 
@@ -827,7 +842,7 @@ codaDownload(char *conf)
 
   
   erp->object = object;
-  erp->write_thread = NULL; /*sergey: will check it*/
+  erp->write_thread = 0; /*sergey: will check it*/
 
   /***************************************************/
   /* extract all necessary information from database */
@@ -849,15 +864,15 @@ codaDownload(char *conf)
 
   sprintf(tmp,"SELECT value FROM %s_option WHERE name='SPLITMB'",
     configname);
-  if(dbGetInt(dbsock, tmp, &erp->split)==ER_ERROR)
+  if(dbGetInt(dbsock, tmp, &split)==ER_ERROR)
   {
     erp->split = 2047 << 20;
-    printf("cannot get SPLITMB, set erp->split=%d Bytes\n",erp->split);
+    printf("cannot get SPLITMB from database, set erp->split=%d Bytes\n",erp->split);
   }
   else
   {
-    printf("get erp->split = %d MBytes\n",erp->split);
-    erp->split = erp->split<<20;
+    printf("got SMPITMB = %d MBytes from database\n",split);
+    erp->split = split<<20;
     printf("set erp->split = %d Bytes\n",erp->split);
   }
 
@@ -929,7 +944,7 @@ codaDownload(char *conf)
   */
   {
     int  arg1c;
-    char arg1v[10][128];
+    char arg1v[10][256];
     char *p_sl;
     listSplit2(tmpp," ",&arg1c,arg1v);
     printf("\nfirst split, arg1c=%d, first piece >%s<\n",arg1c,arg1v[0]);
@@ -1078,7 +1093,7 @@ erDaqCmd(char *param)
   case 'o': /*open*/
     (*(erp->open_proc))(erp);
 
-    erp->write_thread = NULL; /*sergey: will check it*/
+    erp->write_thread = 0; /*sergey: will check it*/
     printf("starting write thread 1 ..\n");fflush(stdout);
     if(erp->fd)
     {
@@ -1092,7 +1107,7 @@ erDaqCmd(char *param)
     else
     {
       printf("No output (erp->fd = %d)\n",erp->fd);
-      erp->write_thread = NULL; /*sergey: will check it*/
+      erp->write_thread = 0; /*sergey: will check it*/
       return ER_ERROR;
     }
     break;
@@ -1122,7 +1137,7 @@ erDaqCmd(char *param)
 
         pthread_join(erp->write_thread, &status);
 
-        erp->write_thread = NULL; /*sergey: will check it*/
+        erp->write_thread = 0; /*sergey: will check it*/
         printf("write thread is done\n");fflush(stdout);
 	  }
 

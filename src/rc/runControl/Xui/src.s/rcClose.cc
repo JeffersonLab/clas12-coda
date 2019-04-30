@@ -81,7 +81,7 @@ rcClose::doit (void)
 
   if (netHandler_.connected ()) {
     if (!dialog_) {
-      dialog_ = new rcCloseDialog (this, "closeDialog", "Close Dialog",
+      dialog_ = new rcCloseDialog (this, (char *)"closeDialog", (char *)"Close Dialog",
 				   netHandler_);
       dialog_->init ();
       dialog_->alignment (XmALIGNMENT_CENTER);

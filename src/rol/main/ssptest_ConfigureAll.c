@@ -7,6 +7,7 @@
 #include <unistd.h> // sleep, usleep
 
 #include "sspLib.h"
+#include "sspLib_rich.h"
 #include "jvme.h"
 
 

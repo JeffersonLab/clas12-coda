@@ -68,6 +68,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
@@ -95,14 +96,13 @@
 #include "Editor_color_sel.h"
 #include "Editor_zoom.h"
 #include "./xpm_icon/stone.xpm"
-#include "XcodaXpm.h"
+#include "XcodaXpm_codaedit.h"
 
 SwGeometry sw_geometry;
 XpointerPosition xp_pos;
 XGC              xgc;
 XcodaEditorGraph coda_graph;
 
-#if defined (__STDC__)
 static void XcodaEditorInitXgc                     (Widget w);
 static void XcodaEditorInitSwGeometry              (Widget h_sc,
 						    Widget v_sc,
@@ -110,37 +110,52 @@ static void XcodaEditorInitSwGeometry              (Widget h_sc,
 						    Widget topRuler,
 						    Widget leftRuler);
 static void XcodaEditorInitGraph                   (Widget w);
-static void scrolled                               (Widget w,
-						    XtPointer data,
-						    XmScrollBarCallbackStruct* c);
-static void resize_callback                        (Widget w,
-						    XtPointer data,
-						    XmDrawingAreaCallbackStruct *);
 static void zoom_scroll_graph                      (XcodaEditorGraph* graph,
 						    Widget w,
 						    XEvent* event);
+static void updateIndicatorPositions               (void);
+
+
+
+static void scrolled                               (Widget w,
+						    XtPointer data,
+						    XtPointer callback_data);
+static void resize_callback                        (Widget w,
+						    XtPointer data,
+						    XtPointer callback_data);
 static void expose_callback                        (Widget w,
 						    XtPointer data,
-						    XmDrawingAreaCallbackStruct *);
-static void updateIndicatorPositions               (void);
+						    XtPointer callback_data);
+
+
+
+
 static void XcodaEditorBtndownAction               (Widget w,
 						    XtPointer data,
-						    XEvent* event);
+						    XEvent* event,
+                            Boolean* opt);
 static void XcodaEditorBtnupAction                 (Widget w,
 						    XtPointer data,
-						    XEvent* event);
+						    XEvent* event,
+                            Boolean* opt);
 static void XcodaEditorEnterWindowAction           (Widget w,
 						    XtPointer data,
-						    XEvent* event);
-static void XcodaEditorSetAddNodeMode              (Widget w,
-						    XtPointer data,
-						    XmAnyCallbackStruct* cbs);
+						    XEvent* event,
+                            Boolean* opt);
 static void XcodaEditorActivateAdd                 (Widget w,
 						    XtPointer data,
-						    XEvent* event);
+						    XEvent* event,
+                            Boolean* opt);
 static void XcodaEditorDeactivateAdd               (Widget w,
 						    XtPointer data,
-						    XEvent* event);
+						    XEvent* event,
+                            Boolean* opt);
+
+
+
+static void XcodaEditorSetAddNodeMode              (Widget w,
+						    XtPointer data,
+						    XtPointer callback_data);
 static void XcodaEditorHighLightPort               (XcodaEditorGraph* graph,
 						    ipPort* port);
 static void XcodaEditorUnselectNode                (XcodaEditorGraph* graph,
@@ -259,69 +274,6 @@ static Arc* newArcConnectingPorts                  (ipPort* from,
 static void config_arc_geometry                    (Arc* arc,
 						    ipPort* from,
 						    ipPort* to);
-#else
-static void XcodaEditorInitXgc                     ();
-static void XcodaEditorInitSwGeometry              ();
-static void XcodaEditorInitGraph                   ();
-static void scrolled                               ();
-static void resize_callback                        ();
-static void zoom_scroll_graph                      ();
-static void expose_callback                        ();
-static void updateIndicatorPositions               ();
-static void XcodaEditorBtndownAction               ();
-static void XcodaEditorBtnupAction                 ();
-static void XcodaEditorEnterWindowAction           ();
-static void XcodaEditorSetAddNodeMode              ();
-static void XcodaEditorActivateAdd                 ();
-static void XcodaEditorDeactivateAdd               ();
-static void XcodaEditorHighLightPort               ();
-static void XcodaEditorUnselectNode                ();
-static void XcodaEditorSelectNode                  ();
-static void XcodaEditorSelectArc                   ();
-static void XcodaEditorUnselectArc                 ();
-static drawComp *newDrawComp                       ();
-static drawComp *createDrawComp                    ();
-static drawComp *dupDrawComp                       ();
-static void     setGraphStartingPosition           ();
-static void     setDrawCompGeometry                ();
-static void     drawCompTransform                  ();
-static void     freeDrawComp                       ();
-static drawComp *XcodaEditorClickedNode            ();
-static ipPort   *XcodaEditorClickedPort            ();
-static Arc      *XcodaEditorClickedArc             ();
-static void XcodaEditorHighLightAllConnectedPorts  ();
-static void XcodaEditorUnhighLightAllConnectedPorts();
-static void StartAddNode                           ();
-static void StartAddExistingNode                   ();
-static void EndAddNode                             ();
-static void EndAddExistingNode                     ();
-static void StartMovingNode                        ();
-static void StartMovingArc                         ();
-static void EndMovingNode                          ();
-static void EndMovingArc                           ();
-static void StartConnectingPorts                   ();
-static void EndConnectingPorts                     ();
-static void HandleMotion                           ();
-static void HandleDoubleClick                      ();
-static void PositionNewNode                        ();
-static void PositionNewArc                         ();
-static void resize_comp                            ();
-static void connect_2cols                          ();
-static void connect_2cols_action                   ();
-static void redisplay                              ();
-static int  select_arc_or_node                     ();
-static void select_ip_ports                        ();
-static int  isOverlapAny                           ();
-static int  isDoubleClick                          ();
-static int  isArcMovable                           ();
-static void delete_arc                             ();
-static void reassign_arc_geometry                  ();
-static void delete_comp                            ();
-static Arc* newArcConnectingComps                  ();
-static Arc* newArcConnectingPorts                  ();
-static void config_arc_geometry                    ();
-#endif
-
 
 
 /* return a from widget containing two ruler 
@@ -567,7 +519,7 @@ XcodaEditorDrawingArea (Widget parent)
   /* configuration menus callbacks */
   XtAddCallback(manager.newconfig, XmNactivateCallback, 
 		XcodaEditorNewConfigCbk,
-		(XtPointer)0);   
+		(XtPointer)0);
   XtAddCallback(manager.openconfig, XmNactivateCallback, 
 		XcodaEditorOpenConfigCbk,
 		(XtPointer)0); 
@@ -880,31 +832,22 @@ static void XcodaEditorInitGraph(w)
  *    Only allow click button on the pushbutton to call callbacks                        *
  *    Key activate will not allowed                                                      *
  ****************************************************************************************/
-#if defined (__STDC__)
-static void XcodaEditorActivateAdd(Widget w, 
+static void
+XcodaEditorActivateAdd(Widget w, 
 				   XtPointer client_data, 
-				   XEvent* event)
-#else
-static void XcodaEditorActivateAdd(w, client_data, event)
-     Widget w;
-     XtPointer client_data;
-     XEvent    *event;
-#endif
+				   XEvent* event,
+                   Boolean* opt)
 {
   if (databaseSelected ())
     XtAddCallback(w, XmNactivateCallback,XcodaEditorSetAddNodeMode, (XtPointer)client_data);
 }
 
-#if defined (__STDC__)
-static void XcodaEditorDeactivateAdd(Widget w, 
+
+static void
+XcodaEditorDeactivateAdd(Widget w, 
 				     XtPointer client_data, 
-				     XEvent* event)
-#else
-static void XcodaEditorDeactivateAdd(w, client_data, event)
-     Widget w;
-     XtPointer client_data;
-     XEvent    *event;
-#endif
+				     XEvent* event,
+                     Boolean* opt)
 {
   XtRemoveAllCallbacks(w, XmNactivateCallback);
 }
@@ -998,16 +941,11 @@ void XcodaEditorBgPixmap(w)
  * Description:                                                          *
  *     Button down action routine                                        *
  ************************************************************************/
-#if defined (__STDC__)
-static void XcodaEditorBtndownAction(Widget w,
+static void
+XcodaEditorBtndownAction(Widget w,
 				     XtPointer client_data, 
-				     XEvent* event)
-#else
-static void XcodaEditorBtndownAction(w,client_data, event)
-     Widget w;
-     XtPointer client_data;
-     XEvent    *event;
-#endif
+				     XEvent* event,
+                     Boolean* opt)
 {
   drawComp *p;
   Arc      *arc;
@@ -1081,16 +1019,11 @@ static void XcodaEditorBtndownAction(w,client_data, event)
  * Description:                                                        *
  *     Button Up action routine for the drawing area                   *
  **********************************************************************/
-#if defined (__STDC__)
-static void XcodaEditorBtnupAction(Widget w,
+static void
+XcodaEditorBtnupAction(Widget w,
 				   XtPointer client_data, 
-				   XEvent* event)
-#else
-static void XcodaEditorBtnupAction(w,client_data, event)
-     Widget w;
-     XtPointer client_data;
-     XEvent    *event;
-#endif
+				   XEvent* event,
+                   Boolean* opt)
 {
   if(event->xbutton.button == Button1){
     switch(coda_graph.current_action){
@@ -1124,16 +1057,11 @@ static void XcodaEditorBtnupAction(w,client_data, event)
  * Description:                                                        *
  *    Enter window event handler                                       *
  **********************************************************************/
-#if defined (__STDC__)
-static void XcodaEditorEnterWindowAction(Widget w,
+static void
+XcodaEditorEnterWindowAction(Widget w,
 					 XtPointer client_data, 
-					 XEvent* event)
-#else
-static void XcodaEditorEnterWindowAction(w,client_data, event)
-     Widget w;
-     XtPointer client_data;
-     XEvent    *event;
-#endif
+					 XEvent* event,
+                     Boolean* opt)
 {
   switch(coda_graph.current_action)
   {
@@ -1176,16 +1104,8 @@ static void XcodaEditorEnterWindowAction(w,client_data, event)
  * Description:                                                        *
  *     Action routine corresponding button  motion event               *
  **********************************************************************/
-#if defined (__STDC__)
-void XcodaEditorTrackPointerPosition(Widget w,
-				     XtPointer client_data, 
-				     XEvent* event)
-#else
-void XcodaEditorTrackPointerPosition(w,client_data, event)
-     Widget w;
-     XtPointer client_data;
-     XEvent    *event;
-#endif
+void
+XcodaEditorTrackPointerPosition(Widget w, XtPointer client_data, XEvent* event, Boolean* opt)
 {
   int      rel_x, rel_y;
   int      col_off, row_off;
@@ -1243,16 +1163,10 @@ void XcodaEditorTrackPointerPosition(w,client_data, event)
  * Description:                                                     *
  *    Callback routine for add components with predefined type      *
  ********************************************************************/
-#if defined (__STDC__)
-void XcodaEditorAddCompNodeMode(Widget w, 
+void
+XcodaEditorAddCompNodeMode(Widget w, 
 				XtPointer client_data, 
-				XmAnyCallbackStruct* cbs)
-#else
-void XcodaEditorAddCompNodeMode(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+				XtPointer callback_data)
 {
   if (databaseSelected ()) {  
     /* reset toggle button part of graph commands */
@@ -1266,16 +1180,10 @@ void XcodaEditorAddCompNodeMode(w, client_data, cbs)
  * Description:                                                     *
  *    Callback routine for component button                         *
  ********************************************************************/
-#if defined (__STDC__)
-static void XcodaEditorSetAddNodeMode(Widget w, 
+static void
+XcodaEditorSetAddNodeMode(Widget w, 
 				      XtPointer client_data, 
-				      XmAnyCallbackStruct* cbs)
-#else
-static void XcodaEditorSetAddNodeMode(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+				      XtPointer callback_data)
 {
   /* reset toggle button part of graph commands */
   XcodaEditorResetGraphCmd();
@@ -1287,16 +1195,10 @@ static void XcodaEditorSetAddNodeMode(w, client_data, cbs)
  * Description:                                                    *
  *    Callback routine for delete node menu                        *
  ******************************************************************/
-#if defined (__STDC__)
-void XcodaEditorSetDeleteCompMode(Widget w, 
+void
+XcodaEditorSetDeleteCompMode(Widget w, 
 				  XtPointer client_data,
-				  XmAnyCallbackStruct* cbs)
-#else
-void XcodaEditorSetDeleteCompMode(w,client_data,cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+				  XtPointer callback_data)
 {
   /* reset toggle button part of graph commands */
   XcodaEditorResetGraphCmd();
@@ -1310,16 +1212,10 @@ void XcodaEditorSetDeleteCompMode(w,client_data,cbs)
  * Description:                                                    *
  *    Callback routine for delete arc menu                         *
  ******************************************************************/
-#if defined (__STDC__)
-void XcodaEditorSetDeleteArcMode(Widget w, 
+void
+XcodaEditorSetDeleteArcMode(Widget w, 
 				 XtPointer client_data, 
-				 XmAnyCallbackStruct* cbs)
-#else
-void XcodaEditorSetDeleteArcMode(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+				 XtPointer callback_data)
 {
   /* reset toggle button part of graph commands */
   XcodaEditorResetGraphCmd();
@@ -1332,18 +1228,13 @@ void XcodaEditorSetDeleteArcMode(w, client_data, cbs)
  * Description:                                                   *
  *    callback routine for undo button                            *
  *****************************************************************/
-#if defined (__STDC__)
-void XcodaEditorUndoAction(Widget w, 
+void
+XcodaEditorUndoAction(Widget w, 
 			   XtPointer client_data, 
-			   XmAnyCallbackStruct* cbs)
-#else
-void XcodaEditorUndoAction(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+			   XtPointer callback_data)
 {
   coda_graph.current_action = (int)client_data;
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
 
   switch(coda_graph.previous_action){
   case DELETE_ARC_ACTION:
@@ -1366,17 +1257,12 @@ void XcodaEditorUndoAction(w, client_data, cbs)
  * Description:                                                   *
  *    refresh everything                                          *
  *****************************************************************/
-#if defined (__STDC__)
-void XcodaEditorRedraw(Widget w,
+void
+XcodaEditorRedraw(Widget w,
 		       XtPointer client_data, 
-		       XmAnyCallbackStruct* cbs)
-#else
-void XcodaEditorRedraw(w,client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+		       XtPointer callback_data)
 {
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
   XClearWindow(xgc.dpy, XtWindow(sw_geometry.draw_area));
   (*coda_graph.redisplay)(&coda_graph, w, cbs->event);
 }
@@ -1386,16 +1272,10 @@ void XcodaEditorRedraw(w,client_data, cbs)
  * Description:                                                  *
  *     callback routine for resize component menu                *
  ****************************************************************/
-#if defined (__STDC__)
-void XcodaEditorResizeComp(Widget w, 
+void
+XcodaEditorResizeComp(Widget w, 
 			   XtPointer client_data, 
-			   XmAnyCallbackStruct* cbs)
-#else
-void XcodaEditorResizeComp(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+			   XtPointer callback_data)
 {
   /* reset toggle button part of graph commands */
   XcodaEditorResetGraphCmd();
@@ -1408,16 +1288,10 @@ void XcodaEditorResizeComp(w, client_data, cbs)
  * Description:                                                  *
  *     callback routine for connect two columns editing menu     *
  ****************************************************************/
-#if defined (__STDC__)
-void XcodaEditorConn2Cols (Widget w, 
+void
+XcodaEditorConn2Cols (Widget w, 
 			   XtPointer client_data, 
-			   XmAnyCallbackStruct* cbs)
-#else
-void XcodaEditorConn2Cols (w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+			   XtPointer callback_data)
 {
   /* reset toggle button part of graph commands */
   XcodaEditorResetGraphCmd();
@@ -1433,18 +1307,11 @@ void XcodaEditorConn2Cols (w, client_data, cbs)
  * Description:                                               *
  *    scroll bar callbacks                                    *
  *************************************************************/ 
-#if defined (__STDC__)
-static void scrolled(Widget w, XtPointer client_data, 
-		     XmScrollBarCallbackStruct* cbs)
-#else
-static void scrolled(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmScrollBarCallbackStruct *cbs;
-#endif
+static void
+scrolled(Widget w, XtPointer client_data, XtPointer callback_data)
 {
   int or = (int)client_data;
-
+  XmScrollBarCallbackStruct* cbs = (XmScrollBarCallbackStruct *)callback_data;
 
   if(or == XmVERTICAL){ /* vertical scroll bar */
     sw_geometry.zoomyoff = cbs->value;
@@ -1512,16 +1379,10 @@ static void updateIndicatorPositions()
  * Description:                                                *
  *     Drawing area resize callbacks                           *
  **************************************************************/
-#if defined (__STDC__)
-static void resize_callback(Widget w,
+static void
+resize_callback(Widget w,
 			    XtPointer client_data, 
-			    XmDrawingAreaCallbackStruct* cbs)
-#else
-static void resize_callback(w,client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmDrawingAreaCallbackStruct *cbs;
-#endif
+			    XtPointer callback_data)
 {
   reset_scrollbar_res();
   XcodaEditorBgPixmap(w);
@@ -1532,16 +1393,12 @@ static void resize_callback(w,client_data, cbs)
  * Description:                                               *
  *     expose event handle routine                            *
  *************************************************************/
-#if defined (__STDC__)
-static void expose_callback(Widget w,
+static void
+expose_callback(Widget w,
 			    XtPointer client_data,
-			    XmDrawingAreaCallbackStruct* cbs)
-#else
-     Widget w;
-     XtPointer client_data;
-     XmDrawingAreaCallbackStruct *cbs;
-#endif
+			    XtPointer callback_data)
 {
+  XmDrawingAreaCallbackStruct* cbs = (XmDrawingAreaCallbackStruct *)callback_data;
   (*coda_graph.redisplay)(&coda_graph, w, cbs->event);
 }
 
@@ -2321,12 +2178,8 @@ EndMovingNode(XcodaEditorGraph* graph,
  * Description:                                                           *
  *     Split ebana component into one eb and one ana                      *
  *************************************************************************/
-#if defined (__STDC__)
-void SplitEbana (drawComp* comp)
-#else
-void SplitEbana (comp)
-     drawComp *comp;
-#endif
+void
+SplitEbana (drawComp* comp)
 {
   int      i;
   drawComp *eb, *ana;
@@ -2658,8 +2511,9 @@ static int insideExposedRegion(p, event)
 			     regx, regy, regx + regw, regy + regh);
   clipCode[4] = clipCode[0];
 
-  for (i = 0; i < 5; i++){
-    if ( clipCode[i] == 0x0000 && clipCode[i+1] == 0x0000)
+  for (i = 0; i < 5; i++)
+  {
+    if ( clipCode[i] == 0x0000 && clipCode[i+1] == 0x0000) /*sergey: ERROR: clipCode[i+1] on last iteration becomes [5] */
       clippedLine++;
     else if((clipCode[i] & clipCode[i+1]) == 0)
       clippedLine++;      
@@ -4540,17 +4394,12 @@ static void delete_comp(graph, w, event)
  * description:                                                           *
  * Delete all connections                                                 *
  **************************************************************************/
-#if defined (__STDC__)
-void delete_all_arcs(Widget w, 
+void
+delete_all_arcs(Widget w, 
 		     XtPointer client_data, 
-		     XmAnyCallbackStruct* cbs)
-#else
-void delete_all_arcs(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+		     XtPointer callback_data)
 {
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
   arcList *p;
   arcList *q;
 
@@ -4577,21 +4426,15 @@ void delete_all_arcs(w, client_data, cbs)
  * Description:                                                            *
  *     Delete evenything inside graph                                      *
  **************************************************************************/
-#if defined (__STDC__)
-void delete_everything(Widget w,
+void
+delete_everything(Widget w,
 		       XtPointer client_data,
-		       XmAnyCallbackStruct* cbs)
-#else
-void delete_everything(w,client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+		       XtPointer callback_data)
 {
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
   compList *qq, *pp;
   arcList  *q,*p;
   int      i;
-
 
   p = coda_graph.arc_list_head->next;
   while(p != coda_graph.arc_list_tail){
@@ -4711,12 +4554,8 @@ void setup_ipport_func(port)
   port->move_name = draw_rubber_name;
 }
 
-#if defined (__STDC__)
-void setup_arc_func(Arc *arc)
-#else
-void setup_arc_func(arc)
-     Arc *arc;
-#endif
+void
+setup_arc_func(Arc *arc)
 {
   arc->draw_original = draw_original_arc;
   arc->high_light = draw_high_light_arc;

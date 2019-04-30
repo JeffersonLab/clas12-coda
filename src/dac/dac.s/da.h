@@ -201,6 +201,7 @@ hrtime_t/*uint64_t*/ gethrtime(void);
 #endif
 
 
+
 #define USE_128
 
 /* to handle 128-bit words, needed by event building process */
@@ -211,8 +212,12 @@ typedef struct
 
 } WORD128;
 
+
+
+/* function prototypes */
+
 void Print128(WORD128 *hw);
-char *String128(WORD128 *hw);
+void String128(WORD128 *hw, char *str, int len);
 void Copy128(WORD128 *hws, WORD128 *hwd);
 void AND128(WORD128 *hwa, WORD128 *hwb, WORD128 *hwc);
 void OR128(WORD128 *hwa, WORD128 *hwb, WORD128 *hwc);
@@ -220,9 +225,53 @@ void XOR128(WORD128 *hwa, WORD128 *hwb, WORD128 *hwc);
 int32_t CheckBit128(WORD128 *hw, int32_t n);
 void SetBit128(WORD128 *hw, int32_t n);
 int32_t EQ128(WORD128 *hwa, WORD128 *hwb);
+int IFZERO128(WORD128 *hwa);
 void Clear128(WORD128 *hw);
 void Negate128(WORD128 *hw);
 
 char *dacGetExpid();
+
+int tcpServer(char *name, char *mysqlhost);
+
+int resetHeartBeats();
+int setHeartBeat(int system, int bit, int countdown);
+int getHeartBeat(int system);
+int checkHeartBeats();
+int codaFindFreeTcpPort();
+char *loadwholefile(char *file, int *size, int *padding);
+int codaLoadROL(ROLPARAMS *rolP, char *rolname, char *params);
+int codaUnloadROL(ROLPARAMS *rolP);
+int isBigEndian(void);
+void debug_printf(int level, char *fmt,...);
+int pr_time(char *stuff) ;
+int lastContext ();
+void *signal_thread (void *arg);
+void Recover_Init ();
+int coda_constructor();
+int coda_destructor();
+int listSplit2(char *list, char *separator, int *argc, char argv[LISTARGV1][LISTARGV2]);
+void CODA_Init(int argc, char **argv);
+void CODA_Execute ();
+int CODA_bswap(int32_t *cbuf, int32_t ndata);
+void getSessionName(char *sessionName, int lname);
+void getConfFile(char *configname, char *conffile, int lname);
+int UDP_establish(char *host, int port);
+int UDP_close(int socket);
+int UDP_standard_request(char *name, char *state);
+int UDP_user_request(int msgclass, char *name, char *message);
+int UDP_reset();
+int UDP_cancel(char *str);
+int UDP_request(char *str);
+int UDP_send(int socket);
+void UDP_show();
+int codaUpdateStatus(char *status);
+void UDP_loop();
+int UDP_start();
+int listSplit1(char *list, int flag, int *argc, char argv[LISTARGV1][LISTARGV2]);
+hrtime_t gethrtime(void);
+void gethrtimetest();
+
+int dacgethostbyname(char *hostname, char *ipaddress);
+
 
 #endif /* _CODA_DA_H */

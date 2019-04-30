@@ -34,7 +34,7 @@
 #include <rcMastership.h>
 #include <rcComdOption.h>
 #include <XmTabs.h>
-#include <RCLogo.xpm>
+/*#include <RCLogo.xpm>*/
 #ifdef USE_TK
 #include <tcl.h>
 #include <tk.h>
@@ -83,13 +83,7 @@
 #include "Editor_drawing.h"
 #include "Editor_converter.h"
 
-
 #include "rcRocMenuWindow.h"
-
-
-
-
-#define _TRACE_OBJECTS
 
 #ifdef NEED_BZERO
 extern "C" {
@@ -218,49 +212,49 @@ rcRocMenuWindow::createMenuPanes (void)
   /*************/
   /* file menu */
 
-  config_ = new rcRocConfig ("Config", 1, "Alt<Key>c", "Alt/C", netHandler_);
-  close_ = new rcClose ("Close", 1, "Alt<Key>c", "Alt/C", netHandler_);
-  exit_ = new rcExit ("Exit", 1, "Alt<Key>q", "Alt/Q", netHandler_);
+  config_ = new rcRocConfig ((char *)"Config", 1, (char *)"Alt<Key>c", (char *)"Alt/C", netHandler_);
+  close_ = new rcClose ((char *)"Close", 1, (char *)"Alt<Key>c", (char *)"Alt/C", netHandler_);
+  exit_ = new rcExit ((char *)"Exit", 1, (char *)"Alt<Key>q", (char *)"Alt/Q", netHandler_);
 
   list = new codaComdList ();
   list->add (config_);
   list->add (close_);
   list->add (exit_);
 
-  MenuBar->addRegMenuEntry (list, "File", 'F');
+  MenuBar->addRegMenuEntry (list, (char *)"File", 'F');
   delete list;
 
 
   /*******************/
   /* preference menu */
 
-  feedBack_ = new rcButtonFeedBack ("Button feedback", 1, "Alt<Key>b",
-				    "Alt/B", 1, netHandler_);
+  feedBack_ = new rcButtonFeedBack ((char *)"Button feedback", 1, (char *)"Alt<Key>b",
+				    (char *)"Alt/B", 1, netHandler_);
 
   if (option->audio ())
-    audio_ = new rcAudioOption ("Audio messages", 1, "Alt<Key>a",
-				"Alt/A", 1, netHandler_);
+    audio_ = new rcAudioOption ((char *)"Audio messages", 1, (char *)"Alt<Key>a",
+				(char *)"Alt/A", 1, netHandler_);
   else
-    audio_ = new rcAudioOption ("Audio messages", 1, "Alt<Key>a",
-				"Alt/A", 0, netHandler_);
+    audio_ = new rcAudioOption ((char *)"Audio messages", 1, (char *)"Alt<Key>a",
+				(char *)"Alt/A", 0, netHandler_);
 
-  Owidth_ = new rcWidthOption ("Toggle width", 1, "Alt<Key>w",
-			      "Alt/W", 0, netHandler_);
+  Owidth_ = new rcWidthOption ((char *)"Toggle width", 1, (char *)"Alt<Key>w",
+			      (char *)"Alt/W", 0, netHandler_);
   if (option->reportMsg ())
-    dispMsg_ = new rcDisplayMsg ("Show server messages", 1, "Alt<Key>s",
-				 "Alt/S", 1, netHandler_);
+    dispMsg_ = new rcDisplayMsg ((char *)"Show server messages", 1, (char *)"Alt<Key>s",
+				 (char *)"Alt/S", 1, netHandler_);
   else
-    dispMsg_ = new rcDisplayMsg ("Show server messages", 1, "Alt<Key>s",
-				 "Alt/S", 0, netHandler_);
+    dispMsg_ = new rcDisplayMsg ((char *)"Show server messages", 1, (char *)"Alt<Key>s",
+				 (char *)"Alt/S", 0, netHandler_);
 
 
-  serverMsgToDbase_ = new rcRcsMsgToDbase ("Log Server Message", 0,
-					   "Alt<Key>m", "Alt/M", 0,
+  serverMsgToDbase_ = new rcRcsMsgToDbase ((char *)"Log Server Message", 0,
+					   (char *)"Alt<Key>m", (char *)"Alt/M", 0,
 					   netHandler_);
 
 
-  online_ = new rcOnLine ("Online", 0, "Alt<Key>l",
-			  "Alt/B", 1, netHandler_);
+  online_ = new rcOnLine ((char *)"Online", 0, (char *)"Alt<Key>l",
+			  (char *)"Alt/B", 1, netHandler_);
   list = new codaComdList ();
   list->add (feedBack_);
   list->add (dispMsg_);
@@ -270,7 +264,7 @@ rcRocMenuWindow::createMenuPanes (void)
 
   list->add (Owidth_);
   list->add (online_);
-  MenuBar->addRegMenuEntry (list, "Preference", 'P');
+  MenuBar->addRegMenuEntry (list, (char *)"Preference", 'P');
   delete list;
 
 
@@ -401,7 +395,7 @@ rcRocMenuWindow::crossEventHandler (Widget, XtPointer clientData, XEvent* event,
 
   if (obj->helpMsgWin_)
   {
-    if (cev->type == EnterNotify) obj->helpMsgWin_->setMessage ("press a button to change page");
+    if (cev->type == EnterNotify) obj->helpMsgWin_->setMessage ((char *)"press a button to change page");
     else                          obj->helpMsgWin_->eraseMessage ();
   }
 }
@@ -473,7 +467,7 @@ rcRocMenuWindow::createXterms (Widget widget, char *name)
 
     ac = 0;
     XtSetArg (arg[ac], XmNframeChildType, XmFRAME_TITLE_CHILD); ac++;
-    xtermsLabel[nxterms] = XmCreateLabelGadget (xterms[nxterms], "title will be here", arg, ac);
+    xtermsLabel[nxterms] = XmCreateLabelGadget (xterms[nxterms], (char *)"title will be here", arg, ac);
     XtManageChild (xtermsLabel[nxterms]);
 
 
@@ -918,7 +912,7 @@ rcRocMenuWindow::ConfigSelPopup (void)
     }
     else
     {
-      t = XmStringCreateSimple ("no runtypes");
+      t = XmStringCreateSimple ((char *)"no runtypes");
       XtSetArg (arg[ac], XmNlabelString, t); ac++;
       XtSetValues (iconfigSel.pushb[0], arg, ac);
       ac = 0;
@@ -979,17 +973,17 @@ rcRocMenuWindow::CreateOptionMenu (Widget parent)
   ac = 0;
   XtSetArg(arg[ac], XmNpacking, XmPACK_COLUMN); ac++;
   XtSetArg(arg[ac], XmNnumColumns, ncols); ac++;
-  menu = XmCreatePulldownMenu (parent, "optionPullDown", arg, ac);
+  menu = XmCreatePulldownMenu (parent, (char *)"optionPullDown", arg, ac);
 
   ac = 0;
-  t = XmStringCreateSimple ("Run Type ");
+  t = XmStringCreateSimple ((char *)"Run Type ");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNsubMenuId, menu); ac++;
-  option = XmCreateOptionMenu (parent, "configurationOption", arg, ac);
+  option = XmCreateOptionMenu (parent, (char *)"configurationOption", arg, ac);
   ac = 0;
   XmStringFree (t);
 
-  t = XmStringCreateSimple ("              ");
+  t = XmStringCreateSimple ((char *)"              ");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   for (i = 0; i < EDITOR_MAX_CONFIGS; i++)
   {
@@ -1123,23 +1117,23 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
             comp[ncomp_].boot_string = daq_list[jj]->daq.boot_string; /* boot string, how to start       */
 
 		    /* backward conversion from number to name, see Editor_converter.c, change it here it changed there !!!!!!!!!! */
-            if(comp[ncomp_].type == CODA_ROC)           {type_name[ncomp_] = "ROC";      bg_name[ncomp_] = "lightgreen";}
-			else if(comp[ncomp_].type == CODA_EB)       {type_name[ncomp_] = "EB";       bg_name[ncomp_] = "yellow";}
-			else if(comp[ncomp_].type == CODA_ET)       {type_name[ncomp_] = "ET";       bg_name[ncomp_] = "yellow";}
-            else if(comp[ncomp_].type == CODA_ETT)      {type_name[ncomp_] = "ETT";      bg_name[ncomp_] = "yellow";}
-            else if(comp[ncomp_].type == CODA_TRIG)     {type_name[ncomp_] = "TS";       bg_name[ncomp_] = "lightblue";}  
-            else if(comp[ncomp_].type == CODA_RCS)      {type_name[ncomp_] = "RCS";      bg_name[ncomp_] = "white";}
-            else if(comp[ncomp_].type == CODA_ER)       {type_name[ncomp_] = "ER";       bg_name[ncomp_] = "yellow";}
-            else if(comp[ncomp_].type == CODA_UC)       {type_name[ncomp_] = "UC";       bg_name[ncomp_] = "white";}
-            else if(comp[ncomp_].type == CODA_L3)       {type_name[ncomp_] = "L3";       bg_name[ncomp_] = "yellow";}
-            else if(comp[ncomp_].type == CODA_LOG)      {type_name[ncomp_] = "LOG";      bg_name[ncomp_] = "white";}
-            else if(comp[ncomp_].type == CODA_SC)       {type_name[ncomp_] = "SC";       bg_name[ncomp_] = "white";}
-            else if(comp[ncomp_].type == CODA_FILE)     {type_name[ncomp_] = "FILE";     bg_name[ncomp_] = "white";}
-            else if(comp[ncomp_].type == CODA_CODAFILE) {type_name[ncomp_] = "CODAFILE"; bg_name[ncomp_] = "white";}
-            else if(comp[ncomp_].type == CODA_DEBUG)    {type_name[ncomp_] = "DEBUG";    bg_name[ncomp_] = "white";}
-            else if(comp[ncomp_].type == CODA_MON)      {type_name[ncomp_] = "MON";      bg_name[ncomp_] = "white";}
-            else if(comp[ncomp_].type == CODA_NONE)     {type_name[ncomp_] = "NONE";     bg_name[ncomp_] = "white";}
-            else                                        {type_name[ncomp_] = "UNKNOWN";  bg_name[ncomp_] = "white";}
+            if(comp[ncomp_].type == CODA_ROC)           {type_name[ncomp_] = (char *)"ROC";      bg_name[ncomp_] = (char *)"lightgreen";}
+			else if(comp[ncomp_].type == CODA_EB)       {type_name[ncomp_] = (char *)"EB";       bg_name[ncomp_] = (char *)"yellow";}
+			else if(comp[ncomp_].type == CODA_ET)       {type_name[ncomp_] = (char *)"ET";       bg_name[ncomp_] = (char *)"yellow";}
+            else if(comp[ncomp_].type == CODA_ETT)      {type_name[ncomp_] = (char *)"ETT";      bg_name[ncomp_] = (char *)"yellow";}
+            else if(comp[ncomp_].type == CODA_TRIG)     {type_name[ncomp_] = (char *)"TS";       bg_name[ncomp_] = (char *)"lightblue";}  
+            else if(comp[ncomp_].type == CODA_RCS)      {type_name[ncomp_] = (char *)"RCS";      bg_name[ncomp_] = (char *)"white";}
+            else if(comp[ncomp_].type == CODA_ER)       {type_name[ncomp_] = (char *)"ER";       bg_name[ncomp_] = (char *)"yellow";}
+            else if(comp[ncomp_].type == CODA_UC)       {type_name[ncomp_] = (char *)"UC";       bg_name[ncomp_] = (char *)"white";}
+            else if(comp[ncomp_].type == CODA_L3)       {type_name[ncomp_] = (char *)"L3";       bg_name[ncomp_] = (char *)"yellow";}
+            else if(comp[ncomp_].type == CODA_LOG)      {type_name[ncomp_] = (char *)"LOG";      bg_name[ncomp_] = (char *)"white";}
+            else if(comp[ncomp_].type == CODA_SC)       {type_name[ncomp_] = (char *)"SC";       bg_name[ncomp_] = (char *)"white";}
+            else if(comp[ncomp_].type == CODA_FILE)     {type_name[ncomp_] = (char *)"FILE";     bg_name[ncomp_] = (char *)"white";}
+            else if(comp[ncomp_].type == CODA_CODAFILE) {type_name[ncomp_] = (char *)"CODAFILE"; bg_name[ncomp_] = (char *)"white";}
+            else if(comp[ncomp_].type == CODA_DEBUG)    {type_name[ncomp_] = (char *)"DEBUG";    bg_name[ncomp_] = (char *)"white";}
+            else if(comp[ncomp_].type == CODA_MON)      {type_name[ncomp_] = (char *)"MON";      bg_name[ncomp_] = (char *)"white";}
+            else if(comp[ncomp_].type == CODA_NONE)     {type_name[ncomp_] = (char *)"NONE";     bg_name[ncomp_] = (char *)"white";}
+            else                                        {type_name[ncomp_] = (char *)"UNKNOWN";  bg_name[ncomp_] = (char *)"white";}
 
             /* set window title*/
 			sprintf(temp,"%s on %s",comp[ncomp_].comp_name,comp[ncomp_].node_name);
@@ -1373,7 +1367,7 @@ rcRocMenuWindow::InitConfigSel (Widget parent)
   /* create all widgets */
   XtSetArg (arg[ac], XmNtitle, "Run Type Selection"); ac++;
   XtSetArg (arg[ac], XmNautoUnmanage, FALSE); ac++;
-  iconfigSel.w_ = XmCreateFormDialog (parent, "editorconfigSel",
+  iconfigSel.w_ = XmCreateFormDialog (parent, (char *)"editorconfigSel",
 				     arg, ac);
   ac = 0;
 
@@ -1391,7 +1385,7 @@ rcRocMenuWindow::InitConfigSel (Widget parent)
   ac = 0;
 
   /* create push buttons */
-  t = XmStringCreateSimple ("   Ok   ");
+  t = XmStringCreateSimple ((char *)"   Ok   ");
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNleftAttachment, XmATTACH_POSITION); ac++;
@@ -1403,7 +1397,7 @@ rcRocMenuWindow::InitConfigSel (Widget parent)
   ac = 0;
   XmStringFree (t);
 
-  t = XmStringCreateSimple (" Cancel ");
+  t = XmStringCreateSimple ((char *)" Cancel ");
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNtopOffset, 5); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;

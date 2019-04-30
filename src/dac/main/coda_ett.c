@@ -1,10 +1,13 @@
 
 /* coda_ett.c - CODA wrapper for et_2_et */
 
+#include <stdio.h>
+
+
 #if defined(Linux_armv7l)
 
-void
-coda_ett()
+int
+main()
 {
   printf("coda_ett is dummy for ARM etc\n");
 }
@@ -13,7 +16,6 @@ coda_ett()
 
 /* INCLUDES */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
@@ -32,6 +34,7 @@ coda_ett()
 #endif
 
 #include "rc.h"
+#include "rolInt.h"
 #include "da.h"
 #include "libdb.h"
 #include "et_private.h"
@@ -105,8 +108,11 @@ extern char configname[128]; /* coda_component.c */
 extern char *mysql_host; /* coda_component.c */
 extern char *expid; /* coda_component.c */
 extern char *session; /* coda_component.c */
+
+/*defined in et.h
 #define ET_ERROR 1
 #define ET_OK 0
+*/
 
 /*
 int listSplit1(char *list, int flag,
@@ -706,7 +712,7 @@ codaDownload(char *conf)
     pthread_attr_init(&attr); /* initialize attr with default attributes */
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
-    res = pthread_create(&etp->id, &attr, ettStart, NULL);
+    res = pthread_create(&etp->id, &attr, (void *(*)(void *)) ettStart, NULL);
     if(res!=0)
     {
       printf("ERROR: pthread_create(ettStart) returned %d - exit\n",res);

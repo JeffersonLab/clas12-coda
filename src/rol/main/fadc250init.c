@@ -11,7 +11,10 @@
 
 #ifdef Linux_vme
 
+#include "jvme.h"
+#include "tiLib.h"
 #include "fadcLib.h"
+#include "fadc250Config.h"
 
 
 int

@@ -43,6 +43,12 @@
 //   run control source
 //
 //
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <rcNetStatus.h>
 #include <rcButtonPanel.h>
 #include <rcComdOption.h>
@@ -53,8 +59,8 @@
 #endif
 #include "pixmaps/startup.xpm"
 
-#define RC_CONNECT_NAME "Connect"
-#define RC_CONNECT_MSG "Connect to a Server"
+#define RC_CONNECT_NAME (char *)"Connect"
+#define RC_CONNECT_MSG (char *)"Connect to a Server"
 
 
 #if defined (_CODA_2_0_T) || defined (_CODA_2_0)
@@ -120,11 +126,11 @@ rcConnect::doit (void)
   }
 
   if (dialog_ == 0) {
-    dialog_ = new rcConnectDialog (this, "connectDialog",
-				   "Open RunControl Server", netHandler_);
+    dialog_ = new rcConnectDialog (this, (char *)"connectDialog",
+				   (char *)"Open RunControl Server", netHandler_);
     dialog_->init ();
   }
-  rcAudio ("Connect to run control server");
+  rcAudio ((char *)"Connect to run control server");
   dialog_->popup ();
 }
 
@@ -134,7 +140,7 @@ rcConnect::configureCallback (int status, void* arg, daqNetData* data)
   rcConnect* obj = (rcConnect *)arg;
 
   if (status != CODA_SUCCESS)
-    obj->reportErrorMsg ("Configuring a run failed !!!");
+    obj->reportErrorMsg ((char *)"Configuring a run failed !!!");
 }
 
 
@@ -166,7 +172,7 @@ rcConnect::connect (void)
     rcClient& client = netHandler_.clientHandler ();
 
     // insert database name + session name into data object
-    daqData data ("RCS", "command", "unkown");
+    daqData data ((char *)"RCS", (char *)"command", (char *)"unkown");
     char* temp[2];
     temp[0] = new char[::strlen (option->dbasename ()) + 1];
     ::strcpy (temp[0], option->dbasename ());
@@ -184,17 +190,17 @@ rcConnect::connect (void)
 					 (void *)this);
     if (status != CODA_SUCCESS)
     {
-      reportErrorMsg ("Cannot send load database command");
-      rcAudio ("can not send load database command");
+      reportErrorMsg ((char *)"Cannot send load database command");
+      rcAudio ((char *)"can not send load database command");
     }
 
-    daqData data2 ("RCS", "command", ::getenv("DEFAULT_RUN"));
+    daqData data2 ((char *)"RCS", (char *)"command", ::getenv("DEFAULT_RUN"));
 
     if (client.sendCmdCallback (DACONFIGURE, data2,
 				(rcCallback)&(rcConnect::configureCallback),
 				(void *)this) != CODA_SUCCESS)
     {
-      reportErrorMsg ("Cannot communication with the RunControl Server\n");
+      reportErrorMsg ((char *)"Cannot communication with the RunControl Server\n");
 	}
 
     if (::getenv("DEFAULT_RUN"))
@@ -204,8 +210,8 @@ rcConnect::connect (void)
 
 #ifdef USE_CREG
 printf("CEDIT 1\n");
-      coda_Send(XtDisplay(this->baseWidget()),"CEDIT",cmd);
-      coda_Send(XtDisplay(this->baseWidget()),"ALLROCS",cmd);
+      coda_Send(XtDisplay(this->baseWidget()),(char *)"CEDIT",cmd);
+      coda_Send(XtDisplay(this->baseWidget()),(char *)"ALLROCS",cmd);
 #endif
     }
 
@@ -230,26 +236,60 @@ rcConnect::startRcServer (void)
   {
     char msg[256];
 
+
+	/* check if directory for log file exists */
+    int log_dir_exists = 0;
+    struct stat s;
+    int err = stat("/data/log", &s);
+    if(err == -1)
+    {
+      if(ENOENT == errno)
+      {
+        ; /* does not exist */
+      }
+      else
+      {
+        printf("ERROR: rcConnect::startRcServer: while checking log dir existance\n");
+        perror("stat");
+        exit(1);
+      }
+    }
+    else
+    {
+      if(S_ISDIR(s.st_mode))
+      {
+        log_dir_exists = 1; /* it's a dir */
+      }
+      else
+      {
+        ; /* exists but is no dir */
+      }
+    }
+
+
 #if 0
     if(option->logRocs_)
 	{
 #endif
+	if(log_dir_exists)
+	{
+      printf("Log dir exists, will place rcServer log file into it\n");
 	  ::sprintf(msg,"%s/rcServer -m %s -d %s -s %s >> /data/log/rcServer.log &\n",
           getenv("CODA_BIN"),
 	      option->msqldhost(),
 	      option->dbasename (),
 	      option->session ());
-#if 0
 	}
 	else
 	{
+      printf("Log dir does not exist, it will be no log file from rcServer\n");
 	  ::sprintf(msg,"%s/rcServer -m %s -d %s -s %s &\n",
           getenv("CODA_BIN"),
 	      option->msqldhost(),
 	      option->dbasename (),
 	      option->session ());
 	}
-#endif
+
 
     printf("STARTING RCSERVER >%s<\n",msg);
     int errcode = system(msg);
@@ -260,7 +300,7 @@ rcConnect::startRcServer (void)
     }
     else
 	{
-      reportErrorMsg ("Starting rcServer failed due to script error");
+      reportErrorMsg ((char *)"Starting rcServer failed due to script error");
 	}
   }
 }
@@ -302,8 +342,8 @@ rcConnect::autoTimerCallback (XtPointer data, XtIntervalId *id)
     obj->timeoutCount_ ++;
     if (obj->timeoutCount_ >= rcConnect::maxCount_) {
       obj->endTimer ();
-      obj->reportErrorMsg ("Cannot connect to the RunControl server");
-      rcAudio ("can not connect to run control server");
+      obj->reportErrorMsg ((char *)"Cannot connect to the RunControl server");
+      rcAudio ((char *)"can not connect to run control server");
     }
     else {
       obj->stWin_->showingInProgress ();
@@ -316,5 +356,3 @@ rcConnect::autoTimerCallback (XtPointer data, XtIntervalId *id)
     obj->endTimer ();
 }
 #endif
-
-    

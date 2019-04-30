@@ -443,59 +443,59 @@ daqRun::createAllVariables (void)
   int  len = sizeof (serverHost);
   if (::gethostname (serverHost, len) != 0) ::strcpy (serverHost, "unknown");
 
-  version_ = new rcsDaqData (exptname_, "version", CODA_VERSION);
-  startTime_ = new rcsDaqData (exptname_, "startTime", "      ");
-  startTimeBin_ = new rcsDaqData (exptname_, "startTimeBin", 0);
-  currTime_ = new rcsDaqData  (exptname_, "currentTime", "       ");
-  currTimeBin_ = new rcsDaqData (exptname_, "timeBin", 0);
-  endTime_ = new rcsDaqData (exptname_, "endTime", "      ");
-  endTimeBin_ = new rcsDaqData (exptname_, "endTimeBin", 0);
-  runNumber_ = new rcsDaqData (exptname_, "runNumber", 0);
+  version_           = new rcsDaqData (exptname_, (char *)"version", (char *)CODA_VERSION);
+  startTime_         = new rcsDaqData (exptname_, (char *)"startTime", (char *)"      ");
+  startTimeBin_      = new rcsDaqData (exptname_, (char *)"startTimeBin", 0);
+  currTime_          = new rcsDaqData (exptname_, (char *)"currentTime", (char *)"       ");
+  currTimeBin_       = new rcsDaqData (exptname_, (char *)"timeBin", 0);
+  endTime_           = new rcsDaqData (exptname_, (char *)"endTime", (char *)"      ");
+  endTimeBin_        = new rcsDaqData (exptname_, (char *)"endTimeBin", 0);
+  runNumber_         = new rcsDaqData (exptname_, (char *)"runNumber", 0);
 
-  status_ = new rcsDaqData (exptname_, "status", CODA_DORMANT);
+  status_            = new rcsDaqData (exptname_, (char *)"status", CODA_DORMANT);
 
-  nevents_ = new rcsDaqData (exptname_, "nevents", 0);
-  nlongs_ =  new rcsDaqData (exptname_, "nlongs", 0);
+  nevents_           = new rcsDaqData (exptname_, (char *)"nevents", 0);
+  nlongs_            = new rcsDaqData (exptname_, (char *)"nlongs", 0);
 
-  database_ = new rcsDaqData (exptname_, "database", dbasename_);
+  database_          = new rcsDaqData (exptname_, (char *)"database", dbasename_);
 
-  dataFile_ = new rcsDaqData (exptname_, "dataFile", "unknown");
-  confFile_ = new rcsDaqData (exptname_, "confFile", "unknown"); /*sergey*/
+  dataFile_          = new rcsDaqData (exptname_, (char *)"dataFile", (char *)"unknown");
+  confFile_          = new rcsDaqData (exptname_, (char *)"confFile", (char *)"unknown"); /*sergey*/
 
-  rcsMsgToDbase_ = new rcsDaqData (exptname_, "rcsMsgToDbase", 1);  
+  rcsMsgToDbase_     = new rcsDaqData (exptname_, (char *)"rcsMsgToDbase", 1);  
 
-  tokenInterval_ = new rcsDaqData (exptname_, "tokenInterval", 0);
+  tokenInterval_     = new rcsDaqData (exptname_, (char *)"tokenInterval", 0);
 
-  logFileDescriptor_ = new rcsDaqData (exptname_, "logFileDescriptor", "unknown");
+  logFileDescriptor_ = new rcsDaqData (exptname_, (char *)"logFileDescriptor", (char *)"unknown");
 
   daqRunTypeStruct runtypeInfo;
-  runTypeInfo_ = new rcsDaqData   (exptname_, "runTypeInfo", &runtypeInfo);
+  runTypeInfo_       = new rcsDaqData (exptname_, (char *)"runTypeInfo", &runtypeInfo);
 
-  allRunTypes_ = new rcsDaqData (exptname_, "allRunTypes", "unknown");
-  runType_ = new rcsDaqData(exptname_, "runType", "unknown");
-  runTypeNum_ = new rcsDaqData (exptname_, "runTypeNum", 0);
-  exptName_ = new rcsDaqData (exptname_, "exptName", exptname_);
-  exptId_ = new rcsDaqData (exptname_, "exptId", exptid_);
-  hostName_ = new rcsDaqData (exptname_, "hostName", serverHost);
-  autoIncrement_ = new rcsDaqData (exptname_, "autoIncrement", 1);
-  eventLimit_ = new rcsDaqData (exptname_, "eventLimit", 0);
-  dataLimit_ = new rcsDaqData (exptname_, "dataLimit", 0);
-  updateInterval_ = new rcsDaqData (exptname_, "updateInterval", 2);
-  compnames_ = new rcsDaqData (exptname_, "components","unknown");
-  clientList_ = new rcsDaqData (exptname_, "clientList", "unknown");
-  master_ = new rcsDaqData (exptname_, "master", "unknown");
-  controlDisp_ = new rcsDaqData (exptname_, "controlDisplay", "unknown");
-  online_ = new rcsDaqData (exptname_, "online", 1);
-  runMsg_ = new rcsDaqData (exptname_, "runMessage","");
+  allRunTypes_       = new rcsDaqData (exptname_, (char *)"allRunTypes", (char *)"unknown");
+  runType_           = new rcsDaqData (exptname_, (char *)"runType", (char *)"unknown");
+  runTypeNum_        = new rcsDaqData (exptname_, (char *)"runTypeNum", 0);
+  exptName_          = new rcsDaqData (exptname_, (char *)"exptName", exptname_);
+  exptId_            = new rcsDaqData (exptname_, (char *)"exptId", exptid_);
+  hostName_          = new rcsDaqData (exptname_, (char *)"hostName", serverHost);
+  autoIncrement_     = new rcsDaqData (exptname_, (char *)"autoIncrement", 1);
+  eventLimit_        = new rcsDaqData (exptname_, (char *)"eventLimit", 0);
+  dataLimit_         = new rcsDaqData (exptname_, (char *)"dataLimit", 0);
+  updateInterval_    = new rcsDaqData (exptname_, (char *)"updateInterval", 2);
+  compnames_         = new rcsDaqData (exptname_, (char *)"components", (char *)"unknown");
+  clientList_        = new rcsDaqData (exptname_, (char *)"clientList", (char *)"unknown");
+  master_            = new rcsDaqData (exptname_, (char *)"master", (char *)"unknown");
+  controlDisp_       = new rcsDaqData (exptname_, (char *)"controlDisplay", (char *)"unknown");
+  online_            = new rcsDaqData (exptname_, (char *)"online", 1);
+  runMsg_            = new rcsDaqData (exptname_, (char *)"runMessage", (char *)"");
 
   // create data structure bootinfo which has all information
   // about auto boot flag information of components
   daqCompBootStruct bootInfo;
-  compBootInfo_ = new rcsDaqData (exptname_, "compBootInfo", &bootInfo);
+  compBootInfo_      = new rcsDaqData (exptname_, (char *)"compBootInfo", &bootInfo);
 
   // create daq run monitoring parameters structure
   daqMonitorStruct monitorInfo;
-  monitorParms_ = new rcsDaqData (exptname_, "monitorParms", &monitorInfo);
+  monitorParms_      = new rcsDaqData (exptname_, (char *)"monitorParms", &monitorInfo);
 
 
   // create assocaited data base writer
@@ -608,30 +608,29 @@ daqRun::createAllVariables (void)
 void
 daqRun::resetAllVariables (void)
 {
-  *startTime_ = "     ";
-  *endTime_ = "     ";
-  *startTimeBin_ = 0;
-  *endTimeBin_ = 0;
-  *status_ = CODA_DORMANT;
-  *nevents_ = 0;
-  *nlongs_ = 0;
-  *allRunTypes_ = "unknown";
-  *runType_ = "unknown";
-  *runTypeNum_ =  0;
+  *startTime_     = (char *)"     ";
+  *endTime_       = (char *)"     ";
+  *startTimeBin_  = 0;
+  *endTimeBin_    = 0;
+  *status_        = CODA_DORMANT;
+  *nevents_       = 0;
+  *nlongs_        = 0;
+  *allRunTypes_   = (char *)"unknown";
+  *runType_       = (char *)"unknown";
+  *runTypeNum_    = 0;
   *autoIncrement_ = 1;
-  *eventLimit_ = 0;
-  *dataLimit_ = 0;
-  *compnames_ = "unknown";
-  *runMsg_ = "";
-	
-  *dataFile_ = "unknown";
+  *eventLimit_    = 0;
+  *dataLimit_     = 0;
+  *compnames_     = (char *)"unknown";
+  *runMsg_        = (char *)"";
+  *dataFile_      = (char *)"unknown";
 
   /*following call will trigger some actions, see comment at 'daqRun::confFile()' */
-  *confFile_ = "unknown";
+  *confFile_      = (char *)"unknown";
 
   *tokenInterval_ = 0;
 
-  *logFileDescriptor_ = "unknown";
+  *logFileDescriptor_ = (char *)"unknown";
 
   if (datafileName_) delete []datafileName_;
   datafileName_ = 0;
@@ -702,7 +701,7 @@ daqRun::createDynamicVars (void)
 
 
       /*nlongs*/
-      if (dataManager_.findData (cs[i], DYN_ATTR0, serverData) == CODA_SUCCESS)
+      if (dataManager_.findData (cs[i], (char *)DYN_ATTR0, serverData) == CODA_SUCCESS)
       {
 	    dvars_[numDvars_++] = serverData;
 	    serverData->notifyChannels ();
@@ -710,7 +709,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR0); /* without it was an error
       }
       else
       {
-	    daqData* ndata = new rcsDaqData (cs[i], DYN_ATTR0, 0);
+	    daqData* ndata = new rcsDaqData (cs[i], (char *)DYN_ATTR0, 0);
 	    ndata->connect (dataManager_);
 	    // ndata->updater (compAttr);
 	    /* create trigger for nlong, insert into the new data */
@@ -722,7 +721,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR0); /* without it was an error
       }
 
       /*nevents*/
-      if (dataManager_.findData (cs[i], DYN_ATTR1, serverData) == CODA_SUCCESS)
+      if (dataManager_.findData (cs[i], (char *)DYN_ATTR1, serverData) == CODA_SUCCESS)
       {
 	    dvars_[numDvars_++] = serverData;
 	    serverData->notifyChannels ();
@@ -730,7 +729,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR1); /* without it was an error
       }
       else
       {
-	    daqData* edata = new rcsDaqData (cs[i], DYN_ATTR1, 0);
+	    daqData* edata = new rcsDaqData (cs[i], (char *)DYN_ATTR1, 0);
 	    edata->connect (dataManager_);
 	    //edata->updater (compAttr);
 	    /* create trigger for nevents, insert into the new data */
@@ -748,7 +747,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR1); /* without it was an error
 
 
       /*status*/
-      if (dataManager_.findData (cs[i], DYN_ATTR2, serverData) == CODA_SUCCESS)
+      if (dataManager_.findData (cs[i], (char *)DYN_ATTR2, serverData) == CODA_SUCCESS)
       {
 	    dvars_[numDvars_++] = serverData;
 	    serverData->notifyChannels ();
@@ -761,7 +760,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR1); /* without it was an error
       }
       else
       {
-	    daqData* sdata = new rcsDaqData (cs[i], DYN_ATTR2, CODA_DORMANT);
+	    daqData* sdata = new rcsDaqData (cs[i], (char *)DYN_ATTR2, CODA_DORMANT);
 	    sdata->connect (dataManager_); /* adding 'sdata' to 'dataManager_' */
 	    dvars_[numDvars_++] = sdata;
 	    sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR2);
@@ -777,7 +776,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR1); /* without it was an error
 
 
       /*erate*/
-      if (dataManager_.findData (cs[i], DYN_ATTR3, serverData) == CODA_SUCCESS)
+      if (dataManager_.findData (cs[i], (char *)DYN_ATTR3, serverData) == CODA_SUCCESS)
       {
 	    dvars_[numDvars_++] = serverData;
 	    serverData->notifyChannels ();
@@ -788,7 +787,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR1); /* without it was an error
       }
       else
       {
-	    daqData* sdata = new rcsDaqData (cs[i], DYN_ATTR3, 0.0);
+	    daqData* sdata = new rcsDaqData (cs[i], (char *)DYN_ATTR3, 0.0);
 	    sdata->connect (dataManager_);
 	    dvars_[numDvars_++] = sdata;
 	    sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR3);
@@ -798,7 +797,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR1); /* without it was an error
       }
 
 	  /*drate*/
-      if (dataManager_.findData (cs[i], DYN_ATTR4, serverData) == CODA_SUCCESS)
+      if (dataManager_.findData (cs[i], (char *)DYN_ATTR4, serverData) == CODA_SUCCESS)
       {
 	    dvars_[numDvars_++] = serverData;
 	    serverData->notifyChannels ();
@@ -809,7 +808,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR1); /* without it was an error
       }
       else
       {
-	    daqData* sdata = new rcsDaqData (cs[i], DYN_ATTR4, 0.0);
+	    daqData* sdata = new rcsDaqData (cs[i], (char *)DYN_ATTR4, 0.0);
 	    sdata->connect (dataManager_);
 	    dvars_[numDvars_++] = sdata;
 	    sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR4);
@@ -820,7 +819,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR1); /* without it was an error
 
 
 	  /*sergey: livetime*/
-      if (dataManager_.findData (cs[i], DYN_ATTR5, serverData) == CODA_SUCCESS)
+      if (dataManager_.findData (cs[i], (char *)DYN_ATTR5, serverData) == CODA_SUCCESS)
       {
 	    dvars_[numDvars_++] = serverData;
 	    serverData->notifyChannels ();
@@ -831,7 +830,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR1); /* without it was an error
       }
       else
       {
-	    daqData* sdata = new rcsDaqData (cs[i], DYN_ATTR5, 0.0);
+	    daqData* sdata = new rcsDaqData (cs[i], (char *)DYN_ATTR5, 0.0);
 	    sdata->connect (dataManager_);
 	    dvars_[numDvars_++] = sdata;
 	    sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR5);
@@ -843,7 +842,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR1); /* without it was an error
 
 
       /*sergey: state*/
-      if (dataManager_.findData (cs[i], DYN_ATTR6, serverData) == CODA_SUCCESS)
+      if (dataManager_.findData (cs[i], (char *)DYN_ATTR6, serverData) == CODA_SUCCESS)
       {
 	    dvars_[numDvars_++] = serverData;
 	    serverData->notifyChannels ();
@@ -854,7 +853,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR1); /* without it was an error
       }
       else
       {
-	    daqData* sdata = new rcsDaqData (cs[i], DYN_ATTR6, CODA_DORMANT);
+	    daqData* sdata = new rcsDaqData (cs[i], (char *)DYN_ATTR6, CODA_DORMANT);
 	    sdata->connect (dataManager_); /* adding 'sdata' to 'dataManager_' */
 	    dvars_[numDvars_++] = sdata;
 	    sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR6);
@@ -876,7 +875,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR1); /* without it was an error
 
       /* create 'data' using 'newComp[]' filled above */
       for(i=0; i<newcount; i++) newCompPtr[i] = newComp[i];
-      daqNetData data (exptname_, "command", newCompPtr, newcount);
+      daqNetData data (exptname_, (char *)"command", newCompPtr, newcount);
 #ifdef _CODA_DEBUG
 	  printf("DAADD_VARS 1: newcount=%d\n",newcount);
 #endif
@@ -899,7 +898,7 @@ daqRun::setStatusVariable (char* comp, int st)
 {
   daqData* serverData = 0;
 
-  if (dataManager_.findData (comp, DYN_ATTR2, serverData) == CODA_SUCCESS) 
+  if (dataManager_.findData (comp, (char *)DYN_ATTR2, serverData) == CODA_SUCCESS) 
   {
 	*serverData = st;
   }
@@ -989,7 +988,7 @@ daqRun::removeDynamicVars (void)
     for (i = 0; i < numDvars_; i++) cs[i] = dvars_[i]->compname ();
     
     /* remove client side */
-    daqNetData data (exptname_, "command", cs, numDvars_);
+    daqNetData data (exptname_, (char *)"command", cs, numDvars_);
     netMan_->sendToAllClients ((int)DAREMOVE_VARS, data, 0);
     
     /* reset dynamic variables to zero without destroying them */
@@ -1312,7 +1311,7 @@ daqRun::writeDataFileNameToDbase (char* file)
   }
   else
   {
-    dataFile ("unknown");
+    dataFile ((char *)"unknown");
   }
 }
 
@@ -1338,7 +1337,7 @@ daqRun::setDataFileName (char* name)
   else
   {
 	logFileDescriptor_->disableWrite ();
-	*logFileDescriptor_ = "unknown";
+	*logFileDescriptor_ = (char *)"unknown";
 	logFileDescriptor_->enableWrite ();
   }
 }
@@ -1518,14 +1517,14 @@ daqRun::setEndTime (void)
 void
 daqRun::eraseStartTime (void)
 {
-  *startTime_ = "            ";
+  *startTime_ = (char *)"            ";
   *startTimeBin_ = 0;
 }
 
 void
 daqRun::eraseEndTime (void)
 {
-  *endTime_ = "             ";
+  *endTime_ = (char *)"             ";
   *endTimeBin_ = 0;
 }
 
@@ -1593,7 +1592,7 @@ daqRun::setAllCompNames (void)
   }
   else
   {
-	*compnames_ = "unknown";
+	*compnames_ = (char *)"unknown";
   }
 }
 
@@ -1802,7 +1801,7 @@ daqRun::cmdFinalResult (int success)
   rccIO* chan = item->channel;
   if (chan != 0) /* real network call */
   {
-	daqNetData res (exptname_,"command",success);
+	daqNetData res (exptname_,(char *)"command",success);
 	// send result back to client
 	chan->sendResult (item->cmsg->type(), res, item->cmsg->reqId ());
 	// free memory of item and message
@@ -1874,7 +1873,7 @@ daqRun::processCommand (rccIO* chan, int command, rcMsg* cmsg)
 	  {
 		status = loadDatabase (sdata[0], sdata[1]);
 	  }
-	  res = new daqNetData (exptname_,"command",status);
+	  res = new daqNetData (exptname_,(char *)"command",status);
 	  /* free memory */
 	  delete []sdata[0]; delete []sdata[1];
 	}
@@ -1886,7 +1885,7 @@ daqRun::processCommand (rccIO* chan, int command, rcMsg* cmsg)
 	  char *session = new char[::strlen ((char *)ndata) + 1];
 	  ::strcpy (session, (char *)ndata);
 	  status = selectSession (session);
-	  res = new daqNetData (exptname_, "command", status);
+	  res = new daqNetData (exptname_, (char *)"command", status);
 	  delete []session;
 	}
 	break;
@@ -1897,7 +1896,7 @@ daqRun::processCommand (rccIO* chan, int command, rcMsg* cmsg)
 	  char *session = new char[::strlen ((char *)ndata) + 1];
 	  ::strcpy (session, (char *)ndata);
 	  status = createSession (session);
-	  res = new daqNetData (exptname_, "command", status);
+	  res = new daqNetData (exptname_, (char *)"command", status);
 	  delete []session;
 	}
 	break;
@@ -1918,7 +1917,7 @@ daqRun::processCommand (rccIO* chan, int command, rcMsg* cmsg)
 	  if (preConfigure (runtype) != CODA_SUCCESS)
       {
 		delete []runtype;
-		res = new daqNetData (exptname_, "command", CODA_ERROR);
+		res = new daqNetData (exptname_, (char *)"command", CODA_ERROR);
 	  }
 	  else
       {
@@ -1985,7 +1984,7 @@ daqRun::processCommand (rccIO* chan, int command, rcMsg* cmsg)
 
 	case DAABORT:
 	  abort (CODA_CONFIGURED);
-	  res = new daqNetData(exptname_,"command",status);  
+	  res = new daqNetData(exptname_,(char *)"command",status);  
 	  break;
 
 	case DATERMINATE:
@@ -2004,7 +2003,7 @@ daqRun::processCommand (rccIO* chan, int command, rcMsg* cmsg)
 	  {
 		for (int i = 0; i < 10; i++) sleep (1);
 	  }
-	  res = new daqNetData(exptname_,"command",status);
+	  res = new daqNetData(exptname_,(char *)"command",status);
 	  break;
 
 	case DADISCONNECT:
@@ -2042,7 +2041,7 @@ daqRun::processCommand (rccIO* chan, int command, rcMsg* cmsg)
 
 	default:
 	  status = CODA_ERROR;
-	  res = new daqNetData(exptname_,"command",status);
+	  res = new daqNetData(exptname_,(char *)"command",status);
 	  break;
   }
 
@@ -2391,7 +2390,7 @@ daqRun::updateClientInfo (rccIO* chan, long cbkid)
 
   // set new value to daqData 
   daqData* data = 0;
-  if (dataManager_.findData (exptname_, "clientList", data) == CODA_SUCCESS)
+  if (dataManager_.findData (exptname_, (char *)"clientList", data) == CODA_SUCCESS)
   {
 	if (numClients == 0)
     {
@@ -2409,7 +2408,7 @@ daqRun::updateClientInfo (rccIO* chan, long cbkid)
   delete []clientInfos;
   if (cbkid != 0) /* need send information back to client */
   {
-    daqNetData res (exptname_, "command", CODA_SUCCESS);
+    daqNetData res (exptname_, (char *)"command", CODA_SUCCESS);
 	chan->sendResult (DAREG_CLIENT_INFO, res, cbkid);
   }
 
@@ -2446,7 +2445,7 @@ daqRun::updateControlDispInfo (char* disp)
 	}
 
 	if (client == 0) // no more client connection
-	  *controlDisp_ = "unknown:0.0";
+	  *controlDisp_ = (char *)"unknown:0.0";
 	else
 	  *controlDisp_ = client->clientXDisplay ();
   }
@@ -2508,7 +2507,7 @@ daqRun::sendDynamicVarsInfo (rccIO* chan)
 
     for(k=0; k<j; k++) cs[k] = comp[k];
 
-	daqNetData data(exptname_,"command", cs, j);
+	daqNetData data(exptname_,(char *)"command", cs, j);
 	chan->sendResult (DAADD_VARS, data, 0);
   }
 }

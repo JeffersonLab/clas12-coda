@@ -14,7 +14,7 @@ MAIN = cterm
 include $(CODA)/src/Makefile.include
 
 #debugging
-CFLAGS = -g -fPIC -DLinux -DLINUX
+##CFLAGS = -g -fPIC -DLinux -DLINUX
 
 #LDCC = $(FC)
 #LDFC = $(FC)

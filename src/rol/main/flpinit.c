@@ -11,6 +11,10 @@
 
 #ifdef Linux_vme
 
+#include "jvme.h"
+#include "flpLib.h"
+#include "flpConfig.h"
+
 int
 main(int argc, char *argv[])
 {

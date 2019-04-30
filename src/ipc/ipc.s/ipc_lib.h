@@ -1,6 +1,46 @@
 
 /* ipc_lib.h */
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <math.h>
+
+#include <iostream>
+#include <memory>
+#include <vector>
+#include <functional>
+
+#include <activemq/library/ActiveMQCPP.h>
+#include <decaf/lang/Thread.h>
+#include <decaf/lang/Runnable.h>
+#include <decaf/lang/Integer.h>
+#include <decaf/lang/Long.h>
+#include <decaf/lang/System.h>
+#include <activemq/core/ActiveMQConnectionFactory.h>
+#include <activemq/util/Config.h>
+#include <cms/Connection.h>
+#include <cms/Session.h>
+#include <cms/TextMessage.h>
+#include <cms/BytesMessage.h>
+#include <cms/MapMessage.h>
+#include <cms/StreamMessage.h>
+#include <cms/ExceptionListener.h>
+#include <cms/MessageListener.h>
+#include <cms/Destination.h>
+
+#include <cms/ConnectionFactory.h>
+
+using namespace activemq::core;
+using namespace decaf::util::concurrent;
+using namespace decaf::util;
+using namespace decaf::lang;
+using namespace cms;
+//using namespace std;
+
+
 #define MAX_TOPIC_LENGTH 1024
 
 #define DEFAULT_APPLICATION        "clastest"
@@ -90,43 +130,6 @@ Destination destination = session.createQueue("test-queue,test-queue-foo,topic:/
                      "failover:(tcp://%s:61616?wireFormat=openwire&wireFormat.maxInactivityDuration=10)"
 */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <math.h>
-
-#include <iostream>
-#include <memory>
-#include <vector>
-#include <functional>
-
-#include <activemq/library/ActiveMQCPP.h>
-#include <decaf/lang/Thread.h>
-#include <decaf/lang/Runnable.h>
-#include <decaf/lang/Integer.h>
-#include <decaf/lang/Long.h>
-#include <decaf/lang/System.h>
-#include <activemq/core/ActiveMQConnectionFactory.h>
-#include <activemq/util/Config.h>
-#include <cms/Connection.h>
-#include <cms/Session.h>
-#include <cms/TextMessage.h>
-#include <cms/BytesMessage.h>
-#include <cms/MapMessage.h>
-#include <cms/StreamMessage.h>
-#include <cms/ExceptionListener.h>
-#include <cms/MessageListener.h>
-#include <cms/Destination.h>
-
-
-using namespace activemq::core;
-using namespace decaf::util::concurrent;
-using namespace decaf::util;
-using namespace decaf::lang;
-using namespace cms;
-//using namespace std;
 
 
 /* classes */
@@ -497,10 +500,10 @@ IpcProducer &sender = IpcProducer::Instance();
       char* sysid = sysid_;
       char* unique = unique_;
 
-      if(expid==NULL)  expid = "*";
-      if(sesid==NULL)  sesid = "*";
-      if(sysid==NULL)  sysid = "*";
-      if(unique==NULL) sysid = "*";
+      if(expid==NULL)  expid = (char *)"*";
+      if(sesid==NULL)  sesid = (char *)"*";
+      if(sysid==NULL)  sysid = (char *)"*";
+      if(unique==NULL) sysid = (char *)"*";
 
       sprintf(tmp,"%s.%s.%s.%s",expid,sesid,sysid,unique);
 
@@ -1103,10 +1106,10 @@ private:
       char* sysid = sysid_;
       char* unique = unique_;
 
-      if(expid==NULL)  expid = "*";
-      if(sesid==NULL)  sesid = "*";
-      if(sysid==NULL)  sysid = "*";
-      if(unique==NULL) sysid = "*";
+      if(expid==NULL)  expid = (char *)"*";
+      if(sesid==NULL)  sesid = (char *)"*";
+      if(sysid==NULL)  sysid = (char *)"*";
+      if(unique==NULL) sysid = (char *)"*";
 
       sprintf(tmp,"%s.%s.%s.%s",expid,sesid,sysid,unique);
 

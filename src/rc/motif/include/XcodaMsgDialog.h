@@ -56,8 +56,8 @@ public:
  protected:
   // constructor
   XcodaMsgDialog (Widget parent,
-		  char   *name,
-		  char   *title);
+		  const char   *name,
+		  const char   *title);
 
   // create different instantance
   virtual Widget createDialog (Widget, char *) = 0;

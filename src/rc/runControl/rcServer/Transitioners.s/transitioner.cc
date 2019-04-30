@@ -75,9 +75,6 @@
 /*sergey
 #include <dplite.h>
 */
-#define _CODA_DEBUG
-
-#define _TRACE_OBJECTS
 
 // timer interval for ping transitioning components, 1000 msec
 int transitioner::tickInterval_ = 1000;
@@ -275,7 +272,7 @@ transitioner::confirmFailure (int type)
       state = subSystemState (subsys);
       if (!transitionFinished (state, successState ()) )
       { // failed
-	    reporter->cmsglog (CMSGLOG_ERROR,"%s : subsystem failed in %s state\n",
+	    reporter->cmsglog (CMSGLOG_ERROR, "%s : subsystem failed in %s state\n",
 			   subsys->title (), 
 			   codaDaqState->stateString (state));
 	    if (state >= CODA_LOW_STATE && state <= CODA_HIGH_STATE)

@@ -55,7 +55,7 @@ void
 rcHelpAbout::doit (void)
 {
   if (!dialog_) {
-    dialog_ = new rcHelpAboutDialog (this, "helpAboutDialog", "Version");
+    dialog_ = new rcHelpAboutDialog (this, (char *)"helpAboutDialog", (char *)"Version");
     dialog_->init ();
   }
   dialog_->popup ();

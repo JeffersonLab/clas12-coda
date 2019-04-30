@@ -40,6 +40,7 @@ XInternAtom(,'property name,) returns property ID
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <ctype.h>
 
 #include <X11/Intrinsic.h>
 #include <X11/Xatom.h>
@@ -57,6 +58,9 @@ XInternAtom(,'property name,) returns property ID
 into codatcl.c and compiled there */
 
 #ifdef USE_TK
+
+#include <tcl.h>
+#include <tk.h>
 
 #include "tkInt.h"
 
@@ -1682,18 +1686,23 @@ coda_SendCmd(clientData, interp, argc, argv)
     return TCL_OK;
 }
 
-int
-codaSendInit(interp, window, name)
-    Tcl_Interp *interp;		/* Interpreter to use for error reporting
+
+
+/* params:
+  interp - Interpreter to use for error reporting
 				 * (no errors are ever returned, but the
-				 * interpreter is needed anyway). */
-    Tk_Window *window;		/* Display to initialize. */
-    char * name;
+				 * interpreter is needed anyway).
+  window - Display to initialize
+  name
+*/
+
+int
+codaSendInit(Tcl_Interp *interp, Tk_Window *window, char *name)
 {
     XSetWindowAttributes atts;
 
-    Tk_CreateEventHandler(window, PropertyChangeMask,
-	    SendEventProc, (ClientData) window);
+	/*sergey: first param was 'window', added '*' */
+    Tk_CreateEventHandler(*window, PropertyChangeMask, SendEventProc, (ClientData) window);
 
     /*XtAddEventHandler(Tk_Window(mainWindow), PropertyChangeMask, False,
 		      TestHandler, (XtPointer)dispPtr);*/
@@ -1709,12 +1718,12 @@ codaSendInit(interp, window, name)
     dispPtr->appNameProperty = Tk_InternAtom(dispPtr->commTkwin,
 	    "TK_APPLICATION");
      */
-    Tcl_CreateCommand(interp, "coda_send", coda_SendCmd, (ClientData) NULL,
+    Tcl_CreateCommand(interp, "coda_Send", coda_SendCmd, (ClientData) NULL,
 		      NULL);
 
     return TCL_OK;
 }
-
+
 /*
  *--------------------------------------------------------------
  *

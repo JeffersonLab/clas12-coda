@@ -244,8 +244,12 @@ transitionGraph::listRef (graphNode* node)
     if (node->state () == gnode->state ()) 
       return  adjLists_[i];
   }
+
+  //printf("transitionGraph::listRef: NEVER HERE !!!\n");fflush(stdout); /*sergey*/
+  //return adjLists_[0]; /*sergey*/
 }
 
+/*sergey: not used
 codaSlist&
 transitionGraph::listRef (int state)
 {
@@ -259,6 +263,7 @@ transitionGraph::listRef (int state)
       return  adjLists_[i];
   }
 }
+*/
 
 void
 transitionGraph::cleanup (void)

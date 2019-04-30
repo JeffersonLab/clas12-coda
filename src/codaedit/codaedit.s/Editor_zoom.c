@@ -122,18 +122,13 @@ Pixel  fg,bg;
  *    setup zoom scale for drawing area                              *
  *    zomm scale is from 1 to 5                                      *
  ********************************************************************/
-#if defined (__STDC__)
-void set_zoomscale(Widget w, 
-		   XtPointer client_data, 
-		   XmArrowButtonCallbackStruct* cbs)
-#else
-void set_zoomscale(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmArrowButtonCallbackStruct *cbs;
-#endif
+void
+set_zoomscale(Widget w, 
+		   XtPointer client_data,
+		   XtPointer callback_data)
 {
   int type = (int)client_data;
+  XmArrowButtonCallbackStruct* cbs = (XmArrowButtonCallbackStruct *)callback_data;
   static int zoomscale = 3;
   
   coda_graph.current_action = NORMAL_ACTION;

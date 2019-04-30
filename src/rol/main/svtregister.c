@@ -6,6 +6,8 @@
 
 #ifdef Linux_vme
 
+#include "jvme.h"
+
 int
 main(int argc, char *argv[])
 {

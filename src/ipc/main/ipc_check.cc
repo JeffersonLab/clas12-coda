@@ -89,8 +89,8 @@ main(int argc, char **argv)
     ipc_init(unique_name,(char*)"ipc_check");
   }
   */
-  server.AddSendTopic(application, getenv("SESSION"), "control", destination);
-  server.AddRecvTopic(application, getenv("SESSION"), "control", "ipc_check");
+  server.AddSendTopic(application, getenv("SESSION"), (char *)"control", destination);
+  server.AddRecvTopic(application, getenv("SESSION"), (char *)"control", (char *)"ipc_check");
 
   server.Open();
 

@@ -11,8 +11,8 @@
 
 /* Macros to help with register spacers */
 #define MERGE_(a,b)  a##b
-#define LABEL_(a) MERGE_(unsigned int sspblank, a)
-#define BLANK LABEL_(__LINE__)
+#define LABELSSP_(a) MERGE_(unsigned int sspblank, a)
+#define BLANKSSP LABELSSP_(__LINE__)
 
 #ifndef MAX_VME_SLOTS 
 #define MAX_VME_SLOTS    21 
@@ -194,13 +194,13 @@ typedef struct
   /* 0x0000-0x0003 */ volatile unsigned int Delay_esum;
   /* 0x0004-0x0007 */ volatile unsigned int Delay_cluster;
   /* 0x0008-0x000B */ volatile unsigned int Delay_cosmic;
-  /* 0x000C-0x000F */ BLANK[(0x0010-0x000C)/4];
+  /* 0x000C-0x000F */ BLANKSSP[(0x0010-0x000C)/4];
   /* 0x0010-0x0013 */ volatile unsigned int WidthInt_esum;
-  /* 0x0014-0x001F */ BLANK[(0x020-0x0014)/4];
+  /* 0x0014-0x001F */ BLANKSSP[(0x020-0x0014)/4];
   /* 0x0020-0x0023 */ volatile unsigned int Scaler_cluster;
   /* 0x0024-0x0028 */ volatile unsigned int Scaler_inner_cosmic;
   /* 0x0028-0x002B */ volatile unsigned int Scaler_outer_cosmic;
-  /* 0x002C-0x00FF */ BLANK[(0x0100-0x002C)/4];
+  /* 0x002C-0x00FF */ BLANKSSP[(0x0100-0x002C)/4];
 } GT_ssec_regs;
 
 #define GT_SSPC_DELAY_ESUM_MASK             0x000003FF
@@ -216,25 +216,25 @@ typedef struct
   /* 0x0008-0x000B */ volatile unsigned int Delay_cosmic;
   /* 0x000C-0x000F */ volatile unsigned int Delay_pcu;
   /* 0x0010-0x0013 */ volatile unsigned int WidthInt_esum;
-  /* 0x0014-0x001F */ BLANK[(0x020-0x0014)/4];
+  /* 0x0014-0x001F */ BLANKSSP[(0x020-0x0014)/4];
   /* 0x0020-0x0023 */ volatile unsigned int Scaler_cluster;
   /* 0x0024-0x0027 */ volatile unsigned int Scaler_cosmic;
   /* 0x0028-0x002B */ volatile unsigned int Scaler_pcu;
-  /* 0x002C-0x00FF */ BLANK[(0x0100-0x002C)/4];
+  /* 0x002C-0x00FF */ BLANKSSP[(0x0100-0x002C)/4];
 } GT_sspc_regs;
 
 /* GT drift chamber subsystem */
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Delay_seg;
-  /* 0x0004-0x00FF */ BLANK[(0x0100-0x0004)/4];
+  /* 0x0004-0x00FF */ BLANKSSP[(0x0100-0x0004)/4];
 } GT_ssdc_regs;
 
 /* GT ecal+pcal subsystem */
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Ctrl;
-  /* 0x0004-0x00FF */ BLANK[(0x0100-0x0004)/4];
+  /* 0x0004-0x00FF */ BLANKSSP[(0x0100-0x0004)/4];
 } GT_ssecpc_regs;
 
 #define GT_SSHTCC_DELAY_MASK               0x000003FF
@@ -243,9 +243,9 @@ typedef struct
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Delay_htcc;
-  /* 0x0004-0x001F */ BLANK[(0x0020-0x0004)/4];
+  /* 0x0004-0x001F */ BLANKSSP[(0x0020-0x0004)/4];
   /* 0x0020-0x0023 */ volatile unsigned int Scaler_htcc;
-  /* 0x0024-0x00FF */ BLANK[(0x0100-0x0024)/4];
+  /* 0x0024-0x00FF */ BLANKSSP[(0x0100-0x0024)/4];
 } GT_sshtcc_regs;
 
 #define GT_SSFTOF_DELAY_MASK               0x000003FF
@@ -254,9 +254,9 @@ typedef struct
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Delay_ftof;
-  /* 0x0004-0x001F */ BLANK[(0x0020-0x0004)/4];
+  /* 0x0004-0x001F */ BLANKSSP[(0x0020-0x0004)/4];
   /* 0x0020-0x0023 */ volatile unsigned int Scaler_ftof;
-  /* 0x0024-0x00FF */ BLANK[(0x0100-0x0024)/4];
+  /* 0x0024-0x00FF */ BLANKSSP[(0x0100-0x0024)/4];
 } GT_ssftof_regs;
 
 #define GT_SSCTOF_DELAY_MASK               0x000003FF
@@ -265,9 +265,9 @@ typedef struct
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Delay_ctof;
-  /* 0x0004-0x001F */ BLANK[(0x0020-0x0004)/4];
+  /* 0x0004-0x001F */ BLANKSSP[(0x0020-0x0004)/4];
   /* 0x0020-0x0023 */ volatile unsigned int Scaler_ctof;
-  /* 0x0024-0x00FF */ BLANK[(0x0100-0x0024)/4];
+  /* 0x0024-0x00FF */ BLANKSSP[(0x0100-0x0024)/4];
 } GT_ssctof_regs;
 
 #define GT_SSCND_DELAY_MASK               0x000003FF
@@ -276,27 +276,27 @@ typedef struct
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Delay_cnd;
-  /* 0x0004-0x001F */ BLANK[(0x0020-0x0004)/4];
+  /* 0x0004-0x001F */ BLANKSSP[(0x0020-0x0004)/4];
   /* 0x0020-0x0023 */ volatile unsigned int Scaler_cnd;
-  /* 0x0024-0x00FF */ BLANK[(0x0100-0x0024)/4];
+  /* 0x0024-0x00FF */ BLANKSSP[(0x0100-0x0024)/4];
 } GT_sscnd_regs;
 
 /* GT pcu*ftof subsystem */
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Ctrl;
-  /* 0x0004-0x001F */ BLANK[(0x0020-0x0004)/4];
+  /* 0x0004-0x001F */ BLANKSSP[(0x0020-0x0004)/4];
   /* 0x0020-0x0037 */ volatile unsigned int Scaler[6];
-  /* 0x0038-0x00FF */ BLANK[(0x0100-0x0038)/4];
+  /* 0x0038-0x00FF */ BLANKSSP[(0x0100-0x0038)/4];
 } GT_sspcuftof_regs;
 
 /* GT dc*pcal subsystem */
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Ctrl;
-  /* 0x0004-0x001F */ BLANK[(0x0020-0x0004)/4];
+  /* 0x0004-0x001F */ BLANKSSP[(0x0020-0x0004)/4];
   /* 0x0020-0x0023 */ volatile unsigned int Scaler_dcpcal;
-  /* 0x0024-0x00FF */ BLANK[(0x0100-0x0024)/4];
+  /* 0x0024-0x00FF */ BLANKSSP[(0x0100-0x0024)/4];
 } GT_ssdcpcal_regs;
 
 
@@ -306,7 +306,7 @@ typedef struct
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Latency;
-  /* 0x0004-0x00FF */ BLANK[(0x0100-0x0004)/4];
+  /* 0x0004-0x00FF */ BLANKSSP[(0x0100-0x0004)/4];
 } GT_gtpif_regs;
 
 #define GT_STRG_CTRL_EN                     0x00000001
@@ -364,11 +364,11 @@ typedef struct
   /* 0x0000-0x0003 */ volatile unsigned int Ctrl;
   /* 0x0004-0x0007 */ volatile unsigned int Cosmic;
   /* 0x0008-0x000B */ volatile unsigned int ECPCCtrl_cluster;
-  /* 0x000C-0x000F */ BLANK[(0x0010-0x000C)/4];
+  /* 0x000C-0x000F */ BLANKSSP[(0x0010-0x000C)/4];
   /* 0x0010-0x0013 */ volatile unsigned int ECCtrl_esum;
   /* 0x0014-0x0017 */ volatile unsigned int PCCtrl_esum;
   /* 0x0018-0x001B */ volatile unsigned int ECCtrl_cluster;
-  /* 0x001C-0x001F */ BLANK[(0x0020-0x001C)/4];
+  /* 0x001C-0x001F */ BLANKSSP[(0x0020-0x001C)/4];
   /* 0x0020-0x0023 */ volatile unsigned int PCCtrl_cluster;
   /* 0x0024-0x0027 */ volatile unsigned int DCCtrl;
   /* 0x0028-0x0027 */ volatile unsigned int HtccCtrl;
@@ -378,12 +378,12 @@ typedef struct
   /* 0x0038-0x003B */ volatile unsigned int Scaler_trigger;
   /* 0x003C-0x003F */ volatile unsigned int FtofMask0;
   /* 0x0040-0x0043 */ volatile unsigned int FtofMask1;
-  /* 0x0044-0x0047 */ BLANK[(0x0048-0x0044)/4];
+  /* 0x0044-0x0047 */ BLANKSSP[(0x0048-0x0044)/4];
   /* 0x0048-0x004B */ volatile unsigned int FtofPcuCtrl;
   /* 0x004C-0x004F */ volatile unsigned int ECCtrl1;
   /* 0x0050-0x0053 */ volatile unsigned int PCCtrl1;
-  /* 0x0054-0x0057 */ BLANK[(0x0058-0x0054)/4];
-  /* 0x0058-0x007F */ BLANK[(0x0080-0x0058)/4];
+  /* 0x0054-0x0057 */ BLANKSSP[(0x0058-0x0054)/4];
+  /* 0x0058-0x007F */ BLANKSSP[(0x0080-0x0058)/4];
 } GT_strg_regs;
 
 /******************************************************************/
@@ -399,11 +399,11 @@ typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Delay_esum;
   /* 0x0004-0x0007 */ volatile unsigned int Delay_cluster;
-  /* 0x0008-0x000F */ BLANK[(0x0010-0x0008)/4];
+  /* 0x0008-0x000F */ BLANKSSP[(0x0010-0x0008)/4];
   /* 0x0010-0x0013 */ volatile unsigned int WidthInt_esum;
-  /* 0x0014-0x001F */ BLANK[(0x020-0x0014)/4];
+  /* 0x0014-0x001F */ BLANKSSP[(0x020-0x0014)/4];
   /* 0x0020-0x0023 */ volatile unsigned int Scaler_cluster;
-  /* 0x0024-0x00FF */ BLANK[(0x0100-0x0024)/4];
+  /* 0x0024-0x00FF */ BLANKSSP[(0x0100-0x0024)/4];
 } GTC_ssft_regs;
 
 #define GTC_GTPIF_LATENCY_MASK               0x0000007FF
@@ -412,7 +412,7 @@ typedef struct
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Latency;
-  /* 0x0004-0x00FF */ BLANK[(0x0100-0x0004)/4];
+  /* 0x0004-0x00FF */ BLANKSSP[(0x0100-0x0004)/4];
 } GTC_gtpif_regs;
 
 #define GTC_CTRG_CTRL_EN                          0x00000001
@@ -455,9 +455,9 @@ typedef struct
   /* 0x0014-0x0017 */ volatile unsigned int CtofCtrl;
   /* 0x0018-0x001B */ volatile unsigned int CndCtrl;
   /* 0x001C-0x001F */ volatile unsigned int CndCtofCtrl;
-  /* 0x0020-0x007F */ BLANK[(0x0080-0x0020)/4];
+  /* 0x0020-0x007F */ BLANKSSP[(0x0080-0x0020)/4];
   /* 0x0080-0x0083 */ volatile unsigned int Scaler_trigger;
-  /* 0x0084-0x00FF */ BLANK[(0x0100-0x0084)/4];
+  /* 0x0084-0x00FF */ BLANKSSP[(0x0100-0x0084)/4];
 } GTC_ctrg_regs;
 
 #define GTC_SSCTOF_DELAY_MASK               0x000003FF
@@ -466,9 +466,9 @@ typedef struct
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Delay_ctof;
-  /* 0x0004-0x001F */ BLANK[(0x0020-0x0004)/4];
+  /* 0x0004-0x001F */ BLANKSSP[(0x0020-0x0004)/4];
   /* 0x0020-0x0023 */ volatile unsigned int Scaler_ctof;
-  /* 0x0024-0x00FF */ BLANK[(0x0100-0x0024)/4];
+  /* 0x0024-0x00FF */ BLANKSSP[(0x0100-0x0024)/4];
 } GTC_ssctof_regs;
 
 #define GTC_SSCND_DELAY_MASK               0x000003FF
@@ -477,18 +477,18 @@ typedef struct
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Delay_cnd;
-  /* 0x0004-0x001F */ BLANK[(0x0020-0x0004)/4];
+  /* 0x0004-0x001F */ BLANKSSP[(0x0020-0x0004)/4];
   /* 0x0020-0x0023 */ volatile unsigned int Scaler_cnd;
-  /* 0x0024-0x00FF */ BLANK[(0x0100-0x0024)/4];
+  /* 0x0024-0x00FF */ BLANKSSP[(0x0100-0x0024)/4];
 } GTC_sscnd_regs;
 
 /* GTC cnd*ctof subsystem */
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Ctrl;
-  /* 0x0004-0x001F */ BLANK[(0x0020-0x0004)/4];
+  /* 0x0004-0x001F */ BLANKSSP[(0x0020-0x0004)/4];
   /* 0x0020-0x0037 */ volatile unsigned int Scaler[6];
-  /* 0x0038-0x00FF */ BLANK[(0x0100-0x0038)/4];
+  /* 0x0038-0x00FF */ BLANKSSP[(0x0100-0x0038)/4];
 } GTC_sscndctof_regs;
 
 /************************/
@@ -499,7 +499,7 @@ typedef struct
   /* 0x0000-0x00FF */ SspCfg_regs       Cfg;
   /* 0x0100-0x01FF */ Clk_regs          Clk;
   /* 0x0200-0x03FF */ Sd_regs           Sd;
-  /* 0x0400-0x04FF */ BLANK[(0x0500-0x0400)/4];
+  /* 0x0400-0x04FF */ BLANKSSP[(0x0500-0x0400)/4];
   
   struct
   {
@@ -510,9 +510,9 @@ typedef struct
     /* 0x0B00-0x0BFF */ HpsCosmic_regs  HpsCosmic;
   } hps;
   
-  /* 0x0C00-0x0FFF */ BLANK[(0x1000-0x0C00)/4];
+  /* 0x0C00-0x0FFF */ BLANKSSP[(0x1000-0x0C00)/4];
   /* 0x1000-0x19FF */ Serdes_regs       Ser[10];
-  /* 0x1a00-0x1FFF */ BLANK[(0x2000-0x1a00)/4];
+  /* 0x1a00-0x1FFF */ BLANKSSP[(0x2000-0x1a00)/4];
   /* 0x2000-0x20FF */ EB_regs           EB;
   /* 0x2100-0x21FF */ Trigger_regs      Trigger;
   
@@ -522,36 +522,36 @@ typedef struct
   /* 0x2300-0x23FF */ GT_sspc_regs      sspc;
   /* 0x2400-0x24FF */ GT_gtpif_regs     gtpif;
   /* 0x2500-0x25FF */ GT_ssdc_regs      ssdc;
-  /* 0x2600-0x26FF */ BLANK[(0x2700-0x2600)/4];
+  /* 0x2600-0x26FF */ BLANKSSP[(0x2700-0x2600)/4];
   /* 0x2700-0x27FF */ GT_ssecpc_regs    ssecpc;
   /* 0x2800-0x28FF */ GT_sshtcc_regs    sshtcc;
   /* 0x2900-0x29FF */ GT_ssftof_regs    ssftof;
   /* 0x2A00-0x2AFF */ GT_ssctof_regs    ssctof;
   /* 0x2B00-0x2BFF */ GT_sscnd_regs     sscnd;
   /* 0x2C00-0x2CFF */ GT_sspcuftof_regs sspcuftof;
-  /* 0x2D00-0x2DFF */ BLANK[(0x2E00-0x2D00)/4];
+  /* 0x2D00-0x2DFF */ BLANKSSP[(0x2E00-0x2D00)/4];
   /* 0x2E00-0x2EFF */ GT_ssdcpcal_regs  ssdcpcal;
-  /* 0x2F00-0x2FFF */ BLANK[(0x3000-0x2F00)/4];
+  /* 0x2F00-0x2FFF */ BLANKSSP[(0x3000-0x2F00)/4];
   /* 0x3000-0x33FF */ GT_strg_regs      strigger[8];
   } gt;
 
-  /* 0x3400 */ BLANK[(0x4000-0x3400)/4];
+  /* 0x3400 */ BLANKSSP[(0x4000-0x3400)/4];
 
   struct
   {
   /* 0x4000-0x41FF */ GTC_ssft_regs   ssft[2];
-  /* 0x4200-0x42FF */ BLANK[(0x4300-0x4200)/4];
+  /* 0x4200-0x42FF */ BLANKSSP[(0x4300-0x4200)/4];
   /* 0x4300-0x43FF */ GTC_gtpif_regs  gtpif;
-  /* 0x4400-0x44FF */ BLANK[(0x4500-0x4400)/4];
+  /* 0x4400-0x44FF */ BLANKSSP[(0x4500-0x4400)/4];
   /* 0x4500-0x45FF */ GTC_sscnd_regs  sscnd;
-  /* 0x4600-0x46FF */ BLANK[(0x4700-0x4600)/4];
+  /* 0x4600-0x46FF */ BLANKSSP[(0x4700-0x4600)/4];
   /* 0x4700-0x47FF */ GTC_ssctof_regs ssctof;
   /* 0x4800-0x48FF */ GTC_sscndctof_regs sscndctof;
-  /* 0x4900-0x4FFF */ BLANK[(0x5000-0x4900)/4];
+  /* 0x4900-0x4FFF */ BLANKSSP[(0x5000-0x4900)/4];
   /* 0x5000-0x53FF */ GTC_ctrg_regs   ctrigger[4];
   } gtc;
 
-  /* 0x5400-0xFFFF */ BLANK[(0x10000-0x5400)/4];
+  /* 0x5400-0xFFFF */ BLANKSSP[(0x10000-0x5400)/4];
   
   struct
   {
@@ -815,6 +815,7 @@ extern const char *ssp_clksrc_name[SSP_CLKSRC_NUM];
 extern const char *ssp_serdes_names[SSP_SER_NUM];
 
 /* SSP configuration */
+int sspIsNotInit(int *id, const char *func, int reqFirmwareType);
 int  sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag);
 int sspGetGeoAddress(int id);
 int  sspSlot(unsigned int id);
@@ -1053,5 +1054,53 @@ void SSPLOCK();
 void SSPUNLOCK();
 
 void sspSetA32BaseAddress(unsigned int addr);
+int sspGetEbWordCnt(int id);
+
+int sspGt_SetPcal_PcuDelay(int id, int delay);
+int sspGt_SetPcuFtof_MatchTable(int id, int table);
+int sspGetIOSrc(int id, int ioport, int pflag);
+int sspGt_GetPcal_PcuDelay(int id);
+int sspGt_GetPcuFtof_MatchTable(int id);
+int sspGtc_GetCndCtof_CtofWidth(int id);
+
+
+int sspHps_GetLatency(int id);
+int sspHps_GetSinglesEmin(int id, int n);
+int sspHps_GetSinglesEmax(int id, int n);
+int sspHps_GetSinglesNHitsmin(int id, int n);
+int sspHps_GetSinglesEnableEmin(int id, int n);
+int sspHps_GetSinglesEnableEmax(int id, int n);
+int sspHps_GetSinglesEnableNmin(int id, int n);
+int sspHps_GetSinglePrescaleXmin(int id, int n, int region);
+int sspHps_GetSinglePrescaleXmax(int id, int n, int region);
+int sspHps_GetSinglePrescalePrescale(int id, int n, int region);
+int sspHps_GetCosmicTimeCoincidence(int id);
+int sspHps_GetCosmicCoincidencePattern(int id);
+int sspHps_GetPairsEnableSum(int id, int n);
+int sspHps_GetPairsEnableDiff(int id, int n);
+int sspHps_GetPairsEnableCoplanar(int id, int n);
+int sspHps_GetPairsEnableED(int id, int n);
+int sspHps_GetPairsTimeCoincidence(int id, int n);
+int sspHps_GetPairsSummax(int id, int n);
+int sspHps_GetPairsSummin(int id, int n);
+int sspHps_GetPairsDiffmax(int id, int n);
+int sspHps_GetPairsEmin(int id, int n);
+int sspHps_GetPairsEmax(int id, int n);
+int sspHps_GetPairsNHitsmin(int id, int n);
+int sspHps_GetPairsCoplanarTolerance(int id, int n);
+float sspHps_GetPairsEDFactor(int id, int n);
+int sspHps_GetPairsEDmin(int id, int n);
+void sspPrintHpsScalers(int id) ;
+void sspPrintHpsConfig(int id);
+
+int  sspGSendScalers();
+int  sspSendScalers(int id);
+void sspPrintScalers(int id);
+
+int sspGtSendErrors(int id);
+int sspGtSendScalers(int id);
+int sspGtcSendErrors(int id);
+int sspGtcSendScalers(int id);
+
 
 #endif

@@ -167,7 +167,7 @@ rcCompBootDialog::okCallback (Widget, XtPointer data,
   // get network handler
   rcClient& client = obj->netHandler_.clientHandler (); 
 
-  daqData data2 (client.exptname (), "command", (daqArbStruct *)&bootInfo);
+  daqData data2 (client.exptname (), (char *)"command", (daqArbStruct *)&bootInfo);
 
   client.sendCmdCallback (DAAUTOBOOT_INFO, data2,
 			  (rcCallback)&(rcCompBootDialog::compBootInfoCbk),

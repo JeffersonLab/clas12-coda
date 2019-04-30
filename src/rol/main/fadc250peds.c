@@ -24,7 +24,9 @@ HPS UNIX:
 #ifdef Linux_vme
 #include "jvme.h"
 #endif
+
 #include "fadcLib.h"
+#include "fadc250Config.h"
 
 #define FADC_ADDR (3<<19)
 #define NFADC     16

@@ -35,4 +35,5 @@ int
 uthist2ipc(int id, char *myname)
 {
   hbook.hist2ipc(id, myname);
+  return(0);
 }

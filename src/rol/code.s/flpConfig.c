@@ -27,9 +27,13 @@ FLP_WIDTH  20  40   <- TDC width (ns), TRG width (ns)
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
+#include <ctype.h>
 
 #include "flpLib.h"
+#include "flpConfig.h"
 #include "xxxConfig.h"
 
 

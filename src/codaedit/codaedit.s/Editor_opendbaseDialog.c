@@ -25,25 +25,25 @@
  *
  *	  
  */
-#include "Editor_opendbaseDialog.h"
+#include <stdio.h>
+
 #include <Xm/Xm.h>
 #include <Xm/MessageB.h>
 
+#include "Editor_opendbaseDialog.h"
 #include "Editor_dbaseSel.h"
 #include "Editor_graph.h"
+#include "Editor_icon_box.h"
+#include "Editor_layout.h"
+#include "Editor_miscinfo.h"
+#include "Editor_menu.h"
 
-#if defined (__STDC__)
+
 static void
-openDatabase (Widget w, XtPointer data, XmAnyCallbackStruct* cbs)
-#else
-static void
-openDatabase (w, data, cbs)
-     Widget w;
-     XtPointer data;
-     XmAnyCallbackStruct* cbs;
-#endif
+openDatabase (Widget w, XtPointer data, XtPointer callback_data)
 {
-  int type = (int)data;
+  /*int*/long type = (/*int*/long)data;
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
 
   delete_everything(w, data, cbs);
   delete_everyicons( );
@@ -62,29 +62,14 @@ openDatabase (w, data, cbs)
   }
 }
 
-#if defined (__STDC__)
 static void 
-cancelOpenDatabase (Widget w, 
-		    XtPointer data, 
-		    XmAnyCallbackStruct* cbs)
-#else
-static void 
-cancelOpenDatabase (w, data, cbs)
-     Widget w;
-     XtPointer data;
-     XmAnyCallbackStruct* cbs;
-#endif
+cancelOpenDatabase (Widget w, XtPointer data, XtPointer callback_data)
 {
   XtPopdown (XtParent (w));
 }
 
-#if defined (__STDC__)
-void opendbaseDialogPopup (Widget parent, int type)
-#else
-void opendbaseDialogPopup (parent, type)
-     Widget parent;
-     int    type;
-#endif
+void
+opendbaseDialogPopup (Widget parent, int type)
 {
   static Widget dialog = 0;
   XmString yes, no, label;
@@ -110,8 +95,7 @@ void opendbaseDialogPopup (parent, type)
     XmStringFree (label);
 
     XtAddCallback (dialog, XmNokCallback, openDatabase, (XtPointer)type);
-    XtAddCallback (dialog, XmNcancelCallback, cancelOpenDatabase, 
-		   (XtPointer)0);
+    XtAddCallback (dialog, XmNcancelCallback, cancelOpenDatabase, (XtPointer)0);
 
     XtManageChild (dialog);
   }

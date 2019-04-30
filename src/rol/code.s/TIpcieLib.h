@@ -758,5 +758,15 @@ int  tipReadBlock2(int bar, unsigned int *reg, unsigned int *value, int nreg);
 int  tipWriteBlock(int bar, unsigned int *reg, unsigned int *value, int nreg);
 int  tipOpen();
 int  tipClose();
+int tipDoLibraryPollingThread(int choice);
+
+/*sergey*/
+int tipGetRandomTriggerSetting(int trigger);
+int tipGetRandomTriggerEnable(int trigger);
+int tipGetBlockBufferLevel();
+int tipGetTSInputMask();
+int tipBusy();
+int tipGetNumberOfBlocksInBuffer();
+/*sergey*/
 
 #endif /* TIPLIB_H */

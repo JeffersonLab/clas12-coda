@@ -43,21 +43,29 @@ XcodaBasic::XcodaBasic ( const char *name )
 XcodaBasic::~XcodaBasic()
 {
 #ifdef _TRACE_OBJECTS
-     printf("Destroy XcodaBasic Object \n");
+  printf("Destroy XcodaBasic Object, name >%s<\n",_name);fflush(stdout);
 #endif
-    if( _w )
-	XtDestroyWidget ( _w );
+  printf("11\n");fflush(stdout);
+    if( _w ) XtDestroyWidget ( _w );
+  printf("12\n");fflush(stdout);
     delete []_name;
+  printf("13\n");fflush(stdout);
 }
 
 void XcodaBasic::manage()
 {
+#ifdef _TRACE_OBJECTS
+  printf("XcodaBasic::manage, name >%s<\n",_name);fflush(stdout);
+#endif
     assert ( _w != NULL );
     XtManageChild ( _w );
 }
 
 void XcodaBasic::unmanage()
 {
+#ifdef _TRACE_OBJECTS
+  printf("XcodaBasic::unmanage, name >%s<\n",_name);fflush(stdout);
+#endif
     assert ( _w != NULL );
     XtUnmanageChild ( _w );
 }

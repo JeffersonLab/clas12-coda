@@ -75,7 +75,7 @@ public:
   virtual const char* className (void) const {return "rcXpmComdButton";}
 
   // constructor
-  rcXpmComdButton (Widget parent, char* name, char **xpm, char* msg,
+  rcXpmComdButton (Widget parent, char* name, const char **xpm, char* msg,
 		rcButtonPanel* panel,
 		rcClientHandler& handler);
 

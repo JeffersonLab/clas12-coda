@@ -61,6 +61,8 @@
 
 #include <sys/stat.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <signal.h>
 #include <ctype.h>
 #include <pwd.h>
@@ -1039,7 +1041,9 @@ StartLog(register TScreen * screen)
 	    if ((log_default = x_strdup(log_def_name)) == NULL)
 		return;
 
-	    mktemp(log_default);
+	    /*mktemp(log_default);sergey*/
+	    mkstemp(log_default);
+
 	}
 	if ((screen->logfile = x_strdup(log_default)) == 0)
 	    return;

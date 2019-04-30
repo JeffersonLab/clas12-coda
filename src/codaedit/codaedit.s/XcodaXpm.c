@@ -29,20 +29,17 @@
  *
  *	  
  */
+
+#include <stdio.h>
+#include <stdlib.h>
+
 #include <X11/Intrinsic.h>
 #include <X11/xpm.h>
 #include <Xm/Xm.h>
 
-#if defined (__STDC__)
 Pixmap XcodaCreatePixmapFromXpm(Widget parent,
-				char** data,
+				const char** data,
 				int    type)
-#else
-Pixmap XcodaCreatePixmapFromXpm(parent,data,type)
-     Widget parent;
-     char   **data;
-     int    type;
-#endif
 {
   Display        *dpy = XtDisplay(parent);
   Window         win = XDefaultRootWindow(dpy);
@@ -52,7 +49,10 @@ Pixmap XcodaCreatePixmapFromXpm(parent,data,type)
   XpmAttributes  attr;
   unsigned int  valuemask = 0;
   int            err;
-  unsigned int  pixmap_ret,pixmap_mask;
+
+  /*unsigned int  pixmap_ret, pixmap_mask;*/
+  Pixmap pixmap_ret, pixmap_mask;
+
   XpmColorSymbol col_symbol[1];
   Arg            arg[5];
   int            ac = 0;
@@ -88,13 +88,12 @@ Pixmap XcodaCreatePixmapFromXpm(parent,data,type)
   /*
   printf("Calling XpmCreatePixmapFromData ...\n");
   */
-  err = XpmCreatePixmapFromData(dpy, win, data, &pixmap_ret, &pixmap_mask, &attr);
+  err = XpmCreatePixmapFromData(dpy, win, (char **)data, &pixmap_ret, &pixmap_mask, &attr);
   
   free (col_symbol[0].value);
   if(err != XpmSuccess){
-    pixmap_ret = NULL;
-    return;
+    pixmap_ret = 0;
   }
-  else
-    return pixmap_ret;
+
+  return pixmap_ret;
 }

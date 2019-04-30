@@ -1,5 +1,9 @@
 /* Provides a useful variable-length argument error handling abstraction. */
 
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+
 /*sergey: to provide prototype for 'thr_self'*/
 #ifdef SunOS
 #include <thread.h>
@@ -74,17 +78,18 @@ Log_Msg::open (const char *prog_name, int flgs, const char *logger_key)
    '%': print out a single percent sign, '%' */
 
 ssize_t
-Log_Msg::log (Log_Priority log_priority, char *format_str, ...)
+Log_Msg::log (Log_Priority log_priority, const char *format_str, ...)
 { 
   /* Note, if we put a trace call here, we will lose! */
   MT (Guard<Mutex> m (Log_Msg::lock_));
 
-  /* External decls. */
+  /* External decls. 
 #ifdef Darwin
   extern const int sys_nerr;
 #else
   extern int sys_nerr;
 #endif
+  */
 
   typedef void (*PTF)(...);
 
@@ -168,10 +173,15 @@ Log_Msg::log (Log_Priority log_priority, char *format_str, ...)
 		case 'p': /* Print out the string assocated with the value of errno. */
 		  {
 		    type = SKIP_SPRINTF;
+
+			/*sergey
 		    if (errno >= 0 && errno < sys_nerr) 
 		      ::sprintf (bp, "%s: %s", va_arg (argp, char *), strerror (errno));
 		    else
 		      ::sprintf (bp, "%s: <unknown error> = %d", va_arg (argp, char *), errno);
+            */
+            ::sprintf (bp, "%s: %s", va_arg (argp, char *), strerror (errno));
+
 		    break;
 		  }
 		case 'S': /* Print out the string associated with this signal number. */

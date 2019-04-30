@@ -1,5 +1,5 @@
 /* XPM */
-static char * trig_btn_xpm[] = {
+static const char *trig_btn_xpm[] = {
 "39 28 56 1",
 " 	c #C30BC30BC30B",
 ".	c #AEBAAEBAAEBA",

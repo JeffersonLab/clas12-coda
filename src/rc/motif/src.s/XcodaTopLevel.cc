@@ -30,19 +30,21 @@
 //   coda motif C++ library
 //
 //
-#include "XcodaApp.h"
-#include "XcodaTopLevel.h"
 #include <stdio.h>
+#include <assert.h>
+
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
 #include <Xm/Xm.h>
-#include <assert.h>
+
+#include "XcodaApp.h"
+#include "XcodaTopLevel.h"
 
 XcodaTopLevel::XcodaTopLevel( char *name )
 : XcodaUi ( name )
 {
 #ifdef _TRACE_OBJECTS
-  printf("Create XcodaTopLevel Objects \n");
+  printf("Create XcodaTopLevel Objects \n");fflush(stdout);
 #endif
   _base_widget = (Widget)NULL;
   assert ( theApplication ); // Application object must exist
@@ -56,7 +58,9 @@ void XcodaTopLevel::initialize (void)
   // implemented as a popup shell off the Application's
   // base widget.
 
+#ifdef _TRACE_OBJECTS
   printf("XcodaTopLevel::initialize _name=>%s<\n",_name);fflush(stdout);
+#endif
 
   _w = XtCreatePopupShell ( _name, 
 			   applicationShellWidgetClass,
@@ -76,17 +80,20 @@ void XcodaTopLevel::initialize (void)
 XcodaTopLevel::~XcodaTopLevel( )
 {
 #ifdef _TRACE_OBJECTS
-  printf("Destroy XcodaTopLevel Objects \n");
+  printf("XcodaTopLevel::~XcodaTopLevel: Destroy XcodaTopLevel Objects\n");fflush(stdout);
+  printf("XcodaTopLevel::~XcodaTopLevel: Unregister this window with the Application object\n");fflush(stdout);
 #endif
   // Unregister this window with the Application object
   // if the list inside theApplication is not locked
-  if (!theApplication->_listLocked)
-    theApplication->unregisterWindow ( this );
+  if (!theApplication->_listLocked) theApplication->unregisterWindow ( this );
 }
 
 void
 XcodaTopLevel::manage (void)
 {
+#ifdef _TRACE_OBJECTS
+  printf("XcodaTopLevel::manage\n");fflush(stdout);
+#endif
   assert ( _w );
   XtPopup ( _w, XtGrabNone );
   
@@ -99,6 +106,9 @@ XcodaTopLevel::manage (void)
 void
 XcodaTopLevel::unmanage (void)
 {
+#ifdef _TRACE_OBJECTS
+  printf("XcodaTopLevel::unmanage\n");fflush(stdout);
+#endif
   assert ( _w );
   XtPopdown ( _w );
 }
@@ -106,6 +116,9 @@ XcodaTopLevel::unmanage (void)
 void 
 XcodaTopLevel::iconify(void)
 {
+#ifdef _TRACE_OBJECTS
+  printf("XcodaTopLevel::iconify\n");fflush(stdout);
+#endif
   assert ( _w );
     
   // Set the widget to have an initial iconic state
@@ -123,6 +136,9 @@ XcodaTopLevel::iconify(void)
 void
 XcodaTopLevel::defineCursor (unsigned int cursor)
 {
+#ifdef _TRACE_OBJECTS
+  printf("XcodaTopLevel::defineCursor\n");fflush(stdout);
+#endif
   Cursor rc = XCreateFontCursor (XtDisplay (_w), cursor);
   XDefineCursor (XtDisplay (_w), XtWindow (_w), rc);
   XmUpdateDisplay (_w);
@@ -131,6 +147,9 @@ XcodaTopLevel::defineCursor (unsigned int cursor)
 void
 XcodaTopLevel::undefineCursor (void)
 {
+#ifdef _TRACE_OBJECTS
+  printf("XcodaTopLevel::undefineCursor\n");fflush(stdout);
+#endif
   XUndefineCursor (XtDisplay (_w), XtWindow (_w));
 }
 

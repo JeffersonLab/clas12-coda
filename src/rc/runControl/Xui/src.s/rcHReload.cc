@@ -31,7 +31,7 @@
 
 rcHReload::rcHReload (Widget parent, rcButtonPanel* panel, 
 		      rcClientHandler& handler)
-  :rcXpmComdButton (parent, "Reload", reload_xpm, "Reload this html page", panel, handler)
+  :rcXpmComdButton (parent, (char *)"Reload", reload_xpm, (char *)"Reload this html page", panel, handler)
 {
   appContext_ = XtWidgetToApplicationContext (parent);
 }

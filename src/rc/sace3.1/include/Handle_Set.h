@@ -17,6 +17,7 @@
 #define ACE_FD_SET_H
 
 #include "sysincludes.h"
+//#include <stdext.h>
 
 /* This wrapper design is not very portable to DEC OSF/1	*/
 /* I had to redefine NFDBITS to 32. On OSF/1 NFDBITS is a 	*/
@@ -59,12 +60,13 @@ private:
   int	 max_handle_;
   fd_set mask_;
 
-  enum 
+  enum /*class MY_ENUM : uint64_t - sergey: did not need it, not sure if it helps*/
   {
     MAX_SIZE  = NOFILE,
     WORD_SIZE = NFDBITS,
     NUM_WORDS = howmany (NOFILE, NFDBITS),
-    MSB_MASK	= ~(1 << (NFDBITS - 1))
+	MSB_MASK  = ~((unsigned long)1 << (NFDBITS - 1)) /*sergey: added (unsigned long) before '1', should be 32bit on
+                                                       32-bit machines and 64bit on 64-bit machines*/
   };
 
   int  count_bits (unsigned long n) const;

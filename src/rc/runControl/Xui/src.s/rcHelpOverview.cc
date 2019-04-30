@@ -127,17 +127,17 @@ void
 rcHelpOverview::setHelpContext (void)
 {
 #if defined (_CODA_2_0_T) || defined (_CODA_2_0)
-  connect_ = new rcHelpContext ("To connect to a server", 1, 0, this);
-  disconnect_ = new rcHelpContext ("To disconnect from a server", 0, 1, this);
-  close_ = new rcHelpContext ("To close the run control GUI", 0, 2, this);
-  exit_ = new rcHelpContext ("To exit from a server", 0, 3, this);
-  master_ = new rcHelpContext ("To change mastership", 0, 4, this);
-  config_ = new rcHelpContext ("To configure a run", 0, 5, this);
-  download_ = new rcHelpContext ("To download a run", 0, 6, this);
-  reset_ = new rcHelpContext ("To reset a run", 0, 7, this);
-  evlimit_ = new rcHelpContext ("To change event/data limit", 0, 8, this);
-  runnum_ = new rcHelpContext ("To change run number", 0, 9, this);
-  repbug_ = new rcHelpContext ("To report bugs", 1, 10, this);
+  connect_    = new rcHelpContext ((char *)"To connect to a server", 1, 0, this);
+  disconnect_ = new rcHelpContext ((char *)"To disconnect from a server", 0, 1, this);
+  close_      = new rcHelpContext ((char *)"To close the run control GUI", 0, 2, this);
+  exit_       = new rcHelpContext ((char *)"To exit from a server", 0, 3, this);
+  master_     = new rcHelpContext ((char *)"To change mastership", 0, 4, this);
+  config_     = new rcHelpContext ((char *)"To configure a run", 0, 5, this);
+  download_   = new rcHelpContext ((char *)"To download a run", 0, 6, this);
+  reset_      = new rcHelpContext ((char *)"To reset a run", 0, 7, this);
+  evlimit_    = new rcHelpContext ((char *)"To change event/data limit", 0, 8, this);
+  runnum_     = new rcHelpContext ((char *)"To change run number", 0, 9, this);
+  repbug_     = new rcHelpContext ((char *)"To report bugs", 1, 10, this);
 
   registerCommand (connect_);
   registerCommand (disconnect_);

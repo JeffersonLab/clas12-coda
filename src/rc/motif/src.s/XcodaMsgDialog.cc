@@ -29,8 +29,8 @@
 #include <XcodaMsgDialog.h>
 
 XcodaMsgDialog::XcodaMsgDialog(Widget parent,
-			       char   *name,
-			       char   *title)
+			       const char   *name,
+			       const char   *title)
 :XcodaUi (name)
 {
   alreadyManaged = 0;

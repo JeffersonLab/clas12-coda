@@ -56,8 +56,8 @@ public:
 protected:
   //constructor
   XcodaPromptDialog(Widget parent,
-		    char   *name,
-		    char   *title);
+		    const char   *name,
+		    const char   *title);
   // real callback function for Ok and cancel
   virtual void ok() = 0;
   virtual void cancel() = 0;

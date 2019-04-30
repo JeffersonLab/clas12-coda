@@ -1,11 +1,16 @@
+
 /* vscmLib.c */
 
-#if defined(VXWORKS) || defined(Linux_vme)
 
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <ctype.h>
+
+
+#if defined(VXWORKS) || defined(Linux_vme)
+
 
 #undef DEBUG
 
@@ -39,9 +44,9 @@ vmeWrite32(volatile uint32_t *addr, uint32_t val) {*addr = val;}
 #define SYNC()
 #define sysClkRateGet() CLOCKS_PER_SEC
 
-#ifdef CODA3DMA
+/*#ifdef CODA3DMA*/
 #include "jvme.h"
-#endif
+/*#endif*/
 
 /*
 Override jvme.h taskDelay to reduce the delay
@@ -1283,7 +1288,7 @@ vscmGetTriggerWindowWidth(int id)
   int width;
   
   if (vscmIsNotInit(&id, __func__))
-    return;
+    return -1;
 
   width = vmeRead32(&VSCMpr[id]->Eb.WindowWidth) / 8;
 
@@ -1296,7 +1301,7 @@ vscmGetTriggerWindowOffset(int id)
   int offset;
   
   if (vscmIsNotInit(&id, __func__))
-    return;
+    return -1;
 
   offset = vmeRead32(&VSCMpr[id]->Eb.Lookback) / 8;
   
@@ -1426,7 +1431,7 @@ vscmReadBlock(int id, volatile uintptr_t *data, int nwrds, int rflag)
 #endif
 #else
     vmeAdr = (unsigned int)(VSCMpf[id]) - vscmA32Offset;
-    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int *)laddr, (nwrds << 2));
+    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int)laddr, (nwrds << 2));
 #endif
     if (retVal |= 0) {
       logMsg("ERROR: %s: DMA transfer Init @ 0x%x Failed\n", __func__, retVal);
@@ -1574,7 +1579,7 @@ int
 vscmGetClockSource(int id)
 {
   if (vscmIsNotInit(&id, __func__))
-    return;
+    return -1;
  
   return (vmeRead32(&VSCMpr[id]->Clk.Ctrl)>>30) & 0x1; 
 }
@@ -1728,7 +1733,7 @@ uint32_t
 vscmReadVmeClk(int id)
 {
   if (vscmIsNotInit(&id, __func__))
-    return;
+    return 0;
 
   return(vmeRead32(&VSCMpr[id]->Sd.Scalers[VSCM_SCALER_SYSCLK50]));
 }
@@ -1765,7 +1770,7 @@ vscmFifoClear(int id)
 }
 
 void
-vscmGStat(int id)
+vscmGStat()
 {
   int i;
 
@@ -1915,7 +1920,7 @@ int
 vscmGetBCOFreq(int id)
 {
   if (vscmIsNotInit(&id, __func__))
-    return;
+    return -1;
 
   return vmeRead32(&VSCMpr[id]->FssrCtrl.ClkCtrl);
 }
@@ -2006,7 +2011,7 @@ uint32_t
 vscmGetPulserRate(int id)
 {
   if (vscmIsNotInit(&id, __func__))
-    return;
+    return 0;
 
   return (VSCM_SYS_CLK / (vmeRead32(&VSCMpr[id]->Sd.PulserPeriod) + 1));
 }
@@ -2124,7 +2129,7 @@ vscmGetHitMask(int id)
 {
  uint32_t val;
   if (vscmIsNotInit(&id, __func__))
-    return;
+    return 0;
 
   val = vmeRead32(&VSCMpr[id]->Sd.TrgHitCtrl);
 
@@ -2136,7 +2141,7 @@ vscmGetHitMaskWidth(int id)
 {
  uint32_t val;
   if (vscmIsNotInit(&id, __func__))
-    return;
+    return 0;
 
   val = vmeRead32(&VSCMpr[id]->Tdc.TrgHitWidth);
 
@@ -2288,7 +2293,7 @@ vscmGSendScalers()
   else if(!strcmp(host, "svt2"))
     crate = 1;
   else
-    return;
+    return 0;
 
   for(i=0; i<nvscm; i++)
   {

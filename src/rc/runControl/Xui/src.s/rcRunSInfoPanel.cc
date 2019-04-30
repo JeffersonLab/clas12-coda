@@ -53,23 +53,23 @@
 
 stateString rcRunSInfoPanel::states[] =
 {
-  {"dormant", DA_DORMANT},
-  {"booting", DA_BOOTING},
-  {"booted", DA_BOOTED},
-  {"configuring", DA_CONFIGURING},
-  {"configured", DA_CONFIGURED},
-  {"downloading", DA_DOWNLOADING},
-  {"downloaded", DA_DOWNLOADED},
-  {"prestarting", DA_PRESTARTING},
-  {"paused", DA_PAUSED},
-  {"pausing", DA_PAUSING},
-  {"activating", DA_ACTIVATING},
-  {"active", DA_ACTIVE},
-  {"ending", DA_ENDING},
-  {"verifying", DA_VERIFYING},
-  {"verified", DA_VERIFIED},
-  {"prestarted", DA_PRESTARTED},
-  {"resetting", DA_TERMINATING},
+  {(char *)"dormant", DA_DORMANT},
+  {(char *)"booting", DA_BOOTING},
+  {(char *)"booted", DA_BOOTED},
+  {(char *)"configuring", DA_CONFIGURING},
+  {(char *)"configured", DA_CONFIGURED},
+  {(char *)"downloading", DA_DOWNLOADING},
+  {(char *)"downloaded", DA_DOWNLOADED},
+  {(char *)"prestarting", DA_PRESTARTING},
+  {(char *)"paused", DA_PAUSED},
+  {(char *)"pausing", DA_PAUSING},
+  {(char *)"activating", DA_ACTIVATING},
+  {(char *)"active", DA_ACTIVE},
+  {(char *)"ending", DA_ENDING},
+  {(char *)"verifying", DA_VERIFYING},
+  {(char *)"verified", DA_VERIFIED},
+  {(char *)"prestarted", DA_PRESTARTED},
+  {(char *)"resetting", DA_TERMINATING},
 };
 
 int rcRunSInfoPanel::numStates = 17;
@@ -108,7 +108,7 @@ rcRunSInfoPanel::init (void)
 
   // create frame title
   ac = 0;
-  XmString t = XmStringCreateSimple ("Run status");
+  XmString t = XmStringCreateSimple ((char *)"Run status");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget rilabel = XtCreateWidget ("runstatusLabel",
@@ -134,7 +134,7 @@ rcRunSInfoPanel::init (void)
   Widget subf1 = XtCreateWidget ("subform", xmFrameWidgetClass,
 				form, arg, ac);
   ac = 0;
-  t = XmStringCreateSimple ("Run number");
+  t = XmStringCreateSimple ((char *)"Run number");
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
 
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
@@ -176,7 +176,7 @@ rcRunSInfoPanel::init (void)
 			 form, arg, ac);
   ac = 0;
 
-  t = XmStringCreateSimple ("Run status");
+  t = XmStringCreateSimple ((char *)"Run status");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget statuslabel = XtCreateManagedWidget ("statusLabel", 
@@ -185,7 +185,7 @@ rcRunSInfoPanel::init (void)
   ac = 0;
   XmStringFree (t);
 
-  t = XmStringCreateSimple ("Dormant");
+  t = XmStringCreateSimple ((char *)"Dormant");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNrecomputeSize, FALSE); ac++;
   XtSetArg (arg[ac], XmNborderWidth, 0); ac++;
@@ -204,7 +204,7 @@ rcRunSInfoPanel::init (void)
 			 form, arg, ac);
   ac = 0;
 
-  t = XmStringCreateSimple ("Start time");
+  t = XmStringCreateSimple ((char *)"Start time");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget stlabel = XtCreateManagedWidget ("startTimeLabel", 
@@ -212,7 +212,7 @@ rcRunSInfoPanel::init (void)
   XmStringFree (t);
   ac = 0;
 
-  t = XmStringCreateSimple ("      ");
+  t = XmStringCreateSimple ((char *)"      ");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNrecomputeSize, FALSE); ac++;
   XtSetArg (arg[ac], XmNborderWidth, 0); ac++;
@@ -235,7 +235,7 @@ rcRunSInfoPanel::init (void)
 			 form, arg, ac);
   ac = 0;
 
-  t = XmStringCreateSimple ("End time");
+  t = XmStringCreateSimple ((char *)"End time");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget etlabel = XtCreateManagedWidget ("endTimeLabel", 
@@ -243,7 +243,7 @@ rcRunSInfoPanel::init (void)
   ac = 0;
   XmStringFree (t);
 
-  t = XmStringCreateSimple ("      ");
+  t = XmStringCreateSimple ((char *)"      ");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNrecomputeSize, FALSE); ac++;
   XtSetArg (arg[ac], XmNborderWidth, 0); ac++;
@@ -267,7 +267,7 @@ rcRunSInfoPanel::init (void)
 			 form, arg, ac);
 
   ac = 0;
-  t = XmStringCreateSimple ("Limits");
+  t = XmStringCreateSimple ((char *)"Limits");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget limlabel = XtCreateManagedWidget ("LimitsLabel", 
@@ -298,7 +298,7 @@ rcRunSInfoPanel::init (void)
   ac = 0;
   XtManageChild(limitFo);
   
-  t = XmStringCreateSimple ("Events");
+  t = XmStringCreateSimple ((char *)"Events");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget ellabel = XtCreateManagedWidget ("EventLimitLabel", 
@@ -330,7 +330,7 @@ rcRunSInfoPanel::init (void)
 			 limitFo, arg, ac);
   ac = 0;
 
-  t = XmStringCreateSimple ("KBytes");
+  t = XmStringCreateSimple ((char *)"KBytes");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget dllabel = XtCreateManagedWidget ("DataLimitLabel", 
@@ -395,35 +395,35 @@ rcRunSInfoPanel::manage (void)
   XcodaUi::manage ();
 
   rcClient& client = netHandler_.clientHandler ();
-  if (client.monitorOnCallback (client.exptname(), "runNumber",
+  if (client.monitorOnCallback (client.exptname(), (char *)"runNumber",
 				(rcCallback)&(rcRunSInfoPanel::runNumberCallback),
 				(void *)this) != CODA_SUCCESS) {
 #ifdef _CODA_DEBUG
     fprintf (stderr, "Cannot monitor on runNumber\n");
 #endif
   }
-  if (client.monitorOnCallback (client.exptname(), "startTime",
+  if (client.monitorOnCallback (client.exptname(), (char *)"startTime",
 		(rcCallback)&(rcRunSInfoPanel::startTimeCallback),
 		(void *)this) != CODA_SUCCESS) {
 #ifdef _CODA_DEBUG
     fprintf (stderr, "Cannot monitor on startTime\n");
 #endif
   }
-  if (client.monitorOnCallback (client.exptname(), "endTime",
+  if (client.monitorOnCallback (client.exptname(), (char *)"endTime",
 		(rcCallback)&(rcRunSInfoPanel::endTimeCallback),
 		(void *)this) != CODA_SUCCESS) {
 #ifdef _CODA_DEBUG
     fprintf (stderr, "Cannot monitor on endTime\n");
 #endif
   }
-  if (client.monitorOnCallback (client.exptname(), "eventLimit",
+  if (client.monitorOnCallback (client.exptname(), (char *)"eventLimit",
 		(rcCallback)&(rcRunSInfoPanel::eventLimitCallback),
 		(void *)this) != CODA_SUCCESS) {
 #ifdef _CODA_DEBUG
     fprintf (stderr, "Cannot monitor on event limit\n");
 #endif
   }
-  if (client.monitorOnCallback (client.exptname(), "dataLimit",
+  if (client.monitorOnCallback (client.exptname(), (char *)"dataLimit",
 		(rcCallback)&(rcRunSInfoPanel::dataLimitCallback),
 		(void *)this) != CODA_SUCCESS) {
 #ifdef _CODA_DEBUG
@@ -436,7 +436,7 @@ void
 rcRunSInfoPanel::unmanage (void)
 {
   rcClient& client = netHandler_.clientHandler ();
-  if (client.monitorOffCallback (client.exptname(), "runNumber",
+  if (client.monitorOffCallback (client.exptname(), (char *)"runNumber",
 		 (rcCallback)&(rcRunSInfoPanel::runNumberCallback),
 		 (void *)this,
 		 (rcCallback)&(rcRunSInfoPanel::offCallback),
@@ -445,7 +445,7 @@ rcRunSInfoPanel::unmanage (void)
     fprintf (stderr, "Cannot monitor off runNumber\n");
 #endif
   }
-  if (client.monitorOffCallback (client.exptname(), "startTime",
+  if (client.monitorOffCallback (client.exptname(), (char *)"startTime",
 		 (rcCallback)&(rcRunSInfoPanel::startTimeCallback),
 		 (void *)this,
 		 (rcCallback)&(rcRunSInfoPanel::offCallback),
@@ -454,7 +454,7 @@ rcRunSInfoPanel::unmanage (void)
     fprintf (stderr, "Cannot monitor off startTime\n");
 #endif
   }
-  if (client.monitorOffCallback (client.exptname(), "endTime",
+  if (client.monitorOffCallback (client.exptname(), (char *)"endTime",
 		 (rcCallback)&(rcRunSInfoPanel::endTimeCallback),
 		 (void *)this,
 		 (rcCallback)&(rcRunSInfoPanel::offCallback),
@@ -463,7 +463,7 @@ rcRunSInfoPanel::unmanage (void)
     fprintf (stderr, "Cannot monitor off endTime\n");
 #endif
   }
-  if (client.monitorOffCallback (client.exptname(), "eventLimit",
+  if (client.monitorOffCallback (client.exptname(), (char *)"eventLimit",
 		 (rcCallback)&(rcRunSInfoPanel::eventLimitCallback),
 		 (void *)this,
 		 (rcCallback)&(rcRunSInfoPanel::offCallback),
@@ -472,7 +472,7 @@ rcRunSInfoPanel::unmanage (void)
     fprintf (stderr, "Cannot monitor off eventLimit\n");
 #endif
   }
-  if (client.monitorOffCallback (client.exptname(), "dataLimit",
+  if (client.monitorOffCallback (client.exptname(), (char *)"dataLimit",
 		 (rcCallback)&(rcRunSInfoPanel::dataLimitCallback),
 		 (void *)this,
 		 (rcCallback)&(rcRunSInfoPanel::offCallback),
@@ -604,7 +604,7 @@ rcRunSInfoPanel::changeRunNumCallback (Widget w, XtPointer data,
     strncpy (temp, value, 256);
     if (::sscanf (temp, "%d", &newvalue) >= 1) {
       rcClient& client = obj->netHandler_.clientHandler ();
-      daqData da (client.exptname (), "runNumber", newvalue);
+      daqData da (client.exptname (), (char *)"runNumber", newvalue);
       if (client.setValueCallback (da, 
 		   (rcCallback)&(rcRunSInfoPanel::setValueCallback),
 		   (void *)0) != CODA_SUCCESS) { 
@@ -647,7 +647,7 @@ rcRunSInfoPanel::changeEventLimitCallback (Widget w, XtPointer data,
     strncpy (temp, value, 256);
     if (::sscanf (temp, "%d", &newvalue) >= 1) {
       rcClient& client = obj->netHandler_.clientHandler ();
-      daqData da (client.exptname (), "eventLimit", newvalue);
+      daqData da (client.exptname (), (char *)"eventLimit", newvalue);
       if (client.setValueCallback (da, 
 		   (rcCallback)&(rcRunSInfoPanel::setValueCallback),
 		   (void *)0) != CODA_SUCCESS) { 
@@ -683,7 +683,7 @@ rcRunSInfoPanel::changeDataLimitCallback (Widget w, XtPointer data,
     strncpy (temp, value, 256);
     if (::sscanf (temp, "%d", &newvalue) >= 1) {
       rcClient& client = obj->netHandler_.clientHandler ();
-      daqData da (client.exptname (), "dataLimit", newvalue);
+      daqData da (client.exptname (), (char *)"dataLimit", newvalue);
       if (client.setValueCallback (da, 
 		   (rcCallback)&(rcRunSInfoPanel::setValueCallback),
 		   (void *)0) != CODA_SUCCESS) { 

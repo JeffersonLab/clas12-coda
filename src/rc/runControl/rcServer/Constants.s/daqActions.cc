@@ -26,7 +26,7 @@
 
 daqActions* codaDaqActions = 0;
 
-static _daq_action actions_[]=
+const _daq_action actions_[]=
 {
   {"Connect", CODA_CONNECT_ACTION},
   {"Boot", CODA_BOOT_ACTION},
@@ -67,6 +67,7 @@ daqActions::actionString (int action) const
     if (action == actions_[i].action_)
       return actions_[i].string_;
   }
+  return 0; /*sergey*/
 }
 
 const int

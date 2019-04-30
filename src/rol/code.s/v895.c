@@ -1,3 +1,4 @@
+
 #ifdef VXWORKS
 
 #define SP_DEBUGx
@@ -382,8 +383,7 @@ v895ReadConfigFile (char *fname)
 	}
 	else if( (strcmp(keyword,"MASK") == 0) && (kk >= 0) )
 	{
-	  sscanf (str_tmp, "%*s %d %d %d %d %d %d %d %d
-                              %d %d %d %d %d %d %d %d",
+	  sscanf (str_tmp, "%*s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
 		  &msk[ 0], &msk[ 1], &msk[ 2], &msk[ 3],
 		  &msk[ 4], &msk[ 5], &msk[ 6], &msk[ 7],
 		  &msk[ 8], &msk[ 9], &msk[10], &msk[11],

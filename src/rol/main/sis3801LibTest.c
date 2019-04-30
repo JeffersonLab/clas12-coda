@@ -147,10 +147,9 @@ CLOSE:
 
 #else /* dummy version*/
 
-void
-sis3801LibTest_dummy()
+int
+main()
 {
-  return;
 }
 
 #endif

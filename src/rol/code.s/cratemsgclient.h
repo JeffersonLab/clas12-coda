@@ -44,7 +44,7 @@ public:
   ~CrateMsgClient();
 
   bool  IsValid();
-  void  Close(char *opt = "");
+  void  Close(char *opt = (char *)"");
   /*const char* GetUrl() const;*/
   int   SendRaw(const void* buffer, int length/*, ESendRecvOptions opt = kDefault*/);
   int   RecvRaw(void* buffer, int length/*, ESendRecvOptions opt = kDefault*/);

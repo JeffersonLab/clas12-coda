@@ -27,8 +27,7 @@
 #include <Xm/Label.h>
 #include "XcodaXpmLabel.h"
 
-XcodaXpmLabel::XcodaXpmLabel (Widget parent, char* name, char** pix,
-			      char* bgsymbol)
+XcodaXpmLabel::XcodaXpmLabel (Widget parent, char* name, char** pix, char* bgsymbol)
 :XcodaUi (name), parent_ (parent), pix_ (pix), pixmap_ (0), bgsymbol_ (0)
 {
 #ifdef _TRACE_OBJECTS

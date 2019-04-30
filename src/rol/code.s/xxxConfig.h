@@ -1,3 +1,6 @@
+
+/* xxxConfig.h */
+
 #ifndef xxxCONFIG_H
 #define xxxCONFIG_H
 /* xxxConfig.h - for all board's Config() procedures  */

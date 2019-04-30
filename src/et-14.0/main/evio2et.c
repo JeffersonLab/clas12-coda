@@ -225,7 +225,7 @@ restartLinux:
         et_event_getdata(pe[i], (void **) &pdata);
 
         /*new et requirement: need to form buffer in certain format by following call*/
-        status = evOpenBuffer(pdata, MAXBUF, "w", &handle1);
+        status = evOpenBuffer((char *)pdata, MAXBUF, "w", &handle1);
         if(status!=0) printf("evOpenBuffer returns %d\n",status);
 
 

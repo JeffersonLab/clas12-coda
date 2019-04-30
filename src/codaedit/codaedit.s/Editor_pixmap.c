@@ -92,7 +92,7 @@
 #include "./xpm_icon/convert1.xpm"
 #include "./xpm_icon/debug.xpm"
 #include "Editor_pixmap.h"
-#include "XcodaXpm.h"
+#include "XcodaXpm_codaedit.h"
 
 XcodaEditorPixmaps btn_pixmaps;
 

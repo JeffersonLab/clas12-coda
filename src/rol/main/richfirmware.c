@@ -14,9 +14,12 @@ richfirmware fe_rich.bin
 #include <string.h>
 
 #include "sspLib.h"
+#include "sspLib_rich.h"
 
 
 #ifdef Linux_vme
+
+#include "jvme.h"
 
 int
 main(int argc, char *argv[])

@@ -1212,7 +1212,7 @@ int beusspReadBlock(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  volatile u
 
 	/*printf("vmeAdr=0x%08x laddr=0x%08x\n",vmeAdr,laddr );  */
 	/*retVal = vmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2));*/
-	retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int *)laddr, (nwrds << 2));
+	retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int)laddr, (nwrds << 2));
 
       if(retVal |= 0) 
 	{
@@ -2955,7 +2955,7 @@ int beusspTokenReadBlock(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  volat
 
 	/*	retVal = vmeDmaSend          */
 
-	retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int *)laddr, (nwrds << 2));
+	retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int)laddr, (nwrds << 2));
 	
 	
       if(retVal |= 0) 

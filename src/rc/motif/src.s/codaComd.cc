@@ -51,7 +51,9 @@ codaComd::codaComd ( char *name, int active )
 codaComd::~codaComd()
 {
 #ifdef _TRACE_OBJECTS
-  printf("codaComd: Destroy codaComd Object \n");
+  printf("codaComd: Destroy codaComd Object, name >%s< \n",_name);fflush(stdout);
+  printf("codaComd:   do not delete _ci here \n",_name);fflush(stdout);
+  printf("codaComd:   _ci is only a pointer to a subclass of codaComdXInterface\n",_name);fflush(stdout);
 #endif
   delete _activationList;	
   delete _deactivationList;	

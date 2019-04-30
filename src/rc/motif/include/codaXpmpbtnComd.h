@@ -38,8 +38,8 @@ class XcodaXpmpbtnInterface;
 class codaXpmpbtnComd: public codaPbtnComd
 {
 public:
-  codaXpmpbtnComd(char *, char **, int);
-  codaXpmpbtnComd(char *, char **, int, char *);
+  codaXpmpbtnComd(char *, const char **, int);
+  codaXpmpbtnComd(char *, const char **, int, char *);
   virtual ~codaXpmpbtnComd ();
   
   virtual void createXInterface(Widget);
@@ -47,7 +47,7 @@ public:
 
 private:
   char *_name;
-  char **_xpm_data;
+  const char **_xpm_data;
   char *_bgsymbol;
 };
 #endif

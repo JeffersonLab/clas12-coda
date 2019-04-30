@@ -25,12 +25,24 @@
  *
  *	  
  */
-#include "Editor_dbaseSel.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
 #include <Xm/Xm.h>
 #include <Xm/PushBG.h>
 #include <Xm/Form.h>
 #include <Xm/RowColumn.h>
 #include <Xm/SeparatoG.h>
+
+#include "Editor_graph.h"
+#include "Editor_dbaseSel.h"
+#include "Editor_miscinfo.h"
+#include "Editor_xmisc.h"
+#include "Editor_layout.h"
+#include "Editor_converter.h"
+#include "Editor_icon_box.h"
+
 
 static editorDbaseSel  idbaseSel;
 
@@ -69,7 +81,7 @@ createOptionMenu (Widget parent)
 }
 
 static void
-dbaseSelOk (Widget w, XtPointer data, XmAnyCallbackStruct* cbs)
+dbaseSelOk (Widget w, XtPointer data, XtPointer callback_data)
 {
   int  i = 0;
   char* currdbase;
@@ -144,7 +156,7 @@ EditorSelectExp (Widget w, char *exp)
 }
 
 static void
-dbaseSelCancel (Widget w, XtPointer data, XmAnyCallbackStruct* cbs)
+dbaseSelCancel (Widget w, XtPointer data, XtPointer callback_data)
 {
   dbaseSelPopdown ();
 }

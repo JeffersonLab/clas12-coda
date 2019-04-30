@@ -91,11 +91,11 @@ rcUpdateInterval::sendUpdateInterval (int newval)
   // get client handler
   rcClient& client = netHandler_.clientHandler ();
 
-  daqData data (client.exptname (), "updateInterval", newval);
+  daqData data (client.exptname (), (char *)"updateInterval", newval);
   if (client.setValueCallback (data, 
 			       (rcCallback)&(rcUpdateInterval::simpleCallback),
 			       (void *)this) != CODA_SUCCESS) {
-    reportErrorMsg ("Cannot send new update interval value to the server !");
+    reportErrorMsg ((char *)"Cannot send new update interval value to the server !");
     return;
   }
 }
@@ -106,7 +106,7 @@ rcUpdateInterval::simpleCallback (int status, void* arg, daqNetData* )
   rcUpdateInterval* obj = (rcUpdateInterval *)arg;
   
   if (status != CODA_SUCCESS) {
-    obj->reportErrorMsg ("Setting new update interval to the server failed !");
+    obj->reportErrorMsg ((char *)"Setting new update interval to the server failed !");
     return;
   }
 }

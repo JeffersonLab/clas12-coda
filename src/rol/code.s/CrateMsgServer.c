@@ -1,7 +1,11 @@
 
+/* CrateMsgServer.c */
+
+
 #if defined(Linux_vme) || defined(Linux_armv7l)
 
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <sys/mman.h>
 #include <sys/signal.h>

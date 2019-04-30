@@ -39,8 +39,8 @@ class XcodaXpm;
 class XcodaXpmpbtnInterface: public XcodaPbtnInterface
 {
  public: 
-  XcodaXpmpbtnInterface (Widget, char *, char **, codaComd *);
-  XcodaXpmpbtnInterface (Widget, char *, char **, codaComd *, char *);
+  XcodaXpmpbtnInterface (Widget, char *, const char **, codaComd *);
+  XcodaXpmpbtnInterface (Widget, char *, const char **, codaComd *, char *);
   virtual ~XcodaXpmpbtnInterface();
   
   virtual void init();

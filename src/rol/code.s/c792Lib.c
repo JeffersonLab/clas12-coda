@@ -1460,10 +1460,10 @@ c792SetPedestal(int id, UINT16 value)
 {
   if((id<0) || (c792p[id] == NULL)) {
     logMsg("c792Reset: ERROR : QDC id %d not initialized \n",id,0,0,0,0,0);
-    return;
+    return(-1);
   }
 
-  if(value > 0xFF) return(-1);
+  if(value > 0xFF) return(-2);
 
   C792LOCK;
   c792Write(&c792p[id]->iped, value&0xFF);
@@ -1479,7 +1479,7 @@ c792GetPedestal(int id)
 
   if((id<0) || (c792p[id] == NULL)) {
     logMsg("c792Reset: ERROR : QDC id %d not initialized \n",id,0,0,0,0,0);
-    return;
+    return(-1);
   }
 
   C792LOCK;
@@ -1500,11 +1500,11 @@ c775SetResolution(int id, UINT16 value)
 {
   if((id<0) || (c792p[id] == NULL)) {
     logMsg("c792Reset: ERROR : QDC id %d not initialized \n",id,0,0,0,0,0);
-    return;
+    return(-1);
   }
 
-  if(value > 0xFF) return(-1);
-  if(value < 0x1E) return(-2);
+  if(value > 0xFF) return(-2);
+  if(value < 0x1E) return(-3);
 
   C792LOCK;
   c792Write(&c792p[id]->iped, value&0xFF);
@@ -1520,7 +1520,7 @@ c775GetResolution(int id)
 
   if((id<0) || (c792p[id] == NULL)) {
     logMsg("c792Reset: ERROR : QDC id %d not initialized \n",id,0,0,0,0,0);
-    return;
+    return(-1);
   }
 
   C792LOCK;

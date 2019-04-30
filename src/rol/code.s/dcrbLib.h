@@ -262,6 +262,9 @@ typedef struct
 
 // /* Function Prototypes */
 // 
+
+int dcrbSlot(unsigned int id);
+int dcrbId(unsigned int slot);
 int dcrbInit (unsigned int addr, unsigned int addr_inc, int ndcrb, int iFlag);
 int dcrbHardReset(int id);
 int dcrbSetClockSource(int id, int clkSrc);
@@ -294,5 +297,22 @@ int dcrbSetDAC_Pulser(int id, int grp_mask, float freq, int offset_mV, int low_m
 int dcrbPulserSetup(int id, float freq, float duty, unsigned int npulses);
 int dcrbSetTriggerPulseWidth(int id, unsigned int width);
 int dcrbGetTriggerPulseWidth(int id);
+int dcrbLinkStatus(int id);
+int dcrbLinkReset(int id);
+
+int dcrbGetDAC(int id);
+int dcrbFirmwareUpdate(int id, const char *filename);
+int dcrbFirmwareVerify(int id, const char *filename);
+int dcrbFirmwareUpdateVerify(int id, const char *filename);
+
+void dcrbSetExpid(char *string);
+void dcrbInitGlobals();
+int  dcrbReadConfigFile(char *filename);
+int  dcrbDownloadAll();
+int  dcrbConfig(char *fname);
+void dcrbMon(int slot);
+int  dcrbUploadAll(char *string, int length);
+int  dcrbUploadAllPrint();
+
 
 #endif /* __DCRBLIB__ */

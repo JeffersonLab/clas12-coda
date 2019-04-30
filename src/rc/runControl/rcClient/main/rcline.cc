@@ -176,7 +176,7 @@ main (int argc, char **argv)
   }
 
 
-  handler_.monitorOnCallback ("RCS", "runMessage", msgCallback, 0);
+  handler_.monitorOnCallback ((char *)"RCS", (char *)"runMessage", msgCallback, 0);
 
   /* in runcontrol something like that::
   if (handler_.monitorOnCallback (session, "status", statusCallback, 0) != CODA_SUCCESS)
@@ -207,7 +207,7 @@ main (int argc, char **argv)
       {
 	    char* temp[2];
 
-	    daqData data ("RCS", "command", "unknown");
+	    daqData data ((char *)"RCS", (char *)"command", (char *)"unknown");
 	    // insert database name + session name into data object
 	    temp[0] = new char[::strlen (dbase) + 1];
 	    ::strcpy (temp[0], dbase);
@@ -222,11 +222,11 @@ main (int argc, char **argv)
       }
       else if (::strcmp (command, "getruntypes") == 0)
 	  {
-	    status = handler_.getValueCallback (argv[2], "allRunTypes", getValCallback, (void *)&handler_);
+	    status = handler_.getValueCallback (argv[2], (char *)"allRunTypes", getValCallback, (void *)&handler_);
 	  }
       else if (::strcmp (command, "getconffile") == 0)
 	  {
-	    status = handler_.getValueCallback (argv[2], "confFile", getValCallback, (void *)&handler_);
+	    status = handler_.getValueCallback (argv[2], (char *)"confFile", getValCallback, (void *)&handler_);
 	  }
       else if (::strcmp (command, "configure") == 0)
       {
@@ -234,38 +234,38 @@ main (int argc, char **argv)
 	    {
 	      char runtype[32];
 	      scanf ("%s",runtype);
-	      daqData data ("RCS","command",runtype);
+	      daqData data ((char *)"RCS",(char *)"command",runtype);
 	      status = handler_.sendCmdCallback (DACONFIGURE, data, callback, 0);
 	    }
       }
       else if (::strcmp (command, "download") == 0)
       {
-	    daqData data ("RCS", "command", (int)DADOWNLOAD);
+	    daqData data ((char *)"RCS", (char *)"command", (int)DADOWNLOAD);
 	    status = handler_.sendCmdCallback (DADOWNLOAD, data, callback, 0);
       }	
       else if (::strcmp (command, "prestart") == 0)
       {
-	    daqData data ("RCS", "command", (int)DAPRESTART);
+	    daqData data ((char *)"RCS", (char *)"command", (int)DAPRESTART);
 	    status = handler_.sendCmdCallback (DAPRESTART, data, callback, 0);
       }	
       else if (::strcmp (command, "go") == 0)
       {
-	    daqData data ("RCS", "command", (int)DAGO);
+	    daqData data ((char *)"RCS", (char *)"command", (int)DAGO);
 	    status = handler_.sendCmdCallback (DAGO, data, callback, 0);
       }	
       else if (::strcmp (command, "end") == 0)
       {
-	    daqData data ("RCS", "command", (int)DAEND);
+	    daqData data ((char *)"RCS", (char *)"command", (int)DAEND);
 	    status = handler_.sendCmdCallback (DAEND, data, callback, 0);
       }	
       else if (::strcmp (command, "abort") == 0)
       {
-	    daqData data ("RCS", "command", (int)DAABORT);
+	    daqData data ((char *)"RCS", (char *)"command", (int)DAABORT);
 	    status = handler_.sendCmdCallback (DAABORT, data, callback, 0);
       }
       else if (::strcmp (command, "reset") == 0)
       {
-	    daqData data ("RCS", "command", (int)DATERMINATE);
+	    daqData data ((char *)"RCS", (char *)"command", (int)DATERMINATE);
 	    status = handler_.sendCmdCallback (DATERMINATE, data, callback, 0);
       }
       else if (::strcmp (command, "getvalue") == 0)
@@ -317,13 +317,13 @@ main (int argc, char **argv)
 	    {
 	      int state[2];
 	      scanf ("%d %d",&state[0], &state[1]);
-	      daqData data ("RCS","command", state, 2);
+	      daqData data ((char *)"RCS",(char *)"command", state, 2);
 	      handler_.sendCmdCallback (DACHANGE_STATE, data, callback, 0);
 	    }
       }
       else if (::strcmp (command, "test") == 0)
       {
-	    daqData data ("RCS", "command", (int)DATEST);	
+	    daqData data ((char *)"RCS", (char *)"command", (int)DATEST);	
 	    status = handler_.sendCmdCallback (DATEST, data, callback, 0);
       }
       else

@@ -24,25 +24,21 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <math.h>
+
 #include <X11/Xatom.h>
 #include <X11/Intrinsic.h>
 #include <X11/Shell.h>
 
-#include <math.h>
 
 /**********************************************************************************
  *                void RGB_TO_HSV(r, g, b, h, s, v)                               *
  * Description:                                                                   *
  *     Standard RGB to HSV Color Model Conversion                                 *
  *********************************************************************************/
-#if defined (__STDC__)
-void RGB_TO_HSV(int r,int g,int b,
-		float* h, float* s,float* v)
-#else
-void RGB_TO_HSV(r,g,b,h,s,v)
-int r,g,b;
-float *h,*s,*v;
-#endif
+void
+RGB_TO_HSV(int r,int g,int b, float* h, float* s,float* v)
 {
   float max,min;
   float temp;
@@ -97,14 +93,8 @@ float *h,*s,*v;
  * Description:                                                                   *
  *     Standard HSV to RGB Color Model Conversion                                 *
  *********************************************************************************/
-#if defined (__STDC__)
-void HSV_TO_RGB(int* r,int* g,int* b,
-		float h, float s, float v)
-#else
-void HSV_TO_RGB(r,g,b,h,s,v)
-int *r,*g,*b;
-float h,s,v;
-#endif
+void
+HSV_TO_RGB(int* r,int* g,int* b, float h, float s, float v)
 {
   float rr,gg,bb;
   int i;
@@ -174,19 +164,12 @@ float h,s,v;
  * Description:                                                                *
  *     Return top and bottom shadow color of a given color pixel               *
  ******************************************************************************/
-#if defined (__STDC__)
-void XcodaGetShadowColor(Display* dpy,
+void
+XcodaGetShadowColor(Display* dpy,
 			 Drawable win,
 			 Pixel bg,
 			 Pixel* b_shadow,
 			 Pixel* t_shadow)
-#else
-void XcodaGetShadowColor(dpy,win,bg,b_shadow,t_shadow)
-Display *dpy;
-Drawable win;
-Pixel bg;
-Pixel *b_shadow,*t_shadow;
-#endif
 {
   Colormap colmap;
   Screen   *scr = XDefaultScreenOfDisplay(dpy);
@@ -260,16 +243,10 @@ Pixel *b_shadow,*t_shadow;
  * Description:                                                              *
  *     Allocate a nearest color to a request XColor structure                *
  ****************************************************************************/
-#if defined (__STDC__)
-int XcodaAllocNearestColor(Display* dpy, 
+int
+XcodaAllocNearestColor(Display* dpy, 
 			   Colormap cmap, 
 			   XColor* color)
-#else
-int XcodaAllocNearestColor(dpy, cmap, color)
-Display *dpy;
-Colormap cmap;
-XColor *color;
-#endif
 {
   int            i, dc;
   XColor         *ctab;
@@ -329,18 +306,12 @@ XColor *color;
  *     Get pixel value by specifying a trplet (r, g, b)                   *
  *     Return 0: upon failure                                             *
  *************************************************************************/
-#if defined (__STDC__)
-Pixel get_pixel(Display* dpy, 
+Pixel
+get_pixel(Display* dpy, 
 		Colormap cmap, 
 		unsigned short r, 
 		unsigned short g, 
 		unsigned short b)
-#else
-Pixel get_pixel(dpy, cmap, r, g, b)
-Display *dpy;
-Colormap cmap;
-unsigned short r, g, b;
-#endif
 {
   XColor color;
   int    status;
@@ -370,17 +341,11 @@ unsigned short r, g, b;
  *      background        rgb:rr/gg/bb                                  *
  *      foreground        rgb:rr/gg/bb                                  *
  ***********************************************************************/
-#if defined (__STDC__)
-int XcodaEditorInitColor (Display* dpy, 
+int
+XcodaEditorInitColor (Display* dpy, 
 			  Colormap cmap, 
 			  Pixel* fg_pixel, 
 			  Pixel* bg_pixel)
-#else
-int XcodaEditorInitColor (dpy, cmap, fg_pixel, bg_pixel)
-Display* dpy;
-Colormap cmap;
-Pixel *fg_pixel, *bg_pixel;
-#endif
 {
   char *home;
   char fullname[128], temp0[64],temp1[64];

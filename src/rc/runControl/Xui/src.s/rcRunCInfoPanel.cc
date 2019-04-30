@@ -89,7 +89,7 @@ rcRunCInfoPanel::init (void)
 
   // create frame title
   ac = 0;
-  XmString t = XmStringCreateSimple ("Static parameters");
+  XmString t = XmStringCreateSimple ((char *)"Static parameters");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget rilabel = XtCreateWidget ("runinfoLabel",
@@ -124,9 +124,9 @@ rcRunCInfoPanel::init (void)
   XtSetArg (arg[ac], XmNrightAttachment, XmATTACH_POSITION); ac++;
   XtSetArg (arg[ac], XmNrightPosition, 1); ac++;
   XtSetArg (arg[ac], XmNshadowType, XmSHADOW_ETCHED_OUT); ac++;
-  Widget frame2 = XmCreateFrame (sform, "frame2", arg, ac );
+  Widget frame2 = XmCreateFrame (sform, (char *)"frame2", arg, ac );
   ac = 0;
-  t = XmStringCreateSimple ("Database");
+  t = XmStringCreateSimple ((char *)"Database");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNshadowType, XmSHADOW_OUT); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
@@ -136,7 +136,7 @@ rcRunCInfoPanel::init (void)
   XmStringFree (t);
 
   ac = 0;
-  t = XmStringCreateSimple ("");
+  t = XmStringCreateSimple ((char *)"");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNheight, 20); ac++;
   XtSetArg (arg[ac], XmNrecomputeSize, FALSE); ac++;
@@ -156,9 +156,9 @@ rcRunCInfoPanel::init (void)
   XtSetArg (arg[ac], XmNleftPosition, 1); ac++;
   XtSetArg (arg[ac], XmNrightAttachment, XmATTACH_POSITION); ac++;
   XtSetArg (arg[ac], XmNrightPosition, 2); ac++;
-  Widget frame3 = XmCreateFrame (sform, "frame3", arg, ac );
+  Widget frame3 = XmCreateFrame (sform, (char *)"frame3", arg, ac );
   ac = 0;
-  t = XmStringCreateSimple ("Session");
+  t = XmStringCreateSimple ((char *)"Session");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget enlabel = XtCreateManagedWidget ("expnameLabel",
@@ -168,7 +168,7 @@ rcRunCInfoPanel::init (void)
 
   // Session name
   ac = 0;
-  t = XmStringCreateSimple ("");
+  t = XmStringCreateSimple ((char *)"");
   XtSetArg (arg[ac], XmNrecomputeSize, FALSE); ac++;
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   exptname_ = XtCreateManagedWidget ("exptname",
@@ -191,10 +191,10 @@ rcRunCInfoPanel::init (void)
   XtSetArg (arg[ac], XmNrightPosition, 3); ac++;
   XtSetArg (arg[ac], XmNshadowThickness, 2); ac++;
   XtSetArg (arg[ac], XmNshadowType, XmSHADOW_ETCHED_OUT); ac++;
-  Widget frame4 = XmCreateFrame (sform, "frame4", arg, ac );
+  Widget frame4 = XmCreateFrame (sform, (char *)"frame4", arg, ac );
 
   ac = 0;
-  t = XmStringCreateSimple ("Configuration");
+  t = XmStringCreateSimple ((char *)"Configuration");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget rtlabel = XtCreateManagedWidget ("runTypeLabel",
@@ -204,7 +204,7 @@ rcRunCInfoPanel::init (void)
 
   // Run name
   ac = 0;
-  t = XmStringCreateSimple ("");
+  t = XmStringCreateSimple ((char *)"");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNrecomputeSize, FALSE); ac++;
   runType_ = XtCreateManagedWidget ("runType",xmLabelWidgetClass, frame4, arg, ac); /* sergey: runTypee scruds up color of Configuration field */
@@ -236,9 +236,9 @@ rcRunCInfoPanel::init (void)
   XtSetArg (arg[ac], XmNrightPosition, 4); ac++;
   XtSetArg (arg[ac], XmNshadowThickness, 2); ac++;
   XtSetArg (arg[ac], XmNshadowType, XmSHADOW_ETCHED_OUT); ac++;
-  Widget frame5 = XmCreateFrame (sform, "frame5", arg, ac );
+  Widget frame5 = XmCreateFrame (sform, (char *)"frame5", arg, ac );
   ac = 0;
-  t = XmStringCreateSimple ("rcServer");
+  t = XmStringCreateSimple ((char *)"rcServer");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget hlabel = XtCreateManagedWidget ("hostLabel",
@@ -247,7 +247,7 @@ rcRunCInfoPanel::init (void)
   XmStringFree (t);
   
   ac = 0;
-  t = XmStringCreateSimple ("");
+  t = XmStringCreateSimple ((char *)"");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNrecomputeSize, FALSE); ac++;
   hostname_ = XtCreateManagedWidget ("hostname",
@@ -316,7 +316,7 @@ rcRunCInfoPanel::manage (void)
   //				(rcCallback)&(rcRunCInfoPanel::timeCallback),
   //				(void *)this) != CODA_SUCCESS) 
   // fprintf (stderr, "Cannot register monitor on time callback\n");
-  if (client.monitorOnCallback (client.exptname (), "exptName",
+  if (client.monitorOnCallback (client.exptname (), (char *)"exptName",
 				(rcCallback)&(rcRunCInfoPanel::exptnameCallback),
 				(void *)this) != CODA_SUCCESS) {
 #ifdef _CODA_DEBUG
@@ -324,7 +324,7 @@ rcRunCInfoPanel::manage (void)
 #endif
   }
 
-  if (client.monitorOnCallback (client.exptname (), "runType",  /*sergey: if runTypee, does not fill 'Configuration' field */
+  if (client.monitorOnCallback (client.exptname (), (char *)"runType",  /*sergey: if runTypee, does not fill 'Configuration' field */
 				(rcCallback)&(rcRunCInfoPanel::runtypeCallback),
 				(void *)this) != CODA_SUCCESS) {
 #ifdef _CODA_DEBUG
@@ -341,7 +341,7 @@ rcRunCInfoPanel::manage (void)
 #endif
   }
 */
-  if (client.monitorOnCallback (client.exptname (), "hostName",
+  if (client.monitorOnCallback (client.exptname (), (char *)"hostName",
 				(rcCallback)&(rcRunCInfoPanel::hostnameCallback),
 				(void *)this) != CODA_SUCCESS) {
 #ifdef _CODA_DEBUG
@@ -349,7 +349,7 @@ rcRunCInfoPanel::manage (void)
 #endif
   }
 #if defined (_CODA_2_0_T) || defined (_CODA_2_0)
-  if (client.monitorOnCallback (client.exptname (), "database",
+  if (client.monitorOnCallback (client.exptname (), (char *)"database",
 				(rcCallback)&(rcRunCInfoPanel::databaseCallback),
 				(void *)this) != CODA_SUCCESS) {
 #ifdef _CODA_DEBUG
@@ -372,7 +372,7 @@ rcRunCInfoPanel::unmanage (void)
 {
   // remove all callbacks
   rcClient& client = netHandler_.clientHandler ();
-  if (client.monitorOffCallback (client.exptname (), "time",
+  if (client.monitorOffCallback (client.exptname (), (char *)"time",
 				 (rcCallback)&(rcRunCInfoPanel::timeCallback),
 				 (void *)this,
 				 (rcCallback)&(rcRunCInfoPanel::offCallback),
@@ -381,7 +381,7 @@ rcRunCInfoPanel::unmanage (void)
     fprintf (stderr, "Cannot register monitor off time callback\n"); 
 #endif
   }
-  if (client.monitorOffCallback (client.exptname (), "exptName",
+  if (client.monitorOffCallback (client.exptname (), (char *)"exptName",
 				 (rcCallback)&(rcRunCInfoPanel::exptnameCallback),
 				 (void *)this,
 				 (rcCallback)&(rcRunCInfoPanel::offCallback),
@@ -391,7 +391,7 @@ rcRunCInfoPanel::unmanage (void)
 #endif
   }
 
-  if (client.monitorOffCallback (client.exptname (), "runType",  /* sergey: 'runTypee' seems irrelevant */
+  if (client.monitorOffCallback (client.exptname (), (char *)"runType",  /* sergey: 'runTypee' seems irrelevant */
 				 (rcCallback)&(rcRunCInfoPanel::runtypeCallback),
 				 (void *)this,
 				 (rcCallback)&(rcRunCInfoPanel::offCallback),
@@ -412,7 +412,7 @@ rcRunCInfoPanel::unmanage (void)
   }
 */
 
-  if (client.monitorOffCallback (client.exptname (), "hostName",
+  if (client.monitorOffCallback (client.exptname (), (char *)"hostName",
 				 (rcCallback)&(rcRunCInfoPanel::hostnameCallback),
 				 (void *)this,
 				 (rcCallback)&(rcRunCInfoPanel::offCallback),
@@ -422,7 +422,7 @@ rcRunCInfoPanel::unmanage (void)
 #endif
   }
 #if defined (_CODA_2_0_T) || defined (_CODA_2_0)
-  if (client.monitorOffCallback (client.exptname (), "database",
+  if (client.monitorOffCallback (client.exptname (), (char *)"database",
 				 (rcCallback)&(rcRunCInfoPanel::databaseCallback),
 				 (void *)this,
 				 (rcCallback)&(rcRunCInfoPanel::offCallback),

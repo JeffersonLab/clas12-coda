@@ -23,8 +23,11 @@
  *   Imported sources
  *
  */
+
 #ifndef RULER_H
+
 #define RULER_H
+
 extern WidgetClass xcodaRulerWidgetClass;
 
 typedef struct _XcodaRulerClassRec * XcodaRulerWidgetClass;
@@ -34,7 +37,9 @@ typedef struct _XcodaRulerRec      * XcodaRulerWidget;
 #define XcodaLEFT_VERTICAL             1  /* of the ruler */
 #define XcodaBOTTOM_HORIZONTAL         2
 #define XcodaRIGHT_VERTICAL            3
+
 /*define reource string for the ruler widget*/
+
 #define XcodaNvalueChangedCallback "valueChangedCallback"
 #define XcodaNorientation          "orientation"
 #define XcodaNminimum              "minimum"
@@ -56,11 +61,12 @@ typedef struct _XcodaRulerRec      * XcodaRulerWidget;
 #define XtCPos                  "Pos"
 #define Xcoda_SELEC                 TED    1
 
-typedef struct{
+typedef struct {
   int    reason;
   XEvent *event;
   int    position;
-}XcodaRulerCallbackStruct;
+} XcodaRulerCallbackStruct;
 
 #define Xcoda_SELECTED 1
-#endif RULER_H
+
+#endif /*RULER_H*/

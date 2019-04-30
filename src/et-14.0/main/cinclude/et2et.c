@@ -60,6 +60,7 @@ pe->byteorder - can be 0x04030201 or 0x01020304
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -212,27 +213,27 @@ main(int argc, char **argv)
     printf("option >%s<\n",option);
   }
 
-  if(strlen(from_node)==NULL)
+  if(strlen(from_node)==0)
   {
     printf("wrong 'from_node' - exit\n");
     exit(0);
   }
-  if(strlen(from_et)==NULL)
+  if(strlen(from_et)==0)
   {
     printf("wrong 'from_et' - exit\n");
     exit(0);
   }
-  if(strlen(to_node)==NULL)
+  if(strlen(to_node)==0)
   {
     printf("wrong 'to_node' - exit\n");
     exit(0);
   }
-  if(strlen(to_et)==NULL)
+  if(strlen(to_et)==0)
   {
     printf("wrong 'to_et' - exit\n");
     exit(0);
   }
-  if(strlen(from_station)==NULL)
+  if(strlen(from_station)==0)
   {
     printf("wrong 'from_station' - exit\n");
     exit(0);

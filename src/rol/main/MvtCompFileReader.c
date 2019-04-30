@@ -19,8 +19,10 @@
 --
 --------------------------------------------------------------------------------
 */
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <signal.h>
 #include <sys/types.h>
@@ -303,7 +305,7 @@ void TimingHistos_Free( TimingHistos *tim_hist )
 void TimingHistos_DumpStat(TimingHistos *tim_hist, FILE *fptr)
 {
 	int index;
-	fprintf( fptr, "TimingHistos = 0x%08x\n", (unsigned int)tim_hist );
+	fprintf( fptr, "TimingHistos = 0x%08x\n", (unsigned long int)tim_hist );
 	/*
 	 * Dump stats
 	 */
@@ -619,7 +621,7 @@ void PhyEvtStat_Init(PhyEvtStat *phy_evt_stat)
 void PhyEvtStat_Dump(PhyEvtStat *phy_evt_stat, FILE *fptr)
 {
 	int index;
-	fprintf( fptr, "  PhyEvtStat = 0x%08x\n", (unsigned int)phy_evt_stat );
+	fprintf( fptr, "  PhyEvtStat = 0x%08x\n", (unsigned long int)phy_evt_stat );
 	fprintf( fptr, "   id   = %d\n", phy_evt_stat->id );
 	fprintf( fptr, "   size = %d\n", phy_evt_stat->size );
 	fprintf( fptr, "   sys_type  = %s\n", SysType2Str( phy_evt_stat->sys_type ) );
@@ -1756,7 +1758,7 @@ int NetHdr_Printf( FILE *fptr, NetHdr *net_hdr )
 		return -1;
 	}
 	// Dump net_hdr
-	fprintf( fptr, "NetHdr =0x%08x\n",      (unsigned int)net_hdr );
+	fprintf( fptr, "NetHdr =0x%08x\n",      (unsigned long int)net_hdr );
 	fprintf( fptr, " size    =0x%08x %d\n", (unsigned int)(net_hdr->size),        net_hdr->size );
 	fprintf( fptr, " blk_num =0x%08x %d\n", (unsigned int)(net_hdr->blk_num),     net_hdr->blk_num );
 	fprintf( fptr, " hdr_len =0x%08x %d\n", (unsigned int)(net_hdr->hdr_len),     net_hdr->hdr_len );
@@ -1791,7 +1793,7 @@ int EntryHdr_Printf( FILE *fptr, EntryHdr *ent_hdr )
 		return -1;
 	}
 	// Dump net_hdr
-	fprintf( fptr, "EntryHdr =0x%08x\n", (unsigned int)ent_hdr );
+	fprintf( fptr, "EntryHdr =0x%08x\n", (unsigned long int)ent_hdr );
 	fprintf( fptr, " size=0x%08x %d\n",  (unsigned int)(ent_hdr->size), ent_hdr->size );
 	fprintf
 	(
@@ -1831,7 +1833,7 @@ int RcPreStart_Printf( FILE *fptr, RcPreStart *rc_ent )
 		return -1;
 	}
 	// Dump net_hdr
-	fprintf( fptr, "RcPreStart =0x%08x\n",  (unsigned int)rc_ent );
+	fprintf( fptr, "RcPreStart =0x%08x\n",  (unsigned long int)rc_ent );
 	fprintf( fptr, " size    =0x%08x %d\n", (unsigned int)(rc_ent->size),     rc_ent->size );
 	fprintf( fptr, " type    =0x%08x\n",    (unsigned int)(rc_ent->type) );
 	fprintf( fptr, " time    =0x%08x %d\n", (unsigned int)(rc_ent->time),     rc_ent->time );
@@ -1861,7 +1863,7 @@ int RcGo_Printf( FILE *fptr, RcGo *rc_ent )
 		return -1;
 	}
 	// Dump net_hdr
-	fprintf( fptr, "RcGo =0x%08x\n",        (unsigned int)rc_ent );
+	fprintf( fptr, "RcGo =0x%08x\n",        (unsigned long int)rc_ent );
 	fprintf( fptr, " size    =0x%08x %d\n", (unsigned int)(rc_ent->size),     rc_ent->size );
 	fprintf( fptr, " type    =0x%08x\n",    (unsigned int)(rc_ent->type) );
 	fprintf( fptr, " time    =0x%08x %d\n", (unsigned int)(rc_ent->time),     rc_ent->time );
@@ -1892,7 +1894,7 @@ int RcEnd_Printf( FILE *fptr, RcEnd *rc_ent )
 		return -1;
 	}
 	// Dump net_hdr
-	fprintf( fptr, "RcEnd =0x%08x\n",       (unsigned int)rc_ent );
+	fprintf( fptr, "RcEnd =0x%08x\n",       (unsigned long int)rc_ent );
 	fprintf( fptr, " size    =0x%08x %d\n", (unsigned int)(rc_ent->size),     rc_ent->size );
 	fprintf( fptr, " type    =0x%08x\n",    (unsigned int)(rc_ent->type) );
 	fprintf( fptr, " time    =0x%08x %d\n", (unsigned int)(rc_ent->time),     rc_ent->time );
@@ -1922,7 +1924,7 @@ int RcSync_Printf( FILE *fptr, RcSync *rc_ent )
 		return -1;
 	}
 	// Dump net_hdr
-	fprintf( fptr, "RcSync =0x%08x\n",      (unsigned int)rc_ent );
+	fprintf( fptr, "RcSync =0x%08x\n",      (unsigned long int)rc_ent );
 	fprintf( fptr, " size    =0x%08x %d\n", (unsigned int)(rc_ent->size),    rc_ent->size );
 	fprintf( fptr, " type    =0x%08x\n",    (unsigned int)(rc_ent->type) );
 	fprintf( fptr, " time    =0x%08x %d\n", (unsigned int)(rc_ent->time),    rc_ent->time );
@@ -1980,7 +1982,7 @@ int EvtBlk_Printf( EvtBlk *evt_blk, FILE *fptr )
 		return -1;
 	}
 	// Dump net_hdr
-	fprintf( fptr, "EvtBlk=0x%08x\n",    (unsigned int)evt_blk );
+	fprintf( fptr, "EvtBlk=0x%08x\n",    (unsigned long int)evt_blk );
 	fprintf( fptr, " size =0x%08x %d\n", (unsigned int)(evt_blk->size),     evt_blk->size );
 	fprintf( fptr, " type =0x%08x %d\n", (unsigned int)(evt_blk->type),     evt_blk->type );
 	fprintf( fptr, " num  =0x%08x %d\n", (unsigned int)(evt_blk->num),      evt_blk->num  );
@@ -2078,7 +2080,7 @@ int TiBank_Disent_Printf( TiBank_Dis *ti_bank, FILE *fptr )
 		return -1;
 	}
 
-	fprintf( fptr, "TiBank =0x%08x\n",   (unsigned int)ti_bank );
+	fprintf( fptr, "TiBank =0x%08x\n",   (unsigned long int)ti_bank );
 	fprintf( fptr, " size          =0x%08x %d\n", ti_bank->size, ti_bank->size );
 	fprintf( fptr, " header        =0x%08x\n", ti_bank->header );
 	fprintf( fptr, "   type_count  =0x%08x size=%d\n",  ti_bank->type_count, ti_bank->type_count & 0xFF );
@@ -3260,7 +3262,7 @@ int main( int argc, char* *argv )
 					// first wright the entity length in the buffer
 					rd_buf_ptr = rd_buf;
 					if( verbose > 2 )
-						fprintf(stdout, "%s: rd_buf_ptr = 0x%08x\n", __FUNCTION__, (unsigned int)rd_buf_ptr);
+						fprintf(stdout, "%s: rd_buf_ptr = 0x%08x\n", __FUNCTION__, (unsigned long int)rd_buf_ptr);
 					*rd_buf_ptr++ = next_ent_len;
 					next_ent_len_to_be_read = next_ent_len;
 					if( verbose > 2 )
@@ -3287,7 +3289,7 @@ int main( int argc, char* *argv )
 					{
 						ent_len = next_ent_len;
 						if( verbose > 2 )
-							fprintf(stdout, "%s: rd_buf = 0x%08x rd_buf_len=%d\n", __FUNCTION__, (unsigned int)rd_buf, ent_len);
+							fprintf(stdout, "%s: rd_buf = 0x%08x rd_buf_len=%d\n", __FUNCTION__, (unsigned long int)rd_buf, ent_len);
 						next_ent_len = 0;
 					}
 				}
@@ -3303,7 +3305,7 @@ int main( int argc, char* *argv )
 					// Wrongly prefetched net header data in the newly occupied buffer
 					rd_buf_ptr = rd_buf;
 					if( verbose > 2 )
-						fprintf(stdout, "%s: rd_buf_ptr = 0x%08x\n", __FUNCTION__, (unsigned int)rd_buf_ptr);
+						fprintf(stdout, "%s: rd_buf_ptr = 0x%08x\n", __FUNCTION__, (unsigned long int)rd_buf_ptr);
 					*rd_buf_ptr++ = net_hdr.size;
 					*rd_buf_ptr++ = net_hdr.blk_num;
 					*rd_buf_ptr++ = net_hdr.hdr_len;
@@ -3326,7 +3328,7 @@ int main( int argc, char* *argv )
 						net_hdr_expected = 1;
 					ent_len = next_ent_len;
 					if( verbose > 2 )
-						fprintf(stdout, "%s: rd_buf = 0x%08x rd_buf_len=%d\n", __FUNCTION__, (unsigned int)rd_buf, ent_len);
+						fprintf(stdout, "%s: rd_buf = 0x%08x rd_buf_len=%d\n", __FUNCTION__, (unsigned long int)rd_buf, ent_len);
 					next_ent_len = 0;
 				} // else of if( net_hdr_detected )
 			} // if( next_ent_len == 0 )
@@ -3547,7 +3549,7 @@ if( (ti_evt_cnt == 15) || (ti_evt_cnt == 16) )
 					}
 					else
 					{
-						fprintf(stdout, "%s: Unknown tag for rd_buf = 0x%08x of len=%d of ascii type=0x%08x skipping!\n", __FUNCTION__, (unsigned int)rd_buf_ptr, *rd_buf_ptr, *(rd_buf_ptr+1) );
+						fprintf(stdout, "%s: Unknown tag for rd_buf = 0x%08x of len=%d of ascii type=0x%08x skipping!\n", __FUNCTION__, (unsigned long int)rd_buf_ptr, *rd_buf_ptr, *(rd_buf_ptr+1) );
 						unknown_asc_cnt++;
 						cur_ent_len = (*rd_buf_ptr + 1);
 						rd_buf_ptr = rd_buf_ptr + cur_ent_len;
@@ -3677,7 +3679,7 @@ TiBank_Disent_Printf( &ti_bank, stdout );
 				}
 				else
 				{
-					fprintf(stdout, "%s: Unknown type rd_buf = 0x%08x of len=%d 0x%08x type=0x%08x skipping!\n", __FUNCTION__, (unsigned int)rd_buf_ptr, *rd_buf_ptr, *rd_buf_ptr, *(rd_buf_ptr+1) );
+					fprintf(stdout, "%s: Unknown type rd_buf = 0x%08x of len=%d 0x%08x type=0x%08x skipping!\n", __FUNCTION__, (unsigned long int)rd_buf_ptr, *rd_buf_ptr, *rd_buf_ptr, *(rd_buf_ptr+1) );
 					unknown_ent_cnt++;
 					cur_ent_len = (*rd_buf_ptr + 1);
 					rd_buf_ptr = rd_buf_ptr + cur_ent_len;

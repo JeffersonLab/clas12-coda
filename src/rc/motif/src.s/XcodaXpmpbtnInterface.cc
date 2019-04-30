@@ -39,14 +39,16 @@
 //   coda motif C++ library
 //
 //
+#include <stdio.h>
+
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
-#include <stdio.h>
-#include <XcodaXpmpbtnInterface.h>
-#include <XcodaXpm.h>
 #include <Xm/Xm.h>
 #include <Xm/PushB.h>
 #include <Xm/DrawnB.h>
+
+#include "XcodaXpmpbtnInterface.h"
+#include "XcodaXpm.h"
 
 #define BUTTON_WIDTH 97
 #define BUTTON_WIDTH2 8
@@ -54,15 +56,13 @@
   
 static XFontStruct *tfont = 0; 
 
-extern "C" Pixmap XcodaCreatePixmapFromXpm (Widget parent,
-				        char** data,
-				        int    type);
+extern "C" Pixmap XcodaCreatePixmapFromXpm (Widget parent, const char** data, int type);
 extern "C" void exit(int);
 extern "C" Pixel get_pixel(Display*, Colormap,int,int,int);
 
 XcodaXpmpbtnInterface::XcodaXpmpbtnInterface(Widget parent,
 					     char *name,
-					     char **pix,
+						 const char **pix,
 					     codaComd *cmd)
 :XcodaPbtnInterface (parent, cmd)
 {
@@ -87,9 +87,12 @@ XcodaXpmpbtnInterface::XcodaXpmpbtnInterface(Widget parent,
 
   height_ = 24;
 
-  if (pix) {
+  if (pix)
+  {
     npixmap = XcodaCreatePixmapFromXpm(parent,pix,1);
-  } else {
+  }
+  else
+  {
     {
 #include "Button1.xpm"
       npixmap = XcodaCreatePixmapFromXpm(parent,magick,1);
@@ -107,7 +110,7 @@ XcodaXpmpbtnInterface::XcodaXpmpbtnInterface(Widget parent,
 
 XcodaXpmpbtnInterface::XcodaXpmpbtnInterface(Widget parent,
 					     char *name,
-					     char **pix,
+						 const char **pix,
 					     codaComd *cmd,
 					     char *symbol)
 :XcodaPbtnInterface (parent, cmd)
@@ -152,7 +155,7 @@ XcodaXpmpbtnInterface::XcodaXpmpbtnInterface(Widget parent,
 XcodaXpmpbtnInterface::~XcodaXpmpbtnInterface()
 {
 #ifdef _TARCE_OBJECTS
-  printf("Destroy XcodaXpmpbtnInterface Objects \n");
+  printf("Destroy XcodaXpmpbtnInterface Objects \n");fflush(stdout);
 #endif
 }
 

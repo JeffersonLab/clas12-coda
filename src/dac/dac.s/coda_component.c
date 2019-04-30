@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <pthread.h>
 #include <sys/resource.h>
@@ -32,24 +33,17 @@
 #include <sys/socket.h>
 #include <dlfcn.h>
 
-
-#ifdef __cplusplus
-typedef int 		(*FUNCPTR) (...);     /* ptr to function returning int */
-typedef void 		(*VOIDFUNCPTR) (...); /* ptr to function returning void */
-#else
-typedef int 		(*FUNCPTR) ();	   /* ptr to function returning int */
-typedef void 		(*VOIDFUNCPTR) (); /* ptr to function returning void */
-#endif			/* _cplusplus */
-
 #ifdef Linux_vme
 #include "ipc.h"
 #endif
 
 #include "rc.h"
+#include "rolInt.h"
 #include "da.h"
 #include "libdb.h"
 
 #include "circbuf.h" /* to get NIMNETBUFS */
+#include "bigbuf.h" /* to get NIMNETBUFS */
 
 #ifdef LINUX
 #include <sys/time.h>
@@ -58,11 +52,12 @@ typedef void 		(*VOIDFUNCPTR) (); /* ptr to function returning void */
 #include <sys/prctl.h>
 #endif
 
-
+/*
 #define CODA_ERROR 1
 #define CODA_OK 0
-
+defined in et_private.h !!!???*/
 #include <et_private.h>
+
 /* more globals */
 static char *et_filename = NULL;  /* for command line */
 char et_name[ET_FILENAME_LENGTH];
@@ -294,7 +289,7 @@ codaFindFreeTcpPort()
   if(sock < 0)
   {
     printf("socket error\n");
-    return;
+    return(0);
   }
 
   bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -306,12 +301,12 @@ codaFindFreeTcpPort()
     if(errno == EADDRINUSE)
     {
       printf("the port is not available. already to other process\n");
-      return;
+      return(0);
     }
     else
     {
       printf("could not bind to process (%d) %s\n", errno, strerror(errno));
-      return;
+      return(0);
     }
   }
 
@@ -319,7 +314,7 @@ codaFindFreeTcpPort()
   if (getsockname(sock, (struct sockaddr *)&serv_addr, &len) == -1)
   {
     perror("getsockname");
-    return;
+    return(0);
   }
 
   port = ntohs(serv_addr.sin_port);
@@ -327,7 +322,7 @@ codaFindFreeTcpPort()
   if (close (sock) < 0 )
   {
     printf("did not close: %s\n", strerror(errno));
-    return;
+    return(0);
   }
 
   return(port);
@@ -412,7 +407,6 @@ loadwholefile(char *file, int *size, int *padding)
 /* routine to dynamically load and unload readout list */
 
 
-#include "rolInt.h"
 
 
 int
@@ -570,17 +564,16 @@ dlerror();    /* Clear any existing error */
 cosine = dlsym(handle, "cos");
 */
 res = (int64_t) dlsym(handle, "cos");
-cosine = (VOIDFUNCPTR) res;
 
 if ((error = dlerror()) != NULL)
 {
   printf ("TEST2: %s\n", error);
   exit(1);
 }
-else
-{
-  printf("TEST2: cosine=0x%016x 0x%016x\n",cosine,*cosine);
-}
+
+
+cosine = (VOIDFUNCPTR) res;
+printf("TEST2: cosine=0x%016x *cosine=0x%016x\n",cosine,*cosine);
 
 
 printf ("TEST3: %f\n", (*cosine)(2.0));
@@ -650,7 +643,8 @@ printf("debug_printf done\n");fflush(stdout);
   */
 }
 
-int pr_time(char *stuff) 
+int
+pr_time(char *stuff) 
 {
   double d1=0.,d2;
 #if defined SOLARIS
@@ -703,7 +697,7 @@ signal_thread (void *arg)
 {
   sigset_t   signal_set;
   int        sig_number, status;
-  int        thr = (int) arg;
+  int        thr = (long) arg;
   char       *rtn;
 
   printf("signal_thread 1\n");fflush(stdout);
@@ -777,7 +771,7 @@ signal_thread (void *arg)
         
       default:
         printf ("ERROR Unknown signal %d in %s\n", sig_number, rtn);fflush(stdout);
-        return;
+        return NULL;
     }
 
     printf("signal_thread 5\n");fflush(stdout);
@@ -805,7 +799,7 @@ Recover_Init ()
   pthread_t  id;
   sigset_t   signal_set;
   int        status;
-  int        thr = pthread_self() & 31;
+  /*int        thr = pthread_self() & 31; ??????*/
   
   sigfillset(&signal_set);
   status = pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
@@ -821,7 +815,7 @@ Recover_Init ()
 
   printf("\nRecover_Init 1\n");fflush(stdout);
 
-  status = pthread_create(&id, NULL, signal_thread, (void *) thr); /*sergey: last par ??? */
+  status = pthread_create(&id, NULL, (void *(*)(void *)) signal_thread, /*(void *) thr*/NULL); /*sergey: last par ??? */
   /*status = pthread_create(&id, NULL, signal_thread, NULL);*/
   if(status!=0)
   {
@@ -876,7 +870,7 @@ printf("\n\ncoda_constructor reached\n");fflush(stdout);
 	 localobject->codaid);
 
   eventNumber = (unsigned int *) &localobject->nevents;
-  dataSent = (unsigned int *) &localobject->nlongs;
+  dataSent = (uint64_t *) &localobject->nlongs;
 
   /* set state to booted and update 'state' field in database*/
   if(codaUpdateStatus("booted") != CODA_OK) return(CODA_ERROR);
@@ -1229,7 +1223,7 @@ CODA_Execute ()
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
 
-    status = pthread_create(&id, &attr, CODAtcpServer, NULL);
+    status = pthread_create(&id, &attr, (void *(*)(void *)) CODAtcpServer, NULL);
     if(status!=0)
     {
       printf("CODA_Execute: ERROR: pthread_create returned %d - exit\n",status);fflush(stdout);
@@ -2086,8 +2080,7 @@ UDP_start()
     udp_loop_ready = 0;
     iii = 10;
 
-    res = pthread_create( (unsigned int *) &thread1, &detached_attr,
-		   (void *(*)(void *)) UDP_loop, (void *) NULL);
+    res = pthread_create(&thread1, &detached_attr, (void *(*)(void *)) UDP_loop, (void *) NULL);
     if(res!=0)
     {
       printf("UDP_start: ERROR: pthread_create returned %d - exit\n",res);fflush(stdout);
@@ -2141,11 +2134,8 @@ UDP_start()
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#define TRUE 1
-#define FALSE 0
-#define OK 0
+
 #define ERROR (-1)
-#define STD_IN stdin
 
 
 #include "libtcp.h" 
@@ -2315,7 +2305,7 @@ printf("WorkTask: alloc 0x%08x\n",targ.address);fflush(stdout);
 	  }
       else
 	  {
-        ret = pthread_create(&id, &detached_attr, CODAtcpServerWorkTask, &targ);
+        ret = pthread_create(&id, &detached_attr, (void *(*)(void *)) CODAtcpServerWorkTask, &targ);
         if(ret!=0)
         {
           printf("CODAtcpServer: ERROR: pthread_create(CODAtcpServerWorkTask) returned %d\n",
@@ -2340,7 +2330,7 @@ printf("WorkTask: alloc 0x%08x\n",targ.address);fflush(stdout);
   /* here we will remove port number from DB ??? */ 
   /* or do it in destructor ?? */
 
-  return;
+  return(0);
 }
 
 /**************************************************************************** 
@@ -2372,7 +2362,7 @@ CODAtcpServerWorkTask(TWORK *targ)
     targ->newFd,targ->address,targ->port); fflush(stdout);
   */
 
-  if( (nRead = recv(targ->newFd, (char *) &clientRequest, sizeof (TREQUEST), NULL)) > 0 )
+  if( (nRead = recv(targ->newFd, (char *) &clientRequest, sizeof (TREQUEST), 0)) > 0 )
   {
     /* convert integers from network byte order */
     clientRequest.msgLen = ntohl(clientRequest.msgLen);
@@ -2652,7 +2642,7 @@ codaExecute(char *command)
   if(len <= 0 || len >= 128)
   {
     printf("codaExecute: ERROR: len=%d - do nothing\n",len);
-    return;
+    return(1);
   }
 
   /* check if command contains ascii codes only */
@@ -2662,7 +2652,7 @@ codaExecute(char *command)
 	{
       printf("codaExecute: ERROR: non-ascii code [%d]=%d - do nothing\n",
         i,command[i]);
-      return;
+      return(1);
 	}
   }
 
@@ -2751,7 +2741,7 @@ codaExecute(char *command)
   }
   printf("codaExecute done\n");
 
-  return;
+  return(0);
 }
 
 
@@ -2794,16 +2784,22 @@ Print128(WORD128 *hw)
   return;
 }
 
-char *
-String128(WORD128 *hw)
+void
+String128(WORD128 *hw, char *str, int len)
 {
-  char str[80];
   int i;
   uint32_t *w;
   w = (uint32_t *)hw->words;
-  sprintf(str,"0x%08x 0x%08x 0x%08x 0x%08x",w[3],w[2],w[1],w[0]);
+  if(len>50)
+  {
+    sprintf(str,"0x%08x 0x%08x 0x%08x 0x%08x",w[3],w[2],w[1],w[0]);
+  }
+  else
+  {
+    printf("ERROR in String128: str too short (len=%d) - exit\n",len);
+  }
 
-  return(str);
+  return;
 }
 
 void

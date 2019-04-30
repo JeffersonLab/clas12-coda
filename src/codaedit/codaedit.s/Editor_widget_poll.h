@@ -30,6 +30,7 @@ extern "C" {
 #endif
 
 extern void init_widget_poll (void);
+extern void add_widget_to_poll (Widget w);
 extern void change_color     (Pixel col, Screen* scr,int type);
 extern void saveColor        (XColor* col, int type);
 

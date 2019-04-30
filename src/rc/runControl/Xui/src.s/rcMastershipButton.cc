@@ -31,7 +31,7 @@
 
 rcMastershipButton::rcMastershipButton (Widget parent, char* name,
 					rcClientHandler& handler)
-:codaXpmtbtnComd (name, unlock_xpm, lock_and_key_xpm, 1, "background"),
+  :codaXpmtbtnComd (name, (char **)unlock_xpm, (char **)lock_and_key_xpm, 1, (char *)"background"),
  parent_ (parent), netHandler_ (handler)
 {
 #ifdef _TRACE_OBJECTS

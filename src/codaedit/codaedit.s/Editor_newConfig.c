@@ -22,7 +22,9 @@
  *
  *	  
  */
-#include "Editor_newConfig.h"
+
+#include <stdio.h>
+
 #include <Xm/Xm.h>
 #include <Xm/PushBG.h>
 #include <Xm/Form.h>
@@ -30,25 +32,23 @@
 #include <Xm/SeparatoG.h>
 #include <Xm/TextF.h>
 
+#include "Editor_newConfig.h"
 #include "Editor_database.h"
 #include "Editor_miscinfo.h"
 #include "Editor_graph.h"
+#include "Editor_xmisc.h"
+#include "Editor_menu.h"
+
 
 typedef struct _new_config_widgets {
   Widget w_;
   Widget input_;
   Widget ok_;
   Widget cancel_;
-}editorNewConfigDialog;
+} editorNewConfigDialog;
 
-#if defined (__STDC__)
-static void newConfig (Widget w, XtPointer data, XmAnyCallbackStruct* cbs)
-#else
-static void newConfig (w, data, cbs)
-     Widget w;
-     XtPointer data;
-     XmAnyCallbackStruct* cbs;
-#endif
+static void
+newConfig (Widget w, XtPointer data, XtPointer callback_data)
 {
   char *config;
   char temp[128];
@@ -88,16 +88,10 @@ static void newConfig (w, data, cbs)
   XtPopdown (XtParent (obj->w_));
 }
 
-#if defined (__STDC__)
-static void popdownNewConfigDialog (Widget w,
+static void
+popdownNewConfigDialog (Widget w,
 				    XtPointer data,
-				    XmAnyCallbackStruct* cbs)
-#else
-static void popdownNewConfigDialog (w, data, cbs)
-     Widget w;
-     XtPointer data;
-     XmAnyCallbackStruct* cbs;
-#endif
+				    XtPointer callback_data)
 {
   editorNewConfigDialog* obj = (editorNewConfigDialog *)data;  
   XtPopdown (XtParent (obj->w_));
@@ -105,14 +99,8 @@ static void popdownNewConfigDialog (w, data, cbs)
 
 static editorNewConfigDialog newConfigDialog;
 
-#if defined (__STDC__)
 void
 newConfigDialogPopup (Widget parent)
-#else
-void
-newConfigDialogPopup (parent)
-     Widget parent;
-#endif
 {
   Arg args[20];
   int ac = 0;

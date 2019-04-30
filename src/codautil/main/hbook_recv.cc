@@ -28,8 +28,8 @@ main()
   int done = 0;
 
   // connect to ipc server
-  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", "hist");
-  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "hist");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"daq", (char *)"hist");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"daq", (char *)"hist");
   server.Open();
 
   MessageActionHist *hist = new MessageActionHist((char *)"hbook_recv",debug);

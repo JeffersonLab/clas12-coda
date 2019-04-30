@@ -32,12 +32,12 @@
 #include <rcButtonPanel.h>
 #include "rcAuto.h"
 
-#define RC_AUTO_NAME "Start Run"
-#define RC_AUTO_MSG  "Automatic start a run"
+#define RC_AUTO_NAME (char *)"Start Run"
+#define RC_AUTO_MSG  (char *)"Automatic start a run"
 
 rcAuto::rcAuto (Widget parent, rcButtonPanel* panel,
 		rcClientHandler& handler)
-:rcComdButton (parent, RC_AUTO_NAME, RC_AUTO_MSG, panel, handler, "B")
+:rcComdButton (parent, RC_AUTO_NAME, RC_AUTO_MSG, panel, handler, (char *)"B")
 {
 #ifdef _TRACE_OBJECTS
   printf ("              Create rcAuto Class Object\n");
@@ -67,11 +67,11 @@ rcAuto::doit (void)
     states[0] = netHandler_.status ();
   
   states[1] = DA_ACTIVE;
-  daqData data ("RCS", "command", states, 2);
+  daqData data ((char *)"RCS", (char *)"command", states, 2);
   if (client.sendCmdCallback (DACHANGE_STATE, data,
 			      (rcCallback)&(rcAuto::autoStartCallback),
 			      (void *)this) != CODA_SUCCESS)
-    reportErrorMsg ("Cannot send change state command to the server.");
+    reportErrorMsg ((char *)"Cannot send change state command to the server.");
   else {
     stWin_->start ();
     bpanel_->deactivateTransitionPanel ();
@@ -94,6 +94,6 @@ rcAuto::autoStartCallback (int status, void* arg, daqNetData* data)
   obj->bpanel_->activateTransitionPanel ();
 
   if (status != CODA_SUCCESS)
-    obj->reportErrorMsg ("Automatic activating a run failed !!!\n");
+    obj->reportErrorMsg ((char *)"Automatic activating a run failed !!!\n");
 }
 

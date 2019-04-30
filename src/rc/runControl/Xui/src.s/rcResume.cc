@@ -28,12 +28,12 @@
 #include <rcAudioOutput.h>
 #include "rcResume.h"
 
-#define RC_RESUME_NAME "   Resume  "
-#define RC_RESUME_MSG  "Resume the run"
+#define RC_RESUME_NAME (char *)"   Resume  "
+#define RC_RESUME_MSG  (char *)"Resume the run"
 
 rcResume::rcResume (Widget parent, rcButtonPanel* panel, 
 		  rcClientHandler& handler)
-:rcComdButton (parent, RC_RESUME_NAME, RC_RESUME_MSG, panel, handler, "B")
+:rcComdButton (parent, RC_RESUME_NAME, RC_RESUME_MSG, panel, handler, (char *)"B")
 {
 #ifdef _TRACE_OBJECTS
   printf ("              Create rcResume Class Object\n");
@@ -52,20 +52,20 @@ rcResume::~rcResume (void)
 void
 rcResume::doit (void)
 {
-  rcAudio ("resume a run");
+  rcAudio ((char *)"resume a run");
 
   assert (stWin_);
 
   // get network handler first
   rcClient& client = netHandler_.clientHandler ();
-  daqData data ("RCS", "command", (int)DARESUME);
+  daqData data ((char *)"RCS", (char *)"command", (int)DARESUME);
 
   if (client.sendCmdCallback (DAGO, data,
 			      (rcCallback) &(rcResume::resumeCallback),
 			      (void *)this) != CODA_SUCCESS) {
 
-    reportErrorMsg ("Cannot send resume command to the server.");
-    rcAudio ("cannot send resume command");
+    reportErrorMsg ((char *)"Cannot send resume command to the server.");
+    rcAudio ((char *)"cannot send resume command");
   } else {
     stWin_->start ();
     bpanel_->deactivateTransitionPanel ();
@@ -88,8 +88,8 @@ rcResume::resumeCallback (int status, void* arg, daqNetData* data)
   obj->bpanel_->activateTransitionPanel ();
 
   if (status != CODA_SUCCESS) {
-    obj->reportErrorMsg ("Resuming a run failed !!!\n");
-    rcAudio ("resuming a run failed");
+    obj->reportErrorMsg ((char *)"Resuming a run failed !!!\n");
+    rcAudio ((char *)"resuming a run failed");
   }
 }
 

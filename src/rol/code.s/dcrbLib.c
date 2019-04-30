@@ -17,8 +17,12 @@
 #include <pthread.h>
 #include "jvme.h"
 #endif
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+
 #ifdef VXWORKS
 #include <logLib.h>
 #include <taskLib.h>
@@ -575,7 +579,7 @@ dcrbSetClockSource(int id, int clkSrc)
   if((id<=0) || (id>21) || (DCRBp[id] == NULL)) 
   {
     printf("dcrbStatus: ERROR : DCRB in slot %d is not initialized \n",id);
-    return;
+    return(-1);
   }
 
   if(clkSrc>0x1)
@@ -2161,7 +2165,7 @@ dcrbSetTriggerPulseWidth(int id, unsigned int width)
   if((id<=0) || (id>21) || (DCRBp[id] == NULL)) 
   {
     printf("dcrbSoftTrig: ERROR : DCRB in slot %d is not initialized \n",id);
-    return;
+    return(-1);
   }
 
   width /= DCRB_NS_PER_CLOCK;
@@ -2182,7 +2186,7 @@ dcrbGetTriggerPulseWidth(int id)
   if((id<=0) || (id>21) || (DCRBp[id] == NULL)) 
   {
     printf("dcrbSoftTrig: ERROR : DCRB in slot %d is not initialized \n",id);
-    return;
+    return(-1);
   }
 
   width = vmeRead32(&(DCRBp[id]->Tdc[0].TriggerWidth));
@@ -2204,7 +2208,7 @@ dcrbLinkStatus(int id)
   if((id<=0) || (id>21) || (DCRBp[id] == NULL)) 
   {
     printf("dcrbSoftTrig: ERROR : DCRB in slot %d is not initialized \n",id);
-    return;
+    return(-1);
   }
 
   return( ( (vmeRead32(&(DCRBp[id]->Ser[1].Status)))&0x1000 )>>12 );
@@ -2218,7 +2222,7 @@ dcrbLinkReset(int id)
   if((id<=0) || (id>21) || (DCRBp[id] == NULL)) 
   {
     printf("dcrbSoftTrig: ERROR : DCRB in slot %d is not initialized \n",id);
-    return;
+    return(-1);
   }
 
   vmeWrite32(&(DCRBp[id]->Ser[1].Ctrl), 0x201);

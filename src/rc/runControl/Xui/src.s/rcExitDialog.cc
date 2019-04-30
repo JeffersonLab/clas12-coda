@@ -39,7 +39,7 @@ rcExitDialog::rcExitDialog (rcExit* exit, char* name,
 rcExitDialog::~rcExitDialog (void)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("                   Delete rcExitDialog Class Object\n");
+  printf ("                   Delete rcExitDialog Class Object\n");fflush(stdout);
 #endif
   // empty
 }

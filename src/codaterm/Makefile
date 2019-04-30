@@ -47,7 +47,6 @@ CLON_FLAGS += -DUSE_CREG
 
 LIBNAMES += $(globallib)/libcodaedit.a
 LIBNAMES += $(globallib)/libcreg.a
-LIBNAMES += $(globallib)/libmysql4.1.20.a
 
 LIBNAMES += $(TERMCAPLIBS)
 

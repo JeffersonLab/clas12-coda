@@ -28,6 +28,7 @@ install: install_lib
 	rm -rf tmp
 	mkdir tmp
 	cp src.s/evio.h tmp/
+	cp src.s/eviofmt.h tmp/
 	cp src.s/evioBankUtil.h tmp/
 	cp fadc.s/fadc_decompress.h tmp/
 	chmod 664 tmp/*

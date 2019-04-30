@@ -201,6 +201,7 @@ Display *,XrmValuePtr ,Cardinal *,XrmValuePtr ,XrmValuePtr ,XtPointer *
 #endif
 );
 
+
 /*ARGSUSED*/
 #if NeedFunctionPrototypes
 

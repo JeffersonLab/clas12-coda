@@ -49,7 +49,7 @@ void drawPanel (cgDispDev& disp)
 {
   cgContext *cxt = new cgContext (disp);
   // set foreground red
-  cxt->setForeground ("red");
+  cxt->setForeground ((char *)"red");
 
   s = new cgScene (0.0, 40.0, 0.0, 50.0,
 		   0.05, 0.95, 0.05, 0.95, disp);
@@ -182,12 +182,12 @@ void drawPanel (cgDispDev& disp)
   plot->foregroundColor ("red");
   plot->draw (s); */
 
-  cgRotString* rstr = new cgRotString ("Hello There", 
-	"-adobe-helvetica-medium-*-*-*-*-180-*-*-*-*-*-*", 10.0, 40.0,
+  cgRotString* rstr = new cgRotString ((char *)"Hello There", 
+	(char *)"-adobe-helvetica-medium-*-*-*-*-180-*-*-*-*-*-*", 10.0, 40.0,
 				       45.0, 2.0);
   rstr->createCgCxt (disp);
   cgContext* ncxt = rstr->cgCxt ();
-  ncxt->setForeground ("blue");
+  ncxt->setForeground ((char *)"blue");
   rstr->attach (s);
   rstr->draw (s);
   

@@ -189,53 +189,53 @@ rcClient::connected (void) const
 void
 rcClient::createAllVariables (void)
 {
-  version_           = new rccDaqData (exptname_, "version",           "unknown");
-  startTime_         = new rccDaqData (exptname_, "startTime",         "      ");
-  startTimeBin_      = new rccDaqData (exptname_, "startTimeBin",      0);
-  endTime_           = new rccDaqData (exptname_, "endTime",           "      ");
-  endTimeBin_        = new rccDaqData (exptname_, "endTimeBin",        0);
-  currTime_          = new rccDaqData (exptname_, "currentTime",       "       ");
-  currTimeBin_       = new rccDaqData (exptname_, "timeBin",           0);
-  runNumber_         = new rccDaqData (exptname_, "runNumber",         0);
-  status_            = new rccDaqData (exptname_, "status",            0);
-  nevents_           = new rccDaqData (exptname_, "nevents",           0);
-  nlongs_            = new rccDaqData (exptname_, "nlongs",            0);
+  version_           = new rccDaqData (exptname_, (char *)"version",           (char *)"unknown");
+  startTime_         = new rccDaqData (exptname_, (char *)"startTime",         (char *)"      ");
+  startTimeBin_      = new rccDaqData (exptname_, (char *)"startTimeBin",      0);
+  endTime_           = new rccDaqData (exptname_, (char *)"endTime",           (char *)"      ");
+  endTimeBin_        = new rccDaqData (exptname_, (char *)"endTimeBin",        0);
+  currTime_          = new rccDaqData (exptname_, (char *)"currentTime",       (char *)"       ");
+  currTimeBin_       = new rccDaqData (exptname_, (char *)"timeBin",           0);
+  runNumber_         = new rccDaqData (exptname_, (char *)"runNumber",         0);
+  status_            = new rccDaqData (exptname_, (char *)"status",            0);
+  nevents_           = new rccDaqData (exptname_, (char *)"nevents",           0);
+  nlongs_            = new rccDaqData (exptname_, (char *)"nlongs",            0);
 
-  database_          = new rccDaqData (exptname_, "database",          "unknown");
+  database_          = new rccDaqData (exptname_, (char *)"database",          (char *)"unknown");
 
-  dataFile_          = new rccDaqData (exptname_, "dataFile",          "unknown");
-  confFile_          = new rccDaqData (exptname_, "confFile",          "unknown"); /*sergey*/
+  dataFile_          = new rccDaqData (exptname_, (char *)"dataFile",          (char *)"unknown");
+  confFile_          = new rccDaqData (exptname_, (char *)"confFile",          (char *)"unknown"); /*sergey*/
 
-  rcsMsgToDbase_     = new rccDaqData (exptname_, "rcsMsgToDbase",     0);
-  logFileDescriptor_ = new rccDaqData (exptname_, "logFileDescriptor", "unknown");
-  tokenInterval_     = new rccDaqData (exptname_, "tokenInterval",     0);
+  rcsMsgToDbase_     = new rccDaqData (exptname_, (char *)"rcsMsgToDbase",     0);
+  logFileDescriptor_ = new rccDaqData (exptname_, (char *)"logFileDescriptor", (char *)"unknown");
+  tokenInterval_     = new rccDaqData (exptname_, (char *)"tokenInterval",     0);
 
-  allRunTypes_       = new rccDaqData (exptname_, "allRunTypes",       "unknown");
-  runType_           = new rccDaqData (exptname_, "runType",           "unknown");
-  runTypeNum_        = new rccDaqData (exptname_, "runTypeNum",        0);
-  exptName_          = new rccDaqData (exptname_, "exptName",          exptname_);
-  exptId_            = new rccDaqData (exptname_, "exptId",            0);
-  hostName_          = new rccDaqData (exptname_, "hostName",          "unknown");
-  autoIncrement_     = new rccDaqData (exptname_, "autoIncrement",     1);
-  eventLimit_        = new rccDaqData (exptname_, "eventLimit",        0);
-  dataLimit_         = new rccDaqData (exptname_, "dataLimit",         0);
-  updateInterval_    = new rccDaqData (exptname_, "updateInterval",    1);
-  compnames_         = new rccDaqData (exptname_, "components",        "unknown");
-  compstates_        = new rccDaqData (exptname_, "compstates",        "unknown");
-  clientList_        = new rccDaqData (exptname_, "clientList",        "unknown");
-  master_            = new rccDaqData (exptname_, "master",            "unknown");
-  controlDisp_       = new rccDaqData (exptname_, "controlDisplay",    "unknown");
-  online_            = new rccDaqData (exptname_, "online",            1);
-  runMsg_            = new rccDaqData (exptname_, "runMessage",        "       ");
+  allRunTypes_       = new rccDaqData (exptname_, (char *)"allRunTypes",       (char *)"unknown");
+  runType_           = new rccDaqData (exptname_, (char *)"runType",           (char *)"unknown");
+  runTypeNum_        = new rccDaqData (exptname_, (char *)"runTypeNum",        0);
+  exptName_          = new rccDaqData (exptname_, (char *)"exptName",          exptname_);
+  exptId_            = new rccDaqData (exptname_, (char *)"exptId",            0);
+  hostName_          = new rccDaqData (exptname_, (char *)"hostName",          (char *)"unknown");
+  autoIncrement_     = new rccDaqData (exptname_, (char *)"autoIncrement",     1);
+  eventLimit_        = new rccDaqData (exptname_, (char *)"eventLimit",        0);
+  dataLimit_         = new rccDaqData (exptname_, (char *)"dataLimit",         0);
+  updateInterval_    = new rccDaqData (exptname_, (char *)"updateInterval",    1);
+  compnames_         = new rccDaqData (exptname_, (char *)"components",        (char *)"unknown");
+  compstates_        = new rccDaqData (exptname_, (char *)"compstates",        (char *)"unknown");
+  clientList_        = new rccDaqData (exptname_, (char *)"clientList",        (char *)"unknown");
+  master_            = new rccDaqData (exptname_, (char *)"master",            (char *)"unknown");
+  controlDisp_       = new rccDaqData (exptname_, (char *)"controlDisplay",    (char *)"unknown");
+  online_            = new rccDaqData (exptname_, (char *)"online",            1);
+  runMsg_            = new rccDaqData (exptname_, (char *)"runMessage",        (char *)"       ");
 
   /* create data structure boot infor which has all information
      about auto boot flag of components */
   daqCompBootStruct bootInfo;
-  compBootInfo_ = new rccDaqData (exptname_, "compBootInfo", &bootInfo);
+  compBootInfo_ = new rccDaqData (exptname_, (char *)"compBootInfo", &bootInfo);
 
   /* create daq run monitoring parameters structure */
   daqMonitorStruct monitorInfo;
-  monitorParms_ = new rccDaqData (exptname_, "monitorParms", &monitorInfo);
+  monitorParms_ = new rccDaqData (exptname_, (char *)"monitorParms", &monitorInfo);
 
 
 
@@ -398,7 +398,7 @@ int
 rcClient::disconnect (void)
 {
   static int64_t opcode = DADISCONNECT;
-  daqNetData data (exptname_, "command", (int)DADISCONNECT);
+  daqNetData data (exptname_, (char *)"command", (int)DADISCONNECT);
   rcMsg msg(opcode,data,0);
   int n = toServer_ << msg;
   connected_ = 0;        // reset connection flag
@@ -420,7 +420,7 @@ void
 rcClient::killServer (void)
 {
   static int64_t opcode = DAZAP;
-  daqNetData data (exptname_, "command", (int)DAZAP);
+  daqNetData data (exptname_, (char *)"command", (int)DAZAP);
   rcMsg msg(opcode,data,0);
   int n = toServer_ << msg;
   connected_ = 0;        // reset connection flag
@@ -699,7 +699,7 @@ rcClient::sendClientInfo (void)
 #endif
 
   /* appropriate method from daqNetData.cc will be used, based on parameters types */
-  daqNetData data ("RCS","command", temp, 3);
+  daqNetData data ((char *)"RCS",(char *)"command", temp, 3);
 
   /* free memory */
   delete []temp[0]; delete []temp[1]; delete []temp[2];
@@ -1276,7 +1276,7 @@ rcClient::attr6Callback (int status, void* arg, daqNetData* data)
 #ifdef _CODA_DEBUG
   printf("!!!!!!!!! CEDIT 30: rcClient::attr6Callback: coda_Send() cmd=>%s<\n",cmd);
 #endif
-  if(MainDisplay) coda_Send(MainDisplay,"CEDIT",cmd);
+  if(MainDisplay) coda_Send(MainDisplay,(char *)"CEDIT",cmd);
   /*coda_Send(XtDisplay(obj->baseWidget()),"CEDIT",cmd);*/
 #endif
 }
@@ -1441,45 +1441,45 @@ rcClient::removeDynamicVars (rcMsg& cmsg)
 #ifdef _CODA_DEBUG
       printf ("rcClient::removeDynamicVars: Vars %s disconnected\n",names[i]);
 #endif
-      if (dataManager_.findData (names[i], DYN_ATTR0, data) == CODA_SUCCESS)
+      if (dataManager_.findData (names[i], (char *)DYN_ATTR0, data) == CODA_SUCCESS)
       {
 	    rccdata = (rccDaqData *)data;
 	    rccdata->notifyDisconnection ();
       }
 
-      if (dataManager_.findData (names[i], DYN_ATTR1, data) == CODA_SUCCESS)
+      if (dataManager_.findData (names[i], (char *)DYN_ATTR1, data) == CODA_SUCCESS)
       {
 	    rccdata = (rccDaqData *)data;
 	    rccdata->notifyDisconnection ();
       }
 
-      if (dataManager_.findData (names[i], DYN_ATTR2, data) == CODA_SUCCESS)
+      if (dataManager_.findData (names[i], (char *)DYN_ATTR2, data) == CODA_SUCCESS)
       {
 	    rccdata = (rccDaqData *)data;
 	    rccdata->notifyDisconnection ();
       }
 
-      if (dataManager_.findData (names[i], DYN_ATTR3, data) == CODA_SUCCESS)
+      if (dataManager_.findData (names[i], (char *)DYN_ATTR3, data) == CODA_SUCCESS)
       {
 	    rccdata = (rccDaqData *)data;
 	    rccdata->notifyDisconnection ();
       }
 
-      if (dataManager_.findData (names[i], DYN_ATTR4, data) == CODA_SUCCESS)
+      if (dataManager_.findData (names[i], (char *)DYN_ATTR4, data) == CODA_SUCCESS)
       {
 	    rccdata = (rccDaqData *)data;
 	    rccdata->notifyDisconnection ();
 	  }
 
 	  /*sergey*/
-      if (dataManager_.findData (names[i], DYN_ATTR5, data) == CODA_SUCCESS)
+      if (dataManager_.findData (names[i], (char *)DYN_ATTR5, data) == CODA_SUCCESS)
       {
 	    rccdata = (rccDaqData *)data;
 	    rccdata->notifyDisconnection ();
       }
 
 	  /*sergey*/
-      if (dataManager_.findData (names[i], DYN_ATTR6, data) == CODA_SUCCESS)
+      if (dataManager_.findData (names[i], (char *)DYN_ATTR6, data) == CODA_SUCCESS)
       {
 	    rccdata = (rccDaqData *)data;
 	    rccdata->notifyDisconnection ();
@@ -1511,7 +1511,7 @@ rcClient::addAnaLogVars (rcMsg& cmsg)
   {
     for (int i = 0; i < count; i++)
     {
-      daqData* ldata = new rccDaqData (names[i], DYN_ANA_LOG, "unknown");
+      daqData* ldata = new rccDaqData (names[i], (char *)DYN_ANA_LOG, (char *)"unknown");
 #ifdef _CODA_DEBUG
       printf ("rcClient::addAnaLogVars: Add ANA Log variables %s %s\n",names[i], DYN_ANA_LOG);
 #endif
@@ -1547,7 +1547,7 @@ rcClient::removeAnaLogVars (rcMsg& cmsg)
 #ifdef _CODA_DEBUG
       printf ("rcClient::removeAnaLogVars: Vars %s %s disconnected\n",names[i], DYN_ANA_LOG);
 #endif
-      if (dataManager_.findData (names[i], DYN_ANA_LOG, data)
+      if (dataManager_.findData (names[i], (char *)DYN_ANA_LOG, data)
 	  == CODA_SUCCESS) {
 	rccdata = (rccDaqData *)data;
 	rccdata->notifyDisconnection ();

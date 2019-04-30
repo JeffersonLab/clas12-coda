@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
+#include <dlfcn.h>
 
 #ifdef Linux
 #include <sys/prctl.h>
@@ -25,6 +26,15 @@
 
 #include "libtcp.h" 
 #include "libdb.h" 
+
+#ifdef __cplusplus
+typedef int 		(*FPTR) (...);     /* ptr to function returning int */
+typedef void 		(*VOIDFPTR) (...); /* ptr to function returning void */
+#else
+typedef int 		(*FPTR) ();	   /* ptr to function returning int */
+typedef void 		(*VOIDFPTR) (); /* ptr to function returning void */
+#endif			/* _cplusplus */
+
 
 #undef DEBUG
 
@@ -39,17 +49,6 @@ extern char *targetName(); /* from roc_component.c */
 
 static void tcpServerWorkTask(TWORK *targ); 
 static int TcpServer(void);
-
-#include <dlfcn.h>
-
-
-#ifdef __cplusplus
-typedef int 		(*FPTR) (...);     /* ptr to function returning int */
-typedef void 		(*VOIDFPTR) (...); /* ptr to function returning void */
-#else
-typedef int 		(*FPTR) ();	   /* ptr to function returning int */
-typedef void 		(*VOIDFPTR) (); /* ptr to function returning void */
-#endif			/* _cplusplus */
 
 
 /* currently processed message */
@@ -262,7 +261,7 @@ tcpServer(char *name, char *mysqlhost)
   printf("tcpServer 2\n");fflush(stdout);
   pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
   printf("tcpServer 3\n");fflush(stdout);
-  status = pthread_create(&id, &attr, TcpServer, NULL);
+  status = pthread_create(&id, &attr, (void *(*)(void *)) TcpServer, NULL);
   printf("tcpServer 4\n");fflush(stdout);
   if(status!=0)
   {
@@ -384,8 +383,13 @@ TcpServer(void)
     /* remove everything starting from first dot */
     ch = strstr(hname,".");
     if(ch != NULL) *ch = '\0';
-    else ch = hname[strlen(hname)];
+
+
+    /*else ch = hname[strlen(hname)];
 	printf("TcpServer(external): hname after >%s<\n",hname);
+	*/
+    printf("TcpServer(external): hname after >%s<\n",ch);
+
 
     /*printf("nrow=%d\n",numRows);*/
     if(numRows == 0)
@@ -484,7 +488,7 @@ usrNetStackDataPoolStatus("tcpServer",1);
 	  }
       else
 	  {
-        ret = pthread_create(&id, &detached_attr, tcpServerWorkTask, &targ);
+        ret = pthread_create(&id, &detached_attr, (void *(*)(void *)) tcpServerWorkTask, &targ);
         if(ret!=0)
         {
           printf("TcpServer(external): ERROR: pthread_create(CODAtcpServerWorkTask) returned %d\n",

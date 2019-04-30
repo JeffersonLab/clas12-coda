@@ -67,7 +67,7 @@ public:
 
   /* user call this to report message */
   void reportMessage (char *format, ...);
-  void cmsglog (int msg_class, char *format, ...);
+  void cmsglog (int msg_class, const char *format, ...);
 
 
 

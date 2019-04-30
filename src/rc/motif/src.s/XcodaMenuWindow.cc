@@ -39,7 +39,7 @@ XcodaMenuWindow::XcodaMenuWindow(Widget parent, char *name):XcodaUi(name)
 #endif
   _w = XtCreateWidget(name, xmFormWidgetClass, parent,
 		      NULL, 0);
-  MenuBar = new XcodaMenuBar (_w, "menu_bar");
+  MenuBar = new XcodaMenuBar (_w, (char *)"menu_bar");
 
   _menu_bar = (Widget)MenuBar->baseWidget();
   

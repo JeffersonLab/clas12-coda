@@ -54,7 +54,7 @@ rcHelpMsgWin::init (void){
 
   Arg args[5];
 
-  XmString t = XmStringCreateSimple ("            ");
+  XmString t = XmStringCreateSimple ((char *)"            ");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNshadowThickness, 3); ac++;
   XtSetArg (arg[ac], XmNshadowType, XmSHADOW_IN); ac++;
@@ -94,7 +94,7 @@ rcHelpMsgWin::eraseMessage (void)
   Arg arg[10];
   int ac = 0;
 
-  XmString t = XmStringCreateSimple ("            ");
+  XmString t = XmStringCreateSimple ((char *)"            ");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetValues (_w, arg, ac);
   ac = 0;

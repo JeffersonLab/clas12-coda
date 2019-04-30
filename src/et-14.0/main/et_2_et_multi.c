@@ -51,6 +51,7 @@ Carl
 #include <signal.h>
 #include <errno.h>
 #include <pthread.h>
+#include <sys/time.h>
 #ifdef sun
 #include <thread.h>
 #endif
@@ -501,13 +502,15 @@ top:    while (1) {
 /* copy every field in one (filled) event into another (new) event */
 void copyEvent(et_event *src, et_event *dst) {
     int i, len, val;
+    size_t size;
     int con[ET_STATION_SELECT_INTS];
     char *srcData, *dstData;
     
     et_event_getpriority(src, &val);
     et_event_setpriority(dst,  val);
     
-    et_event_getlength(src, &len);
+    et_event_getlength(src, &size);
+    len = size;
     et_event_setlength(dst,  len);
 
     et_event_getdatastatus(src, &val);
@@ -817,11 +820,13 @@ int putFilledChunk(circularBuffer *buf, etChunk *chunk) {
 int getEventNumber(et_event *pe, int *evNum) {
     
     int *data, len;
+    size_t size;
     /*int con[ET_STATION_SELECT_INTS]; */
     /* et_event_getcontrol(pe, con); */
     
     /* need at least an integer's worth in the data buffer */
-    et_event_getlength(pe, &len);
+    et_event_getlength(pe, &size);
+    len = size;
     if (len < 4) {
         return 0;
     }    

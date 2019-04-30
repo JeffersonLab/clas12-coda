@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <signal.h>
+#include <unistd.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -32,7 +33,7 @@ note: clientData ignored*/
 int
 Codatcl_codaSendCmd (ClientData clientData, Tcl_Interp *interp, int argc, char **argv)
 {
-  return coda_send(Tk_Display(Tk_MainWindow(interp)),argv[1],argv[2]);
+  return coda_Send(Tk_Display(Tk_MainWindow(interp)),argv[1],argv[2]);
 }
 
 
@@ -66,7 +67,7 @@ Codatcl_codaRCFrame (ClientData clientData, Tcl_Interp *interp, int argc, char *
 
     sprintf(tmp1,"t:%d %s",getpid(),argv[2]);
 	
-    coda_send(Tk_Display(Tk_MainWindow(interp)),"RUNCONTROL",tmp1);
+    coda_Send(Tk_Display(Tk_MainWindow(interp)),"RUNCONTROL",tmp1);
 	
     for(ix=0; ix<500; ix++)
     {
@@ -106,11 +107,9 @@ Codatcl_Init(Tcl_Interp *interp)
     printf("Set Codatcl version to 1.0\n");
   }
 
-  Tcl_CreateCommand(interp, "coda_send", Codatcl_codaSendCmd,
-		      (ClientData) NULL, (void (*)()) NULL);
+  Tcl_CreateCommand(interp, "coda_Send", (Tcl_CmdProc *)Codatcl_codaSendCmd, (ClientData) NULL, (void (*)()) NULL);
 
-  Tcl_CreateCommand(interp, "rcframe", Codatcl_codaRCFrame,
-		      (ClientData)NULL, (void (*)())NULL);  
+  Tcl_CreateCommand(interp, "rcframe", (Tcl_CmdProc *)Codatcl_codaRCFrame, (ClientData)NULL, (void (*)())NULL);  
 
   return(TCL_OK);
 }

@@ -79,7 +79,7 @@ cg2DRtPlot::createInternalPrims (void)
   double  value = ceiling (ymax_);
   sprintf (temp, "%.1lf", value);
 
-  topLabel_ = new cgString (temp, CG_LABEL_FONT, x_, ymax_,
+  topLabel_ = new cgString (temp, (char *)CG_LABEL_FONT, x_, ymax_,
 			    CG_ALIGNMENT_BEGINNING, CG_ALIGNMENT_TOP);
 }
 
@@ -104,7 +104,7 @@ cg2DRtPlot::rewriteTopLabel (const cgScene* scene)
   char temp[32];
 
   sprintf (temp, "%.1lf", value);
-  topLabel_ = new cgString (temp, CG_LABEL_FONT, x_, ymax_,
+  topLabel_ = new cgString (temp, (char *)CG_LABEL_FONT, x_, ymax_,
 			    CG_ALIGNMENT_BEGINNING, CG_ALIGNMENT_TOP);
   if (cxt_)
     topLabel_->setCgCxt (*cxt_);

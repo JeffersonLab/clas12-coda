@@ -1,5 +1,5 @@
 /* XPM */
-static char * casett2_xpm[] = {
+static const char *casett2_xpm[] = {
 "47 36 6 1",
 " 	c #C30BC30BC30B",
 ".	c #000000000000",

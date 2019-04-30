@@ -31,8 +31,8 @@
 #include <XcodaPromptDialog.h>
 
 XcodaPromptDialog::XcodaPromptDialog(Widget parent,
-				     char   *name,
-				     char   *title)
+				     const char   *name,
+				     const char   *title)
 :XcodaUi(name)
 {
 #ifdef _TRACE_OBJECTS
@@ -192,7 +192,7 @@ void XcodaPromptDialog::localOk()
       _errorDialog->init();
     }
     _errorDialog->popdown();
-    _errorDialog->setMessage("Need Input, Try again!");
+    _errorDialog->setMessage((char *)"Need Input, Try again!");
     _errorDialog->popup();
     output = 0;
     return;
@@ -203,7 +203,7 @@ void XcodaPromptDialog::localOk()
       _errorDialog->init();
     }
     _errorDialog->popdown();
-    _errorDialog->setMessage("Need Input, Try again!");
+    _errorDialog->setMessage((char *)"Need Input, Try again!");
     _errorDialog->popup();
     output = 0;
     return;
@@ -219,7 +219,7 @@ void XcodaPromptDialog::localOk()
       _errorDialog->init();
     }
     _errorDialog->popdown();
-    _errorDialog->setMessage("Syntax Error, Try Again");
+    _errorDialog->setMessage((char *)"Syntax Error, Try Again");
     _errorDialog->popup();
     return;
   }

@@ -28,8 +28,8 @@
 #include <rcAudioOutput.h>
 #include "rcReset.h"
 
-#define RC_RESET_NAME "   Reset  "
-#define RC_RESET_MSG  "Reset all components"
+#define RC_RESET_NAME (char *)"   Reset  "
+#define RC_RESET_MSG  (char *)"Reset all components"
 
 rcReset::rcReset (Widget parent, rcButtonPanel* panel, 
 		  rcClientHandler& handler)
@@ -58,12 +58,12 @@ rcReset::reset (void)
 
   // get network handler first
   rcClient& client = netHandler_.clientHandler ();
-  daqData data ("RCS", "command", (int)DARESET);
+  daqData data ((char *)"RCS", (char *)"command", (int)DARESET);
   if (client.sendCmdCallback (DARESET, data,
 			      (rcCallback)&(rcReset::resetCallback),
 			      (void *)this) != CODA_SUCCESS)
   {
-    reportErrorMsg ("Cannot send end command to the server.");
+    reportErrorMsg ((char *)"Cannot send end command to the server.");
   }
   else
   { 
@@ -74,9 +74,9 @@ rcReset::reset (void)
 void
 rcReset::doit (void)
 {
-  rcAudio ("Reset everything, are you sure ?");
+  rcAudio ((char *)"Reset everything, are you sure ?");
   if (!dialog_) {
-    dialog_ = new rcResetDialog (this, "resetDialog", "Reset Dialog",
+    dialog_ = new rcResetDialog (this, (char *)"resetDialog", (char *)"Reset Dialog",
 				 netHandler_);
     dialog_->init ();
     dialog_->alignment (XmALIGNMENT_CENTER);
@@ -105,6 +105,6 @@ rcReset::resetCallback (int status, void* arg, daqNetData* data)
   obj->stWin_->stop ();
 
   if (status != CODA_SUCCESS)
-    obj->reportErrorMsg ("Resetting a run failed !!!\n");
+    obj->reportErrorMsg ((char *)"Resetting a run failed !!!\n");
 }
 

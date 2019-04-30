@@ -1,3 +1,4 @@
+
 /* vscmScan.c */
 
 #if defined(VXWORKS) || defined(Linux_vme)
@@ -5,12 +6,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "vscmLib.h"
+#include <unistd.h>
+
 #include <sys/stat.h>
 
 #ifndef VXWORKS
 #include "jvme.h"
 #endif
+
+#include "vscmLib.h"
 
 typedef struct {
   unsigned int amp;
@@ -25,7 +29,7 @@ fssrGainScan(int id, char *filename, \
               int start_thr, int chan_mult)
 {
   FILE *fd;
-  char fname[256], reg27[20];
+  char fname[256], reg27[20], dirname[256];
   int thr, ichip, ich;
   int i, j;
   int zero_count, amp, min_hits;
@@ -91,7 +95,7 @@ fssrGainScan(int id, char *filename, \
     {
       logMsg("%s\n", filename);
       logMsg("cd %d\n", chdir(filename));
-      logMsg("%s\n", getcwd());
+      logMsg("%s\n", getcwd(dirname,255));
       char datetime[] = "YYYYMMDD_HHMM";
       strftime(datetime, sizeof(datetime), "%Y%m%d_%H%M", localtime(&now));
       struct stat sb;
@@ -100,7 +104,7 @@ fssrGainScan(int id, char *filename, \
       char host[255];
       gethostname(host, 255);
       sprintf(fname,"%s/%s_s%02d_c%1d_u%1d", datetime, host, id, ((ichip > 3) ? 2 : 1), ((ichip % 4) + 1));
-      if( (fd = fopen(fname, "w")) <= NULL )
+      if( (fd = fopen(fname, "w")) == NULL )
       {
         logMsg("ERROR: %s: Opening file: %s\n", __func__, fname);
         free(data);

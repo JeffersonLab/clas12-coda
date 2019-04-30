@@ -61,10 +61,10 @@ rcMastership::init (void)
   _w = XtCreateWidget (_name, xmFormWidgetClass, parent_, arg, ac);
   ac = 0;
   
-  button_ = new rcMastershipButton (_w, "mastershipButton", netHandler_);
+  button_ = new rcMastershipButton (_w, (char *)"mastershipButton", netHandler_);
   button_->init ();
-  label_ = new XcodaXpmLabel (_w, "mastershipLabel", lock_no_key_xpm,
-			      "background");
+  label_ = new XcodaXpmLabel (_w, (char *)"mastershipLabel", (char **)lock_no_key_xpm,
+			      (char *)"background");
   label_->init ();
 
   XtSetArg (arg[ac], XmNshadowThickness, 2); ac++;

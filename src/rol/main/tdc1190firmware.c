@@ -35,6 +35,7 @@ cd $CLON_PARMS/firmwares
 
 #ifdef Linux_vme
 
+#include "jvme.h"
 #include "tdc1190.h"
 
 /*sergey*/
@@ -226,6 +227,7 @@ read_flash_page2(unsigned int addr, unsigned char *page, int pagenum)
 }
 
 
+int
 tdc1190firmware_test1(unsigned int baseaddr)
 {
   unsigned char pdr[264];

@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h> /*sergey: for types like uint32_t etc */
+
 #ifdef VXWORKS
 #include <vxWorks.h>
 #include <sysLib.h>
@@ -4216,7 +4217,7 @@ tiTrigDisable()
     if(TIp == NULL)
     {
       printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
-      return;
+      return(-1);
     }
 
   TILOCK;

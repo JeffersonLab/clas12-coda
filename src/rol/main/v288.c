@@ -22,6 +22,7 @@ IMPORT  STATUS sysBusToLocalAdrs(int, char *, char **);
 #endif
 
 #include "v288.h"
+#include "jvme.h"
 
 #define SSWAP(x)  ((((x) & 0x00ff) << 8) | (((x) & 0xff00) >> 8))
 #define QQ (UINT16)0xfffe
@@ -472,7 +473,7 @@ CAENHVInitSystem(const char *SystemName, int LinkType, void *Arg,
 #ifdef VXWORKS
       sysBusToLocalAdrs(0x39, addr, (char **)&sy527[i].vmeaddr);
 #else
-      vmeBusToLocalAdrs(0x39, addr, (char **)&sy527[i].vmeaddr);
+      vmeBusToLocalAdrs(0x39, (char *)addr, (char **)&sy527[i].vmeaddr);
 #endif
       sy527[i].CrNum = strtol(arg3, (char **)NULL, 0);
 	  /*
@@ -1112,7 +1113,9 @@ main()
   lParValList[0] = 1;
   ret = CAENHVSetChParam("TestSetup", Slot, ParName, ChNum, ChList, lParValList);
 
-  return;
+#ifndef VXWORKS
+  exit(0);
+#endif
 }
 
 
@@ -1120,10 +1123,9 @@ main()
 
 #else /* vxWorks or Linux */
 
-void
+int
 main()
 {
-  return;
 }
 
 #endif

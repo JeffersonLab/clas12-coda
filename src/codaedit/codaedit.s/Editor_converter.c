@@ -58,7 +58,10 @@
  *	  
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <ctype.h>
 #include <time.h>
 #include <sys/time.h>
 #include <sys/timeb.h>
@@ -71,6 +74,9 @@
 #include "Editor_database.h"
 #include "Editor_graph.h"
 #include "Editor_misc.h"
+#include "Editor_xmisc.h"
+#include "Editor_menu.h"
+
 
 /* global file and debugger number */
 int outputFileNum = 0;
@@ -712,7 +718,7 @@ void setConfigInfoName (cinfo, name)
 /*sergey: new function, it fills char[3] instead of ConfigInfo, so we can use parsing in other places;
   it does allocates memory for rols[] */
 void
-codeParser(char* rols[3], char* code)
+codeParser(char *rols[3], char *code)
 {
   char c0[128], c1[128], c2[128];
   char *p = code;
@@ -783,88 +789,17 @@ codeParser(char* rols[3], char* code)
 
 
 void
-setConfigInfoCode (ConfigInfo* cinfo, char* code)
+setConfigInfoCode (ConfigInfo *cinfo, char *code)
 {
-#if 1
   cinfo->code[0] = 0;
   cinfo->code[1] = 0;
   cinfo->code[2] = 0;
-  codeParser((char *)&cinfo->code[0], code);
-#endif
-#if 0
-  char c0[128], c1[128], c2[128];
-  char *p = code;
-  char *p0 = c0;
-  char *p1 = c1;
-  char* p2 = c2;
-
-  /* initialize the code pointers */
-  cinfo->code[0] = 0;
-  cinfo->code[1] = 0;
-  cinfo->code[2] = 0;
-
-  if (p != 0)
-  {
-    /* get first code */
-    while (*p != '{' && *p != '\0')
-      p++;
-    if (*p == '\0') 
-      return;
-
-    p++;
-    while (*p != '}')
-    {
-      *p0 = *p;
-      p0++; p++;
-    }
-    *p0 = '\0';
-    if (!isEmptyLine (c0))
-      cinfo->code[0] = strsave (c0);
-    
-    p++;
-    /* get second code */
-    while (*p != '{' && *p != '\0')
-      p++;
-    if (*p == '\0')
-      return;
-
-    p++;
-    while (*p != '}') {
-      *p1 = *p;
-      p1++; p++;
-    }
-    *p1 = '\0';
-    if (!isEmptyLine (c1))
-      cinfo->code[1] = strsave (c1);
-
-    p++;
-    /* get third code */
-    while (*p != '{' && *p != '\0')
-      p++;
-    if (*p == '\0')
-      return;
-
-    p++;
-    while (*p != '}') {
-      *p2 = *p;
-      p2++; p++;
-    }
-    *p2 = '\0';
-    p++;
-    if (!isEmptyLine (c2))
-      cinfo->code[2] = strsave (c2);
-  }
-#endif
-
+  codeParser((char **)&cinfo->code[0], code);
 }
 
-#if defined (__STDC__)
-void setConfigInfoInputs (ConfigInfo* cinfo, char* buffer)
-#else
-void setConfigInfoInputs (cinfo, buffer)
-     ConfigInfo* cinfo;
-     char* buffer;
-#endif
+
+void
+setConfigInfoInputs (ConfigInfo *cinfo, char *buffer)
 {
 
 #define MAX_LEN_TOKEN 256

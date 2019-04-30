@@ -9,8 +9,8 @@
 
 /* Macros to help with register spacers */
 #define MERGE_(a,b)  a##b
-#define LABEL_(a) MERGE_(unsigned int sspblank, a)
-#define BLANK LABEL_(__LINE__)
+#define LABELRICH_(a) MERGE_(unsigned int sspblank, a)
+#define BLANKRICH LABELRICH_(__LINE__)
 
 /******************/
 /* RICH registers */
@@ -48,13 +48,13 @@
 typedef struct
 {
 /* 0x0000-0x0003 */ volatile unsigned int    Ctrl;
-/* 0x0004-0x0007 */ BLANK[(0x0008-0x0004)/4];
+/* 0x0004-0x0007 */ BLANKRICH[(0x0008-0x0004)/4];
 /* 0x0008-0x000B */ volatile unsigned int    SpiCtrl;
 /* 0x000C-0x000F */ volatile unsigned int    SpiStatus;
 /* 0x0010-0x0013 */ volatile unsigned int    BoardId;
 /* 0x0014-0x0017 */ volatile unsigned int    ICAP;
 /* 0x0018-0x001B */ volatile unsigned int    FWRev;
-/* 0x001C-0x00FF */ BLANK[(0x0100-0x001C)/4];
+/* 0x001C-0x00FF */ BLANKRICH[(0x0100-0x001C)/4];
 } RICH_clk;
 
 typedef struct
@@ -165,11 +165,11 @@ typedef struct
 /* 0x0000-0x0003 */ volatile unsigned int SerCtrl;
 /* 0x0004-0x0007 */ volatile unsigned int SerStatus;
 /* 0x0008-0x000B */ volatile unsigned int DACAmplitude;
-/* 0x000C-0x000F */ BLANK[(0x0010-0x000C)/4];
+/* 0x000C-0x000F */ BLANKRICH[(0x0010-0x000C)/4];
 /* 0x0010-0x009F */ MAROC_Regs            Regs;
 /* 0x00A0-0x00AF */ MAROC_DyRegs          DyRegs_WrAll;
 /* 0x00B0-0x00DF */ MAROC_DyRegs          DyRegs_Rd[3];
-/* 0x00E0-0x00FF */ BLANK[(0x0100-0x00E0)/4];
+/* 0x00E0-0x00FF */ BLANKRICH[(0x0100-0x00E0)/4];
 } RICH_MAROC_Cfg;
 
 typedef struct
@@ -177,17 +177,17 @@ typedef struct
 /* 0x0000-0x000F */ volatile unsigned int    DisableCh[4];
 /* 0x0010-0x0013 */ volatile unsigned int    HitOrMask0;
 /* 0x0014-0x0017 */ volatile unsigned int    HitOrMask1;
-/* 0x0018-0x00FF */ BLANK[(0x0100-0x0018)/4];
+/* 0x0018-0x00FF */ BLANKRICH[(0x0100-0x0018)/4];
 /* 0x0100-0x01FF */ volatile unsigned int    Scalers[64];
 } RICH_Maroc_Proc;
 
 typedef struct
 {
 /* 0x0000-0x0003 */ volatile unsigned int    AdcCtrl;
-/* 0x0004-0x0007 */ BLANK[(0x0008-0x0004)/4];
+/* 0x0004-0x0007 */ BLANKRICH[(0x0008-0x0004)/4];
 /* 0x0008-0x000B */ volatile unsigned int    Hold1Delay;
 /* 0x000C-0x000F */ volatile unsigned int    Hold2Delay;
-/* 0x0010-0x00FF */ BLANK[(0x0100-0x0010)/4];
+/* 0x0010-0x00FF */ BLANKRICH[(0x0100-0x0010)/4];
 } RICH_MAROC_Adc;
 
 #define RICH_EB_LOOKBACK_MAX      1023
@@ -198,15 +198,15 @@ typedef struct
 /* 0x0000-0x0003 */ volatile unsigned int    Lookback;
 /* 0x0004-0x0007 */ volatile unsigned int    WindowWidth;
 /* 0x0008-0x000B */ volatile unsigned int    BlockCfg;
-/* 0x000C-0x000F */ BLANK[(0x0010-0x000C)/4];
+/* 0x000C-0x000F */ BLANKRICH[(0x0010-0x000C)/4];
 /* 0x0010-0x0013 */ volatile unsigned int    DeviceID;
 /* 0x0014-0x0017 */ volatile unsigned int    TrigDelay;
-/* 0x0018-0x0023 */ BLANK[(0x0024-0x0018)/4];
+/* 0x0018-0x0023 */ BLANKRICH[(0x0024-0x0018)/4];
 /* 0x0024-0x0027 */ volatile unsigned int    FifoWordCnt;
 /* 0x0028-0x002B */ volatile unsigned int    FifoEventCnt;
-/* 0x002C-0x007F */ BLANK[(0x0080-0x002C)/4];
+/* 0x002C-0x007F */ BLANKRICH[(0x0080-0x002C)/4];
 /* 0x0080-0x0083 */ volatile unsigned int    FifoData;
-/* 0x0084-0x00FF */ BLANK[(0x0100-0x0084)/4];
+/* 0x0084-0x00FF */ BLANKRICH[(0x0100-0x0084)/4];
 } RICH_EvtBuilder;
 
 typedef struct
@@ -214,7 +214,7 @@ typedef struct
 /* 0x0000-0x0003 */ volatile unsigned int    ErrCtrl;
 /* 0x0004-0x0007 */ volatile unsigned int    ErrAddrL;
 /* 0x0008-0x000B */ volatile unsigned int    ErrAddrH;
-/* 0x000C-0x000F */ BLANK[(0x0010-0x000C)/4];
+/* 0x000C-0x000F */ BLANKRICH[(0x0010-0x000C)/4];
 /* 0x0010-0x0013 */ volatile unsigned int    HeartBeatCnt;
 /* 0x0014-0x0017 */ volatile unsigned int    InitializationCnt;
 /* 0x0018-0x001B */ volatile unsigned int    ObservationCnt;
@@ -226,20 +226,20 @@ typedef struct
 /* 0x0030-0x0033 */ volatile unsigned int    RamAddr;
 /* 0x0034-0x0037 */ volatile unsigned int    RamWrData;
 /* 0x0038-0x003B */ volatile unsigned int    RamRdData;
-/* 0x003C-0x003F */ BLANK[(0x0040-0x003C)/4];
+/* 0x003C-0x003F */ BLANKRICH[(0x0040-0x003C)/4];
 /* 0x0040-0x0043 */ volatile unsigned int    RegData;
 /* 0x0044-0x0047 */ volatile unsigned int    RegCtrl;
-/* 0x0048-0x004F */ BLANK[(0x0050-0x0048)/4];
+/* 0x0048-0x004F */ BLANKRICH[(0x0050-0x0048)/4];
 /* 0x0050-0x0053 */ volatile unsigned int    MonRd;
 /* 0x0054-0x0057 */ volatile unsigned int    MonWr;
 /* 0x0058-0x005B */ volatile unsigned int    MonStatus;
-/* 0x005C-0x005F */ BLANK[(0x0060-0x005C)/4];
+/* 0x005C-0x005F */ BLANKRICH[(0x0060-0x005C)/4];
 /* 0x0060-0x0063 */ volatile unsigned int    XAdcCtrl;
 /* 0x0064-0x0067 */ volatile unsigned int    XAdcStatus;
-/* 0x0068-0x006F */ BLANK[(0x0070-0x0068)/4]; 
+/* 0x0068-0x006F */ BLANKRICH[(0x0070-0x0068)/4]; 
 /* 0x0070-0x0073 */ volatile unsigned int    FiberCtrl;
 /* 0x0074-0x0077 */ volatile unsigned int    FiberStatus;
-/* 0x0078-0x00FF */ BLANK[(0x0100-0x0078)/4];
+/* 0x0078-0x00FF */ BLANKRICH[(0x0100-0x0078)/4];
 } RICH_Testing;
 
 // Mux signal selection for SD->*Src registers
@@ -251,9 +251,9 @@ typedef struct
 {
 /* 0x0000-0x0003 */ volatile unsigned int    ScalerLatch;
 /* 0x0004-0x0007 */ volatile unsigned int    Scaler_GClk125;
-/* 0x0008-0x000F */ BLANK[(0x0010-0x0008)/4];
+/* 0x0008-0x000F */ BLANKRICH[(0x0010-0x0008)/4];
 /* 0x0010-0x0013 */ volatile unsigned int    CTestSrc;
-/* 0x0014-0x00FF */ BLANK[(0x0100-0x0014)/4];
+/* 0x0014-0x00FF */ BLANKRICH[(0x0100-0x0014)/4];
 } RICH_sd;
 
 #define SSP_RICH_GTXCTRL_FIBER_GT_RESET   0x00000001
@@ -273,17 +273,17 @@ typedef struct
 /* 0x0200-0x02FF */ RICH_sd         Sd;
 /* 0x0300-0x03FF */ RICH_MAROC_Adc  MAROC_Adc;
 /* 0x0400-0x09FF */ RICH_Maroc_Proc MAROC_Proc[3];
-/* 0x0A00-0x0AFF */ BLANK[(0x0B00-0x0A00)/4];
+/* 0x0A00-0x0AFF */ BLANKRICH[(0x0B00-0x0A00)/4];
 /* 0x0B00-0x0BFF */ RICH_EvtBuilder EvtBuilder;
 /* 0x0C00-0x0CFF */ RICH_Testing    Testing;
-/* 0x0D00-0x0DFF */ BLANK[(0x0E00-0x0D00)/4];
+/* 0x0D00-0x0DFF */ BLANKRICH[(0x0E00-0x0D00)/4];
 /* 0x0E00-0x0E03 */ volatile unsigned int GtxCtrl;
-/* 0x0E04-0x0E0F */ BLANK[(0x0E10-0x0E04)/4];
+/* 0x0E04-0x0E0F */ BLANKRICH[(0x0E10-0x0E04)/4];
 /* 0x0E10-0x0E13 */ volatile unsigned int GtxStatus;
-/* 0x0E14-0x0E1F */ BLANK[(0x0E20-0x0E14)/4];
+/* 0x0E14-0x0E1F */ BLANKRICH[(0x0E20-0x0E14)/4];
 /* 0x0E20-0x0E23 */ volatile unsigned int EbCtrl;
 /* 0x0E24-0x0E27 */ volatile unsigned int EbFullThreshold;
-/* 0x0E28-0x0FFF */ BLANK[(0x1000-0x0E28)/4];
+/* 0x0E28-0x0FFF */ BLANKRICH[(0x1000-0x0E28)/4];
 } RICH_regs;
 
 enum maroc_reg_t {
@@ -412,5 +412,10 @@ int sspRich_PrintConnectedAsic_All();
 int sspRich_ClearConnectedAsicList();
 int sspRich_SaveConfig(const char * filename);
 int sspRich_LoadConfig(const char * filename);
+
+int sspRich_Init(int id);
+int sspRich_FirmwareVerifyAll(int id, const char *filename);
+int sspRich_FirmwareVerify(int id, int fiber, const char *filename);
+int sspRich_FirmwareUpdate(int id, int fiber, const char *filename);
 
 #endif

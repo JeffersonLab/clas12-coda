@@ -1,5 +1,5 @@
 /* XPM */
-static char *reload_xpm[] = {
+static const char *reload_xpm[] = {
 /* columns rows colors chars-per-pixel */
 "30 30 14 1",
 "  c #306565",

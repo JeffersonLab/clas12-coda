@@ -1,5 +1,5 @@
 /* XPM */
-static char * debug_xpm[] = {
+static const char *debug_xpm[] = {
 "39 35 7 1",
 " 	c #820782078207",
 ".	c #041004100410",

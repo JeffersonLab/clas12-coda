@@ -25,12 +25,8 @@
 #ifndef _EDITOR_COLOR_SEL_H
 #define _EDITOR_COLOR_SEL_H
 
-#if defined (__STDC__)
 extern void popup_color_selector(Widget w, 
 				 XtPointer client_data, 
-				 XmAnyCallbackStruct* cbs);
-#else
-extern void popup_color_selector();
-#endif
+				 XtPointer callback_data);
 
 #endif

@@ -19,11 +19,7 @@ include $(CODA)/src/Makefile.include
 #-----------------------
 
 #for debugging
-ifeq ("$(OSTYPE)","SunOS")
-  CFLAGS = -g -KPIC -mt -DSunOS -DOSTYPE="SunOS"
-endif
-
-##CLON_FLAGS += -D_TRACE_OBJECTS
+CLON_FLAGS += -D_TRACE_OBJECTS
 
 CLON_FLAGS += -I./include -I../Variables/src.s -I../Common/src.s -I../rcClient/src.s \
 	-I./pixmaps -I$(CODA)/common/include -I../../cg/cg.s -I../../motif/include \
@@ -44,7 +40,17 @@ LIBNAMES += ../../sace3.1/$(OSTYPE_MACHINE)/lib/libsace3.1.a
 LIBNAMES += ../../motif/$(OSTYPE_MACHINE)/lib/libmotif.a
 LIBNAMES += ../../cg/$(OSTYPE_MACHINE)/lib/libcg.a
 
-LIBNAMES += $(globallib)/libmysql4.1.20.a
+LIBNAMES += $(globallib)/libcodautil.a
+
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+endif
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
+  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+endif
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+endif
 
 
 CLON_FLAGS += -DUSE_CREG

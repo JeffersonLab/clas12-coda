@@ -37,7 +37,7 @@ class Trace
   //
 {
 public:
-  Trace (char *n, int line = 0, char *file = "");
+  Trace (char *n, int line = 0, const char *file = "");
   ~Trace (void);
 
   static void start_tracing (void);

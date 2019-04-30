@@ -95,16 +95,16 @@ rcInfoRunPanel::init (void)
 
 
   // create run type dialog first
-  runTypeDialog_ = new rcRunTypeDialog (form, "runTypeDialog", "Run Type Configuration", netHandler_);
+  runTypeDialog_ = new rcRunTypeDialog (form, (char *)"runTypeDialog", (char *)"Run Type Configuration", netHandler_);
   runTypeDialog_->init ();
   runTypeDialog_->setModal ();
 
-  runConfigDialog_ = new rcRunConfigDialog (form, "runConfigDialog", "Run Config Configuration", netHandler_);
+  runConfigDialog_ = new rcRunConfigDialog (form, (char *)"runConfigDialog", (char *)"Run Config Configuration", netHandler_);
 /*runConfigDialog_->init (); will do it in popup() */
 
   // setup x resources for all
   ac = 0;
-  cinfoPanel_ = new rcRunCInfoPanel (form, "criticalInfoPanel", netHandler_);
+  cinfoPanel_ = new rcRunCInfoPanel (form, (char *)"criticalInfoPanel", netHandler_);
   cinfoPanel_->init ();
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNleftAttachment, XmATTACH_FORM); ac++;
@@ -140,7 +140,7 @@ rcInfoRunPanel::init (void)
   // create frame title
   ac = 0;
   XmString t;
-  t = XmStringCreateSimple ("Session status");
+  t = XmStringCreateSimple ((char *)"Session status");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget rilabel = XtCreateWidget ("runstatusLabel",
@@ -155,7 +155,7 @@ rcInfoRunPanel::init (void)
 				   
   // Create statusPanel and sinfoPanel as children of topForm
   //statusPanel_ = new rcRunStatusPanel (topForm, "netStatus", netHandler_);
-  sinfoPanel_ = new rcRunSInfoPanel (topForm, "simpleInfoPanel", netHandler_);
+  sinfoPanel_ = new rcRunSInfoPanel (topForm, (char *)"simpleInfoPanel", netHandler_);
   sinfoPanel_->init ();
 
   
@@ -177,7 +177,7 @@ rcInfoRunPanel::init (void)
   XtSetArg (arg[ac], XmNrightAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNshadowType, XmSHADOW_ETCHED_OUT); ac++;
   Widget fnframe = XtCreateWidget ("datafn", xmFrameWidgetClass, topForm, arg, ac);
-  t = XmStringCreateSimple ("Data file name");
+  t = XmStringCreateSimple ((char *)"Data file name");
 
   // 'Data file name' label with red frame
   ac = 0;
@@ -194,7 +194,7 @@ rcInfoRunPanel::init (void)
   XtSetArg (arg[ac], XmNmarginHeight, 0); ac++;
   XtSetArg (arg[ac], XmNmarginWidth, 0); ac++;
   XtSetArg (arg[ac], XmNblinkRate, 0); ac++;
-  t = XmStringCreateSimple ("Unknown");
+  t = XmStringCreateSimple ((char *)"Unknown");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   datafile_ = XtCreateManagedWidget ("datafilename", xmLabelWidgetClass, fnframe, arg, ac);
   XmStringFree (t);
@@ -219,7 +219,7 @@ rcInfoRunPanel::init (void)
   XtSetArg (arg[ac], XmNrightAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNshadowType, XmSHADOW_ETCHED_OUT); ac++;
   Widget cnframe = XtCreateWidget ("datacn", xmFrameWidgetClass, topForm, arg, ac);
-  t = XmStringCreateSimple ("Config file name");
+  t = XmStringCreateSimple ((char *)"Config file name");
 
   ac = 0;
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
@@ -234,7 +234,7 @@ rcInfoRunPanel::init (void)
   XtSetArg (arg[ac], XmNmarginHeight, 0); ac++;
   XtSetArg (arg[ac], XmNmarginWidth, 0); ac++;
   XtSetArg (arg[ac], XmNblinkRate, 0); ac++;
-  t = XmStringCreateSimple ("Unknown");
+  t = XmStringCreateSimple ((char *)"Unknown");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   conffile_ = XtCreateManagedWidget ("conffilename", xmLabelWidgetClass, cnframe, arg, ac);
   XmStringFree (t);
@@ -285,7 +285,7 @@ rcInfoRunPanel::init (void)
 
   // create the bottom panel
   ac = 0;
-  dinfoPanel_ = new rcRunDInfoPanel (form, "dynInfoPanel", netHandler_, statusPanel_);
+  dinfoPanel_ = new rcRunDInfoPanel (form, (char *)"dynInfoPanel", netHandler_, statusPanel_);
   dinfoPanel_->init ();
 
 
@@ -441,7 +441,7 @@ rcInfoRunPanel::updateDataFileLabel (void)
   }
   else
   {
-    t = XmStringCreateSimple ("   ");
+    t = XmStringCreateSimple ((char *)"   ");
   }  
 
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
@@ -477,7 +477,7 @@ rcInfoRunPanel::updateConfFileLabel (void)
   }
   else
   {
-    t = XmStringCreateSimple ("   ");
+    t = XmStringCreateSimple ((char *)"   ");
   }
 #ifdef _CODA_DEBUG
   printf("updateConfFileLabel: confFile >%s<\n",filename);fflush(stdout);

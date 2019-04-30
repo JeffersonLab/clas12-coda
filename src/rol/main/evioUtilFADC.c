@@ -1,4 +1,11 @@
 
+/* evioUtilFADC.c */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/time.h>
+
 #ifdef Linux_armv7l
 
 int
@@ -73,14 +80,11 @@ main()
 /*  misc macros, etc. */
 #define MAXEVIOBUF 1000000
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/time.h>
 
 #include <evio.h>
 #include <evioBankUtil.h>
 
+#include "rolInt.h"
 #include "da.h"
 #include "packing.h"
 

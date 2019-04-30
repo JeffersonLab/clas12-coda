@@ -76,7 +76,7 @@ XcodaSimpleOptionMenu::init (void)
   ac = 0;
   XtSetArg(arg[ac], XmNpacking, XmPACK_COLUMN); ac++;
   XtSetArg(arg[ac], XmNnumColumns, 1); ac++; /*will be changed on-flight based on the number of configs*/
-  menu_ = XmCreatePulldownMenu (parent_, "optionPulldown", arg, ac);
+  menu_ = XmCreatePulldownMenu (parent_, (char *)"optionPulldown", arg, ac);
   
   ac = 0;
   XmString t = XmStringCreateSimple (title_);
@@ -193,7 +193,7 @@ XcodaSimpleOptionMenu::removeAll (void)
 
   Arg arg[20];
   int ac = 0;
-  XmString t = XmStringCreateSimple ("         ");
+  XmString t = XmStringCreateSimple ((char *)"         ");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetValues (widgets_[0], arg, ac);
   ac = 0;

@@ -97,14 +97,14 @@ rcRunConfigDialog::download (void)
 #ifdef _CODA_DEBUG
   printf(">>> rcRunConfigDialog::download reached\n");
 #endif
-  daqData data ("RCS", "command", (int)DADOWNLOAD/*currentruntype*/);
+  daqData data ((char *)"RCS", (char *)"command", (int)DADOWNLOAD/*currentruntype*/);
 
   /* sending download command to rcServer::daqRun() */
   if (client.sendCmdCallback (DADOWNLOAD, data,
 		 (rcCallback)&(rcRunConfigDialog::downloadCallback),
 		 (void *)this) != CODA_SUCCESS)
   {
-    reportErrorMsg ("Cannot communication with the RunControl Server\n");
+    reportErrorMsg ((char *)"Cannot communication with the RunControl Server\n");
   }
 
 }
@@ -318,12 +318,12 @@ rcRunConfigDialog::updateConfFile (char *fname)
 {
   /* get client handler */
   rcClient& client=netHandler_.clientHandler();
-  daqData data (client.exptname (), "confFile", fname);
+  daqData data (client.exptname (), (char *)"confFile", fname);
   if (client.setValueCallback (data,
                   (rcCallback)&(rcRunConfigDialog::confFileCallback),
                   (void *)this) != CODA_SUCCESS)
   {
-    reportErrorMsg ("Cannot send new token interval value to the server !");
+    reportErrorMsg ((char *)"Cannot send new token interval value to the server !");
     return;
   }
 
@@ -338,7 +338,7 @@ rcRunConfigDialog::confFileCallback (int status, void* arg, daqNetData* )
   rcRunConfigDialog* obj = (rcRunConfigDialog *)arg;                                                                          
   if (status != CODA_SUCCESS)                                                                                           
   {                                                                                                                     
-    obj->reportErrorMsg ("Setting new token interval to the server failed !");                                          
+    obj->reportErrorMsg ((char *)"Setting new token interval to the server failed !");                                          
     return;                                                                                                             
   }                                                                                                                     
 }
@@ -383,7 +383,7 @@ rcRunConfigDialog::downloadCallback (int status, void* arg, daqNetData* data)
 {
   rcRunConfigDialog* obj = (rcRunConfigDialog *)arg;
 
-  if (status != CODA_SUCCESS) obj->reportErrorMsg ("Downloading a run failed !!!");
+  if (status != CODA_SUCCESS) obj->reportErrorMsg ((char *)"Downloading a run failed !!!");
 }
 
 

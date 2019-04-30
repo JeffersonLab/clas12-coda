@@ -14,7 +14,7 @@ MAIN = codaedit
 include $(CODA)/src/Makefile.include
 
 #debugging
-CFLAGS = -g -fPIC -DLinux -DLINUX
+##CFLAGS = -g -fPIC -DLinux -DLINUX
 
 #LDCC = $(FC)
 #LDFC = $(FC)
@@ -37,12 +37,21 @@ endif
 # customize definitions
 #-----------------------
 CLON_FLAGS += -I./$(MAIN).s -I$(CODA)/common/include $(X11INCDIR)
+CLON_FLAGS += -I/usr/include/mysql
 
 CLON_FLAGS += -DUSE_CREG
 LIBNAMES += $(globallib)/libcreg.a
+LIBNAMES += $(globallib)/libcodautil.a
 
-LIBNAMES += $(globallib)/libmysql4.1.20.a
-##LIBNAMES += -lmysqlclient
+ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+  LIBNAMES += /usr/lib/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
+    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+endif
 
 LIBNAMES += -lresolv
 LIBNAMES += $(X11LIBS)

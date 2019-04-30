@@ -406,7 +406,7 @@ codaDaPrestart(char *name, int rn, int rt)
   int status = 0;
   char temp [CODA_SCRIPT_LENGTH];
 
-  status = tcpClient(name,"prestart");
+  status = tcpClient(name,(char *)"prestart");
   if(status == CODA_SUCCESS)
   {
     return(CODA_PRESTARTING);
@@ -423,7 +423,7 @@ codaDaEnd(char *name, int special)
   int status = 0;
   char temp [CODA_SCRIPT_LENGTH];
 
-  status = tcpClient(name,"end");
+  status = tcpClient(name,(char *)"end");
   if(status == CODA_SUCCESS)
   {
     return(CODA_ENDING);
@@ -440,7 +440,7 @@ codaDaPause(char *name, int mask)
   int status = 0;
   char temp [CODA_SCRIPT_LENGTH];
 
-  status = tcpClient(name,"pause");
+  status = tcpClient(name,(char *)"pause");
   if(status == CODA_SUCCESS)
   {
     return(CODA_PAUSING);
@@ -461,7 +461,7 @@ codaDaGo(char *name, int mask)
   printf("codaDaGo reached, name >%s<, mask=0x%08x\n",name,mask);
 #endif
 
-  status = tcpClient(name,"go");
+  status = tcpClient(name,(char *)"go");
   if(status == CODA_SUCCESS)
   {
     return(CODA_ACTIVATING);
@@ -499,7 +499,7 @@ codaDaReset(char *name)
   int status = 0;
   char temp [CODA_SCRIPT_LENGTH];
 
-  status = tcpClient(name,"exit");
+  status = tcpClient(name,(char *)"exit");
       
   return(status);
 }
@@ -592,6 +592,7 @@ codaDaReport(char *name, int how)
   {
     return CODA_DISCONNECTED;
   }
+  return CODA_DISCONNECTED; /*sergey*/
 }
 
 int

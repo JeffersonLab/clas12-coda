@@ -25,9 +25,9 @@ void decode_command_line(int argc, char **argv);
 
 //----------------------------------------------------------------
 
-
-main(int argc, char **argv){
-
+int
+main(int argc, char **argv)
+{
   int unixtime;
   char *config, *conffile, *datafile;
 

@@ -1,5 +1,5 @@
 /* XPM */
-static char * convert1_xpm[] = {
+static const char *convert1_xpm[] = {
 "32 32 13 1",
 " 	c #000000000000",
 ".	c #C30BC30BC30B",

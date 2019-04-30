@@ -91,7 +91,7 @@ rcRunTypeDialog::createFormChildren (void)
   ac = 0;  
   XtSetValues (_w, arg, ac);
   // create option menu first
-  option_ = new rcRunTypeOption (_w, "runtype","Run Type ",netHandler_, this);
+  option_ = new rcRunTypeOption (_w, (char *)"runtype", (char *)"Run Type ", netHandler_, this);
   option_->init ();
   
   ac = 0;  
@@ -106,8 +106,8 @@ rcRunTypeDialog::createFormChildren (void)
 
   ac = 0;
   // create push buttons
-  rcXpmComdButton *ok     = new rcXpmComdButton(actionForm,"Ok",    NULL,"select run type",NULL,netHandler_);
-  rcXpmComdButton *cancel = new rcXpmComdButton(actionForm,"Cancel",NULL,"cancel",NULL,netHandler_);
+  rcXpmComdButton *ok     = new rcXpmComdButton(actionForm,(char *)"Ok",    NULL,(char *)"select run type",NULL,netHandler_);
+  rcXpmComdButton *cancel = new rcXpmComdButton(actionForm,(char *)"Cancel",NULL,(char *)"cancel",NULL,netHandler_);
 
 
   ok->init();
@@ -192,12 +192,12 @@ rcRunTypeDialog::configure (void)
 #ifdef _CODA_DEBUG
     printf(">>> rcRunTypeDialog::configure >%s<\n",currentruntype);
 #endif
-    daqData data ("RCS", "command", currentruntype);
+    daqData data ((char *)"RCS", (char *)"command", currentruntype);
     if (client.sendCmdCallback (DACONFIGURE, data,
 		 (rcCallback)&(rcRunTypeDialog::configureCallback),
 		 (void *)this) != CODA_SUCCESS)
 	{
-      reportErrorMsg ("Cannot communication with the RunControl Server\n");
+      reportErrorMsg ((char *)"Cannot communication with the RunControl Server\n");
 	}
 
     /*sergey: moved from rcRunTypeOption::currentRunType, otherwise it called every time when currentRunType() called */
@@ -207,8 +207,8 @@ rcRunTypeDialog::configure (void)
       sprintf(cmd,"c:%s",currentruntype);
 #ifdef USE_CREG
       printf("CEDIT 4: >%s<\n",cmd);
-      coda_Send(XtDisplay(this->baseWidget()),"CEDIT",cmd);
-      coda_Send(XtDisplay(this->baseWidget()),"ALLROCS",cmd);
+      coda_Send(XtDisplay(this->baseWidget()),(char *)"CEDIT",cmd);
+      coda_Send(XtDisplay(this->baseWidget()),(char *)"ALLROCS",cmd);
 #endif
     }
 
@@ -269,7 +269,7 @@ rcRunTypeDialog::configureCallback (int status, void* arg, daqNetData* data)
 {
   rcRunTypeDialog* obj = (rcRunTypeDialog *)arg;
 
-  if (status != CODA_SUCCESS) obj->reportErrorMsg ("Configuring a run failed !!!");
+  if (status != CODA_SUCCESS) obj->reportErrorMsg ((char *)"Configuring a run failed !!!");
 }
 
 

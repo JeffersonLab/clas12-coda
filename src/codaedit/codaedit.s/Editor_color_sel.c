@@ -23,6 +23,7 @@
  */
 
 #include <stdio.h>
+
 #include <X11/Xatom.h>
 #include <X11/Intrinsic.h>
 #include <Xm/Xm.h>
@@ -38,53 +39,43 @@
 
 #include "Editor_color.h"
 #include "Editor_widget_poll.h"
+#include "Editor_graph.h"
+#include "Editor_xmisc.h"
+
+
 
 /******************************************************************************
  *         Toggle Buttons for foreground or background color                  *
  *****************************************************************************/
+
 typedef struct _fg_bg_toggles
 {
-#if defined (__STDC__)
   /* constructor              */
   void (*construct)(struct _fg_bg_toggles* toggles,
 		    Widget parent);
-#else
-  void (*construct)();           /* constructor              */
-#endif
   Widget fg_toggle, bg_toggle;   /* internal toggle widgests */
   Widget _w;                     /* container                */
   int    type;                   /* type = 0, foreground, 1 background */
-#if defined (__STDC__)
   /* callback routine for toggle button */
   void   (*fg_toggled)(Widget w,
 		       XtPointer data,
-		       XmToggleButtonCallbackStruct* cbs);
+			   XtPointer callback_data);
   void   (*bg_toggled)(Widget w,
 		       XtPointer data,
-		       XmToggleButtonCallbackStruct* cbs);
-#else
-  /* callback routine for toggle button */
-  void   (*fg_toggled)();
-  void   (*bg_toggled)();
-#endif
-}typeSel;
+		       XtPointer callback_data);
+} typeSel;
+
 
 static typeSel typeToggles;
 
-#if defined (__STDC__)
 static void fgToggleCallback(Widget w, 
-			     XtPointer client_data, 
-			     XmToggleButtonCallbackStruct* cbs)
-#else
-static void fgToggleCallback(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmToggleButtonCallbackStruct *cbs;
-#endif
+			     XtPointer client_data,
+			     XtPointer callback_data)
 {
   Arg     arg[10];
   int     ac = 0;
   typeSel *toggles = (typeSel *)client_data;
+  XmToggleButtonCallbackStruct* cbs = (XmToggleButtonCallbackStruct *)callback_data;
 
   if (cbs->set){      /* foreground Toggle set */
     toggles->type = 0;
@@ -100,20 +91,14 @@ static void fgToggleCallback(w, client_data, cbs)
   }
 }
 
-#if defined (__STDC__)
 static void bgToggleCallback(Widget w, 
 			     XtPointer client_data, 
-			     XmToggleButtonCallbackStruct* cbs)
-#else
-static void bgToggleCallback(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmToggleButtonCallbackStruct *cbs;
-#endif
+				 XtPointer callback_data)
 {
   Arg     arg[10];
   int     ac = 0;
   typeSel *toggles = (typeSel *)client_data;
+  XmToggleButtonCallbackStruct* cbs = (XmToggleButtonCallbackStruct *)callback_data;
 
   if (cbs->set){      /* background toggle set */
     toggles->type = 1;
@@ -129,13 +114,7 @@ static void bgToggleCallback(w, client_data, cbs)
   }
 }
 
-#if defined (__STDC__)
 static void constructToggles(typeSel* toggles, Widget parent)
-#else
-static void constructToggles(toggles, parent)
-     typeSel *toggles;
-     Widget  parent;
-#endif
 {
   int      ac = 0;
   Arg      arg[10];
@@ -189,16 +168,11 @@ static void constructToggles(toggles, parent)
  ****************************************************************************/
 typedef struct _rgb_labels
 {
-#if defined (__STDC__)
   /* constructor            */
   void (*construct)(struct _rgb_labels* label,
 		    Widget parent);
-#else
-  void (*construct)();               /* constructor            */
-#endif
   Widget r, g, b;                    /* internal label widgets */
   Widget _w;                         /* container widget       */
-#if defined (__STDC__)
   /* update function        */
   void (*updateR) (struct _rgb_labels* label,
 		   int value);
@@ -206,22 +180,11 @@ typedef struct _rgb_labels
 		   int value);
   void (*updateG) (struct _rgb_labels* label,
 		   int value);
-#else
-  void (*updateR)();                 /* update function        */
-  void (*updateB)();
-  void (*updateG)();
-#endif
-}rgbLabels;
+} rgbLabels;
 
 static rgbLabels      rgb_labels;
 
-#if defined (__STDC__)
 static void update_redlabel (rgbLabels* labels, int value)
-#else
-static void update_redlabel (labels, value)
-     rgbLabels *labels;
-     int       value;
-#endif
 {
   char temp[10];
   
@@ -229,13 +192,7 @@ static void update_redlabel (labels, value)
   XmTextFieldSetString (labels->r, temp);
 }
 
-#if defined (__STDC__)
 static void update_greenlabel (rgbLabels* labels, int value)
-#else
-static void update_greenlabel (labels, value)
-     rgbLabels *labels;
-     int       value;
-#endif
 {
   char temp[10];
   
@@ -243,13 +200,7 @@ static void update_greenlabel (labels, value)
   XmTextFieldSetString (labels->g, temp);
 }
 
-#if defined (__STDC__)  
 static void update_bluelabel (rgbLabels* labels, int value)
-#else
-static void update_bluelabel (labels, value)
-     rgbLabels *labels;
-     int       value;
-#endif
 {
   char temp[10];
   
@@ -257,13 +208,7 @@ static void update_bluelabel (labels, value)
   XmTextFieldSetString (labels->b, temp);
 }
 
-#if defined (__STDC__)
 static void constructRGBlabels(rgbLabels* labels, Widget parent)
-#else
-static void constructRGBlabels(labels, parent)
-     rgbLabels *labels;
-     Widget parent;
-#endif
 {
   int ac = 0;
   Arg arg[10];
@@ -314,29 +259,15 @@ static void constructRGBlabels(labels, parent)
  ****************************************************************************/
 typedef struct _hsv_labels
 {
-#if defined (__STDC__)
   void (*construct) (struct _hsv_labels* labels, Widget parent);
-#else
-  void (*construct)();
-#endif
   Widget h, s, v;
   Widget _w;
-#if defined (__STDC__)
   void (*updateHSV) (struct _hsv_labels* labels, int r, int g, int b);
-#else
-  void (*updateHSV) ();
-#endif
 }hsvLabels;  
 
 static hsvLabels hsv_labels;
 
-#if defined (__STDC__)
 static void update_hsv_values (hsvLabels* labels, int r, int g, int b)
-#else
-static void update_hsv_values (labels, r, g, b)
-     hsvLabels *labels;
-     int r, g, b;
-#endif
 {
   char temp[10];
   float  hue, value, sat;
@@ -353,13 +284,7 @@ static void update_hsv_values (labels, r, g, b)
   XmTextFieldSetString (labels->s, temp);
 }
 
-#if defined (__STDC__)
 static void constructHSVlabels (hsvLabels* labels, Widget parent)
-#else
-static void constructHSVlabels (labels, parent)
-     hsvLabels *labels;
-     Widget parent;
-#endif
 {
   int ac = 0;
   Arg arg[10];
@@ -407,31 +332,17 @@ static void constructHSVlabels (labels, parent)
  ****************************************************************************/
 typedef struct _color_disp
 {
-#if defined (__STDC__)
   void   (*construct) (struct _color_disp* disp, Widget parent);
-#else
-  void   (*construct) ();
-#endif
   Widget  _w, _view;
 
-#if defined (__STDC__)
   void   (*update) (struct _color_disp* viewer, int r, int g, int b);
-#else
-  void   (*update) ();
-#endif
 
   XColor color;
 }colorViewer;
 
 static colorViewer color_viewer;
 
-#if defined (__STDC__)
 static void update_color_disp (colorViewer* viewer, int r, int g, int b)
-#else
-static void update_color_disp (viewer, r, g, b)
-     colorViewer *viewer;
-     int r, g, b;
-#endif
 {
   Arg arg[5];
   int ac = 0;
@@ -463,13 +374,7 @@ static void update_color_disp (viewer, r, g, b)
   }
 }
 
-#if defined (__STDC__)
 static void constructColorViewer(colorViewer* viewer, Widget parent)
-#else
-static void constructColorViewer(viewer, parent)
-     colorViewer *viewer;
-     Widget      parent;
-#endif
 {
   int   status;
   Arg   arg[10];
@@ -497,17 +402,10 @@ static void constructColorViewer(viewer, parent)
  ****************************************************************************/
 typedef struct _rgb_controllers
 {
-#if defined (__STDC__)
   void  (*construct) (struct _rgb_controllers* ctrls, Widget parent);
-  void  (*set_r)     (Widget w, XtPointer data, XmScaleCallbackStruct *cbs);
-  void  (*set_g)     (Widget w, XtPointer data, XmScaleCallbackStruct *cbs);
-  void  (*set_b)     (Widget w, XtPointer data, XmScaleCallbackStruct *cbs);
-#else
-  void  (*construct)();
-  void  (*set_r)();
-  void  (*set_g)();
-  void  (*set_b)();
-#endif
+  void  (*set_r)     (Widget w, XtPointer data, XtPointer callback_data);
+  void  (*set_g)     (Widget w, XtPointer data, XtPointer callback_data);
+  void  (*set_b)     (Widget w, XtPointer data, XtPointer callback_data);
 
   Widget r, g, b;
   Widget _w;
@@ -519,35 +417,25 @@ typedef struct _rgb_controllers
 
 static rgbControllers rgbCtrls;
 
-#if defined (__STDC__)
 static void set_red(Widget w, XtPointer client_data, 
-		    XmScaleCallbackStruct* cbs)
-#else
-static void set_red(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmScaleCallbackStruct *cbs;
-#endif
+		    XtPointer callback_data)
 {
   rgbControllers *obj = (rgbControllers *)client_data;
+  XmScaleCallbackStruct* cbs = (XmScaleCallbackStruct *)callback_data;
+
   obj->_red = cbs->value;
   obj->rgbViewers->updateR (obj->rgbViewers, cbs->value);
   obj->hsvViewers->updateHSV (obj->hsvViewers, cbs->value, obj->_green, obj->_blue);
   obj->viewer->update (obj->viewer, obj->_red, obj->_green, obj->_blue);
 }
 
-#if defined (__STDC__)
 static void set_green(Widget w, 
 		      XtPointer client_data,
-		      XmScaleCallbackStruct* cbs)
-#else
-static void set_green(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmScaleCallbackStruct *cbs;
-#endif
+		      XtPointer callback_data)
 {
   rgbControllers *obj = (rgbControllers *)client_data;
+  XmScaleCallbackStruct* cbs = (XmScaleCallbackStruct *)callback_data;
+  
   obj->_green = cbs->value;
   obj->rgbViewers->updateG (obj->rgbViewers, cbs->value);
   obj->hsvViewers->updateHSV (obj->hsvViewers, obj->_red, cbs->value, obj->_blue);
@@ -555,32 +443,21 @@ static void set_green(w, client_data, cbs)
 }
 
 
-#if defined (__STDC__)
 static void set_blue(Widget w, 
 		     XtPointer client_data, 
-		     XmScaleCallbackStruct* cbs)
-#else
-static void set_blue(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmScaleCallbackStruct *cbs;
-#endif
+		     XtPointer callback_data)
 {
   rgbControllers *obj = (rgbControllers *)client_data;
+  XmScaleCallbackStruct* cbs = (XmScaleCallbackStruct *)callback_data;
+  
   obj->_blue = cbs->value;
   obj->rgbViewers->updateB (obj->rgbViewers, cbs->value);
   obj->hsvViewers->updateHSV (obj->hsvViewers, obj->_red, obj->_green, cbs->value);
   obj->viewer->update (obj->viewer, obj->_red, obj->_green, obj->_blue);
 }
 
-#if defined (__STDC__)
 static void constructRGBControllers(rgbControllers* ctrllers, 
 				    Widget parent)
-#else
-static void constructRGBControllers(ctrllers, parent)
-     rgbControllers *ctrllers;
-     Widget parent;
-#endif
 {
   Arg arg[10];
   int ac = 0;
@@ -632,47 +509,26 @@ static void constructRGBControllers(ctrllers, parent)
  *****************************************************************************/
 static Widget form = 0;  /* check to see dialog created or not */
 
-#if defined (__STDC__)
 static void popdown_color_selector(Widget w, 
 				   XtPointer client_data,
-				   XmAnyCallbackStruct* cbs)
-#else
-static void popdown_color_selector(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+				   XtPointer callback_data)
 {
   XtUnmanageChild (form);
   XtPopdown (XtParent(form));
 }
 
-#if defined (__STDC__)
 static void select_color (Widget w, 
 			  XtPointer client_data, 
-			  XmAnyCallbackStruct* cbs)
-#else
-static void select_color (w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+			  XtPointer callback_data)
 {
   colorViewer *obj = (colorViewer *)client_data;
   change_color(obj->color.pixel, XtScreen(w), typeToggles.type);
   saveColor (&(obj->color), typeToggles.type);
 }
 
-#if defined (__STDC__)
 void popup_color_selector(Widget w, 
 			  XtPointer client_data, 
-			  XmAnyCallbackStruct* cbs)
-#else
-void popup_color_selector(w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmAnyCallbackStruct *cbs;
-#endif
+			  XtPointer callback_data)
 {
   Widget pb0, pb1;
   Widget t_form, act_form;

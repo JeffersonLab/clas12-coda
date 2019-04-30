@@ -66,7 +66,7 @@
  * int  evIoctl                (int handle, char *request, void *argp)
  * int  evClose                (int handle)
  * int  evGetBufferLength      (int handle, uint32_t *length)
- * int  evGetRandomAccessTable (int handle, const uint32_t *** const table, uint32_t *len)
+ * int  evGetRandomAccessTable (int handle, const uint32_t ***table, uint32_t *len)
  * int  evGetDictionary        (int handle, char **dictionary, uint32_t *len)
  * int  evWriteDictionary      (int handle, char *xmlDictionary)
  * int  evIsContainer          (int type)
@@ -78,6 +78,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -86,6 +87,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+
 #include "evio.h"
 
 
@@ -5412,8 +5414,8 @@ int evGetRandomAccessTable(int handle, const uint32_t ***table, uint32_t *len) {
         handleReadUnlock(handle);
         return(S_EVFILE_BADMODE);
     }
-            
-    *table = a->pTable;
+
+    *table = (const uint32_t **)a->pTable; /* sergey: add cast */
     *len = a->eventCount;
 
     handleReadUnlock(handle);

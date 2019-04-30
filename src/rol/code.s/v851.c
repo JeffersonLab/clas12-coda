@@ -12,6 +12,9 @@
 * SP (16-Mar-2012): now internal rate from 1Hz to 2.5 MHz
 *                   added v851_start, v851_stop, v851_single
 */
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 #ifdef VXWORKS
 #include <vxWorks.h>
@@ -22,8 +25,8 @@
 #include <unistd.h>
 #include "jvme.h"
 #endif
-#include <stdio.h>
-#include <string.h>
+
+#include "v851.h"
 
 #define SP_DEBUGx
 
@@ -822,7 +825,6 @@ v851ProgExe(int chan, int count, int inc)
 int
 v851_dummy()
 {
-  exit(0);
 }
 
 #endif

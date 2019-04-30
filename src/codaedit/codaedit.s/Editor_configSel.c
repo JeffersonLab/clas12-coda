@@ -37,7 +37,10 @@
  *
  *	  
  */
-#include "Editor_configSel.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
 #include <Xm/Xm.h>
 #include <Xm/PushBG.h>
 #include <Xm/Form.h>
@@ -45,7 +48,13 @@
 #include <Xm/SeparatoG.h>
 
 #include "Editor.h"
+#include "Editor_configSel.h"
 #include "Editor_graph.h"
+#include "Editor_graph_cmd.h"
+#include "Editor_miscinfo.h"
+#include "Editor_xmisc.h"
+#include "Editor_converter.h"
+
 
 #undef DEBUG
 
@@ -90,9 +99,13 @@ createOptionMenu (Widget parent)
   return option;
 }
 
+
+/*args: (Widget,XtPointer,XtPointer), see Intrinsic.h */
+
 static void
-configSelOk (Widget w, XtPointer data, XmAnyCallbackStruct* cbs)
+configSelOk (Widget w, XtPointer data, /*XmAnyCallbackStruct* cbs*/XtPointer callback_data)
 {
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct*)callback_data;
   int  i = 0;
   char* currconfig;
   Arg arg[20];
@@ -207,8 +220,10 @@ EditorSelectConfig (char *confn)
   }
 }
 
+/*args: (Widget,XtPointer,XtPointer), see Intrinsic.h */
+
 static void
-configSelCancel (Widget w, XtPointer data, XmAnyCallbackStruct* cbs)
+configSelCancel (Widget w, XtPointer data, /*XmAnyCallbackStruct**/XtPointer cbs)
 {
   configSelPopdown ();
 }

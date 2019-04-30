@@ -48,14 +48,14 @@ rcExit::rcExit (char* name, int active,
 :rcMenuComd (name, active, acc, acc_text, handler), dialog_ (0)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("         Create rcExit Class Object\n");
+  printf ("         Create rcExit Class Object\n");fflush(stdout);
 #endif
 }
 
 rcExit::~rcExit (void)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("         Delete rcExit Class Object\n");
+  printf ("         Delete rcExit Class Object\n");fflush(stdout);
 #endif
   // netSt_ and rcipanel_ will be deleted by Xt mechanism
 }
@@ -81,29 +81,34 @@ rcExit::doit (void)
   }
   /*sergey*/
 
+
   if (!netHandler_.connected ()) 
     exitRunControl ();
   
   if (!dialog_) {
-    dialog_ = new rcExitDialog (this, "exitdialog", "Exit RunControl",
+    dialog_ = new rcExitDialog (this, (char *)"exitdialog", (char *)"Exit RunControl",
 				netHandler_);
     dialog_->init ();
     dialog_->alignment (XmALIGNMENT_CENTER);
   }
+
   // set message
   char temp[256];
-  if (netHandler_.numConnectedClients () == 1) {
+  if (netHandler_.numConnectedClients () == 1)
+  {
     sprintf (temp, "This kills RunControl server and all remote processes,\n");
     strcat  (temp, "Are you sure?");
     dialog_->setMessage (temp);
   }
-  else {
+  else
+  {
     sprintf (temp, "This leaves RunControl server still running,\n");
     strcat  (temp, "Are you sure?");
     dialog_->setMessage (temp);
   }    
-  if (dialog_->isMapped ())
-    dialog_->popdown ();
+
+  if (dialog_->isMapped ()) dialog_->popdown ();
+
   dialog_->popup ();
 }
 
@@ -116,16 +121,17 @@ rcExit::undoit (void)
 void
 rcExit::exitRunControl (void)
 {
-  if (netSt_)
-    netSt_->stop ();
-  if (rcipanel_) 
-    rcipanel_->readyToExit ();
-  if (netHandler_.connected () && netHandler_.numConnectedClients () == 1) {
+  if (netSt_) netSt_->stop ();
+  if (rcipanel_) rcipanel_->readyToExit ();
+  if (netHandler_.connected () && netHandler_.numConnectedClients () == 1)
+  {
     netHandler_.killServer ();
     XtAppAddTimeOut (XtWidgetToApplicationContext (dialogBaseWidget()),
 		     3000, &(rcExit::timerCallback),
 		     (XtPointer)this);
-  } else {
+  }
+  else
+  {
 #ifndef linux
     // clean up memory
     theApplication->cleanMemory ();

@@ -64,12 +64,12 @@ rcMonitorParmsButton::setMonitorParms (daqMonitorStruct* info)
   // get network handler
   rcClient& client = netHandler_.clientHandler (); 
 
-  daqData data (client.exptname (), "command", (daqArbStruct *)info);
+  daqData data (client.exptname (), (char *)"command", (daqArbStruct *)info);
 
   if (client.sendCmdCallback (DAMONITOR_PARM, data,
 		      (rcCallback)&(rcMonitorParmsButton::monitorParmsCbk),
 		      (void *)this) != CODA_SUCCESS) 
-    reportErrorMsg ("Cannot send monitor options to the server");
+    reportErrorMsg ((char *)"Cannot send monitor options to the server");
 }
 
 void
@@ -78,6 +78,6 @@ rcMonitorParmsButton::monitorParmsCbk (int status, void* arg, daqNetData *)
   rcMonitorParmsButton* obj = (rcMonitorParmsButton *)arg;
 
   if (status != CODA_SUCCESS)
-    obj->reportErrorMsg ("Setting monitor options failed");
+    obj->reportErrorMsg ((char *)"Setting monitor options failed");
 }
 

@@ -49,19 +49,19 @@ rcOnLine::doit (void)
   rcClient& client = netHandler_.clientHandler ();
   
   if (state () > 0) {  // after button pressed
-    daqData data (client.exptname (), "command", (int)DAONLINE);
+    daqData data (client.exptname (), (char *)"command", (int)DAONLINE);
     if (client.sendCmdCallback (DAONLINE, data,
 				(rcCallback)&(rcOnLine::onlineCallback),
 				(void *)this) != CODA_SUCCESS) {
-      reportErrorMsg ("Cannot send command of setting online to the server");
+      reportErrorMsg ((char *)"Cannot send command of setting online to the server");
     }
   }
   else {
-    daqData data (client.exptname (), "command", (int)DAOFFLINE);
+    daqData data (client.exptname (), (char *)"command", (int)DAOFFLINE);
     if (client.sendCmdCallback (DAOFFLINE, data,
 				(rcCallback)&(rcOnLine::offlineCallback),
 				(void *)this) != CODA_SUCCESS) {
-      reportErrorMsg ("Cannot send command of setting offline to the server");
+      reportErrorMsg ((char *)"Cannot send command of setting offline to the server");
     }
   }
 }
@@ -78,7 +78,7 @@ rcOnLine::onlineCallback (int status, void* arg, daqNetData* )
   rcOnLine* obj = (rcOnLine *)arg;
 
   if (status != CODA_SUCCESS) 
-    obj->reportErrorMsg ("Setting Online flag to the server failed");
+    obj->reportErrorMsg ((char *)"Setting Online flag to the server failed");
 }
 
 void
@@ -87,5 +87,5 @@ rcOnLine::offlineCallback (int status, void* arg, daqNetData* )
   rcOnLine* obj = (rcOnLine *)arg;
 
   if (status != CODA_SUCCESS) 
-    obj->reportErrorMsg ("Setting Offline flag to the server failed");
+    obj->reportErrorMsg ((char *)"Setting Offline flag to the server failed");
 }

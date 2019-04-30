@@ -534,7 +534,7 @@ vetrocSetClockSource(int id, int clkSrc)
   if((id<=0) || (id>21) || (VETROCp[id] == NULL)) 
   {
     printf("vetrocStatus: ERROR : VETROC in slot %d is not initialized \n",id);
-    return;
+    return(-1);
   }
 
   if(clkSrc>0x1)
@@ -1996,7 +1996,7 @@ vetrocTriggerPulseWidth(int id, unsigned int width)
   if((id<=0) || (id>21) || (VETROCp[id] == NULL)) 
   {
     printf("vetrocSoftTrig: ERROR : VETROC in slot %d is not initialized \n",id);
-    return;
+    return(-1);
   }
 
   width /= VETROC_NS_PER_CLOCK;
@@ -2017,7 +2017,7 @@ vetrocLinkStatus(int id)
   if((id<=0) || (id>21) || (VETROCp[id] == NULL)) 
   {
     printf("vetrocSoftTrig: ERROR : VETROC in slot %d is not initialized \n",id);
-    return;
+    return(-1);
   }
 
   return (vmeRead32(&(VETROCp[id]->Ser.Status))>>4) & 0x1;
@@ -2031,7 +2031,7 @@ vetrocLinkReset(int id)
   if((id<=0) || (id>21) || (VETROCp[id] == NULL)) 
   {
     printf("vetrocSoftTrig: ERROR : VETROC in slot %d is not initialized \n",id);
-    return;
+    return(-1);
   }
 
   vmeWrite32(&(VETROCp[id]->Ser.Ctrl), 0x203);

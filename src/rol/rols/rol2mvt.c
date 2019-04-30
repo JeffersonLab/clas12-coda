@@ -33,7 +33,11 @@
 static char ssname[80];
 #endif
 
+#include "daqLib.h"
 #include "circbuf.h"
+int getTdcTypes(int *typebyslot);
+int getTdcSlotNumbers(int *slotnumbers);
+
 
 /****************************************************
  * USE_MVT
@@ -140,8 +144,8 @@ int mynev; /*defined in tttrans.c */
 #define CCCLOSE \
 { \
   unsigned int padding; \
-  dataout = (unsigned int *) ( ( ((unsigned int)b08+3)/4 ) * 4); \
-  padding = (unsigned int)dataout - (unsigned int)b08; \
+  dataout = (unsigned int *) ( ( ((unsigned long int)b08+3)/4 ) * 4); \
+  padding = (unsigned long int)dataout - (unsigned long int)b08; \
   /*dataout_save1[1] |= (padding&0x3)<<14;*/ \
   dataout_save2[1] |= (padding&0x3)<<14; \
   /*printf("CCCLOSE: 0x%08x %d --- 0x%08x %d --> padding %d\n",dataout,dataout,b08,b08,((dataout_save2[1])>>14)&0x3);*/ \

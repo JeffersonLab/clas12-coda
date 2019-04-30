@@ -10,11 +10,12 @@
 #define DO_NOT_WRITE
 */
 
+#include <stdio.h>
 
 #if defined(Linux_armv7l)
 
-void
-coda_er()
+int
+main()
 {
   printf("coda_er is dummy for ARM etc\n");
 }
@@ -42,7 +43,6 @@ coda_er()
 
 /* INCLUDES */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
@@ -103,10 +103,12 @@ coda_er()
 
 
 
+#include "evio.h"
 
 
 
 #include "rc.h"
+#include "rolInt.h"
 #include "da.h"
 #include "libdb.h"
 
@@ -378,9 +380,9 @@ static LARGEBUF *glargeBUF = NULL;
 
 
 #define NUM_ER_BUFS MAXTHREAD
-#define ER_BUF_SIZE 2147000000 /* just short of 2GByte */
-/*#define ER_BUF_SIZE 1024000000*/
-/*#define ER_BUF_SIZE 512000000*/
+#define ER_BUF_SIZE 2147000000LL /* just short of 2GByte */
+/*#define ER_BUF_SIZE 1024000000LL*/
+/*#define ER_BUF_SIZE 512000000LL*/
 
 #define BUFFERMARGIN  10000000  /* 10MB - must be bigger then maximum possible event size ! */
 
@@ -475,14 +477,9 @@ if(bigerptr->id==0) {TIMERL_STOP(1,bigerptr->id);}
       bigerptr->id,&(bigerptr->glargein),largebuf[IBUFLEN],largebuf[IBUFNUM],largebuf[IBUFIND],largebuf[IBUFEND]);fflush(stdout);
 #endif
 
-    if(largebuf<0)
+    if(largebuf == NULL)
     {
-      printf("[%d] evio_thread: ERROR: lb_read_grab return %d\n",bigerptr->id,largebuf);fflush(stdout);
-      break;
-    }
-    else if(largebuf == NULL)
-    {
-      printf("[%d] evio_thread: INFO: lb_read_grab return on cleanup condition\n",bigerptr->id);fflush(stdout);
+      printf("[%d] evio_thread: INFO: lb_read_grab return on error or cleanup condition\n",bigerptr->id);fflush(stdout);
       break;
     }
 
@@ -509,9 +506,9 @@ if(bigerptr->id==0) {TIMERL_STOP(1,bigerptr->id);}
 #endif
 
       fd = 0;
-	  evOpen(current_file,"w",&fd);
+	  evOpen(current_file,(char *)"w",&fd);
       tmp = BUFFERSIZE;
-      evIoctl(fd,"B",&tmp);
+      evIoctl(fd,(char *)"B",&tmp);
 
       /* write evio file */
       ii = 0;
@@ -597,14 +594,9 @@ if(bigerptr->id==0) {TIMERL_STOP(1,bigerptr->id);}
 
     /* release buffer */
     largebuf = lb_read_release(&(bigerptr->glargein),bigerptr->id);
-    if(largebuf <0)
+    if(largebuf == NULL)
     {
-      printf("[%d] evio_thread: ERROR: lb_read_release return %d\n",bigerptr->id,largebuf);fflush(stdout);
-      break;
-    }
-    else if(largebuf == NULL)
-    {
-      printf("[%d] evio_thread: INFO: lb_read_release return on cleanup condition\n",bigerptr->id);fflush(stdout);
+      printf("[%d] evio_thread: INFO: lb_read_release return on error or cleanup condition\n",bigerptr->id);fflush(stdout);
       break;
     }
 
@@ -780,7 +772,7 @@ ER_constructor()
   /* allocate buffer space */
 
   /* memory size we need */
-  maxNeededBytes = ER_BUF_SIZE*NUM_ER_BUFS;
+  maxNeededBytes = ER_BUF_SIZE * NUM_ER_BUFS;
   printf("min=0x%08x (bufs 0x%08x x %d)\n",maxNeededBytes,ER_BUF_SIZE,NUM_ER_BUFS);
 
   maxAvailBytes = ER_BUF_SIZE * NUM_ER_BUFS;
@@ -884,6 +876,7 @@ outputEvents(ERp erp, et_event **pe, int start, int stop, int force_write)
 
   for (i=start; i<=stop; i++)
   {
+    size_t size;
     len = pe[i]->length>>2;
 #ifdef DEBUG__
     printf("Got event i=%d of length %d words\n",i,len);
@@ -894,7 +887,8 @@ outputEvents(ERp erp, et_event **pe, int start, int stop, int force_write)
     erp->object->nevents++;
     erp->nevents++;
 
-    et_event_getlength(pe[i], &len); /* return bytes ? */
+    et_event_getlength(pe[i], &size); /* return bytes ? */
+    len = size;
 #ifdef DEBUG__
     printf("Second event length %d bytes (%d words)\n",len,len>>2);
 #endif
@@ -956,14 +950,9 @@ TIMERL_START;
 
 /*TIMERL_START;*/
         largebufout = lb_write_release(&glargeBUF);
-        if(largebufout < 0)
+        if(largebufout == NULL)
         {
-          printf("coda_er:outputEvents: ERROR in lb_write_release: FAILED\n");fflush(stdout);
-          exit(0);
-        }
-        else if(largebufout == NULL)
-        {
-          printf("coda_er:outputEvents: INFO: lb_write_released returned on cleanup condition\n");        
+          printf("coda_er:outputEvents: INFO: lb_write_released returned on error or cleanup condition\n");        
           return(CODA_ERROR);
         }
         else
@@ -977,14 +966,9 @@ TIMERL_START;
 	    {
           largebufout = lb_write_grab(&glargeBUF);
 /*TIMERL_STOP(10,9);*/ /*1us*/
-          if(largebufout < 0)
+          if(largebufout == NULL)
           {
-            printf("coda_er:outputEvents: ERROR in lb_write_grab: FAILED\n");fflush(stdout);
-            exit(0);
-          }
-          else if(largebufout == NULL)
-          {
-            printf("coda_er:outputEvents: INFO: lb_write_grab returned on cleanup condition\n");        
+            printf("coda_er:outputEvents: INFO: lb_write_grab returned on error or cleanup condition\n");        
             return(CODA_ERROR);
           }
           else
@@ -1389,7 +1373,7 @@ erDaqCmd(char *param)
     erp->nevents = 0;
     erp->splitnb = 0;
 
-    erp->write_thread = NULL; /*sergey: will check it*/
+    erp->write_thread = 0; /*sergey: will check it*/
     printf("starting write thread 1 ..\n");fflush(stdout);
     pthread_attr_init(&detached_attr);
     pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED);
@@ -1422,7 +1406,7 @@ erDaqCmd(char *param)
       biger[i].glargein = glargeBUF; /* every 'biger[]' contains pointer to the same 'glargeBUF' */
       biger[i].id = i;
 
-      erp->evio_thread[i] = NULL; /*sergey: will check it*/
+      erp->evio_thread[i] = 0; /*sergey: will check it*/
       printf("\n --> starting evio thread [%d]\n\n",biger[i].id);fflush(stdout);
       pthread_attr_init(&detached_attr);
       pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED);
@@ -1444,14 +1428,9 @@ erDaqCmd(char *param)
 
     /* get first large buffer */
     largebufout = lb_write_grab(&glargeBUF);
-    if(largebufout<0)
+    if(largebufout == NULL)
     {
-      printf("erDaqCmd: ERROR: lb_write_current returned %d - exit\n",largebufout);
-      exit(0);
-    }
-    else if(largebufout == NULL)
-    {
-      printf("erDaqCmd: INFO: lb_write_current returned on cleanup condition\n");
+      printf("erDaqCmd: INFO: lb_write_current returned on error or cleanup condition\n");
       exit(0);
     }
     buffer = largebufout;
@@ -1476,7 +1455,7 @@ erDaqCmd(char *param)
 	    if(erp->evio_thread[i] > 0)
 	    {
           pthread_join(erp->evio_thread[i], &status);
-          erp->evio_thread[i] = NULL; /*sergey: will check it*/
+          erp->evio_thread[i] = 0; /*sergey: will check it*/
           printf("evio_thread[%d] is done\n",i);fflush(stdout);
 	    }
 	  }
@@ -1498,7 +1477,7 @@ erDaqCmd(char *param)
         printf("waiting for write thread 3 ..\n");fflush(stdout);
 
         pthread_join(erp->write_thread, &status);
-        erp->write_thread = NULL; /*sergey: will check it*/
+        erp->write_thread = 0; /*sergey: will check it*/
         printf("write thread is done\n");fflush(stdout);
 
 	  }
@@ -1569,6 +1548,7 @@ codaDownload(char *conf)
   static char tmp[1000];
   static char tmp2[1000];
   int  i, ix;  
+  int split;
   int  listArgc;
   char listArgv[LISTARGV1][LISTARGV2];
 
@@ -1583,8 +1563,8 @@ codaDownload(char *conf)
 
 
   erp->object = object;
-  erp->write_thread = NULL; /*sergey: will check it*/
-  for(i=0; i<MAXTHREAD; i++) erp->evio_thread[i] = NULL; /*sergey: will check it*/
+  erp->write_thread = 0; /*sergey: will check it*/
+  for(i=0; i<MAXTHREAD; i++) erp->evio_thread[i] = 0; /*sergey: will check it*/
 
   /***************************************************/
   /* extract all necessary information from database */
@@ -1606,15 +1586,15 @@ codaDownload(char *conf)
 
   sprintf(tmp,"SELECT value FROM %s_option WHERE name='SPLITMB'",
     configname);
-  if(dbGetInt(dbsock, tmp, &erp->split)==ER_ERROR)
+  if(dbGetInt(dbsock, tmp, &split)==ER_ERROR)
   {
     erp->split = 2047 << 20;
-    printf("cannot get SPLITMB, set erp->split=%d Bytes\n",erp->split);
+    printf("cannot get SPLITMB from database, set erp->split=%d Bytes\n",erp->split);
   }
   else
   {
-    printf("get erp->split = %d MBytes\n",erp->split);
-    erp->split = erp->split<<20;
+    printf("got SPLITMB = %d MBytes from database\n",split);
+    erp->split = split<<20;
     printf("set erp->split = %d Bytes\n",erp->split);
   }
 
@@ -1686,9 +1666,9 @@ codaDownload(char *conf)
   */
   {
     int  arg1c;
-    char arg1v[10][128];
+    char arg1v[10][256];
     char *p_sl;
-    listSplit2(tmpp," ",&arg1c,arg1v);
+    listSplit2(tmpp,(char *)" ",&arg1c,arg1v);
     printf("\nfirst split, arg1c=%d, first piece >%s<\n",arg1c,arg1v[0]);
     if(arg1c==1)
 	{

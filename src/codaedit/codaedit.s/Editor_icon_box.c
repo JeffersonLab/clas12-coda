@@ -35,6 +35,8 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
 #include <Xm/Xm.h>
@@ -50,6 +52,8 @@
 #include "Editor_graph.h"
 #include "Editor_misc.h"
 #include "Editor_graph_cmd.h"
+#include "Editor_converter.h"
+
 
 /* return row column widget */
 
@@ -60,7 +64,7 @@ typedef struct _icon_comp{
   Widget  w;
   struct _icon_comp *next;
   struct _icon_comp *previous;
-}iconCompList;
+} iconCompList;
 
 static iconCompList *icon_head, *icon_tail;
 
@@ -147,12 +151,8 @@ newDrawCompFromIcon (iconCompList* icon)
  *     create icon information from rcnetwork component 'comp'          *
  *     except X widget                                                  *
  ***********************************************************************/
-#if defined (__STDC__)
-static iconCompList *createIconInfoFromRcnetComp(rcNetComp* comp)
-#else
-static iconCompList *createIconInfoFromRcnetComp(comp)
-     rcNetComp *comp;
-#endif
+static iconCompList *
+createIconInfoFromRcnetComp(rcNetComp* comp)
 {
   daqComp      *daq;
   iconCompList *p;
@@ -209,12 +209,8 @@ static iconCompList *createIconInfoFromRcnetComp(comp)
  *     Create icon information from draw component 'comp'               *
  *     except X widget                                                  *
  ***********************************************************************/
-#if defined (__STDC__)
-static iconCompList *createIconInfoFromDrawComp(drawComp* comp)
-#else
-static iconCompList *createIconInfoFromDrawComp(comp)
-     drawComp *comp;
-#endif
+static iconCompList *
+createIconInfoFromDrawComp(drawComp* comp)
 {
   daqComp  *daq;
   ipPort   *port;
@@ -267,14 +263,8 @@ static iconCompList *createIconInfoFromDrawComp(comp)
  * Description:                                                            *
  *     update icon info from daq component                                 *
  **************************************************************************/
-#if defined (__STDC__)
-static void updateIconInfoFromDrawComp(iconCompList* p, 
-				       drawComp* comp)
-#else
-static void updateIconInfoFromDrawComp(p, comp)
-     iconCompList *p;
-     drawComp     *comp;
-#endif
+static void
+updateIconInfoFromDrawComp(iconCompList* p, drawComp* comp)
 {
   daqComp *daq;
   ipPort  *port;
@@ -345,22 +335,16 @@ static void updateIconInfoFromDrawComp(p, comp)
  * Description:                                                   *
  *      Try to insert an existing component into the graph        *
  *****************************************************************/
-#if defined (__STDC__)
-static void insertExistingCompToGraph(Widget w, 
-				      iconCompList* icon, 
-				      XmAnyCallbackStruct* cbs)
-#else
-static void insertExistingCompToGraph(w, icon, cbs)
-     Widget w;
-     iconCompList *icon;
-     XmAnyCallbackStruct *cbs;
-#endif
+static void
+insertExistingCompToGraph(Widget w, XtPointer data, XtPointer callback_data)
 {
   compList *p;
   drawComp *q;
   ipPort   *port;
   int      i;
-  
+  iconCompList* icon = (iconCompList *)data;
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
+
   /* reset toggle button part of graph commands */
   XcodaEditorResetGraphCmd();
 
@@ -382,12 +366,8 @@ static void insertExistingCompToGraph(w, icon, cbs)
 
 static Widget sc;
 
-#if defined (__STDC__)
-Widget XcodaEditorIconBox(Widget parent)
-#else
-Widget XcodaEditorIconBox(parent)
-     Widget parent;
-#endif
+Widget
+XcodaEditorIconBox(Widget parent)
 {
   Widget rcl;
   Arg    args[20];
@@ -524,12 +504,8 @@ XcodaEditorCreateIconsFromRcnet(rcNetComp** list,
  *      Insert current Component to Icon box                      *
  *      upon saving a whole graph                                 *
  ******************************************************************/
-#if defined (__STDC__)
-void XcodaEditorInsertCompToIcons(XcodaEditorGraph* graph)
-#else
-void XcodaEditorInsertCompToIcons(graph)
-     XcodaEditorGraph *graph;
-#endif
+void
+XcodaEditorInsertCompToIcons(XcodaEditorGraph* graph)
 {
   iconCompList *p, *q, *ne, *pr;
   drawComp     *comp;
@@ -640,11 +616,8 @@ void XcodaEditorInsertCompToIcons(graph)
  * Description:                                               *
  *      remove every icons from icon box                      *
  *************************************************************/
-#if defined (__STDC__)
-void delete_everyicons(void)
-#else
-void delete_everyicons()
-#endif
+void
+delete_everyicons(void)
 {
   iconCompList *p, *q;
   int          i;
@@ -686,11 +659,8 @@ void delete_everyicons()
  *     Check whether icon list is empty or not                 *
  *     return 1: Yes empty, 0: not empty                       *
  **************************************************************/
-#if defined (__STDC__)
-int isEmptyIconList(void)
-#else
-int isEmptyIconList()
-#endif
+int
+isEmptyIconList(void)
 {
   if(icon_head->next != icon_tail)
     return 0;
@@ -705,12 +675,8 @@ int isEmptyIconList()
  *    a name inside icon list                                  *
  *    return 1: yes, 0: no                                     *
  **************************************************************/
-#if defined (__STDC__)
-int nameOkWithIconList (char* name)
-#else
-int nameOkWithIconList (name)
-     char *name;
-#endif
+int
+nameOkWithIconList (char* name)
 {
   iconCompList *p;
 
@@ -731,13 +697,8 @@ int nameOkWithIconList (name)
  *    a id inside icon list                                    *
  *    return 1: yes, 0: no                                     *
  **************************************************************/
-#if defined (__STDC__)
-int idOkWithIconList (char* name, int id, int type)
-#else
-int idOkWithIconList (name, id, type)
-     char *name;
-     int  id, type;
-#endif
+int
+idOkWithIconList (char* name, int id, int type)
 {
   iconCompList *p;
 
@@ -773,12 +734,8 @@ int idOkWithIconList (name, id, type)
  *    Update all new information (except comp_name) to icon    *
  *    List                                                     *
  **************************************************************/
-#if defined (__STDC__)
-void updateInfoToIconList(drawComp* comp)
-#else
-void updateInfoToIconList(comp)
-     drawComp *comp;
-#endif
+void
+updateInfoToIconList(drawComp* comp)
 {
   iconCompList *p;
   Arg args[5];
@@ -840,11 +797,8 @@ void updateInfoToIconList(comp)
  * Description:                                                        *
  *     Clean out unused icons from the list                            *
  **********************************************************************/
-#if defined (__STDC__)
-void compressIconList(void)
-#else
-void compressIconList()
-#endif
+void
+compressIconList(void)
 {
   iconCompList *p, *prev, *next;
   Arg args[10];

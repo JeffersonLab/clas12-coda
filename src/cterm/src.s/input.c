@@ -1104,7 +1104,39 @@ VTInitModifiers(void)
 	    for (j = 0; j < keymap->max_keypermod; j++) {
 		KeyCode code = keymap->modifiermap[k];
 		if (code != 0) {
+
+
+
 		    KeySym keysym = XKeycodeToKeysym(dpy, code, 0);
+
+			/*deprecated
+
+Replace
+
+keysym = XKeycodeToKeysym(dpy,xe->xkey.keycode,0)
+
+with
+
+{
+    int keysyms_per_keycode_return;
+    KeySym *keysym = XGetKeyboardMapping(dpy,
+        xe->xkey.keycode,
+        1,
+        &keysyms_per_keycode_return);
+
+    -- do something with keysym[0] --
+
+    XFree(keysym);
+}
+
+Not forgetting to free the return value.
+
+			 */
+
+
+
+
+
 		    if (keysym == XK_Num_Lock) {
 			SaveMask(num_lock);
 		    } else if (keysym == XK_Alt_L) {

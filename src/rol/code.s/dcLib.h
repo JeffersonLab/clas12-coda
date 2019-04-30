@@ -266,4 +266,9 @@ void dcGSetCalMask(unsigned int dce_mask, unsigned fce_mask);
 void dcDataDecode(unsigned int data);
 void dcGFirmwareUpdateVerify(const char *filename);
 
+int dcFirmwareUpdate(int id, const char *filename);
+int dcFirmwareVerify(int id, const char *filename);
+int dcFirmwareUpdateVerify(int id, const char *filename);
+
+
 #endif /* __DCLIB__ */

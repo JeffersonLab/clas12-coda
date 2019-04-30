@@ -1,6 +1,9 @@
 
 /* vxWorks-like interface: avoids dmaPList and makes vxWorks-compartible API */
 
+#include <stdio.h>
+#include <string.h>
+
 static UINT32 physMemBase;
 static UINT32 userMemBase;
 static UINT32 memSize = 0x100000; /*must be enough to take maximum event size from entire VME crate*/
@@ -564,9 +567,15 @@ usrVmeDmaShow()
 }
 
 
+
+
+
+/*sergey: exist in jvme.c but different !!!*/
+#if 0
+
 /* interface to CODA group DMA functions */
 int
-vmeDmaSend(unsigned int laddr, unsigned int vmeAdr, int bytes);
+vmeDmaSend(unsigned long laddr, unsigned int vmeAdr, int bytes)
 {
   int retVal;
   retVal = usrVme2MemDmaStart(vmeAdr, laddr, bytes);
@@ -580,3 +589,5 @@ vmeDmaDone()
   retVal = usrVme2MemDmaDone();
   return(retVal);
 }
+
+#endif

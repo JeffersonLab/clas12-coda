@@ -81,7 +81,7 @@ epics_json_msg_sender_init(const char *expid_, const char *session_, const char 
   printf("epics_json_msg_sender_init: expid >%s<, session >%s<, unique_id >%s<, topic >%s<\n",expid,session,unique_id,topic);
 
   server.AddSendTopic(expid, session, unique_id, topic);
-  server.AddRecvTopic(expid, session, NULL, "WHATEVER");
+  server.AddRecvTopic(expid, session, NULL, (char *)"WHATEVER");
   status = server.Open();
   if(status<0)
   {
@@ -216,6 +216,8 @@ epics_json_msg_close()
   int status;
 
   status = server.Close();
+
+  return(0);
 }
 
 
@@ -227,6 +229,8 @@ send_daq_message_to_epics(const char *expid, const char *session, const char *my
   epics_json_msg_sender_init(expid, session, myname, "HallB_DAQ");
   epics_json_msg_send(caname, catype, nelem, data);
   epics_json_msg_close();
+
+  return(0);
 }
 
 

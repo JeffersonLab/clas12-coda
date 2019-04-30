@@ -1,5 +1,5 @@
 /* XPM */
-static char * default_ett_xpm[] = {
+static const char *default_ett_xpm[] = {
 "32 32 3 1",
 " 	s LightBlue	c LightBlue",
 ".	s Red	c Red",

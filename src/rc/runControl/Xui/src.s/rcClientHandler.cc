@@ -164,52 +164,52 @@ rcClientHandler::connect (char* database, char* exptname, char* msqld)
 #ifdef _TRACE_OBJECTS
     printf("rcClientHandler::connect 3\n");fflush(stdout);
 #endif	
-    if (handler_.monitorOnCallback (exptname, "status", 
+    if (handler_.monitorOnCallback (exptname, (char *)"status", 
 			(rcCallback)&(rcClientHandler::statusCallback),
 			(void *)this) != CODA_SUCCESS)
       fprintf (stderr, "Cannot monitor on %s status\n", exptname);
 
-    if (handler_.monitorOnCallback (exptname, "master",
+    if (handler_.monitorOnCallback (exptname, (char *)"master",
 			(rcCallback)&(rcClientHandler::mastershipCallback),
 			(void *)this) != CODA_SUCCESS)
       fprintf (stderr, "Cannot monitor on %s master\n", exptname);
 
-    if (handler_.monitorOnCallback (exptname, "online",
+    if (handler_.monitorOnCallback (exptname, (char *)"online",
 				(rcCallback)&(rcClientHandler::onlineCallback),
 				(void *)this) != CODA_SUCCESS)
       fprintf (stderr, "Cannot monitor on %s online\n", exptname);
 
-    if (handler_.monitorOnCallback (exptname, "updateInterval",
+    if (handler_.monitorOnCallback (exptname, (char *)"updateInterval",
 			(rcCallback)&(rcClientHandler::updateIntervalCbk),
 			(void *)this) != CODA_SUCCESS)
       fprintf (stderr, "Cannot monitor on %s updateInterval\n", exptname);
 
-    if (handler_.monitorOnCallback (exptname, "clientList",
+    if (handler_.monitorOnCallback (exptname, (char *)"clientList",
 			(rcCallback)&(rcClientHandler::clientsCallback),
 			(void *)this) != CODA_SUCCESS)
       fprintf (stderr, "Cannot monitor on %s clientList\n", exptname);
 
-    if (handler_.monitorOnCallback (exptname, "components",
+    if (handler_.monitorOnCallback (exptname, (char *)"components",
 			(rcCallback)&(rcClientHandler::componentsCallback),
 			(void *)this) != CODA_SUCCESS)
       fprintf (stderr, "Cannot monitor on %s components\n", exptname);
 
-    if (handler_.monitorOnCallback (exptname, "compBootInfo",
+    if (handler_.monitorOnCallback (exptname, (char *)"compBootInfo",
 		(rcCallback)&(rcClientHandler::cabootinfoCallback),
 		(void *)this) != CODA_SUCCESS)
        fprintf (stderr, "Cannot monitor on %s compBootInfo\n", exptname);
 
-    if (handler_.monitorOnCallback (exptname, "monitorParms",
+    if (handler_.monitorOnCallback (exptname, (char *)"monitorParms",
 		(rcCallback)&(rcClientHandler::monitorParmsCallback),
 		(void *)this) != CODA_SUCCESS)
        fprintf (stderr, "Cannot monitor on %s monitorParms\n", exptname);
 
-    if (handler_.monitorOnCallback (exptname, "dataFile",
+    if (handler_.monitorOnCallback (exptname, (char *)"dataFile",
 	    (rcCallback)&(rcClientHandler::anaLogCallback),
 	    (void *)this) != CODA_SUCCESS)
        fprintf (stderr, "Cannot monitor on %s dataFile\n", exptname);
 
-    if (handler_.monitorOnCallback (exptname, "logFileDescriptor",
+    if (handler_.monitorOnCallback (exptname, (char *)"logFileDescriptor",
 	    (rcCallback)&(rcClientHandler::logFileDesCallback),
 	    (void *)this) != CODA_SUCCESS)
        fprintf (stderr, "Cannot monitor on %s logFileDescriptor\n", exptname);
@@ -217,14 +217,14 @@ rcClientHandler::connect (char* database, char* exptname, char* msqld)
 
 
 
-    if (handler_.monitorOnCallback (exptname, "tokenInterval",
+    if (handler_.monitorOnCallback (exptname, (char *)"tokenInterval",
 	    (rcCallback)&(rcClientHandler::tokenIntervalCallback),
 	    (void *)this) != CODA_SUCCESS)
        fprintf (stderr, "Cannot monitor on %s tolenInterval\n", exptname);
 
 
     /*sergey*/
-    if (handler_.monitorOnCallback (exptname, "confFile",
+    if (handler_.monitorOnCallback (exptname, (char *)"confFile",
 	    (rcCallback)&(rcClientHandler::confFileCallback),
 	    (void *)this) != CODA_SUCCESS)
        fprintf (stderr, "Cannot monitor on %s confFile\n", exptname);
@@ -233,7 +233,7 @@ rcClientHandler::connect (char* database, char* exptname, char* msqld)
 
 
 
-    if (handler_.monitorOnCallback (exptname, "rcsMsgToDbase",
+    if (handler_.monitorOnCallback (exptname, (char *)"rcsMsgToDbase",
 	    (rcCallback)&(rcClientHandler::rcsMsgToDbaseCbk),
 	    (void *)this) != CODA_SUCCESS)
        fprintf (stderr, "Cannot monitor on %s rcsMsgToDbase\n", exptname);
@@ -800,7 +800,7 @@ rcClientHandler::discCallback (int status, void* arg, daqNetData* )
     }
     obj->removeInput ();
   }
-  rcAudio ("Disconnected from server");
+  rcAudio ((char *)"Disconnected from server");
 }
 
 void
@@ -824,7 +824,7 @@ rcClientHandler::giveupMastershipCbk (int status, void* arg, daqNetData* data)
 int
 rcClientHandler::requestMastership (void)
 {
-  daqData data (handler_.exptname(), "command", (int)DABECOMEMASTER);
+  daqData data (handler_.exptname(), (char *)"command", (int)DABECOMEMASTER);
   if (handler_.sendCmdCallback (DABECOMEMASTER, data,
 			(rcCallback)&(rcClientHandler::reqMastershipCbk),
 			(void *)this) != CODA_SUCCESS) {
@@ -841,7 +841,7 @@ rcClientHandler::requestMastership (void)
 int
 rcClientHandler::giveupMastership (void)
 {
-  daqData data (handler_.exptname(), "command", (int)DACANCELMASTER);
+  daqData data (handler_.exptname(), (char *)"command", (int)DACANCELMASTER);
   if (handler_.sendCmdCallback (DACANCELMASTER, data,
 			(rcCallback)&(rcClientHandler::giveupMastershipCbk),
 			(void *)this) != CODA_SUCCESS) {

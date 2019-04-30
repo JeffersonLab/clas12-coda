@@ -14,6 +14,8 @@
 
 #ifdef Linux_vme
 
+#include "jvme.h"
+
 typedef struct thdata
 {
   int board_id;

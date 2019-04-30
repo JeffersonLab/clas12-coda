@@ -33,12 +33,12 @@
 #include <rcAudioOutput.h>
 #include "rcPause.h"
 
-#define RC_PAUSE_NAME "   Pause  "
-#define RC_PAUSE_MSG  "Pause a run"
+#define RC_PAUSE_NAME (char *)"   Pause  "
+#define RC_PAUSE_MSG  (char *)"Pause a run"
 
 rcPause::rcPause (Widget parent, rcButtonPanel* panel, 
 		  rcClientHandler& handler)
-:rcComdButton (parent, RC_PAUSE_NAME, RC_PAUSE_MSG, panel, handler, "B")
+:rcComdButton (parent, RC_PAUSE_NAME, RC_PAUSE_MSG, panel, handler, (char *)"B")
 {
 #ifdef _TRACE_OBJECTS
   printf ("              Create rcPause Class Object\n");
@@ -57,18 +57,18 @@ rcPause::~rcPause (void)
 void
 rcPause::doit (void)
 {
-  rcAudio ("pause a run");
+  rcAudio ((char *)"pause a run");
 
   assert (stWin_);
 
   // get network handler first
   rcClient& client = netHandler_.clientHandler ();
-  daqData data ("RCS", "command", (int)DAPAUSE);
+  daqData data ((char *)"RCS", (char *)"command", (int)DAPAUSE);
 
   if (client.sendCmdCallback ( DAPAUSE, data, (rcCallback)&(rcPause::pauseCallback), 
 			       (void *)this) != CODA_SUCCESS) {
-    reportErrorMsg ("Cannot send pause command to the server.");
-    rcAudio ("cannot send pause command");
+    reportErrorMsg ((char *)"Cannot send pause command to the server.");
+    rcAudio ((char *)"cannot send pause command");
   }
   else {
     stWin_->start ();
@@ -92,8 +92,8 @@ rcPause::pauseCallback (int status, void* arg, daqNetData* data)
   obj->bpanel_->activateTransitionPanel ();
 
   if (status != CODA_SUCCESS) {
-    obj->reportErrorMsg ("Pausing a run failed !!!\n");
-    rcAudio ("pausing a run failed");
+    obj->reportErrorMsg ((char *)"Pausing a run failed !!!\n");
+    rcAudio ((char *)"pausing a run failed");
   }
 }
 

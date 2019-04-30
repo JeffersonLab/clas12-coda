@@ -22,7 +22,10 @@
  *
  *	  
  */
-#include "Editor_rmconfigSel.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
 #include <Xm/Xm.h>
 #include <Xm/PushBG.h>
 #include <Xm/Form.h>
@@ -30,8 +33,11 @@
 #include <Xm/SeparatoG.h>
 #include <Xm/LabelG.h>
 
+#include "Editor_rmconfigSel.h"
 #include "Editor.h"
 #include "Editor_graph.h"
+#include "Editor_miscinfo.h"
+#include "Editor_xmisc.h"
 
 Widget menu;
 static editorRmConfigSel  rmconfigSel;
@@ -92,8 +98,9 @@ createOptionMenu (Widget parent)
 
 /* sergey: remove configuration */
 static void
-rmconfigSelOk (Widget w, XtPointer data, XmAnyCallbackStruct* cbs)
+rmconfigSelOk (Widget w, XtPointer data, XtPointer callback_data)
 {
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
   int  i = 0;
   char* currconfig;
   Arg arg[20];
@@ -139,7 +146,7 @@ rmconfigSelOk (Widget w, XtPointer data, XmAnyCallbackStruct* cbs)
 }
 
 static void
-rmconfigSelCancel (Widget w, XtPointer data, XmAnyCallbackStruct* cbs)
+rmconfigSelCancel (Widget w, XtPointer data, XtPointer callback_data)
 {
   removeConfigSelPopdown ();
 }

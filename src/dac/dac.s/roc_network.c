@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -23,10 +24,13 @@
 
 #define MYCLOCK NANOMICRO
 
+#include "rolInt.h"
 #include "da.h"
 
 #include "circbuf.h"
 #include "bigbuf.h"
+
+#include "roc_network.h"
 
 extern char    *mysql_host; /* coda_component.c */
 extern char    *expid; /* coda_component.c */

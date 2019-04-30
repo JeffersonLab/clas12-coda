@@ -1,5 +1,5 @@
 /* XPM */
-static char * Button5_xpm[] = {
+static const char *Button5_xpm[] = {
 "97 72 21 1",
 " 	c #186118611861",
 ".	c #28A228A228A2",

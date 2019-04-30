@@ -204,7 +204,7 @@ usrtrig(unsigned long EVTYPE, unsigned long EVSOURCE)
   int ind, tag, num, fragtag, fragnum, nbytes, ind_data, timestamp_flag, type, *nhits;
   GET_PUT_INIT;
 
-  rol->dabufp = (long *) 0;
+  rol->dabufp = NULL;
 
   CEOPEN(EVTYPE, BT_BANKS);
 

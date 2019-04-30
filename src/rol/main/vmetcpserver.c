@@ -3,9 +3,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 
 #ifdef Linux_vme
+
+#include "jvme.h"
+#include "V1495VMERemote.h"
+#include "libtcp.h" 
+#include "vmeserver.h"
 
 int
 main(int argc, char *argv[])
@@ -36,7 +42,6 @@ main(int argc, char *argv[])
 int
 main()
 {
-  return(0);
 }
 #endif
 

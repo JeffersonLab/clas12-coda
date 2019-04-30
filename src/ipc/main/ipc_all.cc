@@ -37,12 +37,12 @@ main()
   printf(" use IPC_HOST >%s<\n",getenv("IPC_HOST"));
 
   // connect to ipc server
-  server.AddSendTopic(NULL, NULL, NULL, "HallB_DAQ");
+  server.AddSendTopic(NULL, NULL, NULL, (char *)"HallB_DAQ");
 
-  //server.AddRecvTopic("*", "*", "daq", "*");
-  server.AddRecvTopic("*", "*", "runlog", "*");
+  //server.AddRecvTopic((char *)"*", (char *)"*", (char *)"daq", (char *)"*");
+  server.AddRecvTopic((char *)"*", (char *)"*", (char *)"runlog", (char *)"*");
 
-  //server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "*");
+  //server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"daq", (char *)"*");
   server.Open();
 
   //MessageActionDAQ2EPICS *epics = new MessageActionDAQ2EPICS();

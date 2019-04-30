@@ -1,5 +1,5 @@
 /* XPM */
-static char * hl_ebana_xpm[] = {
+static const char *hl_ebana_xpm[] = {
 "32 32 3 1",
 " 	s LightBlue	c LightBlue",
 ".	s Red	c Red",

@@ -46,7 +46,9 @@
  *	  
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
@@ -61,6 +63,7 @@
 #include <Xm/TextF.h>
 #include <Xm/Label.h>
 #include <Xm/SelectioB.h>
+#include <Xm/MessageB.h>
 
 #include "Editor_graph.h"
 #include "Editor_database.h"
@@ -71,7 +74,7 @@
 #include "Editor_syntax_checker.h"
 #include "Editor_graph_cmd.h"
 #include "Editor_script_dialog.h"
-
+#include "Editor_icon_box.h"
 
 
 
@@ -83,9 +86,10 @@
  *************************************************************/
 static void
 change_num_ports(Widget w, 
-			     Widget value_label, 
-			     XmArrowButtonCallbackStruct* cbs)
+			     XtPointer data, 
+			     XtPointer callback_data)
 {
+  Widget value_label = (Widget)data;
   int type;
   int num_ports;
   char   temp[5];
@@ -133,30 +137,20 @@ change_num_ports(Widget w,
   }
 }
 
-#if defined (__STDC__)  
-static void popdown_resize_shell (Widget w, 
-				  Widget shell, 
-				  XmAnyCallbackStruct* cbs)
-#else
-static void change_num_ports(w, value_label, cbs)
-     Widget w, shell;
-     XmAnyCallbackStruct *cbs;
-#endif
+static void
+popdown_resize_shell (Widget w, 
+				  XtPointer data, 
+				  XtPointer callback_data)
 {
+  Widget shell = (Widget)data;
   XtDestroyWidget(shell);
 }
 
-#if defined (__STDC__)
-static void resize_comp (Widget w, drawComp* comp, 
-			 XmAnyCallbackStruct* cbs)
-#else
-static void resize_comp (w, comp, cbs)
-     Widget w;
-     drawComp *comp;
-     XmAnyCallbackStruct *cbs;
-#endif
+static void
+resize_comp (Widget w, XtPointer data, XtPointer callback_data)
 {
   Widget shell = XtParent(XtParent(w));
+  drawComp* comp = (drawComp *)data;
   Arg    args[5];
   int    num_ports, old_num_ports;
   char   *value;
@@ -407,30 +401,21 @@ void popup_resize_selection(graph, comp, draw_area)
  * Description:                                                           *
  *     popup dialog box to enter a name for this port's ip_addrs          *
  **************************************************************************/
-#if defined (__STDC__)
-static void popdown_name_entry_shell(Widget w, 
-				     Widget shell, 
-				     XmAnyCallbackStruct* cbs)
-#else
-static void popdown_name_entry_shell(w, shell, cbs)
-     Widget w, shell;
-     XmAnyCallbackStruct *cbs;
-#endif
+static void
+popdown_name_entry_shell(Widget w, 
+				     XtPointer data, 
+				     XtPointer callback_data)
 {
+  Widget shell = (Widget)data;
   XtPopdown(shell);
 }
 
-#if defined (__STDC__)    
-static void assign_port_name(Widget w, 
-			     ipPort* port, 
-			     XmAnyCallbackStruct* cbs)
-#else
-static void assign_port_name(w, port, cbs)
-     Widget w;
-     ipPort *port;
-     XmAnyCallbackStruct *cbs;
-#endif
+static void
+assign_port_name(Widget w, 
+			     XtPointer data, 
+			     XtPointer callback_data)
 {
+  ipPort* port = (ipPort *)data;
   Widget shell = XtParent(XtParent(w));
   Widget text_w;
   char *name = 0;
@@ -472,16 +457,11 @@ static void assign_port_name(w, port, cbs)
   XtPopdown(shell);
 }
 
-#if defined (__STDC__)
-void popup_ipport_attributes (ipPort* port, 
+
+void
+popup_ipport_attributes (ipPort* port, 
 			      Widget w, 
 			      XEvent* event)
-#else
-void popup_ipport_attributes (port, w, event)
-     ipPort *port;
-     Widget w;
-     XEvent *event;
-#endif
 {
   Widget ipAttrForm;
   Widget text_w, pushb0;
@@ -590,15 +570,8 @@ void popup_ipport_attributes (port, w, event)
  * Description:                                             *
  *       popup a script dialog box                          *
  ***********************************************************/
-#if defined (__STDC__)
-static void script_dialog (Widget w, XtPointer data,
-			   XmAnyCallbackStruct* cbs)
-#else
-static void script_dialog (w, data, cbs)
-     Widget w;
-     XtPointer data;
-     XmAnyCallbackStruct* cbs;
-#endif
+static void
+script_dialog (Widget w, XtPointer data, XtPointer callback_data)
 {
   AttrWidgets* widgets = (AttrWidgets *)data;
   popup_script_dialog (widgets->comp, sw_geometry.draw_area, 
@@ -616,19 +589,11 @@ static void script_dialog (w, data, cbs)
  ***********************************************************/
 
 /* Dismiss button callback */
-#if defined (__STDC__)
-static void popdown_comp_attr(Widget w, 
-				    AttrWidgets* widgets, 
-				    XmAnyCallbackStruct* cbs)
-#else
-bla
-static void popdown_comp_attr(w, widgets, cbs)
-     Widget w;
-     AttrWidgets *widgets;     
-     XmAnyCallbackStruct *cbs;
-#endif
+static void
+popdown_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
 {
   Widget   shell = XtParent(XtParent(w));
+  AttrWidgets* widgets = (AttrWidgets *)data;
   drawComp *comp = widgets->comp;
 
   XtArgVal type = 0; /* sergey: was 'int', somehow lead to memory overwriting after XtGetValues (w, arg, ac) ... */
@@ -668,10 +633,9 @@ static void popdown_comp_attr(w, widgets, cbs)
 
 /* Ok button callback */
 static void
-setup_comp_attr(Widget w, 
-			    AttrWidgets* widgets, 
-			    XmAnyCallbackStruct* cbs)
+setup_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
 {
+  AttrWidgets* widgets = (AttrWidgets *)data;
   char     *str;
   char     msg[256];
   Widget   shell = XtParent(XtParent(w));
@@ -765,12 +729,15 @@ setup_comp_attr(Widget w,
   if(!str || !*str)
   {
     pop_error_message("Nothing typed for id number !", w);
+    printf("Nothing typed for id number !\n");
     return;
   }
 
+  printf("str >%s<\n",str);
   if((sscanf(str, "%d", &id_num)) < 1)
   {
     pop_error_message("Wrong syntax for id number !", w);
+    printf("Wrong syntax for id number !\n");
     return;
   }
 
@@ -861,6 +828,9 @@ setup_comp_attr(Widget w,
   if (daq->type == CODA_EBANA) SplitEbana (comp);
 }
 
+
+
+
 /*********************************************************************
  *       void popup_comp_attributes(comp, base, event, type)         *
  * Description:                                                      *
@@ -869,6 +839,16 @@ setup_comp_attr(Widget w,
  *    type == 1 for later modification                              *
  ********************************************************************/
 static AttrWidgets atw;
+
+static void
+codaXmProcessTraversal(Widget w, 
+				 XtPointer data, 
+				 XtPointer callback_data)
+{
+  XmTraversalDirection dir = (XmTraversalDirection)data;
+  XmProcessTraversal(w, dir);
+}
+
 
 void
 popup_comp_attributes(drawComp* comp, 
@@ -1266,21 +1246,21 @@ popup_comp_attributes(drawComp* comp,
   
 
   if (comp->comp.type != CODA_EBANA)
-    XtAddCallback(text_w0,XmNactivateCallback, XmProcessTraversal,
-		  XmTRAVERSE_NEXT_TAB_GROUP);
+    XtAddCallback(text_w0, XmNactivateCallback, codaXmProcessTraversal,
+		(XtPointer)XmTRAVERSE_NEXT_TAB_GROUP);
 
-  XtAddCallback(text_w1,XmNactivateCallback, XmProcessTraversal,
-		XmTRAVERSE_NEXT_TAB_GROUP);
-  XtAddCallback(text_w2,XmNactivateCallback, XmProcessTraversal,
-		XmTRAVERSE_NEXT_TAB_GROUP);
-  XtAddCallback(text_w3,XmNactivateCallback, XmProcessTraversal,
-		XmTRAVERSE_NEXT_TAB_GROUP);
-  XtAddCallback(text_w4,XmNactivateCallback, XmProcessTraversal,
-		XmTRAVERSE_NEXT_TAB_GROUP);
-  XtAddCallback(text_w5,XmNactivateCallback, XmProcessTraversal,
-		XmTRAVERSE_NEXT_TAB_GROUP);
-  XtAddCallback(text_w6,XmNactivateCallback, XmProcessTraversal,
-		XmTRAVERSE_NEXT_TAB_GROUP);
+  XtAddCallback(text_w1, XmNactivateCallback, codaXmProcessTraversal,
+		(XtPointer)XmTRAVERSE_NEXT_TAB_GROUP);
+  XtAddCallback(text_w2, XmNactivateCallback, codaXmProcessTraversal,
+		(XtPointer)XmTRAVERSE_NEXT_TAB_GROUP);
+  XtAddCallback(text_w3, XmNactivateCallback, codaXmProcessTraversal,
+		(XtPointer)XmTRAVERSE_NEXT_TAB_GROUP);
+  XtAddCallback(text_w4, XmNactivateCallback, codaXmProcessTraversal,
+		(XtPointer)XmTRAVERSE_NEXT_TAB_GROUP);
+  XtAddCallback(text_w5, XmNactivateCallback, codaXmProcessTraversal,
+		(XtPointer)XmTRAVERSE_NEXT_TAB_GROUP);
+  XtAddCallback(text_w6, XmNactivateCallback, codaXmProcessTraversal,
+		(XtPointer)XmTRAVERSE_NEXT_TAB_GROUP);
 
 
   /* OK button callback */
@@ -1524,7 +1504,8 @@ printf("comp->comp.type = %d\n",comp->comp.type);
   }
   else if ((comp->comp.type == CODA_FILE)||(comp->comp.type == CODA_CODAFILE))
   {
-    char     *temp = (char *)malloc(200);
+    char *temp = (char *)malloc(200);
+
     if (comp->comp.type == CODA_FILE)
     {
       sprintf (temp, "file_%d", outputFileNum);
@@ -1548,10 +1529,17 @@ printf("comp->comp.type = %d\n",comp->comp.type);
       XmTextFieldSetString(text_w1, hname);
 
     sprintf (temp, "%d", outputFileNum++);
+
     if(comp->comp.node_name != NULL)
-      XmTextFieldSetString(text_w2, (char *) comp->comp.id_num);
+	{
+      char tmp[100]; /*sergey*/
+      sprintf(tmp,"%d",comp->comp.id_num);
+      XmTextFieldSetString(text_w2, tmp);
+	}
     else
+	{
       XmTextFieldSetString(text_w2, temp);
+	}
 
     XtUnmanageChild(label_w1);
     XtUnmanageChild(text_w1);
@@ -1635,9 +1623,16 @@ printf("comp->comp.type = %d\n",comp->comp.type);
     sprintf (temp, "%d", ddNum++);
 
     if(comp->comp.node_name != NULL)
-      XmTextFieldSetString(text_w2, (char *) comp->comp.id_num);
+	{
+      char tmp[100]; /*sergey*/
+      sprintf(tmp,"%d",comp->comp.id_num);
+      XmTextFieldSetString(text_w2, tmp);
+	}
     else
+	{
       XmTextFieldSetString(text_w2, temp);
+	}
+
     XmTextFieldSetString(text_w3, "coda_mon");
     
   }
@@ -1698,10 +1693,16 @@ printf("comp->comp.type = %d\n",comp->comp.type);
     sprintf (temp, "%d", debuggerNum++);
 
     if(comp->comp.node_name != NULL)
-      XmTextFieldSetString(text_w2, (char *) comp->comp.id_num);
+	{
+      char tmp[100]; /*sergey*/
+      sprintf(tmp,"%d",comp->comp.id_num);
+      XmTextFieldSetString(text_w2, tmp);
+	}
     else
+	{
       XmTextFieldSetString(text_w2, temp);
-    
+    }
+
     XmTextFieldSetString(text_w3, "N/A");
   }
   
@@ -1729,27 +1730,21 @@ printf("comp->comp.type = %d\n",comp->comp.type);
 }
 
 
+
 /************************************************************/
-typedef struct _name_widget{
+typedef struct _name_widget {
   Widget name_widget;
   ipPort *from_port;
   ipPort *to_port;
-}NameWidget;
+} NameWidget;
 
-#if defined (__STDC__)
-static void setup_port_name(Widget w, 
-			    NameWidget* nw, 
-			    XmAnyCallbackStruct* cbs)
-#else
-static void setup_port_name(w, nw, cbs)
-     Widget w;
-     NameWidget *nw;
-     XmAnyCallbackStruct *cbs;
-#endif
+static void
+setup_port_name(Widget w, XtPointer data, XtPointer callback_data)
 {
   char *str;
   char msg[80];
   Widget shell = XtParent(XtParent(w));
+  NameWidget* nw = (NameWidget *)data;
 
   str = XmTextFieldGetString(nw->name_widget);
   if(!str || !*str){
@@ -1857,8 +1852,8 @@ void popup_ipport_name(from_port, to_port, base)
   text_w = XtCreateManagedWidget("text_f_w", xmTextFieldWidgetClass,
 				 form, args, ac);
   nw->name_widget = text_w;
-  XtAddCallback(text_w, XmNactivateCallback, XmProcessTraversal,
-		XmTRAVERSE_NEXT_TAB_GROUP);
+  XtAddCallback(text_w, XmNactivateCallback, codaXmProcessTraversal,
+		(XtPointer)XmTRAVERSE_NEXT_TAB_GROUP);
   ac = 0;
 
   XtSetArg(args[ac], XmNtopAttachment, XmATTACH_WIDGET); ac++;
@@ -1893,18 +1888,13 @@ void popup_ipport_name(from_port, to_port, base)
 
 
 /********************Dialog Box For EB and ANA component name*/
-#if defined (__STDC__)
-static void register_ebana_name (Widget w, 
+static void
+register_ebana_name (Widget w, 
 				 XtPointer client_data, 
-				 XmSelectionBoxCallbackStruct* cbs)
-#else
-static void register_ebana_name (w, client_data, cbs)
-     Widget w;
-     XtPointer client_data;
-     XmSelectionBoxCallbackStruct *cbs;
-#endif
+				 XtPointer callback_data)
 {
   Arc      *arc = (Arc *)client_data;
+  XmSelectionBoxCallbackStruct* cbs = (XmSelectionBoxCallbackStruct *)callback_data;
   Arg      arg[5];
   int      ac = 0, type;
   ipPort   *from, *to;

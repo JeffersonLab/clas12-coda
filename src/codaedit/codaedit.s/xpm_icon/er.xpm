@@ -1,5 +1,5 @@
 /* XPM */
-static char * er_xpm[] = {
+static const char *er_xpm[] = {
 "32 32 3 1",
 " 	s LightBlue	c LightBlue",
 ".	s Red	c Red",

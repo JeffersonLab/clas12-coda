@@ -67,7 +67,7 @@ rcDbaseHandler::~rcDbaseHandler (void)
 {
   int i;
 #ifdef _TRACE_OBJECTS
-  printf ("Delete rcDbaseHandler Class Object\n");
+  printf ("Delete rcDbaseHandler Class Object\n");fflush(stdout);
 #endif
   if (dbaseSock_ != NULL) 
     ::mysql_close (dbaseSock_);

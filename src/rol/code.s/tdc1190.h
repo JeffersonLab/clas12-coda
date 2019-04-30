@@ -232,12 +232,7 @@ typedef struct v1190_struct
 #ifndef STATUS
 #define STATUS int
 #endif
-#ifndef LOCAL
-#define LOCAL static
-#endif
-#ifndef BOOL
-#define BOOL int
-#endif
+
 #ifndef TRUE
 #define TRUE 1
 #endif
@@ -247,9 +242,7 @@ typedef struct v1190_struct
 #ifndef OK
 #define OK 0
 #endif
-#ifndef ERROR
-#define ERROR (-1)
-#endif
+
 
 /*
 #ifdef Linux_vme
@@ -383,6 +376,29 @@ int tdc1190ReadStart(INT32 *tdcbuf, INT32 *rlenbuf);
 int tdc1190ReadListStart(INT32 *tdcbuf, INT32 *rlenbuf);
 int tdc1190ReadDone();
 /*sergey*/
+
+
+int  tdc1190Compensation(int id, UINT32 flag);
+int  tdc1190GetCompensation(int id);
+int  tdc1190GCompensation(UINT32 flag);
+void tdc1190ConvertTable_Float2TCInt(float *in_table, unsigned char *out_table, int n);
+int  tdc1190WriteChannelCompensation(int id, int channel, unsigned char *table);
+int  tdc1190ReadCompensationSramPage(int id, unsigned char *page, unsigned long pagenum);
+int  tdc1190ReadCompensation(int id, UINT32 flag);
+int  tdc1190GetRCadjust(int id, int tdc);
+
+
+STATUS tdc1190GReadAcquisitionMode(UINT16 *acqmode);
+STATUS tdc1190GReadTriggerConfiguration(UINT16 *trigcfg);
+STATUS tdc1190GReadEdgeDetectionConfig(UINT16 *edgedetect);
+STATUS tdc1190GGetEdgeResolution(UINT16 *res);
+STATUS tdc1190GGetDoubleHitResolution(UINT16 *double_res);
+STATUS tdc1190GGetTDCHeaderAndTrailer(UINT16 *headtrl);
+STATUS tdc1190GGetMaxNumberOfHitsPerEvent(UINT16 *maxhits);
+STATUS tdc1190GGetTDCErrorType(UINT16 *errortype);
+STATUS tdc1190GGetEffectiveSizeOfReadoutFIFO(UINT16 *fifosize);
+STATUS tdc1190GGetChannels(UINT32 *chanenable_mask);
+
 
 
 /*S.P.start*/

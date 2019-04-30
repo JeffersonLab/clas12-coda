@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -31,6 +32,7 @@
 #include "SysConfig.h"
 #include "ReturnCodes.h"
 #include "BeuConfig.h"
+#include "tiUtils.h"
 
 // For the moment an ugly declaration
 extern SysParams *sys_params_ptr; // DEFINED IN SysConfig.c

@@ -1,10 +1,13 @@
 
 /* coda_l3.c - CODA level3 */
 
+#include <stdio.h>
+
+
 #if defined(Linux_armv7l)
 
-void
-coda_l3()
+int
+main()
 {
   printf("coda_l3 is dummy for ARM etc\n");
 }
@@ -13,7 +16,6 @@ coda_l3()
 
 /* INCLUDES */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
@@ -77,6 +79,7 @@ coda_l3()
 
 
 #include "rc.h"
+#include "rolInt.h"
 #include "da.h"
 #include "libdb.h"
 #include "et_private.h"
@@ -429,6 +432,7 @@ process_events(ETp etp, et_event **pe, int start, int stop)
   int handle1, i, buflen, len, tmp, status=0;
   unsigned int *buffer, *ptr;
   int event, type;
+  size_t size;
 
   /* evio file output */
   for (i=start; i <= stop; i++)
@@ -441,7 +445,8 @@ process_events(ETp etp, et_event **pe, int start, int stop)
     etp->object->nevents++;
     etp->nevents++;
 
-    et_event_getlength(pe[i], &len);
+    et_event_getlength(pe[i], &size);
+    len = size;
     ptr = (unsigned int *)pe[i]->pdata;
 	
     /* skip evio record header, evLinkBnk() etc functions assumes there is no record header */
@@ -830,7 +835,7 @@ codaPrestart()
 
   /* starting main thread here */
 
-  etp->process_thread = NULL; /*sergey: will check it*/
+  etp->process_thread = 0; /*sergey: will check it*/
   printf("starting write thread 1 ..\n");fflush(stdout);
   pthread_attr_t detached_attr;
   pthread_attr_init(&detached_attr);
@@ -888,7 +893,7 @@ codaEnd()
 
     pthread_join(etp->process_thread, &status);
 
-    etp->process_thread = NULL; /*sergey: will check it*/
+    etp->process_thread = 0; /*sergey: will check it*/
     printf("write thread is done\n");fflush(stdout);
   }
 

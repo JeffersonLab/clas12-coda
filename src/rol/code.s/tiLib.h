@@ -30,6 +30,9 @@ extern int intLock();
 extern int intUnlock();
 #endif
 
+typedef void            (*VOIDFUNCPTR) ();
+
+
 #ifdef VXWORKS
 int intLockKeya;
 #define INTLOCK {				\
@@ -794,6 +797,7 @@ int tiBusy();
 int tiAddRocSWA();
 int tiRemoveRocSWA();
 int tiGetNumberOfBlocksInBuffer();
+int tiGetConnectedFiberMask();
 /*
 unsigned int tiGetSyncDelay();
 */

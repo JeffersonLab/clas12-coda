@@ -218,10 +218,10 @@ main(int argc,char **argv)
 
 #ifdef USE_ACTIVEMQ
 
-  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "control", (char *)"ipcbank2et");
-  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "control", "*");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"ipcbank2et");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"control", (char *)"*");
 
-  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "bank2et", "*");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"bank2et", (char *)"*");
 
   server.Open();
 

@@ -1,5 +1,5 @@
 /* XPM */
-static char * hl_eb_xpm[] = {
+static const char *hl_eb_xpm[] = {
 "32 32 6 1",
 " 	s LightBlue	c LightBlue",
 ".	s Red	c Red",

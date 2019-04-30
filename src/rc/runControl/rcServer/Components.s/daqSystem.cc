@@ -59,7 +59,7 @@
 const int COMP_TABLE_SIZE = 113;
 
 daqSystem::daqSystem (void)
-:daqTarget ("codaDaqSystem"), components_(COMP_TABLE_SIZE, codaStrHashFunc),
+  :daqTarget ((char *)"codaDaqSystem"), components_(COMP_TABLE_SIZE, codaStrHashFunc),
  subsystems_ (), subsysLocked_ (0), activeBeforePaused_ (0), run_ (0)
 {
 #ifdef _TRACE_OBJECTS

@@ -75,7 +75,7 @@ eviofmtdump(int *arr, int nwrd, unsigned short *ifmt, int nfmt, int nextrabytes,
   short *b16, *b16end;
   char *b8, *b8end;
   LV lv[10];
-  int xml1 = xml;
+  char *xml1 = xml;
 #ifdef FADC_UNPACK
   short *fadc16;
   int fadcdata;

@@ -1,4 +1,3 @@
-#ifdef Linux_vme
 /*
 --------------------------------------------------------------------------------
 -- Company:        IRFU / CEA Saclay
@@ -25,6 +24,10 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <errno.h>
+#include <libgen.h>
+#include <unistd.h>
+
+#ifdef Linux_vme
 
 //#include "Platform.h"
 

@@ -1,5 +1,5 @@
 /* XPM */
-static char * doc_coda_xpm[] = {
+static const char *doc_coda_xpm[] = {
 "30 38 4 1",
 " 	c #C30BC30BC30B",
 ".	c #000000000000",

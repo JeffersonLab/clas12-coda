@@ -28,7 +28,7 @@ double rcRunDInfoZoomPanel::xmin = 0.0;
 double rcRunDInfoZoomPanel::xmax = 100.0;
 double rcRunDInfoZoomPanel::ymin = 0.0;
 double rcRunDInfoZoomPanel::ymax = 100.0;
-char*  rcRunDInfoZoomPanel::textfont = "-*-helvetica-medium-r-*-*-20-*-*-*-*-*-*-*";
+char*  rcRunDInfoZoomPanel::textfont = (char *)"-*-helvetica-medium-r-*-*-20-*-*-*-*-*-*-*";
 
 static void dismissDisplay (cgDispDev* disp, void *arg)
 {
@@ -67,7 +67,7 @@ rcRunDInfoZoomPanel::rcRunDInfoZoomPanel (Widget parent,
   // create event number display
   cgFrameRec*  envframe = new cgFrameRec  (0.0, 66.0, 100.0, 33.0,
 					   2.0);
-  evnum_ = new cgRotString ("     0      ",
+  evnum_ = new cgRotString ((char *)"     0      ",
 			    rcRunDInfoZoomPanel::textfont,
 			    5.0, 70.0,
 			    0.0, zoom);
@@ -81,11 +81,11 @@ rcRunDInfoZoomPanel::rcRunDInfoZoomPanel (Widget parent,
   cgFrameRec* evirateframe = new cgFrameRec (0.0, 33.0, 80.0, 33.0,
 					     2.0);
 
-  evirate_ = new cgRotString ("    0.0    ",
+  evirate_ = new cgRotString ((char *)"    0.0    ",
 			      rcRunDInfoZoomPanel::textfont,
 			      5.0, 36.0,
 			      0.0, zoom);
-  cgRotString* hzl0 = new cgRotString ("Hz",
+  cgRotString* hzl0 = new cgRotString ((char *)"Hz",
 				       rcRunDInfoZoomPanel::textfont,
 				       81.0, 36.0,
 				       0.0, zoom);      
@@ -99,11 +99,11 @@ rcRunDInfoZoomPanel::rcRunDInfoZoomPanel (Widget parent,
   // create event differential display
   cgFrameRec* evdrateframe = new cgFrameRec (0.0, 1.0, 80.0, 33.0,
 					     2.0);
-  evdrate_ = new cgRotString ("    0.0    ",
+  evdrate_ = new cgRotString ((char *)"    0.0    ",
 			      rcRunDInfoZoomPanel::textfont,
 			      5.0, 3.0,
 			      0.0, zoom);
-  cgRotString* hzl1 = new cgRotString ("Hz",
+  cgRotString* hzl1 = new cgRotString ((char *)"Hz",
 				       rcRunDInfoZoomPanel::textfont,
 				       81.0, 3.0,
 				       0.0, zoom);      

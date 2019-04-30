@@ -72,7 +72,7 @@ rcRocW::CreateBaseWidget (Widget parent)
   XtSetArg (arg[ac], XtNwidth, WidthOfScreen(XtScreen(parent))); ac++;
   XtSetValues (parent, arg, ac);
 
-  window_ = new rcRocMenuWindow (parent, "rcRocWindow", netHandler_);
+  window_ = new rcRocMenuWindow (parent, (char *)"rcRocWindow", netHandler_);
   printf("11\n");
   window_->init ();
   printf("12\n");

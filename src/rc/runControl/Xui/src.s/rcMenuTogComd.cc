@@ -55,10 +55,10 @@ rcMenuTogComd::rcMenuTogComd (char* name, int active,
 rcMenuTogComd::~rcMenuTogComd (void)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("         Delete rcMenuTogComd Class Object\n");
+  printf ("         Delete rcMenuTogComd Class Object\n");fflush(stdout);
+  printf ("          netSt_ and rcipanel_ will be deleted by Xt mechanism\n");fflush(stdout);
+  printf ("          and the same is true for dialog_\n");fflush(stdout);
 #endif
-  // netSt_ and rcipanel_ will be deleted by Xt mechanism
-  // and the same is true for dialog_
 }
 
 void

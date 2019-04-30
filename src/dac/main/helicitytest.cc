@@ -57,7 +57,7 @@ main(int argc, char **argv)
 	/* input evio file */
 	sprintf(fnamein, "%s.%05d", argv[1], nfile);
 	printf("opening input file >%s<\n", fnamein);
-	status = evOpen(fnamein, "r", &handlerin);
+	status = evOpen(fnamein, (char *)"r", &handlerin);
 	printf("status=%d\n", status);
 	if (status != 0) {
 		printf("evOpen(in) error %d - exit\n", status);
@@ -67,7 +67,7 @@ main(int argc, char **argv)
 	/* output evio file */
 	sprintf(fnameout, "%s_out.%05d", argv[1], nfile);
 	printf("opening output file >%s<\n", fnameout);
-	status = evOpen(fnameout, "w", &handlerout);
+	status = evOpen(fnameout, (char *)"w", &handlerout);
 	printf("status=%d\n", status);
 	if (status != 0) {
 		printf("evOpen(out) error %d - exit\n", status);

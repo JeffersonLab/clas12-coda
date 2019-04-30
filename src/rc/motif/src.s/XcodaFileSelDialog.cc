@@ -201,7 +201,7 @@ XcodaFileSelDialog::ok()
     {
       _errorDialog = new XcodaErrorDialog(_w, "FileSelectionError", "FileSelectionError");
       _errorDialog->init();
-      _errorDialog->setMessage("Cannot open the file, Try again!");
+      _errorDialog->setMessage((char *)"Cannot open the file, Try again!");
     }
     _errorDialog->popup();
     file_status = NOTFOUND; 

@@ -43,14 +43,14 @@ rcMenuComd::rcMenuComd (char* name, int active,
  netHandler_ (handler)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("         Create rcMenuComd Class Object\n");
+  printf ("         Create rcMenuComd Class Object\n");fflush(stdout);
 #endif
 }
 
 rcMenuComd::~rcMenuComd (void)
 {
 #ifdef _TRACE_OBJECTS
-  printf ("         Delete rcMenuComd Class Object\n");
+  printf ("         Delete rcMenuComd Class Object\n");fflush(stdout);
 #endif
   // netSt_ and rcipanel_ will be deleted by Xt mechanism
   // and the same is true for dialog_

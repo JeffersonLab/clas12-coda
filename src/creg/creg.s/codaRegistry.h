@@ -27,8 +27,10 @@
 #define CONST
 
 #endif
- 
+
+/*sergey 
 #define EXTERN extern
+*/
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,8 +84,6 @@ int     codaSendInit _ANSI_ARGS_((Widget w, char *name));
 #endif
 
 void    codaRegisterMsgCallback _ANSI_ARGS_((void *callback));
-
-#define coda_send coda_Send
 
 #ifdef __cplusplus
 }

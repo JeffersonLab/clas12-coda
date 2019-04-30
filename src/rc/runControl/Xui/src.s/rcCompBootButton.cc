@@ -94,7 +94,7 @@ rcCompBootButton::setCompBootInfo (daqCompBootStruct* info)
   // get network handler
   rcClient& client = netHandler_.clientHandler (); 
 
-  daqData data (client.exptname (), "command", (daqArbStruct *)info);
+  daqData data (client.exptname (), (char *)"command", (daqArbStruct *)info);
 
   client.sendCmdCallback (DAAUTOBOOT_INFO, data,
 			  (rcCallback)&(rcCompBootButton::compBootInfoCbk),

@@ -19,6 +19,7 @@
 --
 --------------------------------------------------------------------------------
 */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,6 +38,7 @@
 #include "SysConfigParams.h"
 #include "FeuConfig.h"
 #include "BeuConfig.h"
+
 #include "SysConfig.h"
 
 // System configuration parameters structure
@@ -246,7 +248,7 @@ int SysConfigFromFile( char *sys_conf_params_filename )
 	/*
 	 * Configure the system
 	 */
-	if( (ret=SysConfig( &sys_params, 1 )) != D_RetCode_Sucsess )
+	if( (ret = SysConfig( (SysParams *)&sys_params, 1 )) != D_RetCode_Sucsess )
 	{
 		fprintf( stderr, "%s: SysConfig failed for parameters from conf file %s with %d\n", __FUNCTION__, sys_conf_params_filename, ret );
 		return ret;

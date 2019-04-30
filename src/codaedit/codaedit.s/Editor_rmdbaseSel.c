@@ -22,7 +22,10 @@
  *
  *	  
  */
-#include "Editor_rmdbaseSel.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
 #include <Xm/Xm.h>
 #include <Xm/PushBG.h>
 #include <Xm/Form.h>
@@ -30,7 +33,13 @@
 #include <Xm/SeparatoG.h>
 #include <Xm/LabelG.h>
 
+#include "Editor_rmdbaseSel.h"
 #include "Editor_graph.h"
+#include "Editor_xmisc.h"
+#include "Editor_icon_box.h"
+#include "Editor_layout.h"
+#include "Editor_miscinfo.h"
+
 
 static editorRmDbaseSel  rmdbaseSel;
 
@@ -68,8 +77,9 @@ static Widget createOptionMenu (Widget parent)
 }
 
 static void
-dbaseSelOk (Widget w, XtPointer data, XmAnyCallbackStruct* cbs)
+dbaseSelOk (Widget w, XtPointer data, XtPointer callback_data)
 {
+  XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
   int  i = 0;
   char* currdbase;
   Arg arg[20];
@@ -117,7 +127,7 @@ dbaseSelOk (Widget w, XtPointer data, XmAnyCallbackStruct* cbs)
 }
 
 static void
-dbaseSelCancel (Widget w, XtPointer data, XmAnyCallbackStruct* cbs)
+dbaseSelCancel (Widget w, XtPointer data, XtPointer callback_data)
 {
   removeDbaseSelPopdown ();
 }

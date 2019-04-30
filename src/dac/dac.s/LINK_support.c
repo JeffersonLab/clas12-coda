@@ -7,14 +7,18 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <errno.h>
 
+#include "rolInt.h"
 #include "da.h"
 #include "circbuf.h"
 #include "libdb.h"
+#include "eviofmt.h"
+#include "LINK_support.h"
 
 
 #undef DEBUG
@@ -39,13 +43,6 @@ CIRCBUF *roc_queues[MAX_ROCS]; /* see deb_component.c */
 int      roc_queue_ix; /* see deb_component.c */
 unsigned int *bufpool[MAX_ROCS][QSIZE]; /* allocated in coda_ebc.c */
 
-
-typedef struct thread_args *trArg;
-typedef struct thread_args
-{
-  objClass object;
-  DATA_LINK link;
-} TRARGS;
 
 static int ending_for_recv;
 
@@ -294,7 +291,6 @@ printf("after: 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x
 
 
 
-#define NPROFMAX 10
 #define NPROF1 10
 #define USLEEP 10000 /* usleep parameter: 1000000 is 1 sec*/
 
@@ -318,16 +314,16 @@ LINK_sized_read(int fd, char **buf, hrtime_t tprof[NPROFMAX])
   unsigned int *bigbuf;
   int n_ending;
 
-static int nev;
+  static int nev;
 
-/* timing */
-hrtime_t start1, end1, start2, end2, start3, end3;
+  /* timing */
+  hrtime_t start1, end1, start2, end2, start3, end3;
 
 
 #ifdef DEBUG
- printf("[%2d] LINK_sized_read reached\n",fd);fflush(stdout);
- printf("[%2d] LINK_sized_read reached\n",fd);fflush(stdout);
- printf("[%2d] LINK_sized_read reached\n",fd);fflush(stdout);
+  printf("[%2d] LINK_sized_read reached\n",fd);fflush(stdout);
+  printf("[%2d] LINK_sized_read reached\n",fd);fflush(stdout);
+  printf("[%2d] LINK_sized_read reached\n",fd);fflush(stdout);
 #endif
 
 
@@ -528,7 +524,7 @@ start2 = gethrtime();
 retry1:
 
 	/*
-  printf("[%2d] RECV2: bufferp=0x%08x, rembytes=0x%08x, recv_flags=%d\n",
+    printf("[%2d] RECV2: bufferp=0x%08x, rembytes=0x%08x, recv_flags=%d\n",
     fd, bufferp, rembytes, recv_flags);fflush(stdout);
 	*/
 
@@ -537,10 +533,10 @@ retry1:
 
 
 
-/*printf("[%2d] 2: %d %d\n",fd,rembytes,cc);*/
-/*
-printf("[%2d] cc=0x%08x\n",fd,cc);fflush(stdout);
-*/
+    /*printf("[%2d] 2: %d %d\n",fd,rembytes,cc);*/
+    /*
+    printf("[%2d] cc=0x%08x\n",fd,cc);fflush(stdout);
+    */
     if(cc == -1)
     {
       if(errno == EWOULDBLOCK) goto retry1;
@@ -584,7 +580,8 @@ printf("[%2d] cc=0x%08x\n",fd,cc);fflush(stdout);
     /* Always adjust these to get out of the while loop */
     bufferp += cc;
     rembytes -= cc;
-  }
+
+  } /*while(rembytes)*/
 
 
 
@@ -594,15 +591,15 @@ printf("[%2d] cc=0x%08x\n",fd,cc);fflush(stdout);
 
 
 
-/* chack buffer integrity */
-/*
-bb_check(bigbuf);
-*/
+  /* chack buffer integrity */
+  /*
+  bb_check(bigbuf);
+  */
 
   /*
-printf("[%2d] RECV3: %d %d %d %d 0x%08x %d - 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x (%d)\n",fd,
-bigbuf[0],bigbuf[1],bigbuf[2],bigbuf[3],bigbuf[4],bigbuf[5],
-bigbuf[6],bigbuf[7],bigbuf[8],bigbuf[9],bigbuf[10],bigbuf[11],size);
+  printf("[%2d] RECV3: %d %d %d %d 0x%08x %d - 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x (%d)\n",fd,
+  bigbuf[0],bigbuf[1],bigbuf[2],bigbuf[3],bigbuf[4],bigbuf[5],
+  bigbuf[6],bigbuf[7],bigbuf[8],bigbuf[9],bigbuf[10],bigbuf[11],size);
   */
   magic = bigbuf[BBIFD];
   if(magic == 0x01020304)
@@ -639,57 +636,57 @@ bigbuf[6],bigbuf[7],bigbuf[8],bigbuf[9],bigbuf[10],bigbuf[11],size);
 
 
 
-/* to simulate delay 
-if(!(nev++%10)) {printf("[%2d] sleep\n",fd);sleep(1);}
-*/
+  /* to simulate delay 
+  if(!(nev++%10)) {printf("[%2d] sleep\n",fd);sleep(1);}
+  */
 
   tmp = (int *)(*buf);
 
 
 
 
-end2 = end3 = gethrtime();
-/*printf("[%2d] 67890: %d\n",fd,tmp[BBIWORDS]);fflush(stdout);*/
+  end2 = end3 = gethrtime();
+  /*printf("[%2d] 67890: %d\n",fd,tmp[BBIWORDS]);fflush(stdout);*/
 
-tprof[3] += (end1-start1)/NANOMICRO;
-tprof[4] += (end2-start2)/NANOMICRO;
-tprof[5] += (end3-start3)/NANOMICRO;
+  tprof[3] += (end1-start1)/NANOMICRO;
+  tprof[4] += (end2-start2)/NANOMICRO;
+  tprof[5] += (end3-start3)/NANOMICRO;
 
-tprof[1] += ((hrtime_t)tmp[BBIEVENTS]); /* the number of events */
-tprof[2] += ((hrtime_t)tmp[BBIWORDS]); /* the number of bytes */
-if(++tprof[0] == NPROF1)
-{
-/*
-  printf("[%2d] 1: average buf: %4lld events, %6lld words,",fd,
-    tprof[1]/tprof[0],tprof[2]/tprof[0]);
-  if(tprof[1] > 0)
+  tprof[1] += ((hrtime_t)tmp[BBIEVENTS]); /* the number of events */
+  tprof[2] += ((hrtime_t)tmp[BBIWORDS]); /* the number of bytes */
+  if(++tprof[0] == NPROF1)
   {
-    printf("   recv1=%5lld recv2=%5lld tot=%5lld\n",
-      tprof[3]/tprof[1],tprof[4]/tprof[1],tprof[5]/tprof[1]);
+    /*
+    printf("[%2d] 1: average buf: %4lld events, %6lld words,",fd,
+      tprof[1]/tprof[0],tprof[2]/tprof[0]);
+    if(tprof[1] > 0)
+    {
+      printf("   recv1=%5lld recv2=%5lld tot=%5lld\n",
+        tprof[3]/tprof[1],tprof[4]/tprof[1],tprof[5]/tprof[1]);
+    }
+    else
+    {
+      printf("\n");
+    }
+    */
+    tprof[0] = 0;
+    tprof[1] = 0;
+    tprof[2] = 0;
+    tprof[3] = 0;
+    tprof[4] = 0;
+    tprof[5] = 0;
   }
-  else
+
+
+
+
+  /*
+  if(time3 > 3000000)
   {
-    printf("\n");
+    printf("[%2d] %7lld %7lld %7lld microsec (buf %d), rocid=%2d\n",fd,
+      time1,time2,time3,tmp[1],tmp[2]);
   }
-*/
-  tprof[0] = 0;
-  tprof[1] = 0;
-  tprof[2] = 0;
-  tprof[3] = 0;
-  tprof[4] = 0;
-  tprof[5] = 0;
-}
-
-
-
-
-/*
-if(time3 > 3000000)
-{
-  printf("[%2d] %7lld %7lld %7lld microsec (buf %d), rocid=%2d\n",fd,
-  time1,time2,time3,tmp[1],tmp[2]);
-}
-*/
+  */
 
   /* set appropriate bit letting building thread know we are ready */
 #ifdef USE_128
@@ -720,16 +717,20 @@ handle_link(trArg arg)
   int numRead;
   int headerSize;
   char *errMsg;
-  signed int *buf_long_p;
+  unsigned int *buf_long_p;
   int count, i, itmp;
   char *buf;
   char ipaddress[20];
 
   hrtime_t tprof[NPROFMAX];
-  hrtime_t start1, end1, time1=NULL;
-  hrtime_t start2, end2, time2=NULL;
-  hrtime_t start4, end4, time4=NULL;
-  hrtime_t nevtime1=NULL, nevchun=NULL, avgsize=NULL;
+  hrtime_t start1, end1, time1=0;
+  hrtime_t start2, end2, time2=0;
+  hrtime_t start4, end4, time4=0;
+  hrtime_t nevtime1=0, nevchun=0, avgsize=0;
+
+  struct sockaddr_in from;
+  int len;
+  char *address;
 
 #ifdef NOALLOC
   unsigned int *bufptr[QSIZE];
@@ -751,36 +752,30 @@ handle_link(trArg arg)
 
 acceptagain:
 
-{
-  struct sockaddr_in from;
-  int len;
-  char *address;
 
   bzero((char *)&from, sizeof(from));
   len = sizeof (from);
 
-printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-printf("Wait on 'accept(%d,0x%08x,%d)' ..\n",theLink->sock,&from,len);
-printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  printf("Wait on 'accept(%d,0x%08x,%d)' ..\n",theLink->sock,&from,len);
+  printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
-
+  {
+    FILE *fd;
+    char fname[80];
+    sprintf(fname,"/home/clasrun/ccscans/good_waiting_%s",theLink->name);
+    fd = fopen(fname,"w");
+	if(fd > 0)
 	{
-      FILE *fd;
-      char fname[80];
-      sprintf(fname,"/home/clasrun/ccscans/good_waiting_%s",theLink->name);
-      fd = fopen(fname,"w");
-	  if(fd > 0)
-	  {
-        chmod(fname,777);
-        fprintf(fd,"waiting on accept\n");
-        fclose(fd);
-	  }
+      chmod(fname,777);
+      fprintf(fd,"waiting on accept\n");
+      fclose(fd);
 	}
+  }
 
-
-fflush(stdout);
+  fflush(stdout);
 
   /* NOTE: the original socket theLink->sock remains open for accepting further connections */
   while((theLink->fd = accept(theLink->sock, (struct sockaddr *)&from, &len)) == -1)
@@ -837,28 +832,26 @@ fflush(stdout);
 
   fd = theLink->fd;
   printf("connection accepted, fd=%d\n",fd);
-}
+
+
+
+
 
   /* Sergey ??? */
   printf("call cfree ...\n"); fflush(stdout);
   cfree(arg);
   printf("... cfree done.\n"); fflush(stdout);
 
+
+
+  /*************/
   /* main loop */
   while(1)
   {
 
-
-start1 = gethrtime();
-
-
-
-
+    start1 = gethrtime();
 
 #ifdef NOALLOC
-
-
-
 
     /* get free buffer from pool; will wait if nothing is available */
     buf = NULL;
@@ -894,41 +887,42 @@ start1 = gethrtime();
       }
 	}
 
-
-
-
-#endif
-
-
+#endif /*#ifdef NOALLOC*/
 
 
 
 
     /* reading data from roc */
-start4 = gethrtime();
-/*printf("901 %d\n",fd);fflush(stdout);*/
+    start4 = gethrtime();
+    /*printf("901 %d\n",fd);fflush(stdout);*/
     numRead = LINK_sized_read(fd, &buf, tprof);
-/*printf("902 %d\n",fd);fflush(stdout);*/
-end4 = gethrtime();
+    /*printf("902 %d\n",fd);fflush(stdout);*/
+    end4 = gethrtime();
 
 #ifdef DEBUG
     printf("[%2d] handle_link(): got %d bytes\n",fd,numRead); fflush(stdout);
     fflush(stdout);
 #endif
+
+
+    /* if 'LINK_sized_read' returned <=0, we exiting */
     if(numRead <= 0)
     {
       printf("[%2d] handle_link(): LINK_sized_read() returns %d\n",fd,numRead);fflush(stdout);
       printf("[%2d] handle_link(): put_cb_data calling ...\n",fd);fflush(stdout);
 	  usleep(USLEEP);
+
+      /* sets 'cbp->nevents[icb] = -1;' inside, need it in cb_events_get() call from coda_eb.c */
       put_cb_data(fd, &theLink->roc_queue, (void *) -1);
+
       printf("[%2d] handle_link(): put_cb_data called\n",fd);fflush(stdout);
-      break;
+      break; /* this is the only exit from while(1) loop; will call 'pthread_exit(0)' and return */
     }
 
     /* count total amount of data words */
     *dataSent += (numRead>>2);
 
-    buf_long_p = (signed long *) buf;
+    buf_long_p = (unsigned int *) buf;
 #ifdef DEBUG
     printf("[%2d] buffer from >%s< (%08x %08x %08x %08x %08x %08x %08x %08x)\n",fd,
            theLink->name,
@@ -957,32 +951,32 @@ end4 = gethrtime();
     }
 
 
-#define NSLEP (QSIZE/2)
 
-/* sleep here if our fifo 'almost' full; that suppose
-to give CPU to another thread who probably need it more */
-/*
-if(theLink->roc_queue->num_full > NSLEP)
-{
-  printf("rocid=%2d: sleep %2d seconds\n",
-  theLink->roc_queue->rocid,theLink->roc_queue->num_full-NSLEP);
-  sleep(theLink->roc_queue->num_full-NSLEP);
-}
-*/
+    /* sleep here if our fifo 'almost' full; that suppose
+    to give CPU to another thread who probably need it more */
+    /*
+    #define NSLEP (QSIZE/2)
+    if(theLink->roc_queue->num_full > NSLEP)
+    {
+      printf("rocid=%2d: sleep %2d seconds\n",
+        theLink->roc_queue->rocid,theLink->roc_queue->num_full-NSLEP);
+      sleep(theLink->roc_queue->num_full-NSLEP);
+    }
+    */
 
     /* put buffer to the circular buffer manager */
-start2 = gethrtime();
+    start2 = gethrtime();
 
 #ifndef DO_NOT_PUT
 
 #ifdef DEBUG
-{
-unsigned int *bigbuf;
-bigbuf = (unsigned int *) buf;
- printf("[%2d] PUTV3: %d %d %d %d %d %d - 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",fd,
-bigbuf[0],bigbuf[1],bigbuf[2],bigbuf[3],bigbuf[4],bigbuf[5],
-bigbuf[6],bigbuf[7],bigbuf[8],bigbuf[9],bigbuf[10],bigbuf[11]);
-}
+    {
+      unsigned int *bigbuf;
+      bigbuf = (unsigned int *) buf;
+      printf("[%2d] PUTV3: %d %d %d %d %d %d - 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",fd,
+        bigbuf[0],bigbuf[1],bigbuf[2],bigbuf[3],bigbuf[4],bigbuf[5],
+        bigbuf[6],bigbuf[7],bigbuf[8],bigbuf[9],bigbuf[10],bigbuf[11]);
+    }
 #endif
     if(put_cb_data(fd, &theLink->roc_queue, (void *) buf) < 0)
     {
@@ -990,55 +984,59 @@ bigbuf[6],bigbuf[7],bigbuf[8],bigbuf[9],bigbuf[10],bigbuf[11]);
       fflush(stdout);
       break;
     }
-#endif
+#endif /*#ifndef DO_NOT_PUT*/
 
 
-end2 = gethrtime();
-end1 = gethrtime();
-time1 += ((end1-start1)/NANOMICRO);
-time2 += ((end2-start2)/NANOMICRO);
-time4 += ((end4-start4)/NANOMICRO);
-nevchun += ((hrtime_t)buf_long_p[3]); /* the number of events */
-avgsize += ((hrtime_t)buf_long_p[0]);
-/*
-printf("--- %ld %ld %ld %ld\n",buf_long_p[0],buf_long_p[1],buf_long_p[2],
-buf_long_p[3]);
-*/
-if(++nevtime1 == NPROF1)
-{
-/*
-  printf("2: average buf: %4lld events, %6lld words,",
-    nevchun/nevtime1,avgsize/nevtime1);
-  if(nevchun > 0)
-  {
-    printf("  tot=%5lld recv=%5lld put=%5lld\n",
-      time1/nevchun,time4/nevchun,time2/nevchun);
+    end2 = gethrtime();
+    end1 = gethrtime();
+    time1 += ((end1-start1)/NANOMICRO);
+    time2 += ((end2-start2)/NANOMICRO);
+    time4 += ((end4-start4)/NANOMICRO);
+    nevchun += ((hrtime_t)buf_long_p[3]); /* the number of events */
+    avgsize += ((hrtime_t)buf_long_p[0]);
+    /*printf("--- %ld %ld %ld %ld\n",buf_long_p[0],buf_long_p[1],buf_long_p[2],buf_long_p[3]);*/
+    if(++nevtime1 == NPROF1)
+    {
+      /*
+      printf("2: average buf: %4lld events, %6lld words,",
+        nevchun/nevtime1,avgsize/nevtime1);
+      if(nevchun > 0)
+      {
+        printf("  tot=%5lld recv=%5lld put=%5lld\n",
+          time1/nevchun,time4/nevchun,time2/nevchun);
+      }
+      else
+      {
+        printf("\n");
+      }
+      */
+      nevtime1 = 0;
+      time1 = 0;
+      time2 = 0;
+      time4 = 0;
+      nevchun = 0;
+      avgsize = 0;
+    }
+
+
   }
-  else
-  {
-    printf("\n");
-  }
-*/
-  nevtime1 = 0;
-  time1 = 0;
-  time2 = 0;
-  time4 = 0;
-  nevchun = 0;
-  avgsize = 0;
-}
+  /* end of main loop while(1) */
+  /*****************************/
 
 
-  } /* end of main loop while(1) */
 
 
-/*printf("handle_link(): thread exit for %9.9s\n",theLink->name); fflush(stdout);*/
-/*NOTE: segm fault printing 'theLink->name', probably pointer is not good any more ???*/
+  /*printf("handle_link(): thread exit for %9.9s\n",theLink->name); fflush(stdout);*/
+  /*NOTE: segm fault printing 'theLink->name', probably pointer is not good any more ??? free'ed in debCloseLink ? */
   printf("[%2d] handle_link(): thread exit\n",fd); fflush(stdout);
 
 
   printf("[%2d] 907\n",fd); fflush(stdout);
   pthread_exit(0);
 }
+
+
+
 
 
   /*               croctest1    EB5        clon10-daq1
@@ -1102,7 +1100,7 @@ printf("++++++2+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
   if(hp == 0 && (sin.sin_addr.s_addr = inet_addr(host)) == -1)
   {
 	printf("debOpenLink: unkown host >%s<\n",host);
-	return(1);
+	return(NULL);
   }
   if(hp != 0) bcopy(hp->h_addr, &sin.sin_addr, hp->h_length);
   sin.sin_port = htons(port);
@@ -1113,7 +1111,7 @@ printf("++++++2+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
   if(s < 0)
   {
     printf("debOpenLink: cannot open socket\n");
-    return(1);
+    return(NULL);
   }
   else
   {
@@ -1142,7 +1140,7 @@ printf("++++++2+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
   if(setsockopt (s, SOL_SOCKET, SO_SNDBUF, &slen, sizeof(slen)) < 0)
   {
 	printf("debOpenLink: setsockopt SO_SNDBUF failed\n");
-	return(1);
+	return(NULL);
   }
 
   {
@@ -1191,7 +1189,7 @@ printf("++++++3+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
     printf("debOpenLink: connect failed: host %s port %d\n",
       inet_ntoa(sin.sin_addr), ntohs(sin.sin_port));
     close(s);
-	return(1);
+	return(NULL);
   }
   */
 
@@ -1201,14 +1199,14 @@ printf("++++++3+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
     printf("debOpenLink: bind failed: host %s port %d\n",
       inet_ntoa(sin.sin_addr), ntohs(sin.sin_port));
     close(s);
-	return(1);
+	return(NULL);
   }
 
   if(listen(s, 5) < 0)
   {
     printf("debOpenLink: listen failed\n");
     close(s);
-	return(1);
+	return(NULL);
   }
 
 
@@ -1218,7 +1216,7 @@ printf("++++++3+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
   {
     printf("debOpenLink: getsockname failed\n");
     close(s);
-	return(1);
+	return(NULL);
   }
 
   port = ntohs(sin.sin_port);
@@ -1238,7 +1236,7 @@ printf("++++++4+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
     if(mysql_query(dbsock, tmp) != 0)
     {
 	  printf("ERROR: cannot create table 'links' (%s)\n",mysql_error(dbsock));
-      return(CODA_ERROR);
+      return(NULL);
     }
     else
     {
@@ -1254,7 +1252,7 @@ printf("++++++4+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
     if(!(res = mysql_store_result (dbsock) ))
     {
       printf("ERROR in mysql_store_result (%s)\n",mysql_error(dbsock));
-      return(CODA_ERROR);
+      return(NULL);
     }
     else
     {
@@ -1268,7 +1266,7 @@ printf("++++++4+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
   if(mysql_query(dbsock, tmp) != 0)
   {
 	printf("debOpenLink: mysql error (%s)\n",mysql_error(dbsock));
-    return(CODA_ERROR);
+    return(NULL);
   }
 
   /* gets results from previous query */
@@ -1277,7 +1275,7 @@ printf("++++++4+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
   if( !(result = mysql_store_result(dbsock)) )
   {
     printf("ERROR in mysql_store_result (%)\n",mysql_error(dbsock));
-    return(CODA_ERROR);
+    return(NULL);
   }
   else
   {
@@ -1299,13 +1297,13 @@ printf("++++++4+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
     else
     {
       printf("debOpenLink: ERROR: unknown nrow=%d",numRows);
-      return(CODA_ERROR);
+      return(NULL);
     }
 
     if(mysql_query(dbsock, tmp) != 0)
     {
 	  printf("debOpenLink: ERROR 20-2\n");
-      return(CODA_ERROR);
+      return(NULL);
     }
     else
     {
@@ -1318,7 +1316,7 @@ printf("++++++4+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
   if(mysql_query(dbsock, tmp) != 0)
   {
 	printf("debOpenLink: ERROR 22-2\n");
-    return(CODA_ERROR);
+    return(NULL);
   }
 
   /* database must be closed in calling function */
@@ -1346,7 +1344,9 @@ printf("++++++6+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
     pthread_attr_t detached_attr;
 
     pthread_attr_init(&detached_attr);
-    pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED);
+    pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED); /* default is PTHREAD_CREATE_JOINABLE, can use pthread_join() but
+                                                                             at seems stuck if thread dies */
+
     pthread_attr_setscope(&detached_attr, PTHREAD_SCOPE_SYSTEM);
 
 
@@ -1356,13 +1356,15 @@ printf("++++++6+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
     {
       printf("LINK_thread_init(): ERROR in thread creating\n"); fflush(stdout);
       perror("pthread_create: ");
-      return(CODA_ERROR);
+      return(NULL);
     }
     printf("LINK_thread_init(): thread is created\n"); fflush(stdout);
   }
 
   return(theLink);
 }
+
+
 
 
 int
@@ -1382,6 +1384,56 @@ debCloseLink(DATA_LINK theLink, MYSQL *dbsock)
     printf("debCloseLink: theLink=0x%08x -> closing\n",theLink);
 
 
+
+	/*
+
+from the web:
+
+1. How can I wait until my thread completes?
+
+Answer: This is directly supported by pthreads -- make your thread-to-be-stopped JOINABLE (when it is first started),
+ and use pthread_join() to block your current thread until the thread-to-be-stopped is no longer running.
+
+2. How can I tell if my thread is still running?
+
+Answer: You can add a "thread_complete" flag to do the trick:
+
+Scenario: Thread A wants to know if Thread B is still alive.
+
+When Thread B is created, it is given a pointer to the "thread_complete" flag address. The "thread_complete" flag
+should be initialized to NOT_COMPLETED before the thread is created. Thread B's entry point function should immediately
+call pthread_cleanup_push() to push a "cleanup handler" which sets the "thread_complete" flag to COMPLETED.
+
+See details about cleanup handlers here: pthread cleanup handlers
+
+You'll want to include a corresponding pthread_cleanup_pop(1) call to ensure that the cleanup handler gets called
+no matter what (i.e. if the thread exits normally OR due to cancellation, etc.).
+
+Then, Thread A can simply check the "thread_complete" flag to see if Thread B has exited yet.
+
+NOTE: Your "thread_complete" flag should be declared "volatile" and should be an atomic type -- the GNU compilers
+provide the sig_atomic_t for this purpose. This allows the two threads consistent access the same data without
+the need for synchronization constructs (mutexes/semaphores).
+
+	*/
+
+	/*
+ I used (pthread_kill(tid, 0) != ESRCH).
+
+ the manpage (Linux) says this: 'POSIX.1-2008 recommends that if an implementation detects the use of a thread ID
+ after the end of its lifetime, pthread_kill() should return the error ESRCH. The glibc implementation returns this
+ error in the cases where an invalid thread ID can be detected. But note also that POSIX says that an attempt to use
+ a thread ID whose lifetime has ended produces undefined behavior, and an attempt to use an invalid thread ID in
+ a call to pthread_kill() can, for example, cause a segmentation fault
+	*/
+
+
+
+
+
+
+
+
 /* PIECE MOVED FROM handle_link() */
 
 /* SERGEY: SHOULD IT BE IN DESTRUCTOR ??? */
@@ -1398,42 +1450,43 @@ debCloseLink(DATA_LINK theLink, MYSQL *dbsock)
    * In either case, we close the file, delete the file handler, and
    * return a null string.
    */
-  theLink->thread = 0;
+    theLink->thread = 0;  /* SERGEY: that thread is 'handle_link()', it is alive at that point .. all wierd ..*/
+                          /* should we tell 'handle_link()' to exit and clean itself instead of doing all following ?? */
+                          /* from other side what if handle_link() is dead ? */
+                          /* all problems here probably related to it */
 
-  printf("debCloseLink reached, fd=%d sock=%d\n",theLink->fd,theLink->sock);
-  fflush(stdout);
-  /* shutdown socket connection */
-/* sergey: seg fault was happening, noticed that fd was big value, did check
-   for <1000, need to investigate ..*/
-  if(theLink->fd != 0 || theLink->fd < 1000)
-  {
-	printf("11: shutdown fd=%d\n",theLink->fd);fflush(stdout);
-    if(shutdown(theLink->fd, SHUT_RDWR)==0) /*SHUT_RD,SHUT_WR,SHUT_RDWR*/
+    printf("debCloseLink reached, fd=%d sock=%d\n",theLink->fd,theLink->sock);
+    fflush(stdout);
+
+    /* shutdown socket connection */
+    /* sergey: seg fault was happening, noticed that fd was big value, did check for <1000, need to investigate ..*/
+    if(theLink->fd != 0 || theLink->fd < 1000)
     {
-	  printf("12\n");fflush(stdout);
-      printf("debCloseLink: socket fd=%d sock=%d connection closed\n",
-        theLink->fd,theLink->sock);
+	  printf("11: shutdown fd=%d\n",theLink->fd);fflush(stdout);
+      if(shutdown(theLink->fd, SHUT_RDWR)==0) /*SHUT_RD,SHUT_WR,SHUT_RDWR*/
+      {
+	    printf("12\n");fflush(stdout);
+        printf("debCloseLink: socket fd=%d sock=%d connection closed\n",theLink->fd,theLink->sock);
 
-printf("903\n"); fflush(stdout);
-printf("903-1 %d\n",theLink->fd); fflush(stdout);
-close(theLink->fd);/*??????????hungs here!!!!!!!!!!*/
-printf("904\n"); fflush(stdout);
-printf("904-1 %d\n",theLink->fd); fflush(stdout);
-close(theLink->sock);/*??????????hungs here!!!!!!!!!!*/
-printf("905\n"); fflush(stdout);
-printf("905-1 %d\n",theLink->fd); fflush(stdout);
-
+        printf("903 %d\n",theLink->fd); fflush(stdout);
+        close(theLink->fd);/*??????????hungs here!!!!!!!!!!*/
+        printf("904 %d\n",theLink->fd); fflush(stdout);
+        close(theLink->sock);/*??????????hungs here!!!!!!!!!!*/
+        printf("905 %d\n",theLink->fd); fflush(stdout);
+      }
+      else
+      {
+	    printf("13\n");fflush(stdout);
+        printf("debCloseLink: ERROR in socket fd=%d sock=%d connection closing\n",
+          theLink->fd,theLink->sock);
+      }
     }
     else
     {
-	  printf("13\n");fflush(stdout);
-      printf("debCloseLink: ERROR in socket fd=%d sock=%d connection closing\n",
-        theLink->fd,theLink->sock);
+      printf("903-ERROR: theLink->fd=%d\n",theLink->fd); fflush(stdout);
     }
-  }
 
-printf("906\n"); fflush(stdout);
-
+    printf("906\n"); fflush(stdout);
   }
 
   /* !!!!!?????
@@ -1459,6 +1512,8 @@ printf("906\n"); fflush(stdout);
 
   /* ================ end of database update =================== */
 
+
+
   /* cancel thread if exist */
   if(theLink->thread)
   {
@@ -1471,10 +1526,19 @@ printf("906\n"); fflush(stdout);
     theLink->thread = 0;
   }
 
+  /* SHOULD DO FOLLOWING ONLY IF handle_thread() IS DONE !!! (AND PREVIOUS AS WELL ??) */
+
+
   /* release memory */
   printf("debCloseLink: free memory\n");
   cfree((char *) theLink->name);
   /*cfree((char *) theLink->parent);donotneedit???*/
+
+
+  /* sergey: probably error, after following call 'put_cb_data(fd, &theLink->roc_queue, (void *) -1)'
+     from 'handle_link()' will fail since  'theLink' does not exist any more; this is probably why there
+     is check 'if(cbp <(CIRCBUF *)100000)' inside put_cb_data ... */
+  /* probably 'handle_link()' must set some flag when done, and we'll wait for that flag here ... */
   cfree((char *) theLink);
   printf("debCloseLink: done.\n");
   

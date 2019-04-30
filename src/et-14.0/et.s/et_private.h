@@ -1190,6 +1190,7 @@ extern int  etn_events_dump(et_sys_id id, et_att_id att, et_event *evs[], int nu
 extern int  etl_open(et_sys_id *id, const char *filename, et_openconfig openconfig);
 extern int  etl_close(et_sys_id id);
 extern int  etl_forcedclose(et_sys_id id);
+extern int  etl_kill(et_sys_id id);
 extern int  etl_alive(et_sys_id id);
 extern int  etl_wait_for_alive(et_sys_id id);
 extern int  et_wait_for_system(et_sys_id id, struct timespec *timeout,

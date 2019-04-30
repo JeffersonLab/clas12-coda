@@ -11,8 +11,9 @@
 
 #ifdef Linux_vme
 
+#include "tiLib.h"
 #include "tdc1190.h"
-
+#include "jvme.h"
 
 int
 main(int argc, char *argv[])

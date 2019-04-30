@@ -1,10 +1,13 @@
 
 /* UNIX version only */
 
+#include <stdio.h>
+
+
 #if defined(Linux_armv7l)
 
-void
-coda_mon()
+int
+main()
 {
   printf("coda_mon is dummy for ARM\n");
 }
@@ -14,12 +17,12 @@ coda_mon()
 
 /* coda_mon.c - generic program to run monitoring processess */
 
-#include <stdio.h>
 #include <stdint.h>
 #include <pthread.h>
 #include <dlfcn.h>
 
 #include "rc.h"
+#include "rolInt.h"
 #include "da.h"
 #include "libdb.h"
 

@@ -59,7 +59,7 @@ void XcodaCbtnInterface::init()
   if (map) {
     XtSetArg (arg[ac], XmNbackgroundPixmap, map); ac++;
   }
-  _pulldown = XmCreatePulldownMenu (_parent, "pulldown", arg, ac);
+  _pulldown = XmCreatePulldownMenu (_parent, (char *)"pulldown", arg, ac);
 
   ac = 0;  
   XtSetArg (arg[ac], XmNsubMenuId, _pulldown); ac++;

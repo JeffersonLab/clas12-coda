@@ -169,6 +169,8 @@ int set_w8(int val);
 int set_w16(int val);
 int set_w32(int val);
 int set_w64(int val);
+int set_p32(int val);
+int set_p64(int val);
 int set_xtod(int val);
 int set_indent_size(int val);
 int set_max_depth(int val);

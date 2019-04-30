@@ -111,7 +111,7 @@ rcRunDInfoPanel::init (void)
   XtManageChild (dframe);
   
   ac = 0;
-  t = XmStringCreateSimple ("Run progress");
+  t = XmStringCreateSimple ((char *)"Run progress");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget rplabel = XtCreateWidget ("runsprogressLabel",
@@ -151,7 +151,7 @@ rcRunDInfoPanel::init (void)
 				
   XtManageChild (evnbFrame2); 
   ac = 0;
-  t = XmStringCreateSimple ("Events this run");
+  t = XmStringCreateSimple ((char *)"Events this run");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNchildType, XmFRAME_TITLE_CHILD); ac++;
   Widget evnlabel = XtCreateManagedWidget ("evNumLabel",
@@ -161,7 +161,7 @@ rcRunDInfoPanel::init (void)
   XmStringFree (t);
   
   ac = 0;
-  t = XmStringCreateSimple ("                 0");
+  t = XmStringCreateSimple ((char *)"                 0");
   //XtSetArg (arg[ac], XmNwidth, 40); ac++;
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   XtSetArg (arg[ac], XmNrecomputeSize, FALSE); ac++;
@@ -180,7 +180,7 @@ rcRunDInfoPanel::init (void)
   ac = 0;
 
   /* This little widget is the pull down menu of all possible sources from which the event number can be read */
-  compOption_ = new rcRepCompOption (evnbForm, "compOption", "Read From:", netHandler_, this);
+  compOption_ = new rcRepCompOption (evnbForm, (char *)"compOption", (char *)"Read From:", netHandler_, this);
   compOption_->init ();
 
   XtSetArg (arg[ac], XmNtopOffset, 10); ac++;
@@ -239,7 +239,7 @@ rcRunDInfoPanel::init (void)
   ac = 0;
   
   
-  t = XmStringCreateSimple ("Rates");
+  t = XmStringCreateSimple ((char *)"Rates");
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNleftAttachment, XmATTACH_FORM); ac++;
@@ -251,7 +251,7 @@ rcRunDInfoPanel::init (void)
   ac = 0;
   XmStringFree (t);
 
-  t = XmStringCreateSimple ("Events/S");
+  t = XmStringCreateSimple ((char *)"Events/S");
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNleftAttachment, XmATTACH_POSITION); ac++;
@@ -265,7 +265,7 @@ rcRunDInfoPanel::init (void)
   XmStringFree (t);
 
 
-  t = XmStringCreateSimple ("Rate (KB/S)");
+  t = XmStringCreateSimple ((char *)"Rate (KB/S)");
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNleftAttachment, XmATTACH_POSITION); ac++;
@@ -316,7 +316,7 @@ rcRunDInfoPanel::init (void)
 				      botform, arg, ac);
   ac = 0;  
 
-  t = XmStringCreateSimple ("Integrated");
+  t = XmStringCreateSimple ((char *)"Integrated");
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_POSITION); ac++;
   XtSetArg (arg[ac], XmNbottomPosition, 49); ac++;
@@ -331,7 +331,7 @@ rcRunDInfoPanel::init (void)
   ac = 0;
   XmStringFree (t);
 
-  t = XmStringCreateSimple ("Differential");
+  t = XmStringCreateSimple ((char *)"Differential");
   XtSetArg (arg[ac], XmNtopAttachment, XmATTACH_POSITION); ac++;
   XtSetArg (arg[ac], XmNtopPosition, 51); ac++;
   XtSetArg (arg[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
@@ -386,7 +386,7 @@ rcRunDInfoPanel::init (void)
 
   DID NOT HELPED !!!
   */
-  t = XmStringCreateSimple ("   0    ");
+  t = XmStringCreateSimple ((char *)"   0    ");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   //XtSetArg (arg[ac], XmNrecomputeSize, FALSE); ac++;
   XtSetArg (arg[ac], XmNshadowType, XmSHADOW_ETCHED_OUT); ac++;
@@ -407,7 +407,7 @@ rcRunDInfoPanel::init (void)
 						 dataform3, arg, ac);
   ac = 0;
 
-  t = XmStringCreateSimple ("   0.0   ");
+  t = XmStringCreateSimple ((char *)"   0.0   ");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   //XtSetArg (arg[ac], XmNrecomputeSize, FALSE); ac++;
   iDataRate_ = XtCreateManagedWidget ("iDataRateG", xmLabelWidgetClass,
@@ -427,7 +427,7 @@ rcRunDInfoPanel::init (void)
 					       dataform3, arg, ac);
   ac = 0;
 
-  t = XmStringCreateSimple ("   0    ");
+  t = XmStringCreateSimple ((char *)"   0    ");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   //XtSetArg (arg[ac], XmNrecomputeSize, FALSE); ac++;
   dEvRate_ = XtCreateManagedWidget ("dEvRateG", xmLabelWidgetClass,
@@ -448,7 +448,7 @@ rcRunDInfoPanel::init (void)
 						 dataform3, arg, ac);
   ac = 0;
 
-  t = XmStringCreateSimple ("   0.0   ");
+  t = XmStringCreateSimple ((char *)"   0.0   ");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
   //XtSetArg (arg[ac], XmNrecomputeSize, FALSE); ac++;
   XtSetArg (arg[ac], XmNshadowType, XmSHADOW_ETCHED_OUT); ac++;
@@ -488,22 +488,22 @@ rcRunDInfoPanel::manage (void)
   /* start monitoring on time and start time; get network handler first */
   rcClient& client = netHandler_.clientHandler ();
 
-  if (client.monitorOnCallback (client.exptname(), "timeBin",
+  if (client.monitorOnCallback (client.exptname(), (char *)"timeBin",
 		(rcCallback)&(rcRunDInfoPanel::timeCallback),
 		(void *)this) != CODA_SUCCESS) 
     fprintf (stderr, "Cannot register monitor on timeBin\n");
 
-  if (client.monitorOnCallback (client.exptname(), "startTimeBin",
+  if (client.monitorOnCallback (client.exptname(), (char *)"startTimeBin",
 		(rcCallback)&(rcRunDInfoPanel::startTimeCallback),
 		(void *)this) != CODA_SUCCESS) 
     fprintf (stderr, "Cannot register monitor on startTimeBin\n");
 
-  if (client.monitorOnCallback (client.exptname(), "endTimeBin",
+  if (client.monitorOnCallback (client.exptname(), (char *)"endTimeBin",
 		(rcCallback)&(rcRunDInfoPanel::endTimeCallback),
 		(void *)this) != CODA_SUCCESS) 
     fprintf (stderr, "Cannot register monitor on endTimeBin\n");
 
-  if (client.monitorOnCallback (client.exptname (), "updateInterval",
+  if (client.monitorOnCallback (client.exptname (), (char *)"updateInterval",
 		(rcCallback)&(rcRunDInfoPanel::updateCallback),
 		(void *)this) != CODA_SUCCESS) {
     fprintf (stderr, "Cannot register monitor on %s %s\n", 
@@ -624,7 +624,7 @@ rcRunDInfoPanel::startMonitoringInfo (char* compname)
   printf("starting monitoring %s ....................................................\n",compname);
 #endif
 
-  if (client.monitorOnCallback (compname, DYN_ATTR0,
+  if (client.monitorOnCallback (compname, (char *)DYN_ATTR0,
 		(rcCallback)&(rcRunDInfoPanel::attr0Callback),
 		(void *)this) != CODA_SUCCESS)
   {
@@ -633,7 +633,7 @@ rcRunDInfoPanel::startMonitoringInfo (char* compname)
     err = 1;
   }
 
-  if (client.monitorOnCallback (compname, DYN_ATTR1,
+  if (client.monitorOnCallback (compname, (char *)DYN_ATTR1,
 		(rcCallback)&(rcRunDInfoPanel::attr1Callback),
 		(void *)this) != CODA_SUCCESS)
   {
@@ -642,7 +642,7 @@ rcRunDInfoPanel::startMonitoringInfo (char* compname)
     err = 1;
   }
 
-  if (client.monitorOnCallback (compname, DYN_ATTR2,
+  if (client.monitorOnCallback (compname, (char *)DYN_ATTR2,
 		(rcCallback)&(rcRunDInfoPanel::attr2Callback),
 		(void *)this) != CODA_SUCCESS)
   {
@@ -651,7 +651,7 @@ rcRunDInfoPanel::startMonitoringInfo (char* compname)
     err = 1;
   }
 
-  if (client.monitorOnCallback (compname, DYN_ATTR3,
+  if (client.monitorOnCallback (compname, (char *)DYN_ATTR3,
 		(rcCallback)&(rcRunDInfoPanel::attr3Callback),
 		(void *)this) != CODA_SUCCESS)
   {
@@ -660,7 +660,7 @@ rcRunDInfoPanel::startMonitoringInfo (char* compname)
     err = 1;
   }
 
-  if (client.monitorOnCallback (compname, DYN_ATTR4,
+  if (client.monitorOnCallback (compname, (char *)DYN_ATTR4,
 		(rcCallback)&(rcRunDInfoPanel::attr4Callback),
 		(void *)this) != CODA_SUCCESS)
   {
@@ -671,7 +671,7 @@ rcRunDInfoPanel::startMonitoringInfo (char* compname)
 
 
   /*sergey*/
-  if (client.monitorOnCallback (compname, DYN_ATTR5,
+  if (client.monitorOnCallback (compname, (char *)DYN_ATTR5,
 		(rcCallback)&(rcRunDInfoPanel::attr5Callback),
 		(void *)this) != CODA_SUCCESS)
   {
@@ -715,7 +715,7 @@ rcRunDInfoPanel::stopMonitoringInfo (char* compname)
     printf("rcRunDInfoPanel::stopMonitoringInfo: stop monitoring %s\n",compname);
 #endif
 
-    if (client.monitorOffCallback (compname, DYN_ATTR0,
+    if (client.monitorOffCallback (compname, (char *)DYN_ATTR0,
 				   (rcCallback)&(rcRunDInfoPanel::attr0Callback),
 				   (void *)this,
 				   (rcCallback)&(rcRunDInfoPanel::offCallback),
@@ -723,7 +723,7 @@ rcRunDInfoPanel::stopMonitoringInfo (char* compname)
       fprintf (stderr, "rcRunDInfoPanel::stopMonitoringInfo: Cannot unregister monitor on callback on %s %s\n", 
 	       compname,DYN_ATTR0);
 
-    if (client.monitorOffCallback (compname, DYN_ATTR1,
+    if (client.monitorOffCallback (compname, (char *)DYN_ATTR1,
 				   (rcCallback)&(rcRunDInfoPanel::attr1Callback),
 				   (void *)this,
 		   (rcCallback)&(rcRunDInfoPanel::offCallback),
@@ -731,7 +731,7 @@ rcRunDInfoPanel::stopMonitoringInfo (char* compname)
       fprintf (stderr, "rcRunDInfoPanel::stopMonitoringInfo: Cannot unregister monitor on callback on %s %s\n", 
 	       compname,DYN_ATTR1);
 
-    if (client.monitorOffCallback (compname, DYN_ATTR2,
+    if (client.monitorOffCallback (compname, (char *)DYN_ATTR2,
 				   (rcCallback)&(rcRunDInfoPanel::attr2Callback),
 				   (void *)this,
 		   (rcCallback)&(rcRunDInfoPanel::offCallback),
@@ -739,7 +739,7 @@ rcRunDInfoPanel::stopMonitoringInfo (char* compname)
       fprintf (stderr, "rcRunDInfoPanel::stopMonitoringInfo: Cannot unregister monitor on callback on %s %s\n", 
 	       compname,DYN_ATTR1);
 
-    if (client.monitorOffCallback (compname, DYN_ATTR3,
+    if (client.monitorOffCallback (compname, (char *)DYN_ATTR3,
 				   (rcCallback)&(rcRunDInfoPanel::attr3Callback),
 				   (void *)this,
 				   (rcCallback)&(rcRunDInfoPanel::offCallback),
@@ -747,7 +747,7 @@ rcRunDInfoPanel::stopMonitoringInfo (char* compname)
       fprintf (stderr, "rcRunDInfoPanel::stopMonitoringInfo: Cannot unregister monitor on callback on %s %s\n", 
 	       compname,DYN_ATTR3);
 
-    if (client.monitorOffCallback (compname, DYN_ATTR4,
+    if (client.monitorOffCallback (compname, (char *)DYN_ATTR4,
 				   (rcCallback)&(rcRunDInfoPanel::attr4Callback),
 				   (void *)this,
 				   (rcCallback)&(rcRunDInfoPanel::offCallback),
@@ -756,7 +756,7 @@ rcRunDInfoPanel::stopMonitoringInfo (char* compname)
 	       compname,DYN_ATTR4);
 
     /*sergey*/
-    if (client.monitorOffCallback (compname, DYN_ATTR5,
+    if (client.monitorOffCallback (compname, (char *)DYN_ATTR5,
 				   (rcCallback)&(rcRunDInfoPanel::attr5Callback),
 				   (void *)this,
 				   (rcCallback)&(rcRunDInfoPanel::offCallback),
@@ -862,8 +862,8 @@ rcRunDInfoPanel::attr2Callback (int status, void* arg, daqNetData* data)
         printf("CEDIT 3: rcRunDInfoPanel::attr2Callback: cmd >%s<\n",cmd);fflush(stdout);
 #endif
 #ifdef USE_CREG
-        coda_Send(XtDisplay(obj->baseWidget()),"CEDIT",cmd);
-        coda_Send(XtDisplay(obj->baseWidget()),"ALLROCS",cmd);
+        coda_Send(XtDisplay(obj->baseWidget()),(char *)"CEDIT",cmd);
+        coda_Send(XtDisplay(obj->baseWidget()),(char *)"ALLROCS",cmd);
 #endif
       }
     }
@@ -1124,8 +1124,8 @@ rcRunDInfoPanel::popupRateDisplay (rcMenuWindow *menW)
 {
   if (!ratePanel_)
   {
-    Widget stattab = menW->createTabFrame("Statistics",0);
-    ratePanel_ = new rcRateDisplay (stattab, netHandler_,statusPanel_,"rcRateDisplay","Event/Data Rate Display",60);
+    Widget stattab = menW->createTabFrame((char *)"Statistics",0);
+    ratePanel_ = new rcRateDisplay (stattab, netHandler_,statusPanel_,(char *)"rcRateDisplay",(char *)"Event/Data Rate Display",60);
     ratePanel_->init (menW);
   }
 

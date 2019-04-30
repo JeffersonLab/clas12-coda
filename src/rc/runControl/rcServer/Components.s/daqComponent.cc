@@ -34,11 +34,15 @@
 //   run control source
 //
 //
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "daqComponent.h"
+/*
 #ifndef Darwin
 extern "C" char *getenv(char *);
 #endif
-
+*/
 daqComponent::daqComponent (char *title)
 :daqTarget (title), priority_ (0), enabled_ (0), autoBoot_ (0), 
  monitored_ (1), bootable_ (1)

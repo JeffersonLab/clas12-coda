@@ -1,5 +1,5 @@
 /* XPM */
-static char * trash2_xpm[] = {
+static const char *trash2_xpm[] = {
 "33 46 4 1",
 " 	c #C30BC30BC30B",
 ".	c #000000000000",

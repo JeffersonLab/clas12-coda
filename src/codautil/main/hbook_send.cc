@@ -15,21 +15,21 @@ int
 main()
 {
   // connect to ipc server
-  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), "daq", "hist");
-  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), "daq", "hist");
+  server.AddSendTopic(getenv("EXPID"), getenv("SESSION"), (char *)"daq", (char *)"hist");
+  server.AddRecvTopic(getenv("EXPID"), getenv("SESSION"), (char *)"daq", (char *)"hist");
   server.Open();
 
   Hbook hbook;
 
-  hbook.hbook1(1, "clondaq6:test1", 100, 0.0, 100.0);
-  hbook.hreset(1,"clondaq6:test1");
+  hbook.hbook1(1, (char *)"clondaq6:test1", 100, 0.0, 100.0);
+  hbook.hreset(1, (char *)"clondaq6:test1");
   for(int i=0; i<100; i++)
   {
     hbook.hfill(1, ((float)i), 0.0, ((float)i)*2./2.);
   }
   hbook.hprint(1);
 
-  hbook.hist2ipc(1, "hbook_send");
+  hbook.hist2ipc(1, (char *)"hbook_send");
 
   server.Close();
 }

@@ -133,7 +133,7 @@ cgVmeCrate::draw (const cgScene* s) const
   switch_->solid (s);
 
   // always set color of lights to red
-  cxt_->setForeground ("red");
+  cxt_->setForeground ((char *)"red");
   for (i = 0; i < numLights_; i++)
     lights_[i]->solid (s);
   

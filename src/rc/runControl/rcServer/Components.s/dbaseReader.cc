@@ -996,19 +996,19 @@ dbaseReader::getPriorities (void)
 void
 dbaseReader::setDefaultPriorities (void)
 {
-  compFactory_->subSystemPriority ("ROC", 11);
+  compFactory_->subSystemPriority ((char *)"ROC", 11);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem ROC has default priority of %d\n", 11);
-  compFactory_->subSystemPriority ("EB",  15);
+  compFactory_->subSystemPriority ((char *)"EB",  15);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem EB has default priority of %d\n", 15);
-  compFactory_->subSystemPriority ("ANA", 19);
+  compFactory_->subSystemPriority ((char *)"ANA", 19);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem ANA has default priority of %d\n", 19);
-  compFactory_->subSystemPriority ("ER",  23);
+  compFactory_->subSystemPriority ((char *)"ER",  23);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem ER has default priority of %d\n", 23);
-  compFactory_->subSystemPriority ("LOG", 27);
+  compFactory_->subSystemPriority ((char *)"LOG", 27);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem LOG has default priority of %d\n", 27);
-  compFactory_->subSystemPriority ("TS",  -27);
+  compFactory_->subSystemPriority ((char *)"TS",  -27);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem TS has default priority of %d\n", -27);
-  compFactory_->subSystemPriority ("L3",  26);
+  compFactory_->subSystemPriority ((char *)"L3",  26);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem L3 has default priority of %d\n", 26);
 }
 

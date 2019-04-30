@@ -39,7 +39,7 @@ A status printout can be obtained from:
 #ifdef Linux_vme
 
 #include "moLib.h"
-
+#include "jvme.h"
 
 int
 main(int argc, char *argv[])

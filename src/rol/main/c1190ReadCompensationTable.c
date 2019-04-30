@@ -83,7 +83,7 @@ main(int argc, char *argv[])
     {
       printf(" ERROR: Must specify two arguments\n");
       Usage();
-      return(-1);
+      exit(0);
     }
   else
     {
@@ -226,10 +226,9 @@ Usage()
 
 #else
 
-void
-c1190ReadCompensationTable_dummy()
+int
+main()
 {
-  return;
 }
 
 #endif

@@ -68,7 +68,9 @@ FADC250_CONF_FILE  <filename> <- another config filename to be processed on next
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "fadc250Config.h"
 #include "fadcLib.h"
@@ -78,6 +80,7 @@ FADC250_CONF_FILE  <filename> <- another config filename to be processed on next
 
 static int active;
 
+#define NBOARD     21
 static int          nfadc;                        /* Number of FADC250s */
 static FADC250_CONF fa250[NBOARD+1];
 

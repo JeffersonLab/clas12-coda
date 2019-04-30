@@ -305,10 +305,9 @@ Usage()
 
 #else
 
-void
-c1190WriteCompensationTable_dummy()
+int
+main()
 {
-  return;
 }
 
 #endif

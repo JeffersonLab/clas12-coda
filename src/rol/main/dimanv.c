@@ -1,4 +1,10 @@
-/* UNIX version only */
+
+/* dimanv.c - UNIX version only */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 #if defined(VXWORKS) || defined(Linux_armv7l)
 
@@ -19,11 +25,7 @@ main()
  *  Sergey Boyarinov Oct 2013: redone for the new dsc2 library
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <libtcp.h>
+#include "libtcp.h"
 
 
 #define F_NAME    100       /* length of config. file name */

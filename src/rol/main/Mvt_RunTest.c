@@ -20,7 +20,6 @@
 --------------------------------------------------------------------------------
 */
 
-#ifdef Linux_vme
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,14 +33,20 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <libgen.h>
+
+#ifdef Linux_vme
 
 #define ROL_NAME__ "ROL1MVT"
 
 #include "mvtLib.h"
 #include "SysConfig.h"
 #include "tiUtils.h"
-#include "jvme.h"
 #include "tiLib.h"
+#include "sdLib.h"
+
+#include "jvme.h"
+#include "jlabgef.h"
 
 /********************************************
  * Function for non-blocking keyboard input *

@@ -1,8 +1,9 @@
 
+
+
 /* vmeserver.c - tcp server for trigger-like clients */
 
-
-
+#if defined(VXWORKS) || defined(Linux_vme)
 
 #ifdef VXWORKS
 
@@ -28,7 +29,9 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/prctl.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <pthread.h>
 
 #include <fcntl.h>
@@ -45,12 +48,16 @@
 
 #endif
 
+
 #include "libtcp.h" 
 #include "libdb.h" 
 
 #include "V1495VMERemote.h"
+#include "vmeserver.h"
 
-
+#if defined(VXWORKS) || defined(Linux_vme)
+#include "jvme.h"
+#endif
 
 #ifdef VXWORKS
 int sysBusToLocalAdrs(int, char *, char **);
@@ -177,9 +184,9 @@ vmeScalersReadoutAdd(unsigned int addr, unsigned int len, unsigned int enable)
   }
 
 #ifdef VXWORKS
-  if(sysBusToLocalAdrs(0x39,addr&0xFFFFFF,&vmescalersaddr[vmescalersnum]) < 0)
+  if(sysBusToLocalAdrs(0x39, addr&0xFFFFFF, &vmescalersaddr[vmescalersnum]) < 0)
 #else
-  if(vmeBusToLocalAdrs(0x39,addr&0xFFFFFF,&vmescalersaddr[vmescalersnum]) < 0)
+  if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(addr&0xFFFFFF)), (char **)&vmescalersaddr[vmescalersnum]) < 0)
 #endif
   {
     vmescalersaddr[vmescalersnum] = 0;
@@ -190,9 +197,9 @@ vmeScalersReadoutAdd(unsigned int addr, unsigned int len, unsigned int enable)
   if(enable > 0)
   {
 #ifdef VXWORKS
-    if(sysBusToLocalAdrs(0x39,enable&0xFFFFFF,&vmescalersenable[vmescalersnum]) < 0)
+    if(sysBusToLocalAdrs(0x39, enable&0xFFFFFF, &vmescalersenable[vmescalersnum]) < 0)
 #else
-    if(vmeBusToLocalAdrs(0x39,enable&0xFFFFFF,&vmescalersenable[vmescalersnum]) < 0)
+	if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(enable&0xFFFFFF)), (char **)&vmescalersenable[vmescalersnum]) < 0)
 #endif
     {
       printf("vmeScalersReadoutAdd ERROR: cannot set enable address\n");
@@ -242,7 +249,7 @@ vmeScalersEnableAdd(unsigned int addr, unsigned int enable)
 #ifdef VXWORKS
   if(sysBusToLocalAdrs(0x39,addr&0xFFFFFF,&address) < 0)
 #else
-  if(vmeBusToLocalAdrs(0x39,addr&0xFFFFFF,&address) < 0)
+	if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(addr&0xFFFFFF)), (char **)&address) < 0)
 #endif
   {
     printf("vmeScalersEnableAdd ERROR: cannot set base address\n");
@@ -261,7 +268,7 @@ vmeScalersEnableAdd(unsigned int addr, unsigned int enable)
 #ifdef VXWORKS
       if(sysBusToLocalAdrs(0x39,enable&0xFFFFFF,&vmescalersenable[k]) < 0)
 #else
-      if(vmeBusToLocalAdrs(0x39,enable&0xFFFFFF,&vmescalersenable[k]) < 0)
+		if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(enable&0xFFFFFF)), (char **)&vmescalersenable[k]) < 0)
 #endif
       {
         printf("vmeScalersEnableAdd ERROR: cannot set enable address\n");
@@ -289,7 +296,7 @@ vmeScalersDisableAdd(unsigned int addr, unsigned int disable)
 #ifdef VXWORKS
   if(sysBusToLocalAdrs(0x39,addr&0xFFFFFF,&address) < 0)
 #else
-  if(vmeBusToLocalAdrs(0x39,addr&0xFFFFFF,&address) < 0)
+	if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(addr&0xFFFFFF)), (char **)&address) < 0)
 #endif
   {
     printf("vmeScalersEnableAdd ERROR: cannot set base address\n");
@@ -305,7 +312,7 @@ vmeScalersDisableAdd(unsigned int addr, unsigned int disable)
 #ifdef VXWORKS
       if(sysBusToLocalAdrs(0x39,disable&0xFFFFFF,&vmescalersdisable[k]) < 0)
 #else
-      if(vmeBusToLocalAdrs(0x39,disable&0xFFFFFF,&vmescalersdisable[k]) < 0)
+		if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(disable&0xFFFFFF)), (char **)&vmescalersdisable[k]) < 0)
 #endif
       {
         printf("vmeScalersDisableAdd ERROR: cannot set disable address\n");
@@ -367,7 +374,7 @@ vmeScalersReadoutStart()
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
 
-    pthread_create(&id, &attr, vmeReadTask, NULL);
+    pthread_create(&id, &attr, (void *(*)(void *))vmeReadTask, NULL);
   }
 #endif
 
@@ -379,7 +386,9 @@ vmeScalersReadoutStop()
 {
   /* TODO: END TASK HERE !!!!!!!!!!!!!!!!!!!!!!!! */
 
-  free(vmescalers);
+  int i;
+
+  for(i=0; i<vmescalersnum; i++) free(vmescalers[i]);
 
 #ifdef VXWORKS
   semGive(vmescalers_lock);
@@ -412,10 +421,10 @@ vmeScalersRead()
     if(vmescalersenable[k] > 0)
     {
 #ifdef PHOTON_RUN
-      ptr32 = (volatile unsigned int *)(vmescalersenable[k]);
+      ptr32 = (volatile unsigned int *)((unsigned long int)vmescalersenable[k]);
       *ptr32 = 0x0; /*disable scalers*/
 #else
-      ptr16 = (volatile unsigned short *)(vmescalersenable[k]);
+      ptr16 = (volatile unsigned short *)((unsigned long int)vmescalersenable[k]);
       *ptr16 = 0x0; /*disable scalers*/
 #endif
       /*printf("disable: write 0 to 0x%08x\n",ptr16);*/
@@ -428,10 +437,10 @@ vmeScalersRead()
   for(k=0; k<vmescalersnum; k++)
   {
 #ifdef PHOTON_RUN
-    ptr32 = (volatile unsigned int *)(vmescalersaddr[k]);
+    ptr32 = (volatile unsigned int *)((unsigned long int)vmescalersaddr[k]);
     mem32 = (unsigned int *)(vmescalers[k]);
 #else
-    ptr16 = (volatile unsigned short *)(vmescalersaddr[k]);
+    ptr16 = (volatile unsigned short *)((unsigned long int)vmescalersaddr[k]);
     mem16 = (unsigned short *)(vmescalers[k]);
 #endif
     EIEIO;
@@ -470,10 +479,10 @@ vmeScalersRead()
     if(vmescalersenable[k] > 0)
     {
 #ifdef PHOTON_RUN
-      ptr32 = (volatile unsigned int *)(vmescalersenable[k]);
+      ptr32 = (volatile unsigned int *)((unsigned long int)vmescalersenable[k]);
       *ptr32 = 0x1; /*enable scalers*/
 #else
-      ptr16 = (volatile unsigned short *)(vmescalersenable[k]);
+      ptr16 = (volatile unsigned short *)((unsigned long int)vmescalersenable[k]);
       /*printf("enable: write 1 to 0x%08x\n",ptr16);*/
       *ptr16 = 0x1; /*enable scalers*/
 #endif
@@ -506,7 +515,7 @@ vmeGetScalerMemoryAddress(unsigned int addr)
   {
     if( (addr >= vmescalersbegin[i])  && (addr <= vmescalersend[i]) )
 	{
-      tmp = addr - vmescalersbegin[i] + ((unsigned int)vmescalers[i]);
+      tmp = addr - vmescalersbegin[i] + ((unsigned long int)vmescalers[i]);
       /*printf("tmp=0x%08x (0x%08x 0x%08x 0x%08x)\n",
         tmp,addr,vmescalersbegin[i],((unsigned int)vmescalers[i]));*/
       return(tmp);
@@ -522,7 +531,8 @@ unsigned int
 vmeGetScalerFromMemory(unsigned int addr)
 {
   int i;
-  unsigned int value, tmp;
+  unsigned int value;
+  unsigned long int tmp;
 
   /*printf("vmeGetScalerFromMemory: read addr is 0x%08x\n",addr);*/
   SCALER_LOCK;
@@ -531,7 +541,7 @@ vmeGetScalerFromMemory(unsigned int addr)
   {
     if( (addr >= vmescalersbegin[i])  && (addr <= vmescalersend[i]) )
 	{
-      tmp = addr - vmescalersbegin[i] + ((unsigned int)vmescalers[i]);
+      tmp = addr - vmescalersbegin[i] + ((unsigned long int)vmescalers[i]);
       /*printf("tmp=0x%08x (0x%08x 0x%08x 0x%08x)\n",
         tmp,addr,vmescalersbegin[i],((unsigned int)vmescalers[i]));*/
       value = *((unsigned int *)tmp);
@@ -630,7 +640,7 @@ vmeProcessRemoteMsg(RemoteMsgStruct *pRemoteMsgStruct)
 #ifdef VXWORKS
 	  sysBusToLocalAdrs(0x39, ntohl(pCmd_Read16->Address) & 0xFFFFFF, (unsigned long *)&pData);
 #else
-	  vmeBusToLocalAdrs(0x39, ntohl(pCmd_Read16->Address) & 0xFFFFFF, (unsigned long *)&pData);
+	  vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(ntohl(pCmd_Read16->Address) & 0xFFFFFF)), (char **)&pData);
 #endif
 
 	  OutgoingMsg.BoardType = pRemoteMsgStruct->BoardType;
@@ -653,7 +663,7 @@ vmeProcessRemoteMsg(RemoteMsgStruct *pRemoteMsgStruct)
 #ifdef VXWORKS
 	  sysBusToLocalAdrs(0x39, ntohl(pCmd_Write16->Address) & 0xFFFFFF, (unsigned long *)&pData);
 #else
-	  vmeBusToLocalAdrs(0x39, ntohl(pCmd_Write16->Address) & 0xFFFFFF, (unsigned long *)&pData);
+	  vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(ntohl(pCmd_Write16->Address) & 0xFFFFFF)), (char **)&pData);
 #endif
 
 	  vmeWrite16(pData, ntohs(pCmd_Write16->Value));
@@ -674,7 +684,7 @@ vmeProcessRemoteMsg(RemoteMsgStruct *pRemoteMsgStruct)
 #ifdef VXWORKS
 	  sysBusToLocalAdrs(0x39, ntohl(pCmd_BlkRead16->Address) & 0xFFFFFF, (unsigned long *)&pData);
 #else
-	  vmeBusToLocalAdrs(0x39, ntohl(pCmd_BlkRead16->Address) & 0xFFFFFF, (unsigned long *)&pData);
+	  vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(ntohl(pCmd_BlkRead16->Address) & 0xFFFFFF)), (char **)&pData);
 #endif
 
 #if DEBUG_REMOTE_CMD
@@ -707,7 +717,7 @@ vmeProcessRemoteMsg(RemoteMsgStruct *pRemoteMsgStruct)
           {
             if( (ntohl(pCmd_BlkRead16->Address) == vmescalersbegin[i])  && ((ntohl(pCmd_BlkRead16->Count)/4) == vmescalerslen[i]) )
             {
-              sData = (unsigned int *)(vmescalers[i]);
+              sData = (unsigned short *)(vmescalers[i]);
 #if DEBUG_REMOTE_CMD
               printf("found 0x%08x %6d -> read from memory 0x%08x\n",vmescalersbegin[i],vmescalerslen[i],pData);
 #endif
@@ -750,7 +760,7 @@ vmeProcessRemoteMsg(RemoteMsgStruct *pRemoteMsgStruct)
 #ifdef VXWORKS
 	  sysBusToLocalAdrs(0x39, ntohl(pCmd_Read32->Address) & 0xFFFFFF, (unsigned long *)&pData);
 #else
-	  vmeBusToLocalAdrs(0x39, ntohl(pCmd_Read32->Address) & 0xFFFFFF, (unsigned long *)&pData);
+	  vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(ntohl(pCmd_Read32->Address) & 0xFFFFFF)), (char **)&pData);
 #endif
 
 	  OutgoingMsg.BoardType = pRemoteMsgStruct->BoardType;
@@ -802,7 +812,7 @@ vmeProcessRemoteMsg(RemoteMsgStruct *pRemoteMsgStruct)
 #ifdef VXWORKS
 	  sysBusToLocalAdrs(0x39, ntohl(pCmd_Write32->Address) & 0xFFFFFF, (unsigned long *)&pData);
 #else
-	  vmeBusToLocalAdrs(0x39, ntohl(pCmd_Write32->Address) & 0xFFFFFF, (unsigned long *)&pData);
+	  vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(ntohl(pCmd_Write32->Address) & 0xFFFFFF)), (char **)&pData);
 #endif
 
 	  /*sergey: ignore scalers enable/disable*/
@@ -811,7 +821,7 @@ vmeProcessRemoteMsg(RemoteMsgStruct *pRemoteMsgStruct)
       {
         for(i=0; i<vmescalersnum; i++)
         {
-          if(pData == vmescalersenable[i])
+          if(pData == (unsigned int *)vmescalersenable[i])
           {
             flag = 1;
             break;
@@ -839,7 +849,7 @@ vmeProcessRemoteMsg(RemoteMsgStruct *pRemoteMsgStruct)
 #ifdef VXWORKS
 	  sysBusToLocalAdrs(0x39, ntohl(pCmd_BlkRead32->Address) & 0xFFFFFF, (unsigned long *)&pData);
 #else
-	  vmeBusToLocalAdrs(0x39, ntohl(pCmd_BlkRead32->Address) & 0xFFFFFF, (unsigned long *)&pData);
+	  vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(ntohl(pCmd_BlkRead32->Address) & 0xFFFFFF)), (char **)&pData);
 #endif
 
 	  OutgoingMsg.BoardType = pRemoteMsgStruct->BoardType;
@@ -957,7 +967,7 @@ vmeServer(void)
 int
 vmeServer(char *name)
 {
-  int id;
+  pthread_t id;
 
   printf("vmeServer called with name >%s<\n",name);
 
@@ -967,17 +977,8 @@ vmeServer(char *name)
   pthread_attr_init(&attr); /* initialize attr with default attributes */
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
   pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
-  pthread_create(&id, &attr, vmetcpServer, NULL);
+  pthread_create(&id, &attr, (void *(*)(void *))vmetcpServer, NULL);
 }
-#endif
-
-
-#ifndef VXWORKS
-#define TRUE  1
-#define FALSE 0
-#define OK 0
-#define ERROR (-1)
-#define STATUS int
 #endif
 
 
@@ -1171,7 +1172,7 @@ vmetcpServer(void)
 
     /* fill the structure for thread */
     targ.newFd = gClientSocket;
-    targ.address = (int) inet_ntoa(clientAddr.sin_addr);
+    targ.address = (char *) ((int) inet_ntoa(clientAddr.sin_addr));
     targ.port = ntohs (clientAddr.sin_port);
 
 
@@ -1199,7 +1200,7 @@ vmetcpServer(void)
         targ.newFd, targ.address, targ.port); fflush(stdout);
 	  */
       /* block annoying IP address(es) */
-      if(!strncmp((int) inet_ntoa (clientAddr.sin_addr),"129.57.71.",10))
+      if(!strncmp( (char *)((int)inet_ntoa (clientAddr.sin_addr)), "129.57.71.",10))
 	  {
         printf("WARN: ignore request from %s\n",targ.address);
         close(targ.newFd);
@@ -1207,7 +1208,7 @@ vmetcpServer(void)
 	  }
       else
 	  {
-        ret = pthread_create(&id, &detached_attr, vmetcpServerWorkTask, &targ);
+        ret = pthread_create(&id, &detached_attr, (void *(*)(void *))vmetcpServerWorkTask, &targ);
         if(ret!=0)
         {
           printf("ERROR: pthread_create(vmetcpServerWorkTask) returned %d\n",
@@ -1243,7 +1244,7 @@ vmetcpServerWorkTask(TWORK *targ)
 again:
 
 
-  if( (len=recv(targ->newFd, (char *)&IncomingMsg, 4, NULL)) == 4)
+  if( (len=recv(targ->newFd, (char *)&IncomingMsg, 4, 0)) == 4)
   {
 	IncomingMsg.Length = ntohl(IncomingMsg.Length);
 #if DEBUG_REMOTE_CMD
@@ -1252,7 +1253,7 @@ again:
 
 	if(IncomingMsg.Length <= sizeof(RemoteMsgStruct) - 4)
 	{
-	  if( (len=recv(targ->newFd, (char *)&IncomingMsg.BoardType, IncomingMsg.Length, NULL))
+	  if( (len=recv(targ->newFd, (char *)&IncomingMsg.BoardType, IncomingMsg.Length, 0))
             == IncomingMsg.Length)
 	  {
 
@@ -1373,5 +1374,12 @@ again:
 }
 
 
+#else /*defined(VXWORKS) || defined(Linux_vme)*/
 
+void
+vmeserver_dummy()
+{
+  return;
+}
 
+#endif /*defined(VXWORKS) || defined(Linux_vme)*/

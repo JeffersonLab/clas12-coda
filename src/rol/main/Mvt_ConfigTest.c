@@ -20,7 +20,6 @@
 --------------------------------------------------------------------------------
 */
 
-#ifdef Linux_vme
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +29,10 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <errno.h>
+#include <unistd.h>
+
+
+#ifdef Linux_vme
 
 #include "Platform.h"
 #include "ReturnCodes.h"

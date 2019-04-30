@@ -9,6 +9,9 @@
 #include <X11/Xmu/CharSet.h>
 #include "rotated.h"
 #include <XmTabsP.h>
+
+#include "XcodaXpm_codaedit.h"
+
 /*#include <Balloon.h>*/
 static void activate(
 #if NeedFunctionPrototypes

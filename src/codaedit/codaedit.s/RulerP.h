@@ -77,7 +77,7 @@ typedef struct _XcodaRulerPart{
   GC            xor_GC;
   XSegment      segments[MAXSEGMENTS];
   XtCallbackList valueChanged;   /*callback list*/
-}XcodaRulerPart;
+} XcodaRulerPart;
 
 typedef struct _XcodaRulerRec{
   CorePart        core;
@@ -85,7 +85,7 @@ typedef struct _XcodaRulerRec{
   XmPrimitivePart primitive;
 #endif
   XcodaRulerPart     ruler;
-}XcodaRulerRec;
+} XcodaRulerRec;
 
-#endif RULERP_H
+#endif /*RULERP_H*/
   

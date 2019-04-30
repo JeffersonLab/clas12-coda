@@ -22,11 +22,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <errno.h>
 #include <execinfo.h>
 
 #include "ReturnCodes.h"
 #include "Parser.h"
+
+#include "i2c_eeprom.h"
+#include "i2c_Max16031.h"
 
 #include "CBus.h"
 #include "CBus_Common.h"

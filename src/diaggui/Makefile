@@ -45,7 +45,8 @@ CLON_FLAGS += -I./src.s \
 				-I./inc/vetroc \
 				-I$(CODA)/common/include
 
-CLON_FLAGS += -I$(IPC_HOME)/src/main -I$(CODA)/src/ipc/ipc.s -w
+CLON_FLAGS += -I$(IPC_HOME)/include/activemq-cpp-$(IPC_VER) \
+		   	  -I$(CODA)/src/ipc/ipc.s -w
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   CLON_FLAGS += -I/usr/local/include/apr-1
@@ -57,12 +58,12 @@ endif
 
 LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
   LIBNAMES += /usr/local/lib/libapr-1.so
   LIBNAMES += -luuid -lrt -lcrypt -lssl -lcrypto -ldl -lz
   LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
 else
-  LIBNAMES += /usr/local/lib/libactivemq-cpp.so
+  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
   LIBNAMES += -lapr-1
   LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
   LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
