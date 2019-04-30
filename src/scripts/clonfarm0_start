@@ -27,7 +27,7 @@ set ET2ET   = daq_comp.tcl
 set ETMON   = daq_comp.tcl
 
 set ET_comp     = 'et_start -n 1000 -s 1100000 -f /tmp/et_sys_clasprod'
-set ET2ET_comp  = 'et_2_et clondaq6:/tmp/et_sys_clasprod clonfarm0:/tmp/et_sys_clasprod ET2FARM0'
+set ET2ET_comp  = 'et_2_et clondaq6:/et/clasprod clonfarm0:/tmp/et_sys_clasprod ET2FARM0'
 set ETMON_comp  = 'et_monitor -f /tmp/et_sys_clasprod'
 
 

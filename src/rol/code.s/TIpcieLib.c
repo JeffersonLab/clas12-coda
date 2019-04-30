@@ -22,6 +22,8 @@
  * </pre>
  *----------------------------------------------------------------------------*/
 
+#ifndef Linux_armv7l
+
 #define _GNU_SOURCE
 
 #define DEVEL
@@ -8161,3 +8163,12 @@ tipGetNumberOfBlocksInBuffer()
   nblocks = (blockBuffer&TIP_BLOCKBUFFER_BLOCKS_READY_MASK)>>8;
   return(nblocks);
 }
+
+#else /*Linux_armv7l*/
+
+void
+TIpcieLib_default()
+{
+}
+
+#endif

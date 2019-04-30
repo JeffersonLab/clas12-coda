@@ -2283,7 +2283,7 @@ sspGt_FtofPcuDelayScan(int delay_min, int delay_max, int idle)
       else
         ref = ((float)val) / 100000.0;
 
-       vals = sspReadReg(&pSSP[id]->gt.sspcuftof.Scaler);
+      vals = sspReadReg(&pSSP[id]->gt.sspcuftof.Scaler[0]);
 
       sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0);
       SSPUNLOCK();
