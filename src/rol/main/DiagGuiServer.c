@@ -1601,7 +1601,7 @@ main(int argc, char *argv[])
 #endif
 
 
-#ifdef SCALER_THREAD
+#if defined(SCALER_THREAD) && !defined(Linux_armv7l)
 
 #ifdef Linux_vme
   {
@@ -1631,7 +1631,7 @@ main(int argc, char *argv[])
   }
   else if( (!strncmp(hostname,"ADCECAL",7)) || (!strncmp(hostname,"ADCPCAL",7)) || (!strncmp(hostname,"ADCFTOF",7)) ||
            (!strncmp(hostname,"ADCCTOF",7)) || (!strncmp(hostname,"ADCBAND",7)) || (!strncmp(hostname,"ADCCND",6)) ||
-           (!strncmp(hostname,"ADCFT",5)) )
+           (!strncmp(hostname,"ADCFT",5))   || (!strncmp(hostname,"HPS1",4))    || (!strncmp(hostname,"HPS2",4)) )
   {
     epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "fadc");
   }

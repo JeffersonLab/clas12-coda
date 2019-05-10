@@ -26,6 +26,8 @@ $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/rol1_master.so \
 	./$(OSTYPE_MACHINE)/rol/scaler1_slave.so \
 	./$(OSTYPE_MACHINE)/rol/fbrol1_master.so \
 	./$(OSTYPE_MACHINE)/rol/fbrol1_slave.so \
+	./$(OSTYPE_MACHINE)/rol/hpssvt1_master.so \
+	./$(OSTYPE_MACHINE)/rol/hpssvt1_slave.so \
 	./$(OSTYPE_MACHINE)/rol/srs1_master.so \
 	./$(OSTYPE_MACHINE)/rol/srs1_slave.so \
 	./$(OSTYPE_MACHINE)/rol/rol1mvt_master.so \
@@ -72,6 +74,14 @@ $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/rol1_master.so \
 	$(MKROLDIR)
 	$(CC) -DTI_SLAVE $(CCROLOPT)
 
+./$(OSTYPE_MACHINE)/rol/hpssvt1_master.o : rols/hpssvt1.c
+	$(MKROLDIR)
+	$(CC) -DTI_MASTER $(CCROLOPT)
+
+./$(OSTYPE_MACHINE)/rol/hpssvt1_slave.o : rols/hpssvt1.c
+	$(MKROLDIR)
+	$(CC) -DTI_SLAVE $(CCROLOPT)
+
 #endif
 
 
@@ -86,6 +96,9 @@ LDFC = $(LDCXX)
 
 CLON_FLAGS += -I./inc -I./code.s -I./mvt.s -I./jvme -I./sfi.s -I../vtp -I$(CODA)/common/include
 CLON_FLAGS += -DIPC
+
+# hps run
+CLON_FLAGS += -I$(CLAS)/slac_svt/heavy-photon-daq/software/rogue_coda/install/include/hps/builder/client/
 
 ifeq ("$(OSTYPE)","Linux")
   CLON_FLAGS += -I/usr/local/src/tirpci/tirpci_installation/include
@@ -129,11 +142,16 @@ else ifeq ("$(OSTYPE_MACHINE)","Linux_nios2")
 else
 
 
+### for hps run
+  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+#    LIBNAMES += $(CLAS)/slac_svt/heavy-photon-daq/software/rogue_coda/install/lib/libhps-builder-client-real.so
+    LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libhps-builder-client-real.so
+  endif
 
-##########  LIBNAMES += $(CODA)/src/codatt/$(OSTYPE_MACHINE)/lib/libcodatt.a
-##########  LIBNAMES += $(CODA)/src/bosio/$(OSTYPE_MACHINE)/lib/libbosio.a
-
+### 
 #################  LIBNAMES += $(CODA)/src/gem/$(OSTYPE_MACHINE)/lib/libgem.a
+
+
 
 ###  LIBNAMES += $(CODA)/src/dac/$(OSTYPE_MACHINE)/lib/libdac.a
 

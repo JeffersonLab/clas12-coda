@@ -11,8 +11,9 @@
 #define __TSPRIMARY_ROL__
 
 
-#define DAQ_READ_CONF_FILE  {daqSetExpid(expid); daqConfig("");  if(strncasecmp(rol->confFile,"none",4)) daqConfig(rol->confFile);}
-#define TS_READ_CONF_FILE   {tsSetExpid(expid);  tsConfig("");   if(strncasecmp(rol->confFile,"none",4)) tsConfig(rol->confFile);}
+#define DAQ_READ_CONF_FILE  {daqSetExpid(expid);  daqConfig("");  if(strncasecmp(rol->confFile,"none",4)) daqConfig(rol->confFile);}
+#define TS_READ_CONF_FILE   {tsSetExpid(expid);   tsConfig("");   if(strncasecmp(rol->confFile,"none",4)) tsConfig(rol->confFile);}
+#define DSC2_READ_CONF_FILE {dsc2SetExpid(expid); dsc2Config(""); if(strncasecmp(rol->confFile,"none",4)) dsc2Config(rol->confFile);}
 
 
 #include <stdio.h>

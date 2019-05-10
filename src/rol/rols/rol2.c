@@ -432,10 +432,12 @@ rol2trig(int a, int b)
   int banknum = 0;
   int have_time_stamp, a_nevents2, a_event_type;
   int a_event_number_l, a_timestamp_l, a_event_number_h, a_timestamp_h, a_bitpattern;
-  int a_clusterN, a_clusterE, a_clusterY, a_clusterX, a_clusterT, a_type, a_data, a_time;
+  int a_clusterN, a_clusterE, a_clusterY, a_clusterX, a_clusterT, a_type, a_data, a_time, a_top_nbot;
   int a_instance, a_view, a_coord, a_energy, a_coordU, a_coordV, a_coordW, a_lane;
   int a_hitmask0, a_hitmask1,a_hitmask2;
   int a_h1tag, a_h2tag, a_nhits, a_coordX, a_coordY;
+  int a_h_l1l2x_geom_pass,a_h_l1l2_geom_pass,a_h_l2_pass,a_h_l1_pass,a_pde_pass,a_minx_pass,a_nmin_pass,a_emax_pass,a_emin_pass;
+  int a_res,a_coplanar_pass,a_edslope_pass,a_diff_pass,a_sum_pass,a_calib_type,a_calib_flags,a_mult_tot,a_mult_bot,a_mult_top;
   long long timestamp, latency, latency_offset;
 
   int nheaders, ntrailers, nbcount, nbsubtract, nwtdc;
@@ -2060,6 +2062,129 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
               ii++;
             }
           }
+
+
+
+
+
+          else if( ((datain[ii]>>23)&0xF) == 0x2) /* HPS CLUSTER */
+          {
+            a_clusterX = ((datain[ii]>>0)&0x3F) | ((datain[ii]&0x20)?0xFFFFFFC0:0);
+            a_clusterY = ((datain[ii]>>6)&0xF)  | ((datain[ii]&0x200)?0xFFFFFFF0:0);
+            a_clusterE = ((datain[ii]>>10)&0x1FFF);
+            ii++;
+
+            a_clusterN = ((datain[ii]>>10)&0xF);
+            a_clusterT = ((datain[ii]>>0)&0x3FF);
+            ii++;
+
+#ifdef DEBUG7
+        printf("[%3d] HPS_CLUSTER_(T,N,X,Y,E) %d %d %d %d %d\n",ii,a_clusterT,a_clusterN,a_clusterX,a_clusterX,a_clusterY,a_clusterE);
+#endif
+            while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
+            {
+              printf("ERROR2 in VTP:HPS_CLUSTER pass1 = 0x%08X\n",datain[ii]); 
+              ii++;
+            }
+          }
+
+          else if( ((datain[ii]>>23)&0xF) == 0x3) /* HPS SINGLE TRIG */
+          {
+            a_instance = ((datain[ii]>>20)&0x7);
+            a_top_nbot = ((datain[ii]>>19)&0x1);
+            a_h_l1l2x_geom_pass = ((datain[ii]>>18)&0x1);
+            a_h_l1l2_geom_pass = ((datain[ii]>>17)&0x1);
+            a_h_l2_pass = ((datain[ii]>>16)&0x1);
+            a_h_l1_pass = ((datain[ii]>>15)&0x1);
+            a_pde_pass  = ((datain[ii]>>14)&0x1);
+            a_minx_pass = ((datain[ii]>>13)&0x1);
+            a_nmin_pass = ((datain[ii]>>12)&0x1);
+            a_emax_pass = ((datain[ii]>>11)&0x1);
+            a_emin_pass = ((datain[ii]>>10)&0x1);
+            a_time      = ((datain[ii]>>0)&0x3FF);
+            ii++;
+
+
+#ifdef DEBUG7
+        printf("[%3d] HPS_SINGLE_TRIG_(INST,TOP/BOT,L1L2X,L1L2,L2,L1,PDE,MINX,NMIN,EMAX,EMIN,TIME): %d %d %d %d %d %d %d %d %d %d %d %d\n",ii,
+			   a_instance,a_top_nbot,a_h_l1l2x_geom_pass,a_h_l1l2_geom_pass,a_h_l2_pass,a_h_l1_pass,a_pde_pass,a_minx_pass,a_nmin_pass,a_emax_pass,a_emin_pass,a_time);
+#endif
+            while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
+            {
+              printf("ERROR2 in VTP:HPS_SINGLE_TRIG pass1 = 0x%08X\n",datain[ii]); 
+              ii++;
+            }
+          }
+
+          else if( ((datain[ii]>>23)&0xF) == 0x4) /* HPS PAIR TRIG */
+          {
+            a_instance = ((datain[ii]>>20)&0x7);
+            a_res = ((datain[ii]>>14)&0x3F);
+            a_coplanar_pass = ((datain[ii]>>13)&0x1);
+            a_edslope_pass = ((datain[ii]>>12)&0x1);
+            a_diff_pass = ((datain[ii]>>11)&0x1);
+            a_sum_pass = ((datain[ii]>>10)&0x1);
+            a_time      = ((datain[ii]>>0)&0x3FF);
+            ii++;
+
+
+#ifdef DEBUG7
+        printf("[%3d] HPS_PAIR_TRIG_(INST,COPLANAR,EDSLOPE,DIFF,SUM,TIME): %d %d %d %d %d %d\n",ii,
+			   a_instance,a_coplanar_pass,a_edslope_pass,a_diff_pass,a_sum_pass,a_time);
+#endif
+            while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
+            {
+              printf("ERROR2 in VTP:HPS_PAIR_TRIG pass1 = 0x%08X\n",datain[ii]); 
+              ii++;
+            }
+          }
+
+          else if( ((datain[ii]>>23)&0xF) == 0x5) /* HPS CALIB TRIG */
+          {
+            a_calib_type = ((datain[ii]>>19)&0xF);
+            a_calib_flags = ((datain[ii]>>10)&0x1FF);
+            a_time      = ((datain[ii]>>0)&0x3FF);
+            ii++;
+
+
+#ifdef DEBUG7
+        printf("[%3d] HPS_CALIB_TRIG_(INST,COPLANAR,EDSLOPE,DIFF,SUM,TIME): %d %d %d\n",ii,
+			   a_calib_type,a_calib_flags,a_time);
+#endif
+            while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
+            {
+              printf("ERROR2 in VTP:HPS_CALIB_TRIG pass1 = 0x%08X\n",datain[ii]); 
+              ii++;
+            }
+          }
+
+          else if( ((datain[ii]>>23)&0xF) == 0x6) /* HPS MULT TRIG */
+          {
+            a_mult_tot = ((datain[ii]>>18)&0xF);
+            a_mult_bot = ((datain[ii]>>14)&0xF);
+            a_mult_top = ((datain[ii]>>10)&0xF);
+            a_time     = ((datain[ii]>>0)&0x3FF);
+            ii++;
+
+
+#ifdef DEBUG7
+        printf("[%3d] HPS_CMULT_TRIG_(MULT_TOT,MULT_BOT,MUT_TOP,TIME): %d %d %d %d\n",ii,
+			   a_mult_tot,a_mult_bot,a_mult_top,a_time);
+#endif
+            while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
+            {
+              printf("ERROR2 in VTP:HPS_MULT_TRIG pass1 = 0x%08X\n",datain[ii]); 
+              ii++;
+            }
+          }
+
+
+
+
+
+
+
+
           else
           {
             printf("ERROR2 in VTP data1C: UNKNOWN subtype: [%3d] 0x%08x\n",ii,datain[ii]);
@@ -4594,12 +4719,60 @@ if(a_pulsenumber == 0)
                 b08 += 4;
                 ii++;
 #ifdef DEBUG7
-                printf("[%3d] DCROAD_(MASK0,MASK1,MASK2,TIME) %d %d %d\n",ii,a_hitmask0,a_hitmask1,a_hitmask2,a_time);
+                printf("[%3d] pass2 DCROAD_(MASK0,MASK1,MASK2,TIME) %d %d %d\n",ii,a_hitmask0,a_hitmask1,a_hitmask2,a_time);
 #endif
               }
+
+
+
+
+              else if(((datain[ii]>>23)&0xF) == 0x2) /* HPS CLUSTER */
+              {
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+              }
+
+              else if(((datain[ii]>>23)&0xF) == 0x3) /* HPS SINGLE TRIG */
+              {
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+              }
+
+              else if(((datain[ii]>>23)&0xF) == 0x4) /* HPS PAIR TRIG */
+              {
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+              }
+
+              else if(((datain[ii]>>23)&0xF) == 0x5) /* HPS CALIB TRIG */
+              {
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+              }
+
+              else if(((datain[ii]>>23)&0xF) == 0x6) /* HPS MULT TRIG */
+              {
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+              }
+
+
+
+
+
+
               else
               {
-                printf("ERROR: VTP UNKNOWN data1C: [%3d] 0x%08x\n",ii,datain[ii]);
+                printf("ERROR: pass2 VTP UNKNOWN data1C: [%3d] 0x%08x\n",ii,datain[ii]);
                 error = 1;
                 ii++;
               }
@@ -4641,7 +4814,7 @@ if(a_pulsenumber == 0)
             else if( ((datain[ii]>>27)&0x1F) == 0x1F)
             {
 #ifdef DEBUG7
-	          printf("[%3d] FILLER WORD\n",ii);
+	          printf("[%3d] pass2 FILLER WORD\n",ii);
               printf(">>> do nothing\n");
 #endif
 	          ii++;
@@ -4649,14 +4822,14 @@ if(a_pulsenumber == 0)
             else if( ((datain[ii]>>27)&0x1F) == 0x1E)
             {
 #ifdef DEBUG7
-	          printf("[%3d] DNV\n",ii);
+	          printf("[%3d] pass2 DNV\n",ii);
               printf(">>> do nothing\n");
 #endif
 	          ii++;
             }
             else
 		    {
-              printf("ERROR: VTP UNKNOWN data2: [%3d] 0x%08x\n",ii,datain[ii]);
+              printf("ERROR: pass2 VTP UNKNOWN data2: [%3d] 0x%08x\n",ii,datain[ii]);
               error = 1;
               ii++;
 		    }
@@ -4673,7 +4846,7 @@ if(a_pulsenumber == 0)
           int jjj;
 		  for(jjj=0; jjj<lenin; jjj++)
           {
-            printf("ERRRR: [%5d] 0x%08x\n",jjj,datain[jjj]);
+            printf("ERRRR: pass2 [%5d] 0x%08x\n",jjj,datain[jjj]);
           }
 
 #if 0

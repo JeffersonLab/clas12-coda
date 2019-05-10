@@ -1719,6 +1719,91 @@ codaPrestart()
 
 
 
+/* when end clicked, following printed (GOES FIRST, BEFORE EB):
+
+CODAtcpServer: start work thread
+CODAtcpServer: befor: socket=5 address>129.57.86.64< port=58891
+CODAtcpServer: wait: coda request >go< in progress
+CODAtcpServerWorkTask entry
+codaExecute reached, message >end<, len=3
+codaExecute: 'end' transition
+codaEnd reached ??
+codaEnd reached !!
+codaEnd: calling ROL1's end (0x617c969a)
+INIT_NAME: INFO: rolp->daproc = 3
+testtdisable reached
+
+  Read 496498 events
+
+INFO: User End 1 Executed
+codaEnd: finished ROL1's end
+codaUpdateStatus: dbConnecting ..
+codaUpdateStatus: dbConnect done
+
+codaUpdateStatus(table 'process'): >UPDATE process SET state='ending' WHERE name='ROC85'<
+codaUpdateStatus: dbDisconnecting ..
+codaUpdateStatus: dbDisconnect done
+codaUpdateStatus: updating request ..
+UDP_standard_request >sta:ROC85 ending<
+UDP_standard_request >sta:ROC85 ending<
+UDP_standard_request >sta:ROC85 ending<
+UDP_standard_request >sta:ROC85 ending<
+UDP_standard_request >sta:ROC85 ending<
+UDP_standard_request >sta:ROC85 ending<
+UDP_cancel: cancel >sta:ROC85 active<
+codaUpdateStatus: updating request done
+codaEnd: NOW !!!!!!!!!!!!!!!!!!!
+codaEnd: NOW !!!!!!!!!!!!!!!!!!!
+codaEnd: NOW !!!!!!!!!!!!!!!!!!!
+codaEnd: NOW !!!!!!!!!!!!!!!!!!!
+codaEnd: NOW !!!!!!!!!!!!!!!!!!!
+codaEnd: unlocking
+codaEnd: done
+codaExecute done
+CODAtcpServerWorkTask exit ?
+CODAtcpServerWorkTask exit !
+
+  3: ROLS_LOOP LOCKed, buffer sent
+  3: ROLS_LOOP UNLOCKed
+
+coda_roc: DA_ENDING before lock
+coda_roc: DA_ENDING after lock
+coda_roc: in DA_ENDING last event=496498 nevents=496498
+coda_roc: in DA_ENDING rocp->active=2
+coda_roc: call informEB(EV_END)
+informEB reached
+informEB: 11 -1 85 1 13 1 - 0x00000004 0x009401cc 0x000004b0 0x00000203 0x00079372 0x00000001
+Inserted End event on queue
+codaUpdateStatus: dbConnecting ..
+net_thread: END condition received
+NET_THREAD GOT END 0 SEC
+codaUpdateStatus: dbConnect done
+codaUpdateStatus(table 'process'): >UPDATE process SET state='downloaded' WHERE name='ROC85'<
+codaUpdateStatus: dbDisconnecting ..
+codaUpdateStatus: dbDisconnect done
+codaUpdateStatus: updating request ..
+UDP_standard_request >sta:ROC85 downloaded<
+UDP_standard_request >sta:ROC85 downloaded<
+UDP_standard_request >sta:ROC85 downloaded<
+UDP_standard_request >sta:ROC85 downloaded<
+UDP_standard_request >sta:ROC85 downloaded<
+UDP_standard_request >sta:ROC85 downloaded<
+UDP_cancel: cancel >sta:ROC85 ending<
+codaUpdateStatus: updating request done
+ended after 496498 events
+roc_network cleanup +++++++++++++++++++++++++++++++++++++ 1
+bb_cleanup 0: 0x00622af0
+bb_cleanup 1: 0x00bc8510
+bb_cleanup 2
+roc_network +++++++++++++++++++++++++++++++++++++ 2
+LINK_close: socket #13 connection closed
+roc_network +++++++++++++++++++++++++++++++++++++ 3
+WRITE THREAD EXIT
+call: 'ROC85 close_links'
+rocCloselink reached
+
+*/
+
 
 
 /******************************************************************************
@@ -2533,6 +2618,9 @@ TRANSITION_UNLOCK;
       }
       printf("Inserted End event on queue\n");
       rocp->active = 1;
+
+	  /*sergey: should we wait here until 'roc_network::LINK_close' called by netwotk thread, so we close link before EB End transition called ? */
+      /* as soon as our status become 'downloaded' runcontrol will send End command to EB (?) */
       if(codaUpdateStatus("downloaded") != CODA_OK)
       {
         setHeartBeat(HB_ROL,0,-1);

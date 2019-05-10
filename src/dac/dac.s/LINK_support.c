@@ -1019,6 +1019,14 @@ acceptagain:
     }
 
 
+    /* received command to exit */
+    if(theLink->exit == 1)
+	{
+      printf("[%2d] handle_link(): got exit command\n",fd); fflush(stdout);
+      break;
+	}
+
+
   }
   /* end of main loop while(1) */
   /*****************************/
@@ -1032,6 +1040,7 @@ acceptagain:
 
 
   printf("[%2d] 907\n",fd); fflush(stdout);
+  theLink->exit = -1;
   pthread_exit(0);
 }
 
@@ -1335,6 +1344,7 @@ ending_for_recv = 0;
   theLink->roc_queue = roc_queues[roc_queue_ix++];
   /*theLink->roc_queue->parent = theLink->name;donotneedit???*/
   printf("theLink->name=%s\n",theLink->name);
+  theLink->exit = 0;
   printf("LINK_thread_init(): creating thread ..\n"); fflush(stdout);
 
 printf("++++++6+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[2]);
@@ -1366,12 +1376,12 @@ printf("++++++6+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
 
 
 
-
 int
 debCloseLink(DATA_LINK theLink, MYSQL *dbsock)
 {
   void *status;
   char tmp[1000];
+  int exittimeout = 3;
 
   /* */
   if(theLink == NULL)
@@ -1450,12 +1460,22 @@ the need for synchronization constructs (mutexes/semaphores).
    * In either case, we close the file, delete the file handler, and
    * return a null string.
    */
+#if 0
     theLink->thread = 0;  /* SERGEY: that thread is 'handle_link()', it is alive at that point .. all wierd ..*/
                           /* should we tell 'handle_link()' to exit and clean itself instead of doing all following ?? */
                           /* from other side what if handle_link() is dead ? */
                           /* all problems here probably related to it */
+#endif
+    theLink->exit = 1; /* tells thread to exit */
+    /* give it a time to exit */
+    while((theLink->exit!=-1) && (exittimeout>0))
+	{
+      sleep(1);
+      exittimeout --;
+	}
 
-    printf("debCloseLink reached, fd=%d sock=%d\n",theLink->fd,theLink->sock);
+    printf("debCloseLink reached, fd=%d sock=%d exit=%d (exittimeout=%d)\n",
+		   theLink->fd,theLink->sock,theLink->exit,exittimeout);
     fflush(stdout);
 
     /* shutdown socket connection */
@@ -1479,6 +1499,7 @@ the need for synchronization constructs (mutexes/semaphores).
 	    printf("13\n");fflush(stdout);
         printf("debCloseLink: ERROR in socket fd=%d sock=%d connection closing\n",
           theLink->fd,theLink->sock);
+        exit(0);
       }
     }
     else
@@ -1514,8 +1535,11 @@ the need for synchronization constructs (mutexes/semaphores).
 
 
 
-  /* cancel thread if exist */
+  /* cancel thread if still exists */
+#if 0
   if(theLink->thread)
+#endif
+  if(theLink->exit!=-1)
   {
     pthread_t thread = theLink->thread;
     printf("debCloseLink: canceling thread .\n");
@@ -1523,8 +1547,10 @@ the need for synchronization constructs (mutexes/semaphores).
     printf("debCloseLink: canceling thread ..\n");
     /*pthread_join(thread,&status); stuck here if one of the ROCs crashed */
     printf("debCloseLink: canceling thread !\n");
-    theLink->thread = 0;
   }
+
+  theLink->thread = 0;
+  theLink->exit = 0;
 
   /* SHOULD DO FOLLOWING ONLY IF handle_thread() IS DONE !!! (AND PREVIOUS AS WELL ??) */
 

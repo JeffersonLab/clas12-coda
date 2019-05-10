@@ -1666,6 +1666,12 @@ fflush(stdout);
 
 	SHUTDOWN_BUILD;
 
+	/*
+polling_routine ================!!!!!!!!!!!!!!!!!!=====
+cancel building threads
+Segmentation fault
+	*/
+
     printf("INFO: ended5\n");fflush(stdout);
     ebp->ended = 0;
     printf("INFO: ended4\n");fflush(stdout);
@@ -2539,6 +2545,166 @@ command INDEPENDENTLY (through event type EV_END or error condition)
 and polling_routine will see it and end, so here we just waiting
 for 'downloaded'; if it is not happeded during ... sec, we will
 force end (TO DO) */
+
+
+
+
+
+/* when end clicked, following printed (GOES SECOND, AFTER ROC):
+
+CODAtcpServer: start work thread
+CODAtcpServer: befor: socket=6 address>129.57.86.64< port=59685
+CODAtcpServer: wait: coda request >go< in progress
+CODAtcpServerWorkTask entry
+codaExecute reached, message >end<, len=3
+codaExecute: 'end' transition
+codaEnd 1
+codaEnd 2
+codaEnd 3
+codaEnd 4
+codaEnd 5
+>>>>>>>>>> name >EBDAQ4< state >active<
+codaEnd 6
+deb_end reached
+deb_end: state is active
+codaEnd 7
+===============================================
+===============================================
+===============================================
+===============================================
+===============================================
+codaEnd 8
+INFO: Ending (C)
+codaEnd 9
+deb_end: 1 threads still alive - waiting 0 times ..
+<<< time2=      5 microsec (nevents2put=64) >>>
+CODA_decode_spec: len=12 type=148
+[0] WE ARE NOT ENDING BUT GOT END EVENT FROM ROC 0
+[0] force_end 1 end_event_done 0
+128> oooooooooooooooooooooooooooooooo oooooooooo|ooooooooooooooooooooo oooooooooooooooooooooooooooooooo oooooooooooooooooooooooooooooooo 
+[0] NEED TO TEST AND PROBABLY REDESIGN THAT PART !!!
+[0] EVENT_ENCODE_SPEC 2 ..
+[0] .. done
+[0] handle_build_cleanup
+[0] flush ET system
+[0] detached from ET
+[0] remove mutex locks and shutdown fifos
+
+[0] flushing input streams
+get_cb_count: count = 0
+[0] count for roc[00] = 0
+get_cb_count: count = 0
+
+[0] flushing input streams
+get_cb_count: count = 0
+[0] count for roc[01] = 0
+get_cb_count: count = 0
+
+[0] flushing input streams
+get_cb_count: count = 0
+[0] count for roc[02] = 0
+get_cb_count: count = 0
+
+[0] flushing input streams
+get_cb_count: count = 0
+[0] count for roc[03] = 0
+get_cb_count: count = 0
+
+[0] flushing input streams
+get_cb_count: count = 0
+[0] count for roc[04] = 0
+get_cb_count: count = 0
+
+[0] flushing input streams
+get_cb_count: count = 0
+
+................
+
+[0] flushing input streams
+get_cb_count: count = 0
+[0] count for roc[125] = 0
+get_cb_count: count = 0
+
+[0] flushing input streams
+get_cb_count: count = 0
+[0] count for roc[126] = 0
+get_cb_count: count = 0
+[0] ============= Build threads cleaned
+[0] ============= Build threads cleaned
+[0] ============= Build threads cleaned
+[0] ============= Build threads cleaned
+[0] ============= Build threads cleaned
+[0] build thread exiting: 1 1
+[0] The implementation has detected that the value  specified by thread does not refer to a joinable thread.
+polling_routine ================!!!!!!!!!!!!!!!!!!=====
+cancel building threads
+=c=============================================
+=c=============================================
+=c=============================================
+=c====
+>>>>> close link from >ROC85< link=0xfc007560
+debCloseLink: theLink=0xfc007560 -> closing
+debCloseLink reached, fd=8 sock=9
+11: shutdown fd=8
+12
+debCloseLink: socket fd=8 sock=9 connection closed
+903 8
+904 8
+905 8
+906
+[ 8] LINK_sized_read(): closed
+[ 8] handle_link(): LINK_sized_read() returns 0
+[ 8] handle_link(): put_cb_data calling ...
+[ 8] PUT: fifo is being emptied !
+[ 8] handle_link(): put_cb_data called
+[ 8] handle_link(): thread exit
+[ 8] 907
+debCloseLink: link is down
+debCloseLink: free memory
+debCloseLink: done.
+=cc============================================
+=cc============================================
+=cc============================================
+INFO: ended5
+INFO: ended4
+INFO: ended3
+INFO: ended31 (0x01427970)
+INFO: ended32 (0x0140da40)
+INFO: ended2 (0x0140da40)
+INFO: ended1
+codaUpdateStatus: dbConnecting ..
+codaUpdateStatus: dbConnect done
+codaUpdateStatus(table 'process'): >UPDATE process SET state='downloaded' WHERE name='EBDAQ4'<
+codaUpdateStatus(table 'sessions'): >UPDATE sessions SET log_name='downloaded' WHERE name='clastest1'<
+codaUpdateStatus: dbDisconnecting ..
+codaUpdateStatus: dbDisconnect done
+codaUpdateStatus: updating request ..
+UDP_standard_request >sta:EBDAQ4 downloaded<
+UDP_standard_request >sta:EBDAQ4 downloaded<
+UDP_standard_request >sta:EBDAQ4 downloaded<
+UDP_standard_request >sta:EBDAQ4 downloaded<
+UDP_standard_request >sta:EBDAQ4 downloaded<
+UDP_standard_request >sta:EBDAQ4 downloaded<
+UDP_cancel: cancel >sta:EBDAQ4 active<
+codaUpdateStatus: updating request done
+INFO: ended
+CODAtcpServer: wait: coda request >end< in progress
+codaEnd 10
+codaEnd 11
+DEB_END: all threads are exited
+codaEnd 10
+codaEnd 11
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+codaExecute done
+CODAtcpServerWorkTask exit ?
+CODAtcpServerWorkTask exit !
+*/
+
+
 int
 codaEnd()
 {
@@ -2585,8 +2751,11 @@ printf("codaEnd 8\n");fflush(stdout);
   { 
     printf("INFO: already ended, got all end(s) from ROC(s)\n");
 printf("codaEnd 81\n");fflush(stdout);
+
+/* ??? we are 'downloaded' already, why doing following ??? */
     tcpState = DA_DOWNLOADED;
     if(codaUpdateStatus("downloaded") != CODA_OK) return(CODA_ERROR);
+
 printf("codaEnd 82\n");fflush(stdout);
   }
   else

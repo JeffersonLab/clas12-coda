@@ -173,7 +173,7 @@ typedef struct data_link
   int fd;           /* accepted socket (returned by accept()) */
   char host[100];
   int port;
-  int thread_exit;
+  int exit;
   int bufCnt;
   CIRCBUF *roc_queue;
 } DATA_LINK_S;

@@ -8,6 +8,7 @@
 
 static int nusertrig, ndone;
 
+#define USE_DSC2
 
 
 #undef DEBUG
@@ -67,6 +68,11 @@ static char ssname[80];
 #include "tsLib.h"
 #include "tsConfig.h"
 #include "tdLib.h"
+
+#ifdef USE_DSC2
+#include "dsc2Lib.h"
+#include "dsc2Config.h"
+#endif
 
 void usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE);
 void usrtrig_done();
@@ -406,6 +412,48 @@ sleep(1);
 
 
 
+
+
+
+#ifdef USE_DSC2
+  printf("DSC2 Download() starts =========================\n");
+
+#ifndef VXWORKS
+  vmeSetQuietFlag(1); /* skip the errors associated with BUS Errors */
+#endif
+vmeBusLock();
+  dsc2Init(0x100000,0x80000,20,0);
+vmeBusUnlock();
+#ifndef VXWORKS
+  vmeSetQuietFlag(0); /* Turn the error statements back on */
+#endif
+
+  ndsc2 = dsc2GetNdsc();
+  if(ndsc2>0)
+  {
+    DSC2_READ_CONF_FILE;
+	/*do not need it here
+    maxA32Address = dsc2GetA32MaxAddress();
+    fadcA32Address = maxA32Address + FA_MAX_A32_MEM;
+	*/
+    ndsc2_daq = dsc2GetNdsc_daq();
+  }
+  else
+  {
+    ndsc2_daq = 0;
+  }
+  printf("dsc2: %d boards set to be readout by daq\n",ndsc2_daq);
+  printf("DSC2 Download() ends =========================\n\n");
+#endif
+
+
+
+
+
+
+
+
+
   sprintf(rcname,"RC%02d",rol->pid);
   printf("rcname >%4.4s<\n",rcname);
 
@@ -477,6 +525,16 @@ vmeBusUnlock();
 vmeBusLock();
   tsIntDisable();
 vmeBusUnlock();
+
+
+
+
+#ifdef USE_DSC2
+  printf("DSC2 Prestart() starts =========================\n");
+  /* dsc2 configuration */
+  if(ndsc2>0) DSC2_READ_CONF_FILE;
+  printf("DSC2 Prestart() ends =========================\n\n");
+#endif
 
 
 
@@ -680,6 +738,16 @@ vmeBusLock();
   tsSetSyncEventInterval(0/*10000*//*block_level*/);
 vmeBusUnlock();
 
+#ifdef USE_DSC2
+  for(ii=0; ii<ndsc2_daq; ii++)
+  {
+    slot = dsc2Slot(ii);
+vmeBusLock();
+    dsc2ResetScalersGroupA(slot);
+    dsc2ResetScalersGroupB(slot);
+vmeBusUnlock();
+  }
+#endif
 
   /* always clear exceptions */
   jlabgefClearException(1);
@@ -916,6 +984,18 @@ vmeBusUnlock();
       chptr += len;
       nbytes += len;
 
+#ifdef USE_DSC2
+	  if(ndsc2>0)
+	  {
+vmeBusLock();
+        len = dsc2UploadAll(chptr, 10000);
+vmeBusUnlock();
+        /*printf("\nDSC2 len=%d\n",len);
+        printf("%s\n",chptr);*/
+        chptr += len;
+        nbytes += len;
+	  }
+#endif
 
 
 
