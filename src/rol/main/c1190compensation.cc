@@ -28,6 +28,7 @@ output:
 int
 main(int argc, char** argv)
 {
+  int nchan = 32; /* set default to v1290/v1290N, will change below if have v1190 */
   TH1::AddDirectory(0);
   gStyle->SetOptStat(0);
 
@@ -52,7 +53,11 @@ main(int argc, char** argv)
 	  for(int ibank=0;ibank<b0.tagNumCount(evio::tagNum(0xe107,0));ibank++)
       {
 		evio::bankIndex b = b0.getBankIndex(evio::tagNum(0xe107,0));
+
 		int arrlen = b.dataLength;
+		/*printf("arrlen=%d\n",arrlen);*/
+        if(arrlen>500) nchan=128; /* use data size to figure out tdc type (v1190 or v1290) */
+
 		void *datavoid = const_cast<void *> (b.data);
 		int *datachar = reinterpret_cast<int *> (datavoid);
 
@@ -63,12 +68,10 @@ main(int argc, char** argv)
 		  int tdc = ((datachar[iarr])&0x7FFFF)%1024;
 		  /*std::cout<<"slot/channel/tdc= "<<slot<<" "<<chan<<" "<<tdc<<std::endl;*/
 
-		  //if(slot!=16) /* exclude 1190 in slot 16 */
-          {
-			int id = slot*32+chan;
-			if(htdc[id]==0) htdc[id] = new TH1F("htdc", Form("slot %d chan %d",slot,chan), 1024,0,1024);
-			htdc[id]->Fill(tdc);
-		  }
+		  int id = slot*nchan+chan;
+		  if(htdc[id]==0) htdc[id] = new TH1F("htdc", Form("slot %d chan %d",slot,chan), 1024,0,1024);
+		  htdc[id]->Fill(tdc);
+
 		}
 	  }
 	}
@@ -89,11 +92,12 @@ main(int argc, char** argv)
   TCanvas* c1 = new TCanvas("c1","c", 1100,800);
   /* c1->Divide(1,2); */
   c1->Print("htdc.pdf[");
+  printf("\n\nnchan=%d\n",nchan);
   for (std::map<int, TH1F*>::iterator it=htdc.begin(); it!=htdc.end(); ++it)
   {
-    int islot = it->first/32;
-    int ichan = it->first%32;
-    printf("islot=%d ichan=%d\n",islot,ichan);
+    int islot = it->first/nchan;
+    int ichan = it->first%nchan;
+    printf("it->first=%d -> islot=%d ichan=%d\n",it->first,islot,ichan);
 
     /* for new slot, open new file */
     if(islot!=slot)

@@ -4987,36 +4987,33 @@ tdc1190WriteChannelCompensation(int id, int channel, unsigned char *table)
   CHECKID(id);
 
   if((channel < 0) || (channel > 31))
-    {
-      printf("%s: ERROR: Invalid channel (%d)\n",
-	     __FUNCTION__,
-	     channel);
-      return ERROR;
-    }
+  {
+    printf("%s: ERROR: Invalid channel (%d)\n",__FUNCTION__,channel);
+    return ERROR;
+  }
 
   /* Calculate starting page number */
   pagenum_0 = channel * 4;
 
   for(ipage = 0; ipage < 4; ipage++)
-    {
-      if(tdc1190EraseFlashPage(id, pagenum_0 + ipage) == ERROR)
+  {
+    if(tdc1190EraseFlashPage(id, pagenum_0 + ipage) == ERROR)
 	{
 	  rval = ERROR;
 	  printf("%s(%d, %d, *table): ERROR erasing Flash Page %d\n",
 		 __FUNCTION__, id, channel, pagenum_0 + ipage);
 	  
 	}
-      else
+    else
 	{
-	  if(tdc1190WriteFlashPage(id, (unsigned char *)&table[ipage*256],
-				   pagenum_0 + ipage) == ERROR)
-	    {
-	      rval = ERROR;
-	      printf("%s(%d, %d, *table): ERROR writing to Flash Page %d\n",
+	  if(tdc1190WriteFlashPage(id, (unsigned char *)&table[ipage*256], pagenum_0 + ipage) == ERROR)
+	  {
+	    rval = ERROR;
+	    printf("%s(%d, %d, *table): ERROR writing to Flash Page %d\n",
 		     __FUNCTION__, id, channel, pagenum_0 + ipage);
-	    }
+	  }
 	}
-    }
+  }
   
   return rval;
 }

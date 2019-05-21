@@ -36,7 +36,7 @@ static void Usage();
    * Slot  3:   0x11180000 <-1290
    * Slot  4:   0x11200000
    * Slot  5:   0x11280000
-   * Slot  6:   0x11300000 <-1290
+   * Slot  6:   0x11300000 <-1290, 1190
    * Slot  7:   0x11380000
    * Slot  8:   0x11400000
    * Slot  9:   0x11480000 <-1290
@@ -46,7 +46,7 @@ static void Usage();
    * Slot 13:   0x11680000 <-1290
    * Slot 14:   0x11700000
    * Slot 15:   0x11780000
-   * Slot 16:   0x11800000
+   * Slot 16:   0x11800000 <-      1190
    * Slot 17:   0x11880000
    * Slot 18:   0x11900000
    * Slot 19:   0x11980000
@@ -62,7 +62,7 @@ c1190ReadCompensationTable 0x11680000 tdcftof2_slot13.txt
 int
 main(int argc, char *argv[])
 {
-  int status, i;
+  int status, i, tdctype, nchan;
   int ipage = 0;//, npage = 4;
   int ichar = 0;//, nchar = 256;
   unsigned char sram[256];
@@ -146,6 +146,19 @@ main(int argc, char *argv[])
       goto CLOSE;
     }
 
+  tdctype = tdc1190Type(0);
+  printf("tdc type=%d\n",tdctype);
+
+  /* the number of 16-channel groups in board */
+  if(tdctype==1)
+  {
+    nchan = 128;
+  }
+  else
+  {
+    nchan = 32;
+  }
+
   if(argc==4) /* read delays */
   {
     int adjust[4];
@@ -160,22 +173,34 @@ main(int argc, char *argv[])
     tdc1190ReadCompensation(0, 1);
 
     int ichan;
-    for(ichan = 0; ichan < 32; ichan++)
+    for(ichan = 0; ichan < nchan; ichan++)
     {
       fprintf(filep,"# Channel %d\n", ichan);
 
-      for(ipage = 0; ipage < 4; ipage++)
-	  {
-	    tdc1190ReadCompensationSramPage(0, (unsigned char *)&sram,
-					  ichan*4 + ipage);
-	  
+      if(tdctype==1) /* 128-ch */
+      {
+	    tdc1190ReadCompensationSramPage(0, (unsigned char *)&sram, ichan);
 	    for(ichar = 0; ichar < 256; ichar++)
 	    {
 	      if(((ichar % 8) == 0) && (ichar != 0)) fprintf(filep, "\n");
 	      fprintf(filep, "0x%02x  ", sram[ichar]);
 	    }
 	    fprintf(filep, "\n");
-	  }
+      }
+      else /* 32-ch and 16-ch */
+      {
+        for(ipage = 0; ipage < 4; ipage++)
+	    {
+	      tdc1190ReadCompensationSramPage(0, (unsigned char *)&sram, ichan*4 + ipage);
+	      for(ichar = 0; ichar < 256; ichar++)
+	      {
+	        if(((ichar % 8) == 0) && (ichar != 0)) fprintf(filep, "\n");
+	        fprintf(filep, "0x%02x  ", sram[ichar]);
+	      }
+	      fprintf(filep, "\n");
+	    }
+      }
+
     }
   }
 

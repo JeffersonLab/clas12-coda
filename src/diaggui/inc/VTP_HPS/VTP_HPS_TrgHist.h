@@ -119,7 +119,7 @@ public:
     // Trigger Info Canvas
     //////////////////////////////////    
     const char *trigger_info_bins[] = {
-      "S_Total", "S_ENMinMaxPass", "&S_PDEPass", "&S_Hl1Pass", "&S_Hl2Pass", "&S_Hl12Pass", "&S_Hl1<->2Pass", "&S_Hl1<-X->2Pass", "S_Pass", "S_TI",
+      "S_Total", "S_ENMinMaxPass", "&XMinPass", "&S_PDEPass", "&S_Hl1Pass", "&S_Hl2Pass", "&S_Hl12Pass", "&S_Hl1<->2Pass", "&S_Hl1<-X->2Pass", "S_Pass", "S_TI",
       "P_Total", "P_SumPass", "P_DifPass", "P_EDPass", "P_CopPass", "P_Pass", "P_TI",
       "Mult", "Mult_TI",
       "LED", "LED_TI",
@@ -671,7 +671,7 @@ public:
       s_hl1xl2_pass[i]    = ref*(double)pM->ReadReg32((volatile unsigned int *)((int)pM->BaseAddr + 0x80*i + 0x5960));
       s_hl1xXxl2_pass[i]   = ref*(double)pM->ReadReg32((volatile unsigned int *)((int)pM->BaseAddr + 0x80*i + 0x5964));
       s_pass[i]          = ref*(double)pM->ReadReg32((volatile unsigned int *)((int)pM->BaseAddr + 0x80*i + 0x5944));
-      s_ti[i]            = 0;  //(double)pM->ReadReg32((volatile unsigned int *)((int)pM->BaseAddr + 0x80*i +
+      s_ti[i]            = 0;  //(double)pM->ReadReg32((volatile unsigned int *)((int)pM->BaseAddr + 0x40*i +
     }
 
     for(int i=0;i<4;i++)
@@ -714,6 +714,7 @@ public:
     {
       pHistTriggerInfo[i]->Fill(VTP_HPS_TRIG_INFO_S_TOTAL, s_total[i]);
       pHistTriggerInfo[i]->Fill(VTP_HPS_TRIG_INFO_S_ENMINMAX_PASS, s_enminmax_pass[i]);
+      pHistTriggerInfo[i]->Fill(VTP_HPS_TRIG_INFO_S_XMIN_PASS, s_xmin_pass[i]);
       pHistTriggerInfo[i]->Fill(VTP_HPS_TRIG_INFO_S_PDE_PASS, s_pde_pass[i]);
       pHistTriggerInfo[i]->Fill(VTP_HPS_TRIG_INFO_S_HL1_PASS, s_hl1_pass[i]);
       pHistTriggerInfo[i]->Fill(VTP_HPS_TRIG_INFO_S_HL2_PASS, s_hl2_pass[i]);
@@ -773,11 +774,11 @@ public:
       if(i & 0x1)
       {
         pHistHodoscope[HODO_TOP_CLUSTERED]->Fill(x_l1,0.5*HODO_H, val1);
-        pHistHodoscope[HODO_TOP_CLUSTERED]->Fill(x_l2,1.5*HODO_H, val1);
+        pHistHodoscope[HODO_TOP_CLUSTERED]->Fill(x_l2,1.5*HODO_H, val2);
       }
       else
       {
-        pHistHodoscope[HODO_TOP]->Fill(x_l1,0.5*HODO_H, val2);
+        pHistHodoscope[HODO_TOP]->Fill(x_l1,0.5*HODO_H, val1);
         pHistHodoscope[HODO_TOP]->Fill(x_l2,1.5*HODO_H, val2);
       }
       x_l1+= Hodoscope_w_l1[i]/2.0;
@@ -801,11 +802,11 @@ public:
       if(i & 0x1)
       {
         pHistHodoscope[HODO_BOT_CLUSTERED]->Fill(x_l1,0.5*HODO_H, val1);
-        pHistHodoscope[HODO_BOT_CLUSTERED]->Fill(x_l2,1.5*HODO_H, val1);
+        pHistHodoscope[HODO_BOT_CLUSTERED]->Fill(x_l2,1.5*HODO_H, val2);
       }
       else
       {
-        pHistHodoscope[HODO_BOT]->Fill(x_l1,0.5*HODO_H, val2);
+        pHistHodoscope[HODO_BOT]->Fill(x_l1,0.5*HODO_H, val1);
         pHistHodoscope[HODO_BOT]->Fill(x_l2,1.5*HODO_H, val2);
       }
       x_l1+= Hodoscope_w_l1[i]/2.0;
