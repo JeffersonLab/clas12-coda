@@ -59,7 +59,7 @@ rcSvcInfoFinder::findRcServer (const char* dbhost, const char* database,
 
   if (::mysql_select_db(dbaseSock, database) < 0) {
     fprintf (stderr, "Cannot select database %s\n", database);
-    ::mysql_close(dbaseSock);
+    ::dbDisconnect(dbaseSock);
     return CODA_FATAL;
   }
 
@@ -69,13 +69,13 @@ rcSvcInfoFinder::findRcServer (const char* dbhost, const char* database,
   if (::mysql_query (dbaseSock, qstring) != 0) {
     fprintf (stderr, "Get information for rcServer %s error: %s\n",
 	     session, mysql_error(dbaseSock));
-    ::mysql_close(dbaseSock);
+    ::dbDisconnect(dbaseSock);
     return CODA_ERROR;
   }
 
   res = mysql_store_result(dbaseSock);
   if (!res) {
-    ::mysql_close(dbaseSock);
+    ::dbDisconnect(dbaseSock);
     return CODA_ERROR;
   }
 
@@ -88,12 +88,12 @@ rcSvcInfoFinder::findRcServer (const char* dbhost, const char* database,
 
     ::mysql_free_result (res);
 
-    ::mysql_close(dbaseSock);
+    ::dbDisconnect(dbaseSock);
     return CODA_SUCCESS;
   }
   ::mysql_free_result (res);
 
-  ::mysql_close(dbaseSock);
+  ::dbDisconnect(dbaseSock);
   return CODA_ERROR;
 }
 
@@ -126,7 +126,7 @@ rcSvcInfoFinder::removeDeadRcServer (char* dbhost,
 	     session, mysql_error(dbaseSock));
     return CODA_ERROR;
   }
-  ::mysql_close(dbaseSock);
+  ::dbDisconnect(dbaseSock);
   return CODA_SUCCESS;
 }
 

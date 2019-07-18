@@ -98,7 +98,7 @@ CLON_FLAGS += -I./inc -I./code.s -I./mvt.s -I./jvme -I./sfi.s -I../vtp -I$(CODA)
 CLON_FLAGS += -DIPC
 
 # hps run
-CLON_FLAGS += -I$(CLAS)/slac_svt/heavy-photon-daq/software/rogue_coda/install/include/hps/builder/client/
+CLON_FLAGS += -I$(CLAS)/slac_svt/heavy-photon-daq/software/rogue_coda/include/hps/builder/client/
 
 ifeq ("$(OSTYPE)","Linux")
   CLON_FLAGS += -I/usr/local/src/tirpci/tirpci_installation/include

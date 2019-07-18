@@ -26,7 +26,7 @@ main(int argc, char *argv[])
   vmeOpenDefaultWindows();
 
 vmeBusLock();
-  tiInit((21<<19),2,0);
+ tiInit(0/*(21<<19)*/,2,0);
   tiStatus(1);
 vmeBusUnlock();
 

@@ -183,7 +183,10 @@ tcpClient(char *name, char *message)
 #endif
   if(dbGetStr(dbsock, tmp, hostname)==ERROR) return(ERROR);
 
+  /* disconnect from database */
   dbDisconnect(dbsock);
+
+
 #ifdef DEBUG_MSGS
   printf("tcpClient: hostnamee=>%s< portnum=%d\n",hostname,portnum);
 #endif
@@ -210,7 +213,7 @@ tcpClient(char *name, char *message)
   /* connect to server */ 
   if(connect (sFd, (struct sockaddr *) &serverAddr, sockAddrSize) != 0)
   {
-    perror("connect"); 
+    perror("tcpClient::connect"); 
     close(sFd); 
     return(ERROR); 
   }
@@ -544,14 +547,18 @@ codaDaReport(char *name, int how)
 #ifdef DEBUG_MSGS
   printf("codaDaReport reached for %s\n",name);
 #endif
+
   /* get component status from DB */
   dbsock = dbConnect(getenv("MYSQL_HOST"), getenv("EXPID"));
+
   sprintf(tmp,"SELECT state FROM process WHERE name='%s'",name);
 #ifdef DEBUG_MSGS
   printf("codaDaReport: DB select: >%s<\n",tmp);
 #endif
   if(dbGetStr(dbsock, tmp, res)==ERROR) status = CODA_ERROR;
   else                                  status = CODA_SUCCESS;
+
+  /* disconnect from database */
   dbDisconnect(dbsock);
 
 #ifdef DEBUG_MSGS

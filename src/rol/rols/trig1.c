@@ -448,7 +448,12 @@ vmeBusUnlock();
 
 
 
-
+  /* send synreset here for HPS SVT, will send it again in Prestart in usual place */
+  sleep(1);
+vmeBusLock();
+  tsSyncReset(1); /* '1' will push 'next_block_level' to 'block_level' in slave TI's (not TD's !), we did it already in download */
+vmeBusUnlock();
+  sleep(1);
 
 
 

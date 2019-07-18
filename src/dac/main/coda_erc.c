@@ -91,7 +91,7 @@ typedef struct ERpriv
   void *mod_id;
   char mod_name[30];
   int  record_length;
-  /*int*/long  split;
+  /*int*//*long*/int64_t  split;
   char filename[128];
 
   int usesubdir;
@@ -105,7 +105,7 @@ typedef struct ERpriv
   IFUNCPTR open_proc;
   int splitnb;
   int nevents;
-  /*int*/long nlongs;
+  /*int*//*long*/int64_t nlongs;
   int nerrors;
   int nend;
   char *runConfig;
@@ -248,7 +248,7 @@ update_database(ERp erp)
   time_t rawtime;
 
 
-  mbytes_in_current_run += (erp->nlongs*4)/1000000;
+  mbytes_in_current_run += (erp->nlongs*4)/1048510;
   nevents_in_current_run += erp->nevents;
   time(&rawtime);
 
@@ -434,6 +434,32 @@ ER_constructor()
   bzero ((char *) &ERP,sizeof(ERP));
 
   ERP.split = 512*1024*1024;
+
+
+
+  /*
+  {
+    int split = 10000;
+
+    printf("got SPLITMB = %d MBytes from database\n",split);
+    ERP.split = ((int64_t)split) << 20;
+    printf("set erp->split = %lld Bytes\n",ERP.split);
+
+    printf("ERP.split=%lld\n",ERP.split);
+    exit(0);
+  }
+  */
+
+
+
+
+
+
+
+
+
+
+
 
   tcpState = DA_BOOTED;
   if(codaUpdateStatus("booted") != ER_OK) return(ER_ERROR);
@@ -866,14 +892,14 @@ codaDownload(char *conf)
     configname);
   if(dbGetInt(dbsock, tmp, &split)==ER_ERROR)
   {
-    erp->split = 2047 << 20;
-    printf("cannot get SPLITMB from database, set erp->split=%d Bytes\n",erp->split);
+    erp->split = ((int64_t)2047) << 20;
+    printf("cannot get SPLITMB from database, set erp->split=%lld Bytes\n",erp->split);
   }
   else
   {
-    printf("got SMPITMB = %d MBytes from database\n",split);
-    erp->split = split<<20;
-    printf("set erp->split = %d Bytes\n",erp->split);
+    printf("got SPLITMB = %d MBytes from database\n",split);
+    erp->split = ((int64_t)split) << 20;
+    printf("set erp->split = %lld Bytes\n",erp->split);
   }
 
   sprintf(tmp,"SELECT value FROM %s_option WHERE name='RECL'",

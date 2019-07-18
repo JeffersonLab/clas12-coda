@@ -24,7 +24,7 @@ ifeq ("$(OSTYPE)","SunOS")
   CFLAGS = -g -KPIC -mt -DSunOS -DOSTYPE="SunOS"
 endif
 
-CLON_FLAGS += -D_TRACE_OBJECTS
+##CLON_FLAGS += -D_TRACE_OBJECTS
 
 ###CLON_FLAGS += -DNEW_STUFF
 

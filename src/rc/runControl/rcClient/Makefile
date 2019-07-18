@@ -29,7 +29,7 @@ CLON_FLAGS += -I./src.s -I./include -I../Variables/src.s -I../Common/src.s \
 	-I./pixmaps -I$(CODA)/common/include -I../../cg/cg.s -I../../motif/include \
 	-I../../sace3.1/include -I../../XmHTML-1.1.4/include $(X11INCDIR)
 
-CLON_FLAGS += -D_TRACE_OBJECTS
+##CLON_FLAGS += -D_TRACE_OBJECTS
 
 LIBNAMES += ../Variables/$(OSTYPE_MACHINE)/lib/libVariables.a
 LIBNAMES += ../rcServer/$(OSTYPE_MACHINE)/lib/librcServer.a

@@ -65,7 +65,7 @@
 
 #include "libdb.h"
 
-#undef _CODA_DEBUG
+#define _CODA_DEBUG
 
 #define PRIORITY_TABLE_NAME "priority"
 #define RUNTYPE_TABLE_NAME  "runTypes"
@@ -177,9 +177,35 @@ closeDatabase (void)
 int
 databaseIsOpen (void)
 {
-  if (mysql != NULL)
-    return 1;
-  return 0;
+  if(mysql == NULL)
+  {
+    printf("databaseIsOpen: ERROR: mysql==NULL on entry\n");fflush(stdout);
+    return(0);
+  }
+
+  if(dbCheckConnection(mysql)==NULL)
+  {
+    printf("databaseIsOpen: WARN: dbCheckConnection() returned NULL, trying to reconnect\n");fflush(stdout);
+    mysql = dbConnect(dbaseServerHost, getenv("EXPID"));
+    if(mysql==NULL)
+	{
+      printf("databaseIsOpen: ERROR: dbConnect() returned NULL, cannot reconnect\n");fflush(stdout);
+      return(0);
+	}
+    else
+	{
+      printf("databaseIsOpen: INFO: successfully reconnected\n");fflush(stdout);
+      return(1);
+	}
+  }
+  else
+  {
+    return(1);
+  }
+  /*
+  if (mysql != NULL) return(1);
+  return(0);
+  */
 }
 
 void
@@ -196,8 +222,7 @@ createNewDatabase (char *name)
 {
   char queryString[QUERY_LEN];
 
-  if (mysql == NULL)
-    return -1;
+  if (!databaseIsOpen()) return(-1);
 
   sprintf (queryString, "CREATE DATABASE %s\n", name);
   if (mysql_query(mysql, queryString) != 0)
@@ -249,6 +274,8 @@ listAllDatabases (char* dbase[], int* num)
   int       i = 0;
   MYSQL_ROW     row;
 
+  if (!databaseIsOpen()) return(-1);
+
   if (mysql == NULL)
     return -1;
   res = mysql_list_dbs(mysql, NULL);
@@ -272,6 +299,8 @@ int
 selectDatabase (char *name)
 {
   int status;
+
+  if (!databaseIsOpen()) return(-1);
 
   if (dbasename) free (dbasename);
   dbasename = 0;
@@ -436,11 +465,9 @@ createExpInfoTable (void)
 {
   char queryString[QUERY_LEN];
 
-  if (!databaseIsOpen ())
-    return -1;
+  if (!databaseIsOpen ()) return -1;
 
-  if (!databaseSelected ())
-    return -1;
+  if (!databaseSelected ()) return -1;
 
   sprintf (queryString, "create table %s(\n", EXPINFO_TABLE_NAME);
   strcat  (queryString, "name varchar(64) binary not null primary key,\n");
@@ -465,11 +492,9 @@ createProcessTable (void)
 {
   char queryString[QUERY_LEN];
 
-  if (!databaseIsOpen ())
-    return -1;
+  if (!databaseIsOpen ()) return -1;
 
-  if (!databaseSelected ())
-    return -1;
+  if (!databaseSelected ()) return -1;
 
   sprintf (queryString, "create table %s(\n", PROCESS_TABLE_NAME);
   strcat  (queryString, "name varchar(32) binary not null primary key,\n");
@@ -496,17 +521,18 @@ createOptionTable (char* config)
   char valString  [VAL_LEN];
   MYSQL_RES *res;
 
-  if (!databaseIsOpen ())
-    return -1;
+  if (!databaseIsOpen ()) return -1;
 
-  if (!databaseSelected ())
-    return -1;
+  if (!databaseSelected ()) return -1;
 
   sprintf (queryString, "select * from %s_option", config);
+  printf ("Editor_database::createOptionTable: executing query >%s<\n",queryString);
+  /*Editor_database::createOptionTable: query >select * from PROD66_option<*/
   if (mysql_query (mysql, queryString) != 0)
   {
 #ifdef _CODA_DEBUG
-    printf ("Select %s option table error: %s\n", config, mysql_error(mysql));
+    printf ("Editor_database::createOptionTable: option table '%s_option' does not exist (%s), will create it\n", config, mysql_error(mysql));
+	/*Editor_database::createOptionTable: option table PROD66 does not exist (Table 'daq_hpsrun.PROD66_option' doesn't exist), will create it*/
 #endif
     sprintf (queryString, "create table %s_option(\n", config);
     strcat  (queryString, "name char(32) not null,\n");
@@ -515,24 +541,25 @@ createOptionTable (char* config)
     strcat  (queryString, "value text not null\n");
 
     strcat  (queryString, ")");
+    printf ("Editor_database::createOptionTable: executing query >%s<\n",queryString);
     if (mysql_query (mysql, queryString) != 0)
     {
 #ifdef _CODA_DEBUG
-      printf ("Create %s option table error: %s\n", config, mysql_error(mysql));
+      printf ("Editor_database::createOptionTable: create %s option table error: %s\n", config, mysql_error(mysql));
 #endif
       return(-1);
     }
 
 
     /* insert default data limit */
-    printf("insert defaults\n");
+    printf("Editor_database::createOptionTable: insert defaults\n");
     sprintf (queryString, "insert into %s_option\n",config);
     sprintf (valString, "values ('dataLimit', '0')");
     strcat  (queryString, valString);
     if (mysql_query (mysql, queryString) != 0)
     {
 #ifdef _CODA_DEBUG
-      printf ("insert %s to option table failed: %s\n", config, mysql_error(mysql));
+      printf ("Editor_database::createOptionTable: insert %s to option table failed: %s\n", config, mysql_error(mysql));
 #endif
     }
     
@@ -542,7 +569,7 @@ createOptionTable (char* config)
     strcat  (queryString, valString);
     if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
-      printf ("insert %s to option table failed: %s\n", config, mysql_error(mysql));
+      printf ("Editor_database::createOptionTable: insert %s to option table failed: %s\n", config, mysql_error(mysql));
 #endif
     }
     
@@ -552,14 +579,14 @@ createOptionTable (char* config)
     strcat  (queryString, valString);
     if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
-      printf ("insert %s to option table failed: %s\n", config, mysql_error(mysql));
+      printf ("Editor_database::createOptionTable: insert %s to option table failed: %s\n", config, mysql_error(mysql));
 #endif
     }
   }
   else
   {
 #ifdef _CODA_DEBUG
-    printf ("Select %s option table successful, clear 'res'\n", config);
+    printf ("Option table %s exist already, clear 'res'\n", config);
 #endif
     res = mysql_store_result (mysql);
     mysql_free_result(res);
@@ -607,11 +634,9 @@ createPriorityTable (void)
   char valString[VAL_LEN];
   int  status;
 
-  if (!databaseIsOpen ())
-    return -1;
+  if (!databaseIsOpen ()) return -1;
 
-  if (!databaseSelected ())
-    return -1;
+  if (!databaseSelected ()) return -1;
 
   sprintf (queryString, "create table %s(\n", PRIORITY_TABLE_NAME);
   strcat  (queryString, "class char(32) not null,\n");
@@ -714,11 +739,9 @@ createRunTypeTable (void)
 {
   char queryString[QUERY_LEN];
 
-  if (!databaseIsOpen ())
-    return(-1);
+  if (!databaseIsOpen ()) return(-1);
 
-  if (!databaseSelected ())
-    return(-1);
+  if (!databaseSelected ()) return(-1);
 
   sprintf (queryString, "create table %s(\n", RUNTYPE_TABLE_NAME);
   strcat  (queryString, "name varchar(32) binary not null primary key,\n");
@@ -746,6 +769,8 @@ listAllTables (char* tables[], int* num)
   MYSQL_ROW row;
   int       i = 0;
   
+  if (!databaseIsOpen ()) return(-1);
+
   if (databaseSelected ()) {
     res = mysql_list_tables(mysql, NULL);
     if (!res)
@@ -778,6 +803,8 @@ listAllConfigs (char* configs[], int* num)
   MYSQL_RES *res;
   MYSQL_ROW row;
   int      i = 0;
+
+  if (!databaseIsOpen ()) return(-1);
 
   *num = 0;
   if (databaseSelected ())
@@ -824,6 +851,8 @@ numberConfigs(void)
   MYSQL_ROW row;
   int       i = 0;
 
+  if (!databaseIsOpen ()) return(-1);
+
   if (databaseSelected ())
   {
     sprintf (queryString, "select * from %s", RUNTYPE_TABLE_NAME);
@@ -864,6 +893,9 @@ isConfigCreated (char* config)
   int  num, i;
   int  found = 0;
 
+  if (!databaseIsOpen ())
+    return(-1);
+
   if (listAllConfigs (configs, &num) < 0) {
     return -1;
   }
@@ -882,6 +914,9 @@ isTableCreated (char* name)
   char *names[200]; /* no way to exceed 200 configuration */
   int  num, i;
   int  found = 0;
+
+  if (!databaseIsOpen ())
+    return(-1);
 
   if (listAllConfigs (names, &num) < 0) {
     return -1;
@@ -905,6 +940,8 @@ isTableCreated (char* name)
 int
 removePositionTable (char* config)
 {
+  if (!databaseIsOpen ()) return(-1);
+
   char queryString[QUERY_LEN];
   
   if (databaseSelected ())
@@ -927,6 +964,8 @@ removeScriptTable (char* config)
 {
   char queryString[QUERY_LEN];
   
+  if (!databaseIsOpen ()) return(-1);
+
   if (databaseSelected ())
   {
     sprintf (queryString, "drop table %s_script", config);
@@ -948,6 +987,8 @@ removeOptionTable (char* config)
 {
   char queryString[QUERY_LEN];
   
+  if (!databaseIsOpen ()) return(-1);
+
   if (databaseSelected ())
   {
     sprintf (queryString, "drop table %s_option", config);
@@ -975,6 +1016,8 @@ removeConfigTable (char* config)
   int   numtables = 0;
   int   found = 0;
   
+  if (!databaseIsOpen ()) return(-1);
+
   if (databaseSelected ())
   {
 
@@ -986,6 +1029,8 @@ removeConfigTable (char* config)
 #endif
     }
 
+
+	/*sergey: do not drop '_script' table
     sprintf (queryString, "drop table %s_script", config);
     if (mysql_query (mysql, queryString) != 0)
     {
@@ -993,7 +1038,9 @@ removeConfigTable (char* config)
       printf ("Cannot remove %s_script table: %s\n", config, mysql_error(mysql));
 #endif
     }
+	*/
 
+	/*sergey: do not drop '_option' table
     sprintf (queryString, "drop table %s_option", config);
     if (mysql_query (mysql, queryString) != 0)
     {
@@ -1001,6 +1048,7 @@ removeConfigTable (char* config)
       printf ("Cannot remove %s_option table: %s\n", config, mysql_error(mysql));
 #endif
     }
+	*/
 
     sprintf (queryString, "drop table %s_pos", config);
     if (mysql_query (mysql, queryString) != 0)
@@ -1050,6 +1098,8 @@ insertValToPosTable (char* config, char* name, int row, int col)
   char queryString[QUERY_LEN];
   char valString[VAL_LEN];
 
+  if (!databaseIsOpen ()) return(-1);
+
   if (databaseSelected ())
   {
     sprintf (queryString, "insert into %s_pos (name, row, col) ",config);
@@ -1081,6 +1131,9 @@ insertValToOptionTable (char* config, char* name, char* value)
 #ifdef _CODA_DEBUG
   printf("Editor_database: insertValToOptionTable(%s,%s,%s)\n",config,name,value);
 #endif
+
+  if (!databaseIsOpen ()) return(-1);
+
   if (databaseSelected ())
   {
     /* delete old entry */
@@ -1123,8 +1176,9 @@ insertValToScriptTable (char* config, char* name, codaScript* list)
   char valString[VAL_LEN];
   codaScript* p;
 
-  if (list == 0)
-    return -1;
+  if (list == 0) return -1;
+
+  if (!databaseIsOpen ()) return(-1);
 
   if (databaseSelected ()) {
     /* MSQL is stupid: not to allow one to insert multiple values */
@@ -1154,6 +1208,8 @@ insertValToConfigTable (char* config, char* name, char* code,
   char valString[VAL_LEN];  
 
   printf("Editor_database: insertValToConfigTable(%s,%s, >%s<, %s,%s,%s,%d,%d)\n",config,name,code,inputs,outputs,next,first,order_num);
+
+  if (!databaseIsOpen ()) return(-1);
 
   if (databaseSelected ())
   {
@@ -1187,6 +1243,7 @@ removeDaqCompFromProcTable (char* name)
   char queryString[QUERY_LEN];
   char keyString[KEY_LEN];
 
+  if (!databaseIsOpen ()) return(-1);
 
   if (databaseSelected ()) {
     sprintf (queryString, "delete from %s\n",PROCESS_TABLE_NAME);
@@ -1207,8 +1264,9 @@ isDaqCompInProcTable (char* name)
   MYSQL_RES *res;
   MYSQL_ROW row;
 
-  if (!databaseSelected ()) 
-    return -1;
+  if (!databaseIsOpen ()) return(-1);
+
+  if (!databaseSelected ()) return -1;
 
   sprintf (queryString, "select * from %s\n",PROCESS_TABLE_NAME);
   sprintf (keyString, "where name='%s'",name);
@@ -1243,6 +1301,8 @@ insertDaqCompToProcTable (daqComp* comp)
   char keyString[KEY_LEN];
   char valString[VAL_LEN];
 
+  if (!databaseIsOpen ()) return(-1);
+
   if (databaseSelected ()) {
     sprintf (queryString, "insert into %s\n", PROCESS_TABLE_NAME);
     if (comp->boot_string != 0)
@@ -1269,6 +1329,8 @@ int
 updateDaqCompToProcTable (daqComp* comp)
 {
   char queryString[QUERY_LEN];
+
+  if (!databaseIsOpen ()) return(-1);
 
   if (databaseSelected ()) {
     if (comp->boot_string != 0)
@@ -1313,6 +1375,8 @@ int
 setCompInuseField(char *compname, int portnum)
 {
   char queryString[QUERY_LEN];
+
+  if (!databaseIsOpen ()) return(-1);
 
   if (databaseSelected ())
   {
@@ -1393,7 +1457,18 @@ createRcNetCompsFromDbase (rcNetComp** comp, int *num)
   char      errmsg[256];
 
   *num = 0;
-  if (!databaseSelected ()) return(-1);
+
+  if (!databaseIsOpen ())
+  {
+    printf("Editor_database::createRcNetCompsFromDbase: ERROR: database is not opened\n");
+    return(-1);
+  }
+
+  if (!databaseSelected ())
+  {
+    printf("Editor_database::createRcNetCompsFromDbase: ERROR: database is not selected\n");
+    return(-1);
+  }
 
   /*sprintf (queryString, "select * from %s", PROCESS_TABLE_NAME);*/
   sprintf (queryString, "select * from %s ORDER BY name", PROCESS_TABLE_NAME);
@@ -1455,8 +1530,10 @@ retrieveConfigInfoFromDbase (char* config, ConfigInfo** cinfo, int* num)
   int ncol;
 
   *num = 0;
-  if (!databaseSelected ()) return(-1);
 
+  if (!databaseIsOpen ()) return(-1);
+
+  if (!databaseSelected ()) return(-1);
 
 
 
@@ -1615,6 +1692,8 @@ getDefaultCodeFromDbase (char* class, char *rols[3])
   char      errmsg[256];
   char *r[3];
 
+  if (!databaseIsOpen ()) return(-1);
+
   if (!databaseSelected ()) return(-1);
   
   sprintf (queryString, "show tables like '%s'", DEFAULTS_TABLE_NAME);
@@ -1719,8 +1798,12 @@ getAllOptionInfos (char* config, char*** names, char*** values)
   char **tnames, **tvalues;
   char      errmsg[256];
 
+  if (!databaseIsOpen ()) return(-1);
+
+  if (!databaseSelected ()) return -1;
+
   /* get position information */
-  printf("query\n");
+  printf("Editor_database::getAllOptionInfos query\n");
 
   sprintf (queryString, "select * from %s_option", config);
   if (mysql_query (mysql, queryString) != 0) {
@@ -1781,8 +1864,9 @@ compInConfigTables (char* name)
   MYSQL_ROW row;
   char      errmsg[256];
 
-  if (!databaseSelected ())
-    return -1;
+  if (!databaseIsOpen ()) return(-1);
+
+  if (!databaseSelected ()) return -1;
 
   if (listAllConfigs (configs, &num) < 0)
     return -1;

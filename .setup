@@ -90,6 +90,19 @@ if ( ($OSTYPE == "Linux") && ($MACHINE == "i686" || $MACHINE == "i686_vme") ) th
 endif
 
 
+#
+# JAVA
+#
+setenv PATH "/apps/maven/bin:${PATH}"
+
+setenv CODA_JAR           $CODA/common/jar
+if ($?CLASSPATH) then
+  setenv CLASSPATH "$CLASSPATH":"$CODA_JAR/ipc.jar"
+else
+  setenv CLASSPATH "$CODA_JAR/ipc.jar"
+endif
+setenv CLASSPATH "$CLASSPATH":"$IMPORT_JAR/activemq-all.jar"
+setenv CLASSPATH "$CLASSPATH":"$IMPORT_JAR/qpid-jms-client-0.35.0.jar"
 
 
 #

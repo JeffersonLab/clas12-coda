@@ -104,6 +104,7 @@ volatile unsigned int *FApmb;                        /* pointer to Multblock win
 int fadcID[FA_MAX_BOARDS];                           /* array of slot numbers for FADCs */
 unsigned int fadcAddrList[FA_MAX_BOARDS];            /* array of a24 addresses for FADCs */
 int fadcRev[(FA_MAX_BOARDS+1)];                      /* Board Revision Info for each module */
+int fadcProcRev[(FA_MAX_BOARDS+1)];                  /* Processing FPGA Revision Info for each module */
 unsigned short fadcChanDisable[(FA_MAX_BOARDS+1)];   /* Disabled Channel Mask for each Module*/
 int fadcInited=0;                                    /* >0 if Library has been Initialized before */
 int fadcMaxSlot=0;                                   /* Highest Slot hold an FADC */
@@ -190,6 +191,12 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
   int noBoardInit=0;
   int useList=0;
   int noFirmwareCheck=0;
+  unsigned short supported_ctrl[FA_SUPPORTED_CTRL_FIRMWARE_NUMBER]
+    = {FA_SUPPORTED_CTRL_FIRMWARE};
+  unsigned short supported_proc[FA_SUPPORTED_PROC_FIRMWARE_NUMBER]
+    = {FA_SUPPORTED_PROC_FIRMWARE};
+  unsigned short ctrl_version = 0, proc_version = 0;
+  int icheck=0, ctrl_supported=0, proc_supported=0;
 
   /* Check if we have already Initialized boards before */
   if((fadcInited>0) && (fadcID[0] != 0)) 
@@ -250,23 +257,23 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
   bzero((char *)fadcID,sizeof(fadcID));
 
   for (ii=0;ii<nadc;ii++) 
-    {
-      if(useList==1)
+  {
+    if(useList==1)
 	{
 	  laddr_inc = fadcAddrList[ii] + fadcA24Offset;
 	}
-      else
+    else
 	{
 	  laddr_inc = laddr +ii*addr_inc;
 	}
-      fa = (struct fadc_struct *)laddr_inc;
-      /* Check if Board exists at that address */
+    fa = (struct fadc_struct *)laddr_inc;
+    /* Check if Board exists at that address */
 #ifdef VXWORKS
-      res = vxMemProbe((char *) &(fa->version),VX_READ,4,(char *)&rdata);
+    res = vxMemProbe((char *) &(fa->version),VX_READ,4,(char *)&rdata);
 #else
-      res = vmeMemProbe((char *) &(fa->version),4,(char *)&rdata);
+    res = vmeMemProbe((char *) &(fa->version),4,(char *)&rdata);
 #endif
-      if(res < 0) 
+    if(res < 0) 
 	{
 #ifdef DEBUG
 #ifdef VXWORKS
@@ -279,24 +286,28 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 	  errFlag = 1;
 	  /* 	  break; */
 	}
-      else 
+    else 
 	{
 	  /* Check that it is an FA board */
 	  if((rdata&FA_BOARD_MASK) != FA_BOARD_ID) 
-	    {
+	  {
 #ifdef DEBUG
-	      printf("%s: ERROR: For board at 0x%x, Invalid Board ID: 0x%x\n",
+	    printf("%s: ERROR: For board at 0x%x, Invalid Board ID: 0x%x\n",
 		     __FUNCTION__,
 		     (UINT32) fa-fadcA24Offset, rdata);
 #endif
-	      continue;
-	    }
+	    continue;
+	  }
 	  else 
-	    {
-	      /* Check if this is board has a valid slot number */
-	      boardID =  ((vmeRead32(&(fa->intr)))&FA_SLOT_ID_MASK)>>16;
+	  {
+	    ctrl_supported=0;
+	    proc_supported=0;
 
-	      if(!noFirmwareCheck)
+	    /* Check if this is board has a valid slot number */
+	    boardID =  ((vmeRead32(&(fa->intr)))&FA_SLOT_ID_MASK)>>16;
+
+		/*
+	    if(!noFirmwareCheck)
 		{
 		  if( ((rdata&FA_VERSION_MASK) < FA_SUPPORTED_CTRL_FIRMWARE_MIN) ||
           ((rdata&FA_VERSION_MASK) > FA_SUPPORTED_CTRL_FIRMWARE_MAX) )
@@ -307,17 +318,98 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 		      continue;
 		    }
 		}
+		*/
 
-	      if((boardID <= 0)||(boardID >21)) 
+	    if((boardID <= 0)||(boardID >21)) 
 		{
 		  printf(" ERROR: Board Slot ID is not in range: %d\n",boardID);
 		  continue;
 		  /* 	      return(ERROR); */
 		}
 	      else
-		{
+        {
+
+
+
+
+
+
+
+
+
+
+
+
+	      /* Check Control FPGA firmware version */
+          ctrl_version = rdata & FA_VERSION_MASK;
+
+	      for(icheck = 0; icheck < FA_SUPPORTED_CTRL_FIRMWARE_NUMBER; icheck++)
+		  {
+		    if(ctrl_version == supported_ctrl[icheck])
+		      ctrl_supported=1;
+		  }
+
+	      if(ctrl_supported == 0)
+		  {
+		    printf("%s: %s: Slot %2d: Control FPGA Firmware (0x%02x) not supported by this driver.\n",
+			  __FUNCTION__, (noFirmwareCheck)?"WARN":"ERROR",
+			  boardID, ctrl_version);
+
+		    printf("\tSupported Control Firmware:  ");
+		    for(icheck=0; icheck<FA_SUPPORTED_CTRL_FIRMWARE_NUMBER; icheck++)
+		    {
+		      printf("0x%02x ",supported_ctrl[icheck]);
+		    }
+		    printf("\n");
+
+		    if(!noFirmwareCheck)
+		    { /* Skip to the next fADC */
+		      continue;
+		    }
+		  }
+
+	      /* Check Processing FPGA firmware version */
+	      proc_version = (unsigned short)(vmeRead32(&fa->adc_status[0]) & FA_ADC_VERSION_MASK);
+
+	      for(icheck = 0; icheck < FA_SUPPORTED_PROC_FIRMWARE_NUMBER; icheck++)
+		  {
+		    if(proc_version == supported_proc[icheck]) proc_supported=1;
+		  }
+
+	      if(proc_supported == 0)
+		  {
+		    printf("%s: %s: Slot %2d: Proc FPGA Firmware (0x%02x) not supported by this driver.\n",
+			  __FUNCTION__, (noFirmwareCheck)?"WARN":"ERROR",
+			  boardID, proc_version);
+
+		    printf("\tSupported Proc Firmware:  ");
+		    for(icheck=0; icheck<FA_SUPPORTED_PROC_FIRMWARE_NUMBER; icheck++)
+		    {
+		      printf("0x%04x ",supported_proc[icheck]);
+		    }
+		    printf("\n");
+
+		    if(!noFirmwareCheck)
+		    { /* Skip to the next fADC */
+		      continue;
+		    }
+		  }
+
+
+
+
+
+
+
+
+
+
+
+
+
 		  FAp[boardID] = (struct fadc_struct *)(laddr_inc);
 		  fadcRev[boardID] = rdata&FA_VERSION_MASK;
+	      fadcProcRev[boardID] = proc_version;
 		  /* 	} */
 		  fadcID[nfadc] = boardID;
 		  if(boardID >= maxSlot) maxSlot = boardID;
@@ -327,12 +419,12 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 			 nfadc,fadcID[nfadc],(UINT32) FAp[(fadcID[nfadc])],
 			 (UINT32) FAp[(fadcID[nfadc])]-fadcA24Offset);
 		}
-	    }
+	  }
 	  nfadc++;
 /* 	  printf("Initialized FADC %2d  Slot # %2d at address 0x%08x \n", */
 /* 		 ii,fadcID[ii],(UINT32) FAp[(fadcID[ii])]); */
 	}
-    }
+  }
 
   /* Check if we are to exit when pointers are setup */
   noBoardInit=(iFlag&FA_INIT_SKIP)>>16;
@@ -813,6 +905,8 @@ faStatus(int id, int sflag)
   unsigned int mgtStatus, mgtCtrl;
   unsigned int berr_count=0;
   unsigned int scaler_interval=0;
+  unsigned int trigger_control=0;
+  unsigned int lost_trig_scal=0;
   unsigned int tet_trg[16], tet_readout[16], delay[16];
   float gain_trg[16], ped_trg[16];
   unsigned int val;
@@ -850,9 +944,11 @@ faStatus(int id, int sflag)
   ambMax =  (addrMB&FA_AMB_MAX_MASK);
   berr_count = vmeRead32(&(FAp[id]->berr_module_scal));
 
-  for(ii=0;ii<3;ii++) adcStat[ii] = (vmeRead32(&(FAp[id]->adc_status[ii]))&0xFFFF);
-  for(ii=0;ii<4;ii++) adcConf[ii] = (vmeRead32(&(FAp[id]->adc_config[ii]))&0xFFFF);
-
+  for(ii=0;ii<3;ii++)
+  {
+      adcStat[ii] = (vmeRead32(&(FAp[id]->adc_status[ii]))&0xFFFF);
+      adcConf[ii] = (vmeRead32(&(FAp[id]->adc_config[ii]))&0xFFFF);
+  }
   PTW =  (vmeRead32(&(FAp[id]->adc_ptw))&0xFFFF)*FA_ADC_NS_PER_CLK;
   PL  =  (vmeRead32(&(FAp[id]->adc_pl))&0xFFFF)*FA_ADC_NS_PER_CLK;
   NSB =  (vmeRead32(&(FAp[id]->adc_nsb))&0xFFFF)*FA_ADC_NS_PER_CLK;
@@ -885,6 +981,7 @@ faStatus(int id, int sflag)
 #endif
 
   scaler_interval = vmeRead32(&FAp[id]->scaler_interval) & FA_SCALER_INTERVAL_MASK;
+  trigger_control = vmeRead32(&FAp[id]->trigger_control);
 
   FAUNLOCK;
 
@@ -1058,6 +1155,18 @@ faStatus(int id, int sflag)
   printf("   Max Peak Count   = %d \n",NP);
   printf("   Playback Mode    = %d \n",playbackMode);
 
+
+
+  printf("\n");
+  printf(" Unacknowleged Trigger Stop: %s (%d)\n",
+	 (trigger_control&FA_TRIGCTL_TRIGSTOP_EN) ? " ENABLED" : "DISABLED",
+	 (trigger_control&FA_TRIGCTL_MAX2_MASK)>>16);
+  printf(" Unacknowleged Trigger Busy: %s (%d)\n",
+	 (trigger_control&FA_TRIGCTL_BUSY_EN) ? " ENABLED" : "DISABLED",
+	 trigger_control&FA_TRIGCTL_MAX1_MASK);
+
+
+
   printf("\n");
   if(csr&FA_CSR_ERROR_MASK) 
     {
@@ -1102,6 +1211,11 @@ faStatus(int id, int sflag)
   printf("  Trigger   Scaler         = %d\n",trigCnt);
   printf("  Trigger 2 Scaler         = %d\n",trig2Cnt);
   printf("  SyncReset Scaler         = %d\n",srCnt);
+  printf("  Trigger Control          = 0x%08x\n",trigger_control);
+  if(trigger_control & (FA_TRIGCTL_TRIGSTOP_EN | FA_TRIGCTL_BUSY_EN))
+    {
+      printf("  Lost Trigger Scaler      = %d\n",lost_trig_scal);
+    }
 
   if(scaler_interval)
     {
@@ -1147,6 +1261,27 @@ faStatus(int id, int sflag)
   else
     printf("\n");
 #endif
+
+
+
+  /*sergey for testing*/
+  printf("Some registers:\n");
+  printf("0x30: 0x%08x\n",vmeRead32(&(FAp[id]->trig_scal)));
+  printf("0x34: 0x%08x\n",vmeRead32(&(FAp[id]->ev_count)));
+  printf("0x38: 0x%08x\n",vmeRead32(&(FAp[id]->blk_count)));
+  printf("0x48: 0x%08x\n",vmeRead32(&(FAp[id]->ram_word_count)));
+  printf("0x4C: 0x%08x\n",vmeRead32(&(FAp[id]->dataflow_status)));
+  printf("0x70: 0x%08x\n",vmeRead32(&(FAp[id]->status[0])));
+  printf("0x74: 0x%08x\n",vmeRead32(&(FAp[id]->status[1])));
+  printf("0x78: 0x%08x\n",vmeRead32(&(FAp[id]->status[2])));
+  printf("0x7C: 0x%08x\n",vmeRead32(&(FAp[id]->status[3])));
+  printf("0x84: 0x%08x\n",vmeRead32(&(FAp[id]->trigger_control)));
+  printf("0xA8: 0x%08x\n",vmeRead32(&(FAp[id]->proc_words_scal)));
+  printf("0xAC: 0x%08x\n",vmeRead32(&(FAp[id]->aux_scal2)));
+  printf("0xB0: 0x%08x\n",vmeRead32(&(FAp[id]->header_scal)));
+  printf("0xB8: 0x%08x\n",vmeRead32(&(FAp[id]->trailer_scal)));
+  printf("0xC0: 0x%08x\n",vmeRead32(&(FAp[id]->busy_level)));
+  printf("\n");
 
 }
 
@@ -1355,6 +1490,306 @@ faGSetProcMode(int pmode, unsigned int PL, unsigned int PTW,
     if(res<0) printf("ERROR: slot %d, in faSetProcMode()\n",fadcID[ii]);
   }
 }
+
+
+
+
+/*********************************************************************/
+/*********************************************************************/
+/* sergey: begin new functions from Bryan Moffit for trigger_control */
+
+/**
+ *  @ingroup Config
+ *  @brief Return the maximum number of unacknowledged triggers a specific
+ *         mode can handle.
+ *
+ *  @param pmode  Processing Mode
+ *  @param ptw  Window Width
+ *  @param nsb  Number of samples before pulse over threshold
+ *  @param nsa  Number of samples after pulse over threshold
+ *  @param np   Number of pulses processed per window
+ *
+ *  @return The minimum of 9 and the calculated maximum number of triggers
+ *    allowed given specified mode and window paramters.
+ */
+
+int
+faCalcMaxUnAckTriggers(int mode, int ptw, int nsa, int nsb, int np)
+{
+  int max;
+  int imode=0, supported_modes[FA_SUPPORTED_NMODES] = {FA_SUPPORTED_MODES};
+  int mode_supported=0;
+
+  for(imode=0; imode<FA_SUPPORTED_NMODES; imode++)
+    {
+      if(mode == supported_modes[imode])
+	mode_supported=1;
+    }
+  if(!mode_supported)
+    {
+      printf("%s: ERROR: Processing Mode (%d) not supported\n",
+	     __FUNCTION__,mode);
+      return ERROR;
+    }
+
+  switch(mode)
+    {
+    case 9: /* PULSE PARAMETER */
+      max = (int)(1024 / ((np * 2) + 8));
+      break;
+
+    case 10: /* DEBUG */
+      max = (int)(1024 / (((np * 2) + 8) + ptw + 1));
+      break;
+
+    default:
+      printf("%s: ERROR: Mode %d is not supported\n",
+	     __FUNCTION__,mode);
+    }
+
+  return ((max < 9) ? max : 9);
+}
+
+/**
+ *  @ingroup Config
+ *  @brief Set the maximum number of unacknowledged triggers before module
+ *         stops accepting incoming triggers.
+ *  @param id Slot number
+ *  @param trigger_max Limit for maximum number of unacknowledged triggers.
+ *         If 0, disables the condition.
+ *  @return OK if successful, otherwise ERROR.
+ */
+
+int
+faSetTriggerStopCondition(int id, int trigger_max)
+{
+  if(id==0) id=fadcID[0];
+  if((id<=0) || (id>21) || (FAp[id] == NULL))
+    {
+      printf("%s: ERROR : FADC in slot %d is not initialized \n",__FUNCTION__,id);
+      return ERROR;
+    }
+
+  if(trigger_max>0xFF)
+    {
+      printf("%s: ERROR: Invalid trigger_max (%d)\n",
+	     __FUNCTION__,trigger_max);
+      return ERROR;
+    }
+
+  FALOCK;
+  if(trigger_max>0)
+    {
+      vmeWrite32(&FAp[id]->trigger_control,
+		 (vmeRead32(&FAp[id]->trigger_control) &
+		  ~(FA_TRIGCTL_TRIGSTOP_EN | FA_TRIGCTL_MAX2_MASK)) |
+		 (FA_TRIGCTL_TRIGSTOP_EN | (trigger_max<<16)));
+    }
+  else
+    {
+      vmeWrite32(&FAp[id]->trigger_control,
+		 (vmeRead32(&FAp[id]->trigger_control) &
+		  ~(FA_TRIGCTL_TRIGSTOP_EN | FA_TRIGCTL_MAX2_MASK)));
+    }
+  FAUNLOCK;
+
+  return OK;
+}
+
+/**
+ *  @ingroup Config
+ *  @brief Set the maximum number of unacknowledged triggers before module
+ *         asserts BUSY.
+ *  @param id Slot number
+ *  @param trigger_max Limit for maximum number of unacknowledged triggers
+ *         If 0, disables the condition
+ *  @return OK if successful, otherwise ERROR.
+ */
+
+int
+faSetTriggerBusyCondition(int id, int trigger_max)
+{
+  if(id==0) id=fadcID[0];
+  if((id<=0) || (id>21) || (FAp[id] == NULL))
+    {
+      printf("%s: ERROR : FADC in slot %d is not initialized \n",__FUNCTION__,id);
+      return ERROR;
+    }
+
+  if(trigger_max>0xFF)
+    {
+      printf("%s: ERROR: Invalid trigger_max (%d)\n",
+	     __FUNCTION__,trigger_max);
+      return ERROR;
+    }
+
+  FALOCK;
+  if(trigger_max>0)
+    {
+      vmeWrite32(&FAp[id]->trigger_control,
+		 (vmeRead32(&FAp[id]->trigger_control) &
+		  ~(FA_TRIGCTL_BUSY_EN | FA_TRIGCTL_MAX1_MASK)) |
+		 (FA_TRIGCTL_BUSY_EN | (trigger_max)));
+    }
+  else
+    {
+      vmeWrite32(&FAp[id]->trigger_control,
+		 (vmeRead32(&FAp[id]->trigger_control) &
+		  ~(FA_TRIGCTL_BUSY_EN | FA_TRIGCTL_MAX1_MASK)));
+    }
+  FAUNLOCK;
+
+  return OK;
+}
+
+/**
+ *  @ingroup Config
+ *  @brief Set the number of samples that are included before and after
+ *    threshold crossing that are sent through the trigger path
+ *  @param id Slot number
+ *  @param NSB Number of samples before threshold crossing
+ *  @param NSA Number of samples after threshold crossing
+ *  @return OK if successful, otherwise ERROR.
+ */
+int
+faSetTriggerPathSamples(int id, unsigned int TNSA, unsigned int TNSAT)
+{
+  unsigned int readback_nsa=0, readback_config1=0;
+
+  if(id==0) id=fadcID[0];
+  if((id<=0) || (id>21) || (FAp[id] == NULL))
+    {
+      printf("%s: ERROR : FADC in slot %d is not initialized \n",__FUNCTION__,id);
+      return ERROR;
+    }
+
+  if(fadcProcRev[id]<0x90B)
+    {
+      printf("%s: ERROR: Processing Firmware does not support this function\n",
+	     __FUNCTION__);
+      printf("      Requires 0x90B and above\n");
+      return ERROR;
+    }
+
+  if((TNSA < FA_ADC_MIN_TNSA) || (TNSA > FA_ADC_MAX_TNSA))
+    {
+      printf("%s: WARN: TNSA (%d) out of range. Setting to %d\n",
+	     __FUNCTION__,
+	     TNSA, FA_ADC_DEFAULT_TNSA);
+      TNSA = FA_ADC_DEFAULT_TNSA;
+    }
+
+  if((TNSAT < FA_ADC_MIN_TNSAT) || (TNSAT > FA_ADC_MAX_TNSAT))
+    {
+      printf("%s: WARN: TNSAT (%d) out of range. Setting to %d\n",
+	     __FUNCTION__,
+	     TNSAT, FA_ADC_DEFAULT_TNSAT);
+      TNSAT = FA_ADC_DEFAULT_TNSAT;
+    }
+
+  FALOCK;
+
+  readback_nsa     = vmeRead32(&FAp[id]->adc_nsa)       & FA_ADC_NSA_READBACK_MASK;
+  readback_config1 = vmeRead32(&FAp[id]->adc_config[0]) & ~FA_ADC_CONFIG1_TNSAT_MASK;
+
+  vmeWrite32(&FAp[id]->adc_nsa,       (TNSA  << 9)  | readback_nsa);
+  vmeWrite32(&FAp[id]->adc_config[0], ((TNSAT-1) << 12) | readback_config1);
+
+  FAUNLOCK;
+
+  return OK;
+}
+
+/**
+ *  @ingroup Config
+ *  @brief Set the number of samples that are included before and after
+ *    threshold crossing that are sent through the trigger path for
+ *    all initialized fADC250s
+ *  @param NSB Number of samples before threshold crossing
+ *  @param NSA Number of samples after threshold crossing
+ *  @sa faSetTriggerPathSamples
+ */
+void
+faGSetTriggerPathSamples(unsigned int TNSA, unsigned int TNSAT)
+{
+  int ii, res;
+
+  for (ii=0;ii<nfadc;ii++)
+    {
+      res = faSetTriggerPathSamples(fadcID[ii], TNSA, TNSAT);
+      if(res<0) printf("ERROR: slot %d, in faSetTriggerPathSamples()\n",fadcID[ii]);
+    }
+}
+
+/**
+ *  @ingroup Config
+ *  @brief Set the threshold used to determine what samples are sent through the
+ *     trigger path
+ *  @param id Slot number
+ *  @param threshold Trigger Path Threshold
+ *  @return OK if successful, otherwise ERROR.
+ */
+int
+faSetTriggerPathThreshold(int id, unsigned int TPT)
+{
+  if(id==0) id=fadcID[0];
+  if((id<=0) || (id>21) || (FAp[id] == NULL)) {
+    printf("%s: ERROR : FADC in slot %d is not initialized \n",__FUNCTION__,id);
+    return ERROR;
+  }
+
+  if(fadcProcRev[id]<0x90B)
+    {
+      printf("%s: ERROR: Processing Firmware does not support this function\n",
+	     __FUNCTION__);
+      printf("      Requires 0x90B and above\n");
+      return ERROR;
+    }
+
+  if(TPT>FA_ADC_MAX_TPT)
+    {
+      printf("%s: WARN: TPT (%d) greater than MAX.  Setting to %d\n",
+	     __FUNCTION__, TPT, FA_ADC_MAX_TPT);
+      TPT = FA_ADC_MAX_TPT;
+    }
+
+#if 0
+  FALOCK;
+  vmeWrite32(&FAp[id]->config3,
+	     (vmeRead32(&FAp[id]->config3) & ~FA_ADC_CONFIG3_TPT_MASK) |
+	     TPT);
+  FAUNLOCK;
+#endif
+
+  return OK;
+}
+
+/**
+ *  @ingroup Config
+ *  @brief Set the threshold used to determine what samples are sent through the
+ *     trigger path for all initialized fADC250s
+ *  @param threshold Trigger Path Threshold
+ *  @sa faSetTriggerPathThreshold
+ */
+void
+faGSetTriggerPathThreshold(unsigned int TPT)
+{
+  int ii, res;
+
+  for (ii=0;ii<nfadc;ii++)
+    {
+      res = faSetTriggerPathThreshold(fadcID[ii], TPT);
+      if(res<0) printf("ERROR: slot %d, in faSetTriggerPathThreshold()\n",fadcID[ii]);
+    }
+}
+
+/* sergey: end new functions from Bryan Moffit for trigger_control */
+/*******************************************************************/
+/*******************************************************************/
+
+
+
+
 
 /*
  * faWaitForAdcReady()
@@ -1706,21 +2141,24 @@ faReadBlock(int id, volatile UINT32 *data, int nwrds, int rflag)
       retVal = vmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2));
 #endif
 */
+/*
+	printf("faReadBlock: fadcA32Offset=0x%08x vmeAdr=0x%08x laddr=0x%08x nwrds=%d\n",fadcA32Offset,vmeAdr,laddr,nwrds);fflush(stdout);
+*/
     retVal = usrVme2MemDmaStart(vmeAdr, (UINT32)laddr, (nwrds<<2));
 
-      if(retVal |= 0) 
+    if(retVal |= 0) 
 	{
 	  logMsg("faReadBlock: ERROR in DMA transfer Initialization 0x%x\n",retVal,0,0,0,0,0);
 	  FAUNLOCK;
 	  return(retVal);
 	}
 
-      if(async) 
-	{ /* Asynchonous mode - return immediately - don't wait for done!! */
+    if(async) 
+	{ /* Asynchronous mode - return immediately - don't wait for done!! */
 	  FAUNLOCK;
 	  return(OK);
 	}
-      else
+    else
 	{
 	  /* Wait until Done or Error */
 /*sergey
@@ -1733,7 +2171,7 @@ faReadBlock(int id, volatile UINT32 *data, int nwrds, int rflag)
       retVal = usrVme2MemDmaDone();
 	}
 
-      if(retVal > 0) 
+    if(retVal > 0) 
 	{
 	  /* Check to see that Bus error was generated by FADC */
 	  if(rmode == 2) 
@@ -1789,7 +2227,7 @@ faReadBlock(int id, volatile UINT32 *data, int nwrds, int rflag)
 	      /* 	return(ERROR); */
 	    }
 	} 
-      else if (retVal == 0)
+    else if (retVal == 0)
 	{ /* Block Error finished without Bus Error */
 /*sergey
 #ifdef VXWORKS
@@ -1804,7 +2242,7 @@ faReadBlock(int id, volatile UINT32 *data, int nwrds, int rflag)
 	  fadcBlockError=1;
 	  return(nwrds);
 	} 
-      else 
+    else 
 	{  /* Error in DMA */
 /*sergey
 #ifdef VXWORKS
@@ -4214,6 +4652,7 @@ faGetMGTChannelStatus(int id)
   return(0);
 }
 
+/*
 int
 faSetMGTSettings(int id, int txpre, int txswing, int rxequ)
 {
@@ -4240,6 +4679,8 @@ faSetMGTSettings(int id, int txpre, int txswing, int rxequ)
 
   return(OK);
 }
+*/
+
 
 #endif
 
@@ -6062,6 +6503,137 @@ faPrintPedestal(int id)
 
   return(OK);
 }
+
+
+
+/**************************/
+/* begin debugging for Ed */
+
+/* Ed's email:
+
+I am adding state machine tracing code to the firmware.  This will save the last 500 state changes of the data flow control state machine into a FIFO.  Please modify your code to do the following:
+
+
+STATE_CSR register:  address = 0x504
+
+STATE_VALUE register:  address = 0x508
+
+
+Before 'GO':
+
+- Arm the storage of states by writing value 0x80000000 to STATE_CSR  (0x504)
+
+
+After the error occurs and all status registers have been read and printed:
+
+- Disarm storage of states by writing 0x0 to STATE_CSR  (0x504)
+
+- Read (and print) STATE_CSR (= value) to get the number of valid states stored
+
+- Print all valid stored state values:
+
+      num_states = 0x1FF & value;
+
+      for(ii = 0; ii < num_states; ii++)
+
+      {
+
+             read and print STATE_VALUE register  (0x508);      // read gets next value in FIFO
+
+      }
+
+
+----------------
+
+Since the data flow state machine will stop changing when the triggers stop due to the busy assertion I can trace back the history of this state machine.  The Xilinx Chipscope tool records state values on each clock edge and thus can only show a limited history of the state machine.
+
+----------------
+ */
+
+int
+faArmStatesStorage(int id)
+{
+  int ii;
+
+  if(id==0) id=fadcID[0];
+
+  if((id<=0) || (id>21) || (FAp[id] == NULL)) 
+  {
+    logMsg("faArmStatesStorage: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
+    return(ERROR);
+  }
+
+  FALOCK;
+  vmeWrite32(&(FAp[id]->state_csr),0x80000000);
+  FAUNLOCK;
+
+  printf("faArmStatesStorage: ARMED slot %d\n",id);
+
+  return(OK);
+}
+
+int
+faDisarmStatesStorage(int id)
+{
+  int ii;
+
+  if(id==0) id=fadcID[0];
+
+  if((id<=0) || (id>21) || (FAp[id] == NULL)) 
+  {
+    logMsg("faDisarmStatesStorage: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
+    return(ERROR);
+  }
+
+  FALOCK;
+  vmeWrite32(&(FAp[id]->state_csr),0x0);
+  FAUNLOCK;
+
+  printf("faDisarmStatesStorage: DISARMED slot %d\n",id);
+
+  return(OK);
+}
+
+int
+faReadStatesStorage(int id)
+{
+  int ii;
+  unsigned int value, fifo;
+  int num_states;
+
+  if(id==0) id=fadcID[0];
+
+  if((id<=0) || (id>21) || (FAp[id] == NULL)) 
+  {
+    logMsg("faReadStatesStorage: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
+    return(ERROR);
+  }
+
+  FALOCK;
+
+  value = vmeRead32(&(FAp[id]->state_csr));
+
+  num_states = value & 0x1FF;
+  printf("\nfaReadStatesStorage: slot %d, state_csr = 0x%08x, num_states = %d\n",id,value,num_states);
+
+  /* read and print STATE_VALUE fifo */
+  for(ii=0; ii<num_states; ii++)
+  {
+    fifo = vmeRead32(&(FAp[id]->state_value));
+    printf("faReadStatesStorage: fifo[%4d] = 0x%08x\n",ii,fifo);
+  }
+
+  FAUNLOCK;
+
+  printf("faReadStatesStorage: done printing fifo\n\n");
+
+  return(OK);
+}
+
+
+/*  end debugging for Ed  */
+/**************************/
+
 
 #else /* dummy version*/
 

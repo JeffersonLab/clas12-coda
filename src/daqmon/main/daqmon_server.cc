@@ -11,7 +11,7 @@
 #include "hbook.h"
 
 
-#define USE_ET
+//#define USE_ET
 
 #ifdef USE_ET
 
@@ -359,7 +359,7 @@ main(int argc, char *argv[])
 
   // connect to ipc server
   server.AddSendTopic(getenv("EXPID"),getenv("SESSION"),NULL,NULL);
-  server.AddRecvTopic(getenv("EXPID"),getenv("SESSION"),"*","*");
+  server.AddRecvTopic(getenv("EXPID"),getenv("SESSION"),(char *)"*",(char *)"*");
   server.Open();
 
   MessageActionHist *hist = new MessageActionHist((char *)"hbook_recv",Debug,ALL_1D_HIST);

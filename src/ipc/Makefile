@@ -24,6 +24,8 @@ CLON_FLAGS += -std=c++11 -DRCDB_MYSQL -I/usr/include/mysql -I$(RCDB_HOME)/cpp/in
 CLON_FLAGS += -I./$(MAIN).s -I$(CODA)/common/include -I$(CODA)/common/include
 CLON_FLAGS += -I$(IPC_HOME)/include/activemq-cpp-$(IPC_VER)
 
+#JAVA
+JFLAGS = -classpath ./:$(CLON)/common/jar/clonutil.jar:$(IMPORT_JAR)/activemq-all.jar:$(IMPORT_JAR)/qpid-jms-client-0.35.0.jar
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   CLON_FLAGS += -I/usr/local/include/apr-1
@@ -83,7 +85,7 @@ LIBNAMES += $(SYSLIBS)
 #-------------------
 # customize targets
 #-------------------
-install: install_lib install_bin
+install: install_lib install_bin install_java
 	rm -rf tmp
 	mkdir tmp
 	cp $(MAIN).s/*.h tmp

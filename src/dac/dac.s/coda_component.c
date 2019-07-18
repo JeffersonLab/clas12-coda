@@ -45,7 +45,7 @@
 #include "circbuf.h" /* to get NIMNETBUFS */
 #include "bigbuf.h" /* to get NIMNETBUFS */
 
-#ifdef LINUX
+#ifdef Linux
 #include <sys/time.h>
 #include <unistd.h>
 #include <stdarg.h>
@@ -2349,9 +2349,11 @@ CODAtcpServerWorkTask(TWORK *targ)
   int nRead;                               /* number of bytes read */
   char message[REQUEST_MSG_SIZE];
   int itmp;
-
 #ifdef Linux
-  prctl(PR_SET_NAME,"coda_er1");
+  char thread_name[1024];
+  sprintf(thread_name,"w%s:%d\0",(char *)&targ->address[6], targ->port);
+  prctl(PR_SET_NAME,thread_name);
+  /*prctl(PR_SET_NAME,"coda_er1");*/
 #endif
   /*setHeartBeat(HB_TCP,0,2);*/
 

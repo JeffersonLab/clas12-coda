@@ -83,7 +83,7 @@ ccconnect(char *ip, int port)
   /* connect to the server */
   if (connect(sc, (struct sockaddr *) &server_address, sockAddrSize) == -1)
   {
-    perror("connect");
+    perror("c111cLib::ccconnect::connect");
     close(sc);
     return 0;
   }

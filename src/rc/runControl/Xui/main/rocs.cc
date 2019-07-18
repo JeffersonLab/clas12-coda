@@ -351,14 +351,27 @@ messageHandler(char *message)
 
       /*EditorSelectConfig(&message[2]);*/
       break;
+
     case 't':
     {
       char name[200];
       int pid;
       sscanf(&message[2],"%d %s",&pid,name);
       /*menW->createTabFrame(name,pid);*/
+      printf("rocs::messageHandler: message 't' not used\n");
     }
     break;
+
+    case 's':
+    {
+      int state;
+      char name[50];
+      sscanf(&message[2],"%d %s",&state, name);
+      /*setCompState(name,state);*/
+      printf("rocs::messageHandler: message 's' not used\n");
+    }
+    break;
+
 
     default:
       printf("rocs::messageHandler: unknown message : %s\n",message);

@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 
-
 #if defined(Linux_armv7l)
 
 int
@@ -36,6 +35,7 @@ main()
 #include "rc.h"
 #include "rolInt.h"
 #include "da.h"
+#include "circbuf.h"
 #include "libdb.h"
 #include "et_private.h"
 
@@ -218,6 +218,10 @@ ettStart()
   objClass object = localobject;
   ET_priv *etp = (ET_priv *) object->privated;
 
+  int ix;
+  int  listArgc;
+  char listArgv[LISTARGV1][LISTARGV2];
+
   size_t hostlen = ET_FILENAME_LENGTH - 1;
   char *ch;
 
@@ -316,12 +320,50 @@ ettStart()
   printf("host_to >%s<, et_to >%s<\n",etp->host_to,etp->et_to);
 
 
+
+
+  /* get ETT 'from' station name from 'code' field in config table */
+  sprintf(tmpp,"SELECT code FROM %s WHERE name='%s'",configname,object->name);
+  printf("MYSQL QUERY >%s<\n",tmpp);
+  if(dbGetStr(dbsock, tmpp, tmp)==ET_ERROR) return(ET_ERROR);
+
+  /* Decode 'code' string extracting the number of events and event size */
+  listArgc = 0;
+  if(!((strcmp (tmp, "{}") == 0)||(strcmp (tmp, "") == 0)))
+  {
+    printf("Something in 'code' field >%s<, will process it\n",tmp);
+    if(listSplit1(tmp, 1, &listArgc, listArgv)) return(ET_ERROR);
+    for(ix=0; ix<listArgc; ix++) printf("code [%1d] >%s<\n",ix,listArgv[ix]);
+    if(listArgc>0) strcpy(etp->station,listArgv[0]);
+    printf("ET station name in database is >%s<\n",etp->station);
+    if(strlen(etp->station)<1)
+	{
+      printf("ET station name length is %d, will use default station name\n",strlen(etp->station));
+      strcpy(etp->station,"ETT");
+	}
+    else if(!isalpha(etp->station[0]))
+	{
+      printf("Not alpha (%c) in first position of the ET station name, will use default station name\n",etp->station[0]);
+      strcpy(etp->station,"ETT");
+	}
+    else
+	{
+      printf("ET station name from database >%s< looks good\n",etp->station);
+	}
+  }
+  else
+  {
+    printf("Nothing in 'code' field >%s<, will use default station name\n",tmp);
+    strcpy(etp->station,"ETT");
+  }
+
+  printf("Will use ET station name >%s<\n",etp->station);
+
+
   /* disconnect from database */
   dbDisconnect(dbsock);
 
 
-  /* station 'from' */
-  strcpy(etp->station,"ETT");
 
 
 
@@ -437,50 +479,75 @@ printf("11\n");fflush(stdout);
  
 printf("12\n");fflush(stdout);
 
-  /* ET system "all" mode */
-  et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_ALL);
-  et_station_config_setblock(etp->sconfig, ET_STATION_BLOCKING);
+  if( !strncmp(etp->station,"ROUNDROBIN",10))
+  {
+    printf("============== ROUND-ROBIN ====================\n");fflush(stdout);
 
-  /* ET system "on req" mode 
-  et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_ALL);
-  et_station_config_setblock(etp->sconfig, ET_STATION_NONBLOCKING);
-  */
-  /* ET system "condition" mode 
-  et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_MATCH);
-  et_station_config_setblock(setp->config, ET_STATION_BLOCKING);
-  et_station_config_setselectwords(etp->sconfig, selections);
-  */
-  /* new non-blocking "condition" mode 
-  et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_MATCH);
-  et_station_config_setblock(etp->sconfig, ET_STATION_NONBLOCKING);
-  et_station_config_setselectwords(etp->sconfig, selections);
-  */
-  /* user's condition, blocking  mode 
-  et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_USER);
-  et_station_config_setblock(etp->sconfig, ET_STATION_BLOCKING);
-  et_station_config_setselectwords(etp->sconfig, selections);
-  if (et_station_config_setfunction(etp->sconfig, "et_carls_function") == ET_ERROR) {
-	printf("%s: cannot set function\n", argv[0]);
-	exit(1);
+    /* ET station "round-robin" mode */
+    et_station_config_setflow(etp->sconfig, ET_STATION_PARALLEL);
+    et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_RROBIN);
+    et_station_config_setblock(etp->sconfig, ET_STATION_BLOCKING);
   }
-  if (et_station_config_setlib(etp->sconfig, "/home/timmer/cvs/coda/source/et/src/libet_user.so") == ET_ERROR) {
-    printf("%s: cannot set library\n", argv[0]);
-	exit(1);
-  }
-  */
-  /* user's condition, nonblocking mode 
-  et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_USER);
-  et_station_config_setblock(etp->sconfig, ET_STATION_NONBLOCKING);
-  et_station_config_setselectwords(etp->sconfig, selections);
-  et_station_config_setfunction(etp->sconfig, "et_carls_function");
-  et_station_config_setlib(etp->sconfig, "/home/timmer/cvs/coda/source/et/src/libet_user.so");
-  */
-  
+  else
+  {
+    printf("============== NOT ROUND-ROBIN ====================\n");fflush(stdout);
+
+    /* ET station "all" mode */
+    et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_ALL);
+    et_station_config_setblock(etp->sconfig, ET_STATION_BLOCKING);
+
+    /* ET station "on req" mode 
+    et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_ALL);
+    et_station_config_setblock(etp->sconfig, ET_STATION_NONBLOCKING);
+    */
+    /* ET station "condition" mode 
+    et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_MATCH);
+    et_station_config_setblock(setp->config, ET_STATION_BLOCKING);
+    et_station_config_setselectwords(etp->sconfig, selections);
+    */
+    /* ET station new non-blocking "condition" mode 
+    et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_MATCH);
+    et_station_config_setblock(etp->sconfig, ET_STATION_NONBLOCKING);
+    et_station_config_setselectwords(etp->sconfig, selections);
+    */
+    /* ET station user's condition, blocking  mode 
+    et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_USER);
+    et_station_config_setblock(etp->sconfig, ET_STATION_BLOCKING);
+    et_station_config_setselectwords(etp->sconfig, selections);
+    if (et_station_config_setfunction(etp->sconfig, "et_carls_function") == ET_ERROR)
+    {
+	  printf("%s: cannot set function\n", argv[0]);
+	  exit(1);
+    }
+    if (et_station_config_setlib(etp->sconfig, "/home/timmer/cvs/coda/source/et/src/libet_user.so") == ET_ERROR)
+    {
+      printf("%s: cannot set library\n", argv[0]);
+	 exit(1);
+    }
+    */
+    /* ET station user's condition, nonblocking mode 
+    et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_USER);
+    et_station_config_setblock(etp->sconfig, ET_STATION_NONBLOCKING);
+    et_station_config_setselectwords(etp->sconfig, selections);
+    et_station_config_setfunction(etp->sconfig, "et_carls_function");
+    et_station_config_setlib(etp->sconfig, "/home/timmer/cvs/coda/source/et/src/libet_user.so");
+    */
+  }  
+
   /* set debug level */
   et_system_setdebug(etp->id_from, ET_DEBUG_INFO);
   et_system_setdebug(etp->id_to,   ET_DEBUG_INFO);
 
-  if ((status = et_station_create(etp->id_from, &etp->stat_from, etp->station, etp->sconfig)) < ET_OK)
+  if( !strncmp(etp->station,"ROUNDROBIN",10))
+  {
+    status = et_station_create_at(etp->id_from, &etp->stat_from, etp->station, etp->sconfig, 1, ET_END);
+  }
+  else
+  {
+    status = et_station_create(etp->id_from, &etp->stat_from, etp->station, etp->sconfig);
+  }
+
+  if(status<ET_OK)
   {
     if (status == ET_ERROR_EXISTS)
     {
@@ -550,7 +617,7 @@ printf("15\n");fflush(stdout);
   status = ET_OK;
   while((status == ET_OK) && (etp->exit == 0))
   {
-	printf("-> status=%d etp->exit=%d\n",status,etp->exit);
+	/*printf("-> status=%d etp->exit=%d\n",status,etp->exit);*/
     status = et_events_bridge(etp->id_from, etp->id_to, etp->att_from, etp->att_to,
 			      etp->bconfig, NUMEVENTS, &ntransferred);
   }

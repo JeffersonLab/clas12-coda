@@ -26,10 +26,8 @@ static int nusertrig, ndone;
 
 #include <sys/time.h>
 
-#if 0
 //RTH
 #include <RogueCoda.h>
-#endif
 
 #ifdef SSIPC
 #include <rtworks/ipc.h>
@@ -56,14 +54,14 @@ static char ssname[80];
 /* name used by loader */
 
 #ifdef TI_MASTER
-#define INIT_NAME srs1_master__init
+#define INIT_NAME hpssvt1_master__init
 #define TIP_READOUT TIP_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
 #else
 #ifdef TI_SLAVE
-#define INIT_NAME srs1_slave__init
+#define INIT_NAME hpssvt1_slave__init
 #define TIP_READOUT TIP_READOUT_TS_POLL /* Poll for available data, triggers from master over fiber */
 #else
-#define INIT_NAME srs1__init
+#define INIT_NAME hpssvt1__init
 #define TIP_READOUT TIP_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
 #endif
 #endif
@@ -195,10 +193,8 @@ extern int rocMask; /* defined in roc_component.c */
   } \
 }
 
-#if 0
 //RTH
 struct RogueCodaData *rcd;
-#endif
 
 /*dummy to resolve reference*/
 int
@@ -225,10 +221,10 @@ __download()
   int i1, i2, i3;
   char ver[100];
 
-#if 0
   //RTH
+  printf("creating svt rogue interface\n");fflush(stdout);
   if ( (rcd = rogueCodaInit()) == NULL ) exit(-1);
-#endif
+  printf("done creating svt rogue interface\n");fflush(stdout);
 
 #ifdef POLLING_MODE
   rol->poll = 1;
@@ -499,10 +495,8 @@ vmeBusUnlock();
   epics_msg_sender_init(getenv("EXPID"), ssname); /* SECOND ARG MUST BE UNIQUE !!! */
 #endif
 
-#if 0
   //RTH
   if ( rogueCodaDownload(rcd,rol->confFile,rol->usrString) != 0 ) exit(-1);
-#endif
 
   logMsg("INFO: User Download Executed\n",1,2,3,4,5,6);
 }
@@ -595,10 +589,8 @@ vmeBusUnlock();
   /* USER code here */
   /******************/
 
-#if 0
   //RTH
   if ( rogueCodaPrestart(rcd) != 0 ) exit(-1);
-#endif
 
 #if 0 /* FOR NOW */
 
@@ -730,10 +722,8 @@ vmeBusUnlock();
     printf(">>>>>>>>>>>>>>>>>>>>>>> after while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
   }
 
-#if 0
   //RTH
   rogueCodaEnd(rcd);
-#endif
 
 #ifdef USE_SRS
   for(ifec=0; ifec<nfec; ifec++)
@@ -794,10 +784,8 @@ vmeBusUnlock();
 
 #endif
 
-#if 0
   //RTH
  if ( rogueCodaGo(rcd,rol->runNumber) != 0 ) exit(-1);
-#endif
 
 #ifdef USE_SRS
   int ifec=0;
@@ -916,9 +904,6 @@ usleep(100);
 
 
 
-
-#if 0
-
     // RTH
     rcdRet = rogueCodaTrigger(rcd,tdcbuf,len);
     //printf("\n===> rcdRet=%d\n",rcdRet);
@@ -1010,7 +995,7 @@ TIMERL_STOP(100000/block_level,1000+rol->pid);
         *(rol->dabufp+jjj) = tmp;
 
         jjj = jjj - 1; /* builder header index, add builder header tag */
-        tmp = *(rol->dabufp+jjj);
+        tmp = (*(rol->dabufp+jjj))&0x7FFFFFF; /*take 27 bits of event number*/
         tmp |= (0x16<<27);
         *(rol->dabufp+jjj) = tmp;
 
@@ -1043,7 +1028,7 @@ TIMERL_STOP(100000/block_level,1000+rol->pid);
     printf("fadc1: start fadc processing\n");fflush(stdout);
 #endif
 
-#endif /* if 0 */
+
 
 
 
@@ -1240,8 +1225,6 @@ vmeBusUnlock();
 	}
 #endif
 
-
-#if 0
      // RTH Begin
     //printf("5\n");
      rcdRet = rogueCodaUpdate(rcd,syncFlag);
@@ -1264,9 +1247,6 @@ printf("8\n");
      if ( rcdRet & 0x10 ) __end();
 
      // RTH END
-#endif
-
-
 
     /* for physics sync event, make sure all board buffers are empty */
     if(syncFlag==1)
@@ -1367,12 +1347,10 @@ rocClose()
 {
   printf("--- Execute rocClose ---\n");
 
-#if 0
   // RTH
 printf("9\n");
   rogueCodaClose(rcd);
 printf("10\n");
-#endif
 
 #ifdef USE_SRS
   int ifec=0;

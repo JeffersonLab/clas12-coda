@@ -18,13 +18,11 @@ include $(CODA)/src/Makefile.include
 # customize definitions
 #-----------------------
 
-#for debugging
-CLON_FLAGS += -D_TRACE_OBJECTS
-
 CLON_FLAGS += -I./include -I../Variables/src.s -I../Common/src.s -I../rcClient/src.s \
 	-I./pixmaps -I$(CODA)/common/include -I../../cg/cg.s -I../../motif/include \
 	-I../../sace3.1/include $(X11INCDIR)
 
+##CLON_FLAGS += -D_TRACE_OBJECTS
 
 # rocs
 CLON_FLAGS += -I$(CODA)/src/cterm/src.s -I$(CODA)/src/codaedit/codaedit.s

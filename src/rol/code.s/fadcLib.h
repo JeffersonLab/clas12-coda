@@ -38,8 +38,16 @@
 #define FA_VME_INT_LEVEL           3     
 #define FA_VME_INT_VEC          0xFA
 
+/*
 #define FA_SUPPORTED_CTRL_FIRMWARE_MIN 0xB1
 #define FA_SUPPORTED_CTRL_FIRMWARE_MAX 0xB2
+*/
+
+#define FA_SUPPORTED_CTRL_FIRMWARE 0xB3
+#define FA_SUPPORTED_CTRL_FIRMWARE_NUMBER 1
+#define FA_SUPPORTED_PROC_FIRMWARE 0x1B02
+#define FA_SUPPORTED_PROC_FIRMWARE_NUMBER 1
+
 
 struct fadc_struct 
 {
@@ -65,7 +73,8 @@ struct fadc_struct
   /* 0x004C */ volatile unsigned int dataflow_status;
   /* 0x0050 */ volatile unsigned short dac[16];
   /* 0x0070 */ volatile unsigned int status[4];
-  /* 0x0080 */ volatile unsigned int aux[2];
+  /* 0x0080 */ volatile unsigned int aux;
+  /* 0x0084 */ volatile unsigned int trigger_control;
   /* 0x0088 */ volatile unsigned int trig21_delay;
   /* 0x008C */ volatile unsigned int mem_adr;
   /* 0x0090 */ volatile unsigned int mem1_data;
@@ -155,8 +164,8 @@ struct fadc_struct
 #ifdef CLAS12
   /* 0x0414 */ volatile unsigned int spare_adc_1[(0x500-0x414)>>2];
   /* 0x0500 */ volatile unsigned int gtx_ctrl;
-  /* 0x0504 */ volatile unsigned int spare_gtx1;
-  /* 0x0508 */ volatile unsigned int trx_ctrl;
+  /* 0x0504 */ volatile unsigned int /*spare_gtx1*/state_csr; /* for Ed */
+  /* 0x0508 */ volatile unsigned int /*trx_ctrl*/state_value; /* for Ed */
   /* 0x050C */ volatile unsigned int spare_gtx3;
   /* 0x0510 */ volatile unsigned int gtx_status;
   /* 0x0514 */ volatile unsigned int spare_gtx4;
@@ -335,6 +344,12 @@ struct fadc_sdc_struct {
 /* Define trig_scal bits */
 #define FA_TRIG_SCAL_RESET          (1<<31)
 
+/* Define trigger_control bits */
+#define FA_TRIGCTL_TRIGSTOP_EN      (1<<31)
+#define FA_TRIGCTL_MAX2_MASK     0x00FF0000
+#define FA_TRIGCTL_BUSY_EN          (1<<15)
+#define FA_TRIGCTL_MAX1_MASK     0x000000FF
+
 /* Define trig21 delay bits */
 #define FA_TRIG21_DELAY_MASK     0x00000FFF
 
@@ -411,12 +426,40 @@ struct fadc_sdc_struct {
 
 #define FA_ADC_NS_PER_CLK      4
 
+#define FA_MAX_PROC_MODE                       10
 #define FA_ADC_PROC_MASK        0x7
 #define FA_ADC_PROC_ENABLE      0x8
 #define FA_ADC_PROC_MODE_WINDOW   1
 #define FA_ADC_PROC_MODE_PEAK     2
 #define FA_ADC_PROC_MODE_SUM      3
 #define FA_ADC_PROC_MODE_TIME     7
+
+/* begin from Bryan for trigger_control */
+#define FA_SUPPORTED_MODES                   9,10
+#define FA_SUPPORTED_NMODES                     2
+
+extern const char *fa_mode_names[FA_MAX_PROC_MODE+1];
+
+#define FA_ADC_CONFIG0_CHAN_MASK         0x0F00
+#define FA_ADC_CONFIG0_CHAN_READ_ENABLE (1<<15)
+
+#define FA_ADC_STATUS1_TRIG_RCV_DONE (1<<15)
+#define FA_ADC_STATUS1_TRIGNUM_MASK  0x0FFF
+
+#define FA_ADC_STATUS2_CHAN_DATA_MASK    0x3FFF
+
+#define FA_ADC_CONFIG1_NSAT_MASK  0x0C00
+#define FA_ADC_CONFIG1_TNSAT_MASK 0x3000
+
+#define FA_ADC_CONFIG3_TPT_MASK   0x0FFF
+
+#define FA_ADC_CONFIG6_MNPED_MASK   0x00003C00
+#define FA_ADC_CONFIG6_PMAXPED_MASK 0x000003FF
+
+#define FA_ADC_CONFIG7_NPED_MASK    0x00003C00
+#define FA_ADC_CONFIG7_MAXPED_MASK  0x000003FF
+/* end from Bryan for trigger_control */
+
 
 #define FA_ADC_VERSION_MASK  0x7fff
 #define FA_ADC_PLAYBACK_MODE 0x0080
@@ -430,6 +473,13 @@ struct fadc_sdc_struct {
 #define FA_ADC_DEFAULT_NSA    10
 #define FA_ADC_DEFAULT_NP      4
 #define FA_ADC_DEFAULT_THRESH  0
+#define FA_ADC_DEFAULT_NPED    4
+#define FA_ADC_DEFAULT_MAXPED  1
+#define FA_ADC_DEFAULT_NSAT    1
+#define FA_ADC_DEFAULT_MNPED   4
+#define FA_ADC_DEFAULT_TNSA   10
+#define FA_ADC_DEFAULT_TNSAT   1
+#define FA_ADC_DEFAULT_TPT     0
 
 #define FA_ADC_MAX_PL       2000
 #define FA_ADC_MAX_PTW       512
@@ -437,6 +487,13 @@ struct fadc_sdc_struct {
 #define FA_ADC_MAX_NSA       500
 #define FA_ADC_MAX_NP          1
 #define FA_ADC_MAX_THRESH   1023
+#define FA_ADC_MAX_NPED       15
+#define FA_ADC_MAX_MAXPED   1023
+#define FA_ADC_MAX_NSAT        4
+#define FA_ADC_MAX_MNPED      15
+#define FA_ADC_MAX_TNSA       63
+#define FA_ADC_MAX_TNSAT       4
+#define FA_ADC_MAX_TPT      4095
 
 #define FA_ADC_MIN_PL          1
 #define FA_ADC_MIN_PTW         1
@@ -444,6 +501,21 @@ struct fadc_sdc_struct {
 #define FA_ADC_MIN_NSA         1
 #define FA_ADC_MIN_NP          1
 #define FA_ADC_MIN_THRESH      0
+#define FA_ADC_MIN_NPED        4
+#define FA_ADC_MIN_MAXPED      0
+#define FA_ADC_MIN_NSAT        1
+#define FA_ADC_MIN_MNPED       4
+#define FA_ADC_MIN_TNSA        2
+#define FA_ADC_MIN_TNSAT       2
+#define FA_ADC_MIN_TPT         0
+
+#define FA_ADC_NSB_READBACK_MASK    0x0000000F
+#define FA_ADC_NSB_NEGATIVE         (1<<3)
+
+#define FA_ADC_NSA_READBACK_MASK    0x000001FF
+#define FA_ADC_TNSA_MASK            0x00007E00
+
+#define FA_ADC_TPT_MASK    0xFFF
 
 #define FA_ADC_PEDESTAL_MASK   0xffff
 #define FA_ADC_DELAY_MASK      0x1f
@@ -786,5 +858,18 @@ unsigned int faGetMaxA32MB(int id);
 
 #endif
 
+int  faCalcMaxUnAckTriggers(int mode, int ptw, int nsa, int nsb, int np);
+int  faSetTriggerStopCondition(int id, int trigger_max);
+int  faSetTriggerBusyCondition(int id, int trigger_max);
+int  faSetTriggerPathSamples(int id, unsigned int TNSA, unsigned int TNSAT);
+void faGSetTriggerPathSamples(unsigned int TNSA, unsigned int TNSAT);
+int  faSetTriggerPathThreshold(int id, unsigned int TPT);
+void faGSetTriggerPathThreshold(unsigned int TPT);
+
+/* for Ed */
+int  faArmStatesStorage(int id);
+int  faDisarmStatesStorage(int id);
+int  faReadStatesStorage(int id);
+/* for Ed */
 
 #endif /* __FADCLIB__ */

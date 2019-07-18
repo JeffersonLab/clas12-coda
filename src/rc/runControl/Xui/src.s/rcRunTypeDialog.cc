@@ -201,7 +201,7 @@ rcRunTypeDialog::configure (void)
 	}
 
     /*sergey: moved from rcRunTypeOption::currentRunType, otherwise it called every time when currentRunType() called */
-    /* NOTE: maybe need to use use option_->baseWidget() instead of this->baseWidget(), or it does not matter ??? */
+    /* NOTE: maybe need to use option_->baseWidget() instead of this->baseWidget(), or it does not matter ??? */
     {
       char cmd[100];
       sprintf(cmd,"c:%s",currentruntype);

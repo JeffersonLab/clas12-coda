@@ -6,7 +6,7 @@
 
 static UINT32 physMemBase;
 static UINT32 userMemBase;
-static UINT32 memSize = 0x100000; /*must be enough to take maximum event size from entire VME crate*/
+static UINT32 memSize = 0x100000; /* must be enough to take maximum event size from entire VME crate*/
 
 /* if using externally allocated destination memory, attributes will be modified; following will
 be used to save default values so we can go back to our memory */
@@ -22,6 +22,13 @@ usrVmeDmaSetMemSize(int size)
   memSize = size;
   printf("usrVmeDmaSetMemSize: set memSize to 0x%08x (%d MB)\n",memSize,memSize/1024/1024);
   return;
+}
+
+int
+usrVmeDmaGetMemSize()
+{
+  printf("usrVmeDmaGetMemSize: memSize = 0x%08x (%d MB)\n",memSize,memSize/1024/1024);
+  return(memSize);
 }
 
 int
@@ -70,7 +77,7 @@ usrVmeDmaInit()
     printf("usrVmeDmaInit ERROR: gefVmeAllocDmaBuf returned 0x%x\n",status);
     physMemBase = 0;
     userMemBase = 0;
-    return;
+    /*return;*/exit(0);
   }
 
   physMemBase = (UINT32)dma_hdl->phys_addr;

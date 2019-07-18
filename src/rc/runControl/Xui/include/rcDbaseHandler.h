@@ -49,7 +49,7 @@ public:
   // operations
   int   connect     (char* host);
   int   close       (void);
-  int   connected   (void) const;
+  int   connected   (void);
 
   // select a database
   int   database    (char* dbase);
@@ -87,6 +87,7 @@ private:
   /*sergey*/
   char*  options_[RCXUI_MAX_OPTIONS];
   int    numOptions_;
+  char   host_[256];
 
   // static instannce: only copy
   static rcDbaseHandler* handler_;

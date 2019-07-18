@@ -333,10 +333,12 @@ TIMERL_START;
 
 TIMERL_STOP(10000,1000+rol->pid);
 
-#if 0
+#if 1
   /* read boards configurations */
   if(syncFlag==1 || EVENT_NUMBER==1)
   {
+    printf("SYNC: read boards configurations\n");
+
     BANKOPEN(0xe10E,3,rol->pid);
     chptr = chptr0 =(char *)rol->dabufp;
     nbytes = 0;
@@ -345,9 +347,7 @@ TIMERL_STOP(10000,1000+rol->pid);
     *chptr++ = '\n';
     nbytes ++;
 
-/*vmeBusLock();*/
-    len = gtpUploadAll(chptr, 10000);
-/*vmeBusUnlock();*/
+    len = vtpUploadAll(chptr, 30000);
     /*printf("len=%d\n",len);
     printf(">%s<\n",chptr);*/
     chptr += len;

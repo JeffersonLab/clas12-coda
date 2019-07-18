@@ -143,6 +143,19 @@ rmconfigSelOk (Widget w, XtPointer data, XtPointer callback_data)
     sprintf (temp, "Cannot remove configuration: %s", currconfig);
     pop_error_message (temp, sw_geometry.draw_area);
   }
+
+  if (removeOptionTable (currconfig) < 0)
+  {
+    sprintf (temp, "Cannot remove %s_option table", currconfig);
+    pop_error_message (temp, sw_geometry.draw_area);
+  }
+
+  if (removeScriptTable (currconfig) < 0)
+  {
+    sprintf (temp, "Cannot remove %s_script table", currconfig);
+    pop_error_message (temp, sw_geometry.draw_area);
+  }
+
 }
 
 static void

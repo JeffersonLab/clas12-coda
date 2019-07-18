@@ -37,6 +37,7 @@ static pthread_mutex_t  dbMutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 
+
 /* UNIX function(s) missing in VXWORKS */
 #ifdef VXWORKS
 
@@ -89,6 +90,7 @@ dbConnectFull(const char *host, const char *database, const char *user, const ch
   unsigned int port = 0;
   const char *unix_socket = "";
   unsigned long client_flag = 0;
+  my_bool reconnect = 0;
 
   char dbaseServerHost[128];   /* database server host name */
   char db[128]; /* normally comes from EXPID, add 'daq_' */
@@ -134,12 +136,16 @@ perror("INFO(dbConnect1)");
 #ifdef DEBUG
   printf("dbConnect: host >%s<, database >%s<\n",dbaseServerHost,db);
 #endif
-  /*initialize MYSQL structure; use 'mysql_options'*/
+
+  /* initialize MYSQL structure */
   mysql = mysql_init(NULL);
 #ifdef DEBUG
   printf("dbConnect: after mysql_init mysql=0x%08x\n",mysql);
 #endif
   if(mysql == NULL) return(NULL);
+
+  /* set mysql options */
+  mysql_options(mysql, MYSQL_OPT_RECONNECT, &reconnect);
 
   /* connect to database */
 
@@ -190,6 +196,7 @@ perror("INFO(dbConnect9)");
     goto tryagain;
   }
 
+
 #ifdef DEBUG
   printf("dbConnect: connected to host >%s< database >%s<\n",dbaseServerHost,database);
 #endif
@@ -210,6 +217,7 @@ dbConnect(const char *host, const char *database)
   unsigned int port = 0;
   const char *unix_socket = "";
   unsigned long client_flag = 0;
+  my_bool reconnect = 0;
 
   char dbaseServerHost[128];   /* database server host name */
   char db[128]; /* normally comes from EXPID, add 'daq_' */
@@ -255,12 +263,17 @@ perror("INFO(dbConnect1)");
 #ifdef DEBUG
   printf("dbConnect: host >%s<, database >%s<\n",dbaseServerHost,db);
 #endif
-  /*initialize MYSQL structure; use 'mysql_options'*/
+
+
+  /* initialize MYSQL structure */ 
   mysql = mysql_init(NULL);
 #ifdef DEBUG
   printf("dbConnect: after mysql_init mysql=0x%08x\n",mysql);
 #endif
   if(mysql == NULL) return(NULL);
+
+  /* set mysql options */
+  mysql_options(mysql, MYSQL_OPT_RECONNECT, &reconnect);
 
   /* connect to database */
 
@@ -311,6 +324,7 @@ perror("INFO(dbConnect9)");
     goto tryagain;
   }
 
+
 #ifdef DEBUG
   printf("dbConnect: connected to host >%s< database >%s<\n",dbaseServerHost,database);
 #endif
@@ -323,24 +337,45 @@ perror("INFO(dbConnect9)");
 void
 dbDisconnect(MYSQL *mysql)
 {
+  int ii, jj;
+
 #ifdef DEBUG
   printf("dbDisconnect: mysql=0x%08x\n",mysql);fflush(stdout);
-printf("INFO(dbDisconnect1): errno=%d\n",errno);fflush(stdout);
-perror("INFO(dbDisconnect1)");fflush(stdout);
- printf("111: 0x%08x\n",mysql);fflush(stdout);
+  printf("INFO(dbDisconnect1): errno=%d\n",errno);fflush(stdout);
+  perror("INFO(dbDisconnect1)");fflush(stdout);
+  printf("111: 0x%08x\n",mysql);fflush(stdout);
 #endif
   if (mysql != NULL) mysql_close (mysql);
 #ifdef DEBUG
   printf("222: 0x%08x\n",mysql);fflush(stdout);
-printf("INFO(dbDisconnect9): errno=%d\n",errno);fflush(stdout);
-perror("INFO(dbDisconnect9)");fflush(stdout);
+  printf("INFO(dbDisconnect9): errno=%d\n",errno);fflush(stdout);
+  perror("INFO(dbDisconnect9)");fflush(stdout);
 #endif
-  mysql = NULL;
 
+  mysql = NULL;
 
   DBUNLOCK;
 
 }
+
+MYSQL *
+dbCheckConnection(MYSQL *mysql)
+{
+  int ret;
+
+  ret = mysql_ping(mysql); /* returns zero if connection is active, otherwise we reconnect */
+
+  if(ret)
+  {
+    printf("dbCheckConnection: mysql_ping() returned %d, connection is not active, trying to connect again\n",ret);
+    return(NULL); /* return NULL if cannot connect */
+  }
+  else
+  {
+    return(mysql); /* if connection is active, return old 'mysql' */
+  }
+}
+
 
 
 int

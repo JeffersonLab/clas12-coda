@@ -13,7 +13,8 @@
 # first set of histograms
 ##########################
 CMON_TAB Tab1 2 3
-CMON_PAD clondaq6:fadcpulse_001 1 2 1 1
+CMON_PAD clondaq3:test1 1 2 1 1
+#CMON_PAD clondaq6:fadcpulse_001 1 2 1 1
 CMON_PAD clondaq6:fadcped_001 2 2 1 1
 CMON_PAD clondaq6:fadcadc_001 3 2 1 1
 #

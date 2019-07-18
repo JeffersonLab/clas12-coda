@@ -160,24 +160,4 @@ int cb_events_get(CIRCBUF *cba[32], int id, int nrocs, int chunk,
 
 
 
-/* for LINK_support.c and deb_component.c only - temporary here !!! */
-
-typedef struct data_link *DATA_LINK;
-typedef struct data_link
-{
-  char *name;
-  char *linkname;   /* for example 'croctest1->EB5' */
-  char *parent;
-  pthread_t thread;
-  int sock;         /* listening socket (bind) */
-  int fd;           /* accepted socket (returned by accept()) */
-  char host[100];
-  int port;
-  int exit;
-  int bufCnt;
-  CIRCBUF *roc_queue;
-} DATA_LINK_S;
-
-
-
 

@@ -46,8 +46,7 @@ rcDbaseHandler* rcDbaseHandler::handler_ = 0;
 rcDbaseHandler*
 rcDbaseHandler::dbaseHandler (void)
 {
-  if (rcDbaseHandler::handler_ == 0)
-    rcDbaseHandler::handler_ = new rcDbaseHandler ();
+  if (rcDbaseHandler::handler_ == 0) rcDbaseHandler::handler_ = new rcDbaseHandler ();
   return rcDbaseHandler::handler_;
 }
 
@@ -59,8 +58,7 @@ rcDbaseHandler::rcDbaseHandler (void)
 #ifdef _TRACE_OBJECTS
   printf ("Create rcDbaseHandler Class Object\n");
 #endif
-  for (i = 0; i < RCXUI_MAX_SESSIONS; i++)
-    sessionActive_[i] = 0;
+  for (i = 0; i < RCXUI_MAX_SESSIONS; i++) sessionActive_[i] = 0;
 }
 
 rcDbaseHandler::~rcDbaseHandler (void)
@@ -70,7 +68,7 @@ rcDbaseHandler::~rcDbaseHandler (void)
   printf ("Delete rcDbaseHandler Class Object\n");fflush(stdout);
 #endif
   if (dbaseSock_ != NULL) 
-    ::mysql_close (dbaseSock_);
+    /*::mysql_close*/::dbDisconnect(dbaseSock_);
   dbaseSock_ = NULL;
 
   if (dbaseDir_)
@@ -86,8 +84,7 @@ rcDbaseHandler::~rcDbaseHandler (void)
 int
 rcDbaseHandler::connect (char* host)
 {
-  if (dbaseSock_ != NULL)
-    ::mysql_close (dbaseSock_);
+  if (dbaseSock_ != NULL) /*::mysql_close*/::dbDisconnect(dbaseSock_);
   
   dbaseSock_ = ::dbConnect (host, getenv("EXPID"));
   if (dbaseSock_ == NULL) {
@@ -95,6 +92,8 @@ rcDbaseHandler::connect (char* host)
     ::exit (1);
     return CODA_ERROR;
   }
+
+  strncpy(host_,host,255);
   printf("rcDbaseHandler::connect: Connected to mysql host %s\n",host);
   return CODA_SUCCESS;
 }
@@ -102,19 +101,45 @@ rcDbaseHandler::connect (char* host)
 int
 rcDbaseHandler::close (void)
 {
-  if (dbaseSock_ != NULL)
-    ::mysql_close (dbaseSock_);
+  if (dbaseSock_ != NULL) /*::mysql_close*/::dbDisconnect(dbaseSock_);
   dbaseSock_ = NULL;
   printf("rcDbaseHandler::close: Disconnected from mysql\n");
   return CODA_SUCCESS;
 }
 
 int
-rcDbaseHandler::connected (void) const
+rcDbaseHandler::connected (void)
 {
+  /*sergey:  try to do some checks and reconnect
   if (dbaseSock_ == NULL)
     return 0;
   return 1;
+  */
+  if(dbaseSock_ == NULL)
+  {
+    printf("rcDbaseHandler::connected: ERROR: dbaseSock_==NULL on entry\n");fflush(stdout);
+    return(0);
+  }
+
+  if(dbCheckConnection(dbaseSock_)==NULL)
+  {
+    printf("rcDbaseHandler::connected: WARN: dbCheckConnection() returned NULL, trying to reconnect\n");fflush(stdout);
+    dbaseSock_ = ::dbConnect (host_, getenv("EXPID"));
+    if(dbaseSock_==NULL)
+	{
+      printf("rcDbaseHandler::connected: ERROR: connect() returned NULL, cannot reconnect\n");fflush(stdout);
+      return(0);
+	}
+    else
+	{
+      printf("rcDbaseHandler::connected: INFO: successfully reconnected\n");fflush(stdout);
+      return(1);
+	}
+  }
+  else
+  {
+    return(1);
+  }
 }
 
 int
@@ -123,6 +148,13 @@ rcDbaseHandler::listAllDatabases (void)
   int i;
   MYSQL_RES *res = 0;
   MYSQL_ROW    row;
+
+  if (!connected())
+  {
+    printf("mysql server is not connected 101\n");
+    return CODA_ERROR;
+  }
+
 
   // first clean up the old result
   for (i = 0; i < numDbases_; i++)
@@ -158,6 +190,12 @@ rcDbaseHandler::database (char* dbase)
   if (dbaseDir_)
     delete []dbaseDir_;
   dbaseDir_ = 0;
+
+  if (!connected())
+  {
+    printf("mysql server is not connected 102\n");
+    return CODA_ERROR;
+  }
 
   if (::mysql_select_db (dbaseSock_, dbase) >= 0) {
     dbaseDir_ = new char[::strlen (dbase) + 1];
@@ -210,8 +248,11 @@ rcDbaseHandler::listAllSessions (void)
     delete[] sessions_[i];
   numSessions_ = 0;
 
-  if (dbaseSock_ == NULL)
+  if (!connected())
+  {
+    printf("mysql server is not connected 103\n");
     return CODA_ERROR;
+  }
 
   ::sprintf (qstring, "select * from %s", DBASE_SESSION_TABLE);
   if (mysql_query (dbaseSock_, qstring) != 0) {

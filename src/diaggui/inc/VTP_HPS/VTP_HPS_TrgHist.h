@@ -49,7 +49,8 @@
 #define CMB_ID_SEL_HISTSRC_P1           5
 #define CMB_ID_SEL_HISTSRC_P2           6
 #define CMB_ID_SEL_HISTSRC_P3           7
-#define CMB_ID_SEL_HISTSRC_ALL          8
+#define CMB_ID_SEL_HISTSRC_FEE          8
+#define CMB_ID_SEL_HISTSRC_ALL          15
 
 
 class VTP_HPS_TrgHist : public TGCompositeFrame
@@ -89,6 +90,7 @@ public:
         pComboHistSrc->AddEntry("P1  CLUSTERS", CMB_ID_SEL_HISTSRC_P1);
         pComboHistSrc->AddEntry("P2  CLUSTERS", CMB_ID_SEL_HISTSRC_P2);
         pComboHistSrc->AddEntry("P3  CLUSTERS", CMB_ID_SEL_HISTSRC_P3);
+        pComboHistSrc->AddEntry("FEE  CLUSTERS", CMB_ID_SEL_HISTSRC_FEE);
         pComboHistSrc->Associate(this);
         pComboHistSrc->Select(CMB_ID_SEL_HISTSRC_ALL);
       pTF1->AddFrame(pSliderUpdateTime = new TGHSlider(pTF1, 100, kSlider1 | kScaleBoth, SDR_UPDATETIME), new TGLayoutHints(kLHintsExpandX | kLHintsCenterY | kLHintsLeft));
@@ -171,6 +173,7 @@ public:
     pPadHodoTop->cd()->SetTopMargin(0.15);
     pHistHodoscope[HODO_TOP]->SetTitle("Hodoscope Top");
     pHistHodoscope[HODO_TOP_CLUSTERED]->SetTitle("Hodoscope Top");
+    pHistHodoscope[HODO_TOP]->SetMarkerSize(4);
     pHistHodoscope[HODO_TOP]->Draw("COL,L,TEXT");
     pHistHodoscope[HODO_TOP_CLUSTERED]->Draw("COL,L,SAME");
     t->SetTextAlign(31);
@@ -182,6 +185,7 @@ public:
     pPadHodoBot->cd()->SetTopMargin(0.15);
     pHistHodoscope[HODO_BOT]->SetTitle("Hodoscope Bottom");
     pHistHodoscope[HODO_BOT_CLUSTERED]->SetTitle("Hodoscope Bottom");
+    pHistHodoscope[HODO_BOT]->SetMarkerSize(4);
     pHistHodoscope[HODO_BOT]->Draw("COL,L,TEXT");
     pHistHodoscope[HODO_BOT_CLUSTERED]->Draw("COL,L,SAME");
     t->SetTextAlign(31);
@@ -313,11 +317,18 @@ public:
     pCanvas->GetCanvas()->cd();
     pCanvas->GetCanvas()->Modified();
     pCanvas->GetCanvas()->Update();
+		
+//    gVirtualX->GrabButton(GetId(), kButton1, kAnyModifier, kButtonPressMask, kNone, kNone);
+//    gVirtualX->GrabButton(GetId(), kButton2, kAnyModifier, kButtonPressMask, kNone, kNone);
+    gVirtualX->GrabButton(GetId(), kButton3, kAnyModifier, kButtonPressMask, kNone, kNone);
 
     pTimerUpdate = new TTimer(this, 1000*pSliderUpdateTime->GetPosition(), kTRUE);
 
     // Setup histograms to bin what we've selected by default
     SetSelectedHistogram(pComboHistSrc->GetSelected());
+    cluster_x_sel = 0;
+    cluster_y_sel = 0;
+    cluster_sel_enabled = 0;
 
     inst++;
   }
@@ -449,6 +460,7 @@ public:
     static TPaveText ttT(-22+13+0.05,6-5,-22+22,7-5-0.05);
     static TPaveText ttB(-22+13+0.05,4-5+0.05,-22+22,5-5);
     static TPaveText ttM(-22+0+0.05,5-5+0.05,-22+13,6-5);
+    static TPaveText ttSel(10,5-5+0.05,22,6-5);
     static TBox bb;
     static TLine ll;
 
@@ -470,6 +482,9 @@ public:
         ttM.SetBorderSize(0);
         ttM.SetFillColor(kWhite);
         ttM.SetTextColor(kRed);
+        ttSel.SetBorderSize(0);
+        ttSel.SetFillColor(kWhite);
+        ttSel.SetTextColor(kRed);
     }
 
     float max=0.0;
@@ -531,6 +546,10 @@ public:
     ttT.Clear();
     ttB.Clear();
     ttM.Clear();
+    ttSel.Clear();
+
+    if(cluster_sel_enabled)
+      ttSel.AddText(Form("SEL ENABLED X,Y = %d,%d",(cluster_x_sel>0)?cluster_x_sel:cluster_x_sel-1, cluster_y_sel));
 
     if(normalize)
     {
@@ -550,6 +569,7 @@ public:
     ttT.Draw();
     ttB.Draw();
     ttM.Draw();
+    ttSel.Draw();
     pPadCalorimeter->cd()->Modified();
   }
 
@@ -857,7 +877,11 @@ public:
   void SetSelectedHistogram(int sel)
   {
     volatile unsigned int *HpsMon_HistSel        = (volatile unsigned int *)((int)pM->BaseAddr + 0x5704);
-    pM->WriteReg32(HpsMon_HistSel, (sel&0xF)<<11);
+    int val = (sel & 0xF)<<11;
+    val|= cluster_sel_enabled ? 1 : 0;
+    val|= (cluster_x_sel & 0x3f)<<5;
+    val|= (cluster_y_sel & 0xf)<<1;
+    pM->WriteReg32(HpsMon_HistSel, val);
   }
 
   void HodoHist(TH2Poly *pH, int tiles_nclusters)
@@ -888,6 +912,40 @@ public:
       x_pos_l2+= Hodoscope_w_l2[i];
     } 
   }
+
+	virtual Bool_t HandleButton(Event_t *event)
+	{
+		TGCompositeFrame::HandleButton(event);
+
+		if(event->fCode == kButton3)
+    {
+      float xmin = 0.103, xmax = 0.896, ymin = 0.396, ymax = 0.631;
+      float x = (float)event->fX / (float)GetWidth();
+      float y = (float)event->fY / (float)GetHeight();
+
+      if(x>=xmin && x<=xmax && y>=ymin && y<=ymax)
+      {
+        float xscale = round(46.0*(x-xmin)/(xmax-xmin)-0.5);
+        float yscale = round(-11.0*(y-ymin)/(ymax-ymin)+0.5);
+        cluster_x_sel = -22.0 + xscale;
+        cluster_y_sel =   5.0 + yscale;
+
+        if(cluster_sel_enabled)
+          cluster_sel_enabled = 0;
+        else
+          cluster_sel_enabled = 1;
+      
+        printf("kButton3: %d event->fX,fY(%d,%d), x,y(%f,%f), ix,iy(%d,%d)\n", cluster_sel_enabled, event->fX, event->fY, x, y, cluster_x_sel, cluster_y_sel);
+
+        SetSelectedHistogram(pComboHistSrc->GetSelected());
+      }
+      else
+        printf("kButton3: invalid: event->fX,fY(%d,%d), x,y(%f,%f)\n", event->fX, event->fY, x, y);
+        
+    }
+		return kTRUE;
+	}
+
 
 private:
 
@@ -926,7 +984,12 @@ private:
   const int HODO_BOT           = 1;
   const int HODO_TOP_CLUSTERED = 2;
   const int HODO_BOT_CLUSTERED = 3;
-  
+
+  int cluster_x_sel;
+  int cluster_y_sel;
+  int cluster_sel_enabled;
+ 
+ 
   ModuleFrame         *pM;
 
   TTimer              *pTimerUpdate;

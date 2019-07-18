@@ -97,7 +97,6 @@ public:
   void database  (char *dbaseDir);
   char* database (void) const;
 
-  int isDatabaseOpen    (void) const;
   int databaseSelected  (void) const;
 
   // get all session and session status
@@ -160,9 +159,9 @@ public:
   int configured (char *title);
 
 protected:
-#if defined (_CODA_2_0_T) || defined (_CODA_2_0)
   // connect to database server
   int connectMysql      (void);
+  int isDatabaseOpened  (void);
   // list all databases
   int listAllDatabases (void);
   // list all session names and active flags
@@ -174,7 +173,6 @@ protected:
   // return CODA_SUCCESS: ok and database is selected
   // return CODA_ERROR:   cannot reconnect and database is not selected
   int reconnectMysql     (void);
-#endif
 
   // check whether a component with name 'title' in the hash table
   int compInsideHash    (char* title);
@@ -184,13 +182,11 @@ private:
   int         exptid_;
   daqRun&     run_;
   factory*    compFactory_;
-#if defined (_CODA_2_0_T) || defined (_CODA_2_0)
   MYSQL*      dbaseSock_;
   char*       username_;
   uid_t       uid_;
   gid_t       gid_;
   static int  numRetries_;  // number of retries to connect to database server
-#endif
   codaStrHash cinfos_;
 };
 #endif

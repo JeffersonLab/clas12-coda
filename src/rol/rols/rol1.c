@@ -22,13 +22,14 @@ static int nusertrig, ndone;
 //#define USE_FLP
 
 
+//#define USE_ED
+
 /* if event rate goes higher then 10kHz, with random triggers we have wrong
 slot number reported in GLOBAL HEADER and/or GLOBAL TRAILER words; to work
 around that problem temporary patches were applied - until fixed (Sergey) */
 #define SLOTWORKAROUND
 
 #undef DEBUG
-#define DEBUG
 
 
 #include <stdio.h>
@@ -319,6 +320,7 @@ static int sd_found = 0;
 #ifdef USE_FADC250
 
 #include "fadcLib.h"
+extern int fadcBlockError; /* defined in fadcLib.c */
 
 #define DIST_ADDR  0xEA00	  /*  base address of FADC signal distribution board  (A16)  */
 
@@ -1443,14 +1445,15 @@ vmeBusUnlock();
     MAXFADCWORDS = NFADC * block_level * (1+2+100/*FADC_WINDOW_WIDTH*/*16) + 2*32;
   
     printf("**************************************************\n");
-    printf("* Calculated MAX FADC words per block = %d\n",MAXFADCWORDS);
+    printf("* Calculated MAXFADCWORDS per block = %d\n",MAXFADCWORDS);
     printf("**************************************************\n");
 
     /* Check these numbers, compared to our buffer size.. */
     if( (MAXFADCWORDS+MAXTIWORDS)*4 > MAX_EVENT_LENGTH )
     {
       printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-      printf(" WARNING.  Event buffer size is smaller than the expected data size\n");
+      printf(" WARNING.  Event buffer size (%d bytes) is smaller than the expected data size (%d bytes)\n",
+        MAX_EVENT_LENGTH,(MAXFADCWORDS+MAXTIWORDS)*4);
       printf("     Increase the size of MAX_EVENT_LENGTH and recompile!\n");
       printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     }
@@ -1462,7 +1465,35 @@ vmeBusLock();
       faSetBlockLevel(slot, block_level);
 vmeBusUnlock();
     }
+
+
+
+//#ifdef USE_ED
+    /* sergey: set fadc250 internal busy parameters */
+	printf("\n\n== Setting fadc250 internal busy parameters\n\n");
+    for(id=0; id<nfadc; id++) 
+    {
+      slot = faSlot(id);
+vmeBusLock();
+
+      /*the maximum number of unacknowledged triggers before
+		module stops accepting incoming triggers*/
+      faSetTriggerStopCondition(slot, 9); /* halld - 9 */ /*2000/nsamples-3 ???*/
+
+	  /*the maximum number of unacknowledged triggers before module asserts BUSY*/
+      faSetTriggerBusyCondition(slot, 3); /* halld - 3 */
+
+      faStatus(slot,0);
+vmeBusUnlock();
+    }
+	printf("\n\n== Done setting fadc250 internal busy parameters\n\n");
+//#endif
+
+
+
 #endif
+
+
 #ifdef USE_VSCM
   for(ii=0; ii<nvscm1; ii++)
   {
@@ -1613,6 +1644,13 @@ vmeBusUnlock();
 
 #ifdef USE_FADC250
 
+#ifdef USE_ED
+  for(id=0; id<nfadc; id++) 
+  {
+    FA_SLOT = faSlot(id);
+    faArmStatesStorage(FA_SLOT);
+  }
+#endif
 
   /*  Enable FADC - old place
   for(id=0; id<nfadc; id++) 
@@ -1786,7 +1824,9 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
 #endif
   char *chptr, *chptr0;
 
-  /*printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);*/
+#ifdef DEBUG
+  printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
+#endif
 
   if(syncFlag) printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
 
@@ -2122,8 +2162,12 @@ vmeBusUnlock();
     {
 
 
+#ifdef DEBUG
+	  printf("FADC250 readout starts\n");fflush(stdout);
+#endif
+
 /*COMMENT OUT FOLLOWING 'FOR' LOOP FOR SPEED UP !!!*/
-      for(itime=0; itime<100000; itime++) 
+      for(itime=0; itime<200000/*100000*/; itime++) 
 	  {
 vmeBusLock();
 	    gbready = faGBready();
@@ -2162,7 +2206,7 @@ vmeBusUnlock();
  
  /*25us->*/
 vmeBusLock();
- 	      dCnt = faReadBlock(FA_SLOT,rol->dabufp,0x100000/*MAXFADCWORDS*/,FADC_ROFLAG);
+          dCnt = faReadBlock(FA_SLOT,rol->dabufp,/*(dmaMemSize/4)*/MAXFADCWORDS,FADC_ROFLAG);
 vmeBusUnlock();
  /*->25us*/
 #ifdef DEBUG
@@ -2174,20 +2218,37 @@ vmeBusUnlock();
           usrRestoreVmeDmaMemory();
           usrVmeDmaMemory(&pMemBase, &uMemBase, &mSize);
  	      /*printf("restored: 0x%08x 0x%08x 0x%08x\n",pMemBase,uMemBase,mSize);*/
+
 #else
 
 #ifdef DEBUG
-          printf("fadc1: Starting DMA\n");fflush(stdout);
+          printf("fadc1: Starting DMA, dmaMemSize=%d(0x%08x) bytes\n",dmaMemSize,dmaMemSize);fflush(stdout);
 #endif
 
 vmeBusLock();
-	      dCnt = faReadBlock(FA_SLOT,tdcbuf,500000/*MAXFADCWORDS*/,FADC_ROFLAG);
+          dCnt = faReadBlock(FA_SLOT,tdcbuf,/*(dmaMemSize/4)*/MAXFADCWORDS,FADC_ROFLAG);
 vmeBusUnlock();
 
+          if(fadcBlockError)
+		  {
+            printf("fadc1 ERROR: Finished DMA, fadcBlockError=%d\n",fadcBlockError);fflush(stdout);
+            printf("dmaMemSize can be too small\n");fflush(stdout);
+		  }
 #ifdef DEBUG
-          printf("fadc1: Finished DMA, dCnt=%d\n",dCnt);fflush(stdout);
+          printf("fadc1: Finished DMA, dCnt*4=%d bytes, fadcBlockError=%d\n",dCnt*4,fadcBlockError);fflush(stdout);
 #endif
-
+		  
+          if((dCnt*4) >= dmaMemSize)
+		  {
+            printf("ERROR !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");fflush(stdout);
+            printf("ERROR !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");fflush(stdout);
+            printf("ERROR: increase dmaMemSize above %d bytes by calling usrVmeDmaSetMemSize(size)\n",dCnt*4);fflush(stdout);
+            printf("       and recompile rol1 (see TIPRIMARY_source.h)\n");fflush(stdout);
+            printf("ERROR !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");fflush(stdout);
+            printf("ERROR !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");fflush(stdout);
+            exit(0);
+          }
+		  
 #endif
 
 
@@ -2213,7 +2274,7 @@ vmeBusUnlock();
 
 
 vmeBusLock();
-	        len = faReadBlock(faSlot(jj),rol->dabufp,500000/*MAXFADCWORDS*/,FADC_ROFLAG);
+	        len = faReadBlock(faSlot(jj),rol->dabufp,MAXFADCWORDS,FADC_ROFLAG);
 vmeBusUnlock();
             rol->dabufp += len;
             dCnt += len;
@@ -2221,15 +2282,21 @@ vmeBusUnlock();
             usrRestoreVmeDmaMemory();
 #else
 vmeBusLock();
-	        len = faReadBlock(faSlot(jj),&tdcbuf[dCnt],500000/*MAXFADCWORDS*/,FADC_ROFLAG);
+	        len = faReadBlock(faSlot(jj),&tdcbuf[dCnt],MAXFADCWORDS,FADC_ROFLAG);
 vmeBusUnlock();
             dCnt += len;
 #endif
 
-#ifdef DEBUG
-            printf("fadc1: [%d] len=%d dCnt=%d\n",jj,len,dCnt);
-            for(jjj=0; jjj<len; jjj++) printf(" [%3d]  0x%08x\n",jjj,tdcbuf[(dCnt-len)+jjj]);
-#endif
+			/*
+			if(len!=21244)
+			{
+			printf("!!!!!!!!!!!!!!!!!!! ERROR len=%d\n",len);
+            faStatus(jj,0);
+            printf("FADC board %d: len=%d dCnt=%d\n",jj,len,dCnt);
+            for(jjj=0; jjj<len; jjj++) printf(" [%3d]  0x%08x (tag=0x%02x)\n",jjj,LSWAP(tdcbuf[(dCnt-len)+jjj]),((LSWAP(tdcbuf[(dCnt-len)+jjj])>>27)&0x1F));
+            printf("End of FADCs data\n");
+			}
+			*/
 		  }
 
 
@@ -2249,8 +2316,13 @@ vmeBusUnlock();
 	    else
 	    {
 #ifndef DMA_TO_BIGBUF
-
+#ifdef DEBUG
+          printf("fadc: moving %d words to dabufp starting from address 0x%08x\n",dCnt,rol->dabufp);fflush(stdout);
+#endif
           for(jj=0; jj<dCnt; jj++) *rol->dabufp++ = tdcbuf[jj];
+#ifdef DEBUG
+          printf("fadc: ending dabufp address 0x%08x\n",rol->dabufp);fflush(stdout);
+#endif
 #endif
         }
 
@@ -2283,10 +2355,11 @@ vmeBusUnlock();
               printf("FADC in slot %3d:\n",jj);fflush(stdout);
 vmeBusLock();
               faStatus(jj,0);
-	          len = faReadBlock(jj,tdcbuf,500000,1);
-              printf("read %d words from FADC\n",len);
-              for(jjj=0; jjj<len; jjj++) printf(" [%3d]  0x%08x\n",jjj,tdcbuf[jjj]);
+	          len = faReadBlock(jj,tdcbuf,MAXFADCWORDS,1);
 vmeBusUnlock();
+              printf("ERROR: Printing %d words from FADC %d\n",len,jj);
+              for(jjj=0; jjj<len; jjj++) printf(" [%3d]  0x%08x (tag=0x%02x)\n",jjj,LSWAP(tdcbuf[jjj]),((LSWAP(tdcbuf[jjj])>>27)&0x1F));
+              printf("End of FADC data\n");
 			}
 		  }
           printf("\n============= finished reading troubled FADCs ===================\n");
@@ -2312,6 +2385,10 @@ vmeBusUnlock();
 	    }
 /*->2us*/
 	  }
+
+#ifdef DEBUG
+	  printf("FADC250 readout ends\n");fflush(stdout);
+#endif
 
     }
 

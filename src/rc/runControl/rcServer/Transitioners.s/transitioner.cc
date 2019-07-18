@@ -79,7 +79,7 @@
 // timer interval for ping transitioning components, 1000 msec
 int transitioner::tickInterval_ = 1000;
 // transition timeout value 15 seconds
-int transitioner::timeout_ = 60/*sergey: 45 is not enough for rich4 in prestart*/;
+int transitioner::timeout_ = 180/*sergey: 60 is not enough for HPS SVT*//*sergey: 45 is not enough for rich4 in prestart*/;
 
 transitioner::transitioner (daqSystem* system)
 :system_ (system), child_ (0), activeList_ (), 

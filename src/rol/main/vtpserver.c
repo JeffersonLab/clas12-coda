@@ -114,9 +114,17 @@ main(int argc, char *argv[])
 
   /* connect to IPC server */
   printf("Connect to IPC server...\n");
-  epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");
+  //epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");
+  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
   printf("done.\n");
   fflush(stdout);
+
+  stat = fork();
+  if(!stat)
+  {
+    system("/usr/clas12/release/1.4.0/coda/src/rol/Linux_armv7l/bin/DiagGuiServer");
+    return 0;
+  }
 
   count = 0;
   while(1)

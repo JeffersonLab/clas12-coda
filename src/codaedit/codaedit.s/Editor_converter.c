@@ -78,6 +78,8 @@
 #include "Editor_menu.h"
 
 
+#define DEBUG
+
 /* global file and debugger number */
 int outputFileNum = 0;
 int codaFileNum = 0;
@@ -1415,7 +1417,10 @@ XcodaEditorWriteToConfig(char* config_name, XcodaEditorGraph* graph)
 	    err = insertValToConfigTable (config_name, daq->comp_name, code, inputStr, outputStr, nextComp, fComp, order_num); /*sergey: 'order_num' added */
         order_num ++;	
 
-		/* sergey: if name starts from "coda_", use daq->code[0] as filename to update _option table */
+
+
+		/* probably do not need it any more, since _option drop problem fixed ? */
+		/* sergey: if name starts from "coda_", use daq->code[0] as filename to update _option table (assume coda_0 or coda_1 etc) */
         if(!strncmp(daq->comp_name,"coda_",5))
 		{
 #ifdef DEBUG
@@ -1423,6 +1428,8 @@ XcodaEditorWriteToConfig(char* config_name, XcodaEditorGraph* graph)
 #endif
           insertValToOptionTable (config_name,"dataFile",daq->code[0]);
 		}
+
+
 
 	    /* free memories */
 	    if (num_inputs)
@@ -1442,6 +1449,9 @@ XcodaEditorWriteToConfig(char* config_name, XcodaEditorGraph* graph)
   }
   meshDestroy (mesh, maxrow, maxcol);
 
+#ifdef DEBUG
+  printf("XcodaEditorWriteToConfig: calling XcodaEditorSaveConfigOption()\n");
+#endif
   /* save option information */
   XcodaEditorSaveConfigOption (config_name);
 
@@ -1604,9 +1614,11 @@ constructRcnetComps(rcNetComp** comps, int* num)
   ConfigInfo* cinfo[MAX_NUM_COMPS];
   int  num_cinfo;
 
-  if (createRcNetCompsFromDbase (comps, num) < 0) 
+  if (createRcNetCompsFromDbase (comps, num) < 0)
+  {
+    printf("Editor_converter::constructRcnetComps error 1\n");
     return -1;
-
+  }
 
   /*  if (listAllConfigs (configs, &numConfigFiles) < 0)
     return -1;
@@ -1648,9 +1660,7 @@ constructRcnetCompsWithConfig (char* config,
   /* sergey: get component information from 'process' table */
   if (createRcNetCompsFromDbase (comps, num) < 0)
   {
-#ifdef DEBUG
-    printf("constructRcnetCompsWithConfig error 1\n");
-#endif
+    printf("Editor_converter::constructRcnetCompsWithConfig error 1\n");
     return(-1);
   }
 

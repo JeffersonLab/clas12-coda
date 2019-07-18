@@ -35,6 +35,8 @@
 
 #include "../code.s/tiLib.h"
 
+static unsigned int dmaMemSize; /* DMA memory size, see below */
+
 #ifdef VXWORKS
 extern unsigned int tsIntCount;
 extern struct TI_A24RegStruct *TIp;
@@ -52,7 +54,6 @@ extern char configname[128]; /* coda_component.c (need to add it in rolInt.h/ROL
 
 #define TS_LEVEL 3 /*do we have it in one of the TS registers ???*/
 
-#undef DEBUG
 
 static int nackcalls;
 
@@ -142,8 +143,18 @@ vmeCheckMutexHealth(1); /*- use 'mutexclean' command if needed !!!!!!!!!!!!!!!!!
 
 
   /* DMA setup */
-  /*usrVmeDmaSetMemSize(0x200000);*/
-  usrVmeDmaInit();
+
+/* increase DMA memory size here if necessary */
+usrVmeDmaSetMemSize(0x200000);
+
+/* usrVmeDmaSetMemSize(0x800000); produces error:
+ usrVmeDmaSetMemSize: set memSize to 0x00800000 (8 MB)
+ usrVmeDmaGetMemSize: memSize = 0x00800000 (8 MB)
+ usrVmeDmaInit ERROR: gefVmeAllocDmaBuf returned 0x30100002
+*/
+
+ dmaMemSize = usrVmeDmaGetMemSize();
+ usrVmeDmaInit();
 #ifdef VXWORKS
   i2 = &tdcbuftmp[0];
 #else
@@ -172,7 +183,7 @@ vmeCheckMutexHealth(1); /*- use 'mutexclean' command if needed !!!!!!!!!!!!!!!!!
 vmeBusLock();
  /*tiSetFiberLatencyOffset_preInit(0xbf);*/ /*default is 0xbf in 4ns ticks*/
   ret = tiInit(TI_ADDR,TI_READOUT,0); /*tiInit((21<<19),2,0)*/
-  /*if(ret<0) ret = tiInit(0,TI_READOUT,0);*/
+  if(ret<0) ret = tiInit(0,TI_READOUT,0);
   if(ret<0)
   {
     printf("ERROR: tiInit() returns %d \n",ret);

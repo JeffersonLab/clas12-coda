@@ -1011,11 +1011,11 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
   pid_t pid;
   int myargc;
   char *myargv[20];
-  char *mysql;
+  char *mysqlhost;
   char *expid;
   char *session;
 
-  mysql = option->msqldhost();
+  mysqlhost = option->msqldhost();
   expid = option->dbasename();
   session = option->session();
   printf("\n>>> Will use expid(dbasename) >%s<, session name >%s<\n\n",expid,session);
@@ -1223,7 +1223,7 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
           sprintf(temp,"stop_coda_process -p %s -match \"%s %s\"",comp[kk].boot_string,comp[kk].comp_name,type_name[kk]);
           myargv[myargc++] = strdup( temp );
 
-          sprintf(temp,"%s -m %s -e %s -s %s -o \"%s %s\":%s %s",comp[kk].boot_string,mysql,expid,session,comp[kk].comp_name,type_name[kk],comp[kk].comp_name,type_name[kk]);
+          sprintf(temp,"%s -m %s -e %s -s %s -o \"%s %s\":%s %s",comp[kk].boot_string,mysqlhost,expid,session,comp[kk].comp_name,type_name[kk],comp[kk].comp_name,type_name[kk]);
           myargv[myargc++] = strdup( temp );
 
 

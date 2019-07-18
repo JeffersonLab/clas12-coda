@@ -28,6 +28,9 @@ CLON_FLAGS += -I./src.s \
 				-I$(CODA)/src/ipc/ipc.s \
 				-I$(CODA)/src/codautil/codautil.s
 
+# for json.hpp
+CLON_FLAGS += -I$(RCDB_HOME)/cpp/include
+
 CLON_FLAGS += $(ROOTCFLAGS)
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")

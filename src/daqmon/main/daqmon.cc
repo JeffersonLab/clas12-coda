@@ -61,6 +61,8 @@ ReadConfig(char *fileconf)
 
   ntabs = 0;
 
+  printf("ReadConfig(%s)\n",fileconf);
+
   if((fd=fopen(fileconf,"r")) != NULL)
   {
     nline = 0;
@@ -103,7 +105,7 @@ ReadConfig(char *fileconf)
           printf("Found 'CMON_PAD' key\n");
 	  nread = sscanf(str,"%*s %s %i %i %i %i",str_tmp,&i1,&i2,&i3,&i4);
           /*daqPad(char* hname, int pad, int dim, int Log, int stat, char* hopt, char* dopt);*/
-          pad = new daqPad(str_tmp,i1,i2,i3,i4,"nemo","hist");
+	  pad = new daqPad(str_tmp,i1,i2,i3,i4,(char *)"nemo",(char *)"hist");
           tab->pads.push_back(pad);
         }
         else
@@ -200,11 +202,11 @@ main(int argc, char **argv)
   //------------------------------
   //----  tab:   ERRORS        ---
   //------------------------------
-  tab=new daqTab(dmf,"ERR",1,1);
+  tab=new daqTab(dmf,(char *)"ERR",1,1);
   tabs.push_back(tab);
   printf("Created TAB id=%d, total=%d \n",tab->ID,dmf->get_n_tabs());
   //dmf->fTab->SetEnabled(tab->ID,0);
-  pad = new daqPad("ROC_Errors",1,2,0,1,"i","text");  tab->pads.push_back(pad);
+  pad = new daqPad((char *)"ROC_Errors",1,2,0,1,(char *)"i",(char *)"text");  tab->pads.push_back(pad);
   //pad->Maximum=10;
   tab->canvas->cd(1);   gPad->SetGridx(1);   gPad->SetGridy(1);
 
@@ -223,8 +225,8 @@ main(int argc, char **argv)
   
    const Int_t nx = 9;
    const Int_t ny = 53;
-   char *errors[nx]  = {"Time mismatch","DMA timeout","tiBusy","Error_4","Error_5","Error_6","Error_7","Error_8","Error_9"};
-   char *crates[ny] = 
+   const char *errors[nx]  = {"Time mismatch","DMA timeout","tiBusy","Error_4","Error_5","Error_6","Error_7","Error_8","Error_9"};
+   const char *crates[ny] = 
 {  "FCAL1",  "FCAL2",  "FCAL3",  "FCAL4",  "FCAL5",  "FCAL6",  "FCAL7",  "FCAL8",  "FCAL9",  "FCAL10",  "FCAL11",  "FCAL12",
    "BCAL1","BCAL2","BCAL3","BCAL4","BCAL5","BCAL6","BCAL7","BCAL8","BCAL9","BCAL10","BCAL11","BCAL12",
    "FDC1","FDC2","FDC3","FDC4","FDC5","FDC6","FDC7","FDC8","FDC9","FDC10","FDC11","FDC12","FDC13","FDC14",
@@ -310,12 +312,12 @@ main(int argc, char **argv)
 
 
 
-  /* starting one thread per tab; if want one per pad, do lop over ii and s_pad++ */
+  /* starting one thread per tab; if want one per pad, do loop over ii and s_pad++ */
   for(itab=0; itab<ntabs; itab++)
   {
     int CTAB = tab_id[itab];
     int s_pad = 1;
-    for(int ii=6; ii<=6; ii++)
+    for(int ii=3; ii<=3; ii++)
     {
       sprintf(srv_trig[ii].REM_HOST,"clondaq%d",ii);
 

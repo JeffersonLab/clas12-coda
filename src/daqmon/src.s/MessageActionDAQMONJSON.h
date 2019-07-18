@@ -1,10 +1,13 @@
+
+/* MessageActionDAQMONJSON.h */
+
 #ifndef __MESSAGE_ACTION_JSON__
 #define __MESSAGE_ACTION_JSON__
 
 #include "MessageAction.h"
 
 #include "hbook.h"
-#include "json.hpp" /*A.C. I am currently putting a local include file here, is it somewhere else already?*/
+#include "json/json.hpp"
 #include <string>
 
 #include <unistd.h>
@@ -101,40 +104,27 @@ int check(std::string fmt){
 
 
 
-void decode(IpcConsumer& recv){
-    
-      recv >> str;
-      if(debug) printf("\nMessageActionJSON received >%s<\n",str.c_str());fflush(stdout);
-      
+void
+decode(IpcConsumer& recv)
+{    
+  recv >> str;
+  if(debug) printf("\nMessageActionJSON received >%s<\n",str.c_str());fflush(stdout);
 
+  json j3 = json::parse(str);
+   
+  // special iterator member functions for objects
+  for (json::iterator it = j3.begin(); it != j3.end(); ++it)
+  {
+	std::cout<<it.key()<<" "<<it.value()<<std::endl;
+	if (j3[it.key()].is_array())
+    {
+	  std::vector <double> data = j3[it.key()]; //use a double vector
+	  std::string htitle = it.key();
+	  htitle = std::string(hnameLocalSplit)+":"+htitle;
 
-      json j3 = json::parse(str);
-
-     
-      // special iterator member functions for objects
-      for (json::iterator it = j3.begin(); it != j3.end(); ++it) {
-	cout<<it.key()<<" "<<it.value()<<endl;
-	if (j3[it.key()].is_array()){
-	  vector<double> data=j3[it.key()]; //use a double vector
-	  std::string htitle=it.key();
-	  htitle=string(hnameLocalSplit)+":"+htitle;
-	  /*Special cases*/
-	 
-	  if ((it.key()=="adcft1vtp_VTPFT_CLUSTERPOSITION")||(it.key()=="adcft1vtp_VTPFT_CLUSTERPOSITION_HODO")||(it.key()=="adcft2vtp_VTPFT_CLUSTERPOSITION")||(it.key()=="adcft2vtp_VTPFT_CLUSTERPOSITION_HODO")){
-
-	    decodeFTPosHist(htitle,data);
-	   
-	  }
-	  else if (it.key()=="ABCD"){
-	    
-	  }
-	  else{
-	    decodeDefaultHist(htitle,data);
-	  }
-	  
+	  decodeDefaultHist(htitle, data);
 	}
-      }
-
+  }
 }
 
 
@@ -156,7 +146,8 @@ void decode(IpcConsumer& recv){
 
     /*Special flag is to handle specific cases (as FT mapping)*/
 
-void hist2root(int specialFlag=0)
+void
+hist2root(int specialFlag=0)
 {
   Int_t id, ibinx, ibiny;
   Float_t x, y;
@@ -277,7 +268,8 @@ void hist2root(int specialFlag=0)
   } /*netlist==NULL*/
 }
 
-void decodeDefaultHist(std::string title,vector <double> &data){
+void decodeDefaultHist(std::string title, std::vector <double> &data)
+{
   if (debug) printf("decodeDefaultHist \n");
   hist.ntitle=title.length();
   hist.title=strdup(title.c_str());
@@ -294,78 +286,12 @@ void decodeDefaultHist(std::string title,vector <double> &data){
     return;
   }
   
-  for(int ibinx=0; ibinx<hist.nbinx; ibinx++) {
-      hist.buf[ibinx]=data[ibinx];
+  for(int ibinx=0; ibinx<hist.nbinx; ibinx++)
+  {
+    hist.buf[ibinx]=data[ibinx];
   }
   
- 
 }
-
-
- void decodeFTPosHist(std::string title,vector<double> &data){
-   const int expectedSize=1024;
-   int i=0;
-   int x,y;
-
-   if (data.size()!=expectedSize){
-     printf("error in decodeFTPosHist, expected: %i got: %i\n",expectedSize,data.size());
-     error=1;
-     return;
-   }
-   
-   if (debug) printf("decodeFTPosHist \n");
-
-
-   hist.ntitle=title.length();
-   hist.title=strdup(title.c_str());
-   
-  hist.nbinx=22;
-  hist.xmin=-0.5;
-  hist.xmax=21.5;
-  hist.xunderflow=0;
-  hist.xoverflow=0;
-  hist.dx=1;
-
-  hist.nbiny=22;
-  hist.ymin=-0.5;
-  hist.ymax=21.5;
-  hist.yunderflow=0;
-  hist.yoverflow=0;
-  hist.dy=1;
-
-  hist.buf2 = (float **) calloc(hist.nbinx,sizeof(float*));
-  if(hist.buf2==NULL){
-    printf("ERROR1 in 2DIM calloc()\n");fflush(stdout);
-    error = 1;
-    return;
-  }
-
-  for(i=0; i<hist.nbinx; i++){
-      hist.buf2[i] = (float *) calloc(hist.nbiny,sizeof(float));
-      if(hist.buf2[i]==NULL){
-	printf("ERROR2 in 2DIM calloc()\n");fflush(stdout);
-	error = 1;
-	return;
-      }
-  }
-  
-  i=0;
-  for(int ibiny=0; ibiny<32; ibiny++){ //We report clusters as a 5-bit value, to count from 0 to 21, first all X for given Y, then next Y...
-    
-    for(int ibinx=0; ibinx<32; ibinx++){
-      if ((ibinx<hist.nbinx)&&(ibiny<hist.nbiny)){
-	y=ibiny;
-	x=hist.nbinx-ibinx-1;
-	hist.buf2[x][y]=data[i]; //implement reverse axis
-      }
-  
-      i++;
-    }
-  }
- }
-
-
-
 
 
 

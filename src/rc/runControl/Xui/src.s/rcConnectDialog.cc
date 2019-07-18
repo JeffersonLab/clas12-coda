@@ -355,10 +355,10 @@ rcConnectDialog::popup (void)
 {
   XcodaFormDialog::popup ();
   rcComdOption* option = rcComdOption::option ();
-  rcDbaseHandler* handler = rcDbaseHandler::dbaseHandler ();
+  /*sergey rcDbaseHandler* handler = rcDbaseHandler::dbaseHandler ();*/
 
   XmTextFieldSetString (hostname_, option->serverHost ());
-  // use database handler to find all databases and sessions
+  /*sergey // use database handler to find all databases and sessions*/
   if (option->session())
     XmComboBoxSetString (exptname_, option->session ());
   else
@@ -463,38 +463,50 @@ rcConnectDialog::dbaseDropDownCbk (Widget w, XtPointer data,
   int i = 0;
   XmString t;
 
-  if (cbs->reason == XmCR_SHOW_LIST) {
+  if (cbs->reason == XmCR_SHOW_LIST)
+  {
     // try to connect to database
-    if (dbaseHandler->connect (msqldhost) != CODA_SUCCESS) {
+    if (dbaseHandler->connect (msqldhost) != CODA_SUCCESS)
+    {
       dialog->reportError ((char *)"Cannot connect to msql database server");
       rcAudio ((char *)"can not connect to msql database server");
       return;
     }
+
     // first to remove all old items
     XmComboBoxDeleteAllItems (dialog->exptid_);
+
     // get all databases from dbase handler
-    if (dbaseHandler->listAllDatabases () != CODA_SUCCESS) {
+    if (dbaseHandler->listAllDatabases () != CODA_SUCCESS)
+    {
       dialog->reportError ((char *)"Listing all databases from msql database failed");
+
+      dbaseHandler->close ();
       return;
     }
+
     int numdbases = 0;
     char **dbases = dbaseHandler->allDatabases (numdbases);
 
-    if (numdbases <= 0) {
+    if (numdbases <= 0)
+    {
       dialog->reportError ((char *)"No databases have been found");
+
+      dbaseHandler->close ();
       return;
     }
     
-    for (i = 0; i < numdbases; i++) {
+    for (i = 0; i < numdbases; i++)
+    {
       t = XmStringCreateSimple (dbases[i]);
       XmComboBoxAddItemUnselected (dialog->exptid_, t, 0);
       XmStringFree (t);
     }
-  }
-  else {
-    // disconenct database handler from the database server
+
     dbaseHandler->close ();
   }
+
+  return;
 }
 
 void
@@ -515,44 +527,56 @@ rcConnectDialog::sessionDropDownCbk (Widget w, XtPointer data,
   int i = 0;
   XmString t;
 
-  if (cbs->reason == XmCR_SHOW_LIST) {
+  if (cbs->reason == XmCR_SHOW_LIST)
+  {
     // try to connect to database
-    if (dbaseHandler->connect (msqldhost) != CODA_SUCCESS) {
+    if (dbaseHandler->connect (msqldhost) != CODA_SUCCESS)
+    {
       dialog->reportError ((char *)"Cannot connect to msql database server");
       return;
     }
+
     // select database selected from the list
     char* dbase = XmComboBoxGetString (dialog->exptid_);
-    if (!dbase || !*dbase){
+    if (!dbase || !*dbase)
+    {
       dialog->reportError ((char *)"Fatal: Cannot find selected database");
       XtFree (dbase);
+
+      dbaseHandler->close ();
       return;
     }
+
     dbaseHandler->database (dbase);
 
     /* first to remove all old items */
     XmComboBoxDeleteAllItems (dialog->exptname_);
 
     /* get all databases from dbase handler */
-    if (dbaseHandler->listAllSessions () != CODA_SUCCESS) {
+    if (dbaseHandler->listAllSessions () != CODA_SUCCESS)
+    {
       dialog->reportError ((char *)"Listing all sessions from msql database failed");
+
+      dbaseHandler->close ();
       return;
     }
+
     int numSessions = 0;
     char **sessions = dbaseHandler->allSessions (numSessions);
     int* sessionStatus = dbaseHandler->sessionStatus (numSessions);
     
-    for (i = 0; i < numSessions; i++) {
+    for (i = 0; i < numSessions; i++)
+    {
       t = XmStringCreateSimple (sessions[i]);
       XmComboBoxAddItemUnselected (dialog->exptname_, t, 0);
       XmStringFree (t);
     }
-  }
-  else {
-    // disconenct database handler from the database server
     dbaseHandler->close ();
   }
+
+  return;
 }
+
 
 void
 rcConnectDialog::spawnCallback (Widget w, XtPointer data,

@@ -74,6 +74,7 @@ public:
     }
     printf("Define new pad for hist = %s opt=%s Dopt=%s\n",Hname,Hopt,Dopt);
   }
+
   //--------------------------------------------------------------------------------
   TGraph* timeGraph(char* name,  int size ) {
     GraphSize=size;
@@ -105,6 +106,7 @@ public:
 
     return graph;
   }
+
   //--------------------------------------------------------------------------------
   TGraph* timeGraph(char* name,  int size , int src, int chX, int chY ) {
     char name2[128];
@@ -114,6 +116,7 @@ public:
     graph->SetTitle(name2);
     return gr;
   }
+
   //--------------------------------------------------------------------------------
   int fillGraph(double X , double Y ) {
     for (Int_t i=0;i<GraphSize-1;i++) {
@@ -122,7 +125,10 @@ public:
     }
     GraphX[GraphSize-1] =  Gtime++; //X;
     GraphY[GraphSize-1] = Y;
+
+    return 0;
   }
+
   //--------------------------------------------------------------------------------
   int fillGraph2(double X , double Y ) {
     //printf("fillGraph2: x=%f y=%f \n",X,Y);
@@ -135,7 +141,10 @@ public:
     GraphY[GraphSize-1] = Y;
     graph->SetPoint(GraphSize-1,GraphX[GraphSize-1],GraphY[GraphSize-1]);
     //printf("tv: sec=%lu  usec=%lu\n",Time.tv_sec,Time.tv_usec);
+
+    return 0;
   }
+
   //--------------------------------------------------------------------------------
   ~daqPad() {
     delete graph;
@@ -158,19 +167,25 @@ class daqTab {
   vector<daqPad*> pads;
   int modified;
   int update_time;  //-- sec --
+
   int Print() {
     char fname[512];
       sprintf(fname,"~/ROOT_HIST/ROOT-%d/%s.pdf",234,name);
       //fMain->c1[Nmmod]->Print(name);
       //sprintf(name,"ROOTTB2008/ROOT-%d/MonitorModule%dPedest.gif",RunNo_local,DEPFET[Nmmod]->ID);
       //mainWin->c1[Nmmod]->Print(name);
+	  return 0;
   }
+
   int Divide(int nx0 , int ny0 ) {    
     nx=nx0;
     ny=ny0;
     max_pads=nx*ny;
-    canvas->Divide(nx,ny);    
+    canvas->Divide(nx,ny);
+
+    return 0;    
   }
+
   int Create(daqMainFrame *fMain, /*TGString**/ char*  name) { 
     canvas=fMain->add_tab(name);
     sprintf(name,"%s",name);
@@ -179,18 +194,24 @@ class daqTab {
     //ID=fMain->fTab->GetCurrent(); 
     ID=fMain->fTab->GetNumberOfTabs()-1;
     printf("New TAB ID=(%d,%d) Current=%d\n",ID,fMain->fTab->GetNumberOfTabs()-1,cID);
+
     //fMain->fTab->SetTab(cID,kTRUE);
     modified=0;
     update_time=1;
+
+    return 0;
   }
 
   daqTab(daqMainFrame *fMain, /*TGString**/ char*  name) {    
     Create(fMain, name);
     nx=1; ny=1; max_pads=1;
   }
+
   daqTab(daqMainFrame *fMain, char*  name, int nx0 , int ny0 ) {    
     Create(fMain, name);
+	printf("daqTab: div 1\n");fflush(stdout);
     Divide(nx0,ny0);
+	printf("daqTab: div 2\n");fflush(stdout);
   }
 
   ~daqTab() { }

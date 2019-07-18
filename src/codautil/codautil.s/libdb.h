@@ -14,6 +14,7 @@ extern "C" {
 MYSQL *dbConnectFull(const char *host, const char *database, const char *user, const char *passwd);
 MYSQL *dbConnect(const char *host, const char *database);
 void dbDisconnect(MYSQL *mysql);
+MYSQL * dbCheckConnection(MYSQL *mysql);
 int  dbGetInt(MYSQL *mysql, char *str, int *value);
 int  dbGetStr(MYSQL *mysql, char *str, char *strout);
 

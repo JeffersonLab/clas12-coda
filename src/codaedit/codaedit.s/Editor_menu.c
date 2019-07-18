@@ -79,6 +79,8 @@
 #include "Editor_rmdbaseSel.h"
 
 
+#define DEBUG
+
 /*
 static char *file_menus[]={
   "New Database...",
@@ -132,6 +134,7 @@ static codaDefOption defOptions[] = {
   {"dataLimit", "0"},
   {"dataFile", ""},
   {"tokenInterval", "64"},
+  {"SPLITMB", "2047"},
 };
 
 static int numDefOptions = 4;
@@ -673,6 +676,8 @@ confirm_overwrite(Widget w,
   XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
   char *config_name;
 
+  printf("Editor_menu::confirm_overwrite reached\n");
+
   if(cbs->reason == XmCR_OK)
   {
     config_name = XmTextFieldGetString(info->input_);
@@ -759,6 +764,8 @@ saveConfig (Widget w,
 {
   char *config;
   ConfigWidgets* obj = (ConfigWidgets *)clientData;
+
+  printf("Editor_menu::saveConfig\n");
 
   config = XmTextFieldGetString (obj->input_);
   if (!config || !*config)
@@ -939,6 +946,8 @@ XcodaEditorSaveDefault(Widget w,
   XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
   XcodaEditorResetGraphCmd();
 
+  printf("Editor_menu::XcodaEditorSaveDefault reached\n");
+
   if(isEmptyGraph(&coda_graph))
     return;
 
@@ -983,6 +992,9 @@ saveAction(Widget w,
 		       XtPointer callback_data)
 {
   XmAnyCallbackStruct* cbs = (XmAnyCallbackStruct *)callback_data;
+
+  printf("Editor_menu::saveAction reached\n");
+
   popdown_shell(w, client_data, cbs);
   XcodaEditorSaveConfig(w, client_data, cbs);
 }
@@ -1110,7 +1122,7 @@ popupSaveQDialog(Widget parent,
  *      Callback function for constructing a option for a run     *
  *      type                                                      *
  *****************************************************************/
-#define EDITOR_MAX_NUM_OPTIONS 10
+#define EDITOR_MAX_NUM_OPTIONS /*10*/20
 typedef struct _editor_config_option_w
 {
   Widget holder[EDITOR_MAX_NUM_OPTIONS];
@@ -1130,12 +1142,16 @@ static void
 saveOptions (Widget w, XtPointer clientData, 
 			 XtPointer callback_data)
 {
-#ifdef DEBUG
-  printf("Editor_menu::saveOptions reached\n");
-#endif
   editorConfigOptionW *obj = (editorConfigOptionW *)clientData;
 
+#ifdef DEBUG
+  printf("Editor_menu::saveOptions reached\n");
+  printf("Editor_menu::saveOptions: obj->runtype >%s<\n",obj->runtype);
+#endif
+
+  XcodaEditorSaveConfigOption (obj->runtype); /*sergey: added this call, otherwise nothing was saved to database */
   obj->saved = 1;
+
   XtPopdown (obj->shell);
 }
 
@@ -1171,9 +1187,6 @@ updateOptionWidgets (char* runtype)
   /* first unmanage all old information */
   for (i = 0; i < EDITOR_MAX_NUM_OPTIONS; i++)
   {
-#ifdef DEBUG
-    printf("\n\nEditor_menu 1111111111111111\n\n\n\n");
-#endif
     XmTextFieldSetString (opW.option[i], "");
     XmTextFieldSetString (opW.value[i], "");
   }
@@ -1181,7 +1194,7 @@ updateOptionWidgets (char* runtype)
   /* set saved flag to 0 and set widget config name to run type */
   strncpy (opW.runtype, runtype, sizeof (opW.runtype));
 #ifdef DEBUG
-  printf("\n\nEditor_menu:updateOptionWidgets: >%s< >%s<\n\n\n\n",opW.runtype, runtype);
+  printf("\n\nEditor_menu:updateOptionWidgets: opW.runtype >%s< runtype >%s<\n",opW.runtype, runtype);
 #endif
   opW.saved = 0;
   
@@ -1200,7 +1213,7 @@ updateOptionWidgets (char* runtype)
     /* update label for option name */
     /* option name */
 #ifdef DEBUG
-    printf("\n\nEditor_menu 111111111111111122222222222222\n\n\n\n");
+    printf("\n\nEditor_menu::updateOptionWidgets: numOptions=%d realnum=%d\n",numOptions,realnum);
 #endif
     XmTextFieldSetString (opW.option[i], options[i]);
     /* option value */
@@ -1233,9 +1246,6 @@ XcodaEditorResetOptionDialog (void)
     /* first unmanage all old information */
     for (i = 0; i < EDITOR_MAX_NUM_OPTIONS; i++)
     {
-#ifdef DEBUG
-      printf("\n\nEditor_menu 1111111111111111333333333333333333\n\n\n\n");
-#endif
       XmTextFieldSetString (opW.option[i], "");
       XmTextFieldSetString (opW.value[i], "");
     }
@@ -1257,8 +1267,7 @@ XcodaEditorSaveConfigOption (char* runtype)
 
 #ifdef DEBUG
   printf("Editor_menu::XcodaEditorSaveConfigOption reached\n");
-  printf("Editor_menu:insertValToOptionTable ???\n");
-  printf("Editor_menu 1: opW.saved=%d, >%s< >%s<\n",opW.saved,opW.runtype, runtype);
+  printf("Editor_menu::XcodaEditorSaveConfigOption: opW.saved=%d, >%s< >%s<\n",opW.saved,opW.runtype, runtype);
 #endif
 
 /* sergey: opW.saved is never true,  opW.runtype nevet set ... */
@@ -1266,39 +1275,38 @@ XcodaEditorSaveConfigOption (char* runtype)
   if (!opW.saved && strcmp (opW.runtype, runtype) == 0)
   {
 #ifdef DEBUG
-    printf("Editor_menu 2\n");
+    printf("Editor_menu::XcodaEditorSaveConfigOption: loop over %d options\n",EDITOR_MAX_NUM_OPTIONS);
 #endif
     for (i = 0; i < EDITOR_MAX_NUM_OPTIONS; i++)
     {
 #ifdef DEBUG
-      printf("Editor_menu 3 (%d)\n",i);fflush(stdout);
-      printf("\n\nEditor_menu 1111111111111111444444444444444\n\n\n\n");
+      printf("Editor_menu::XcodaEditorSaveConfigOption: option number %d\n",i);fflush(stdout);
 #endif
       option = XmTextFieldGetString (opW.option[i]);
 #ifdef DEBUG
-      printf("Editor_menu 31 %d\n",option);fflush(stdout);
+      printf("Editor_menu::XcodaEditorSaveConfigOption: option name >%s<\n",option);fflush(stdout);
 #endif
       value =  XmTextFieldGetString (opW.value[i]);
-	  printf("Editor_menu 32 %d\n",value);fflush(stdout);
+	  printf("Editor_menu::XcodaEditorSaveConfigOption: option value >%s<\n",value);fflush(stdout);
       if (option && (*option))
       {
 #ifdef DEBUG
-        printf("Editor_menu 4\n");fflush(stdout);
+        printf("Editor_menu::XcodaEditorSaveConfigOption: in0\n");fflush(stdout);
 #endif
 	    if (value && *value)
         {
 #ifdef DEBUG
-          printf("Editor_menu 5\n");fflush(stdout);
+          printf("Editor_menu::XcodaEditorSaveConfigOption: in1\n");fflush(stdout);
 #endif
-          /*insertValToOptionTable (runtype, option, value);*/
+          insertValToOptionTable (runtype, option, value);
 	      XtFree (value);
 	    }
 	    else
 		{
 #ifdef DEBUG
-          printf("Editor_menu 6\n");fflush(stdout);
+          printf("Editor_menu::XcodaEditorSaveConfigOption: in2\n");fflush(stdout);
 #endif
-	      /*insertValToOptionTable (runtype, option, 0);*/
+	      insertValToOptionTable (runtype, option, 0);
 		}
 	    XtFree (option);
       }

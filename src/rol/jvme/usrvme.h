@@ -2,6 +2,7 @@
 /* usrvme.h */
 
 void usrVmeDmaSetMemSize(int size);
+int  usrVmeDmaGetMemSize();
 int  usrVmeDmaSetChannel(int chan);
 int  usrVmeDmaGetChannel();
 void usrVmeDmaInit();

@@ -28,7 +28,7 @@ CLON_FLAGS += -I./src.s -I./include -I.. -I../Common/src.s \
 	-I./pixmaps -I$(CODA)/common/include -I../../cg/cg.s -I../../motif/include \
 	-I../../sace3.1/include -I../../XmHTML-1.1.4/include $(X11INCDIR)
 
-CLON_FLAGS += -D_TRACE_OBJECTS
+##CLON_FLAGS += -D_TRACE_OBJECTS
 
 LIBNAMES += ../../sace3.1/$(OSTYPE_MACHINE)/lib/libsace3.1.a
 

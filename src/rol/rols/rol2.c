@@ -38,7 +38,7 @@ static char ssname[80];
 int getTdcTypes(int *typebyslot);
 int getTdcSlotNumbers(int *slotnumbers);
 
-
+//#define DEBUG0 /*general*/
 //#define DEBUG /*FADC*/
 //#define DEBUG1 /*TI/TS*/
 //#define DEBUG2 /*TDC*/
@@ -49,6 +49,7 @@ int getTdcSlotNumbers(int *slotnumbers);
 //#define DEBUG7 /*VTP*/
 //#define DEBUG8 /*DCRB*/
 //#define DEBUG9 /*SSP_RICH*/
+//#define DEBUG10 /*HPS SVT*/
 
 
 #define ROL_NAME__ "ROL2"
@@ -228,6 +229,11 @@ int mynev; /*defined in tttrans.c */
 #define MVT_TYPE_EVTHDR    0xF3EE0000
 #define MVT_TYPE_SAMPLE    0xF3550000
 #define MVT_TYPE_FILLER    0xFAAAFAAA
+
+/* HPS SVT */
+#define HPSSVT_TYPE_DATA     0x14
+#define HPSSVT_TYPE_TAIL     0x15
+#define HPSSVT_TYPE_BUILDER  0x16
 
 #define VTP_SLOT 11
 
@@ -418,7 +424,8 @@ rol2trig(int a, int b)
   int a_tdc, a_edge;
   int a_slot_old;
   int a_channel_old, a_asic_old;
-  int npedsamples, atleastoneslot, atleastonechannel[21];
+  int a_rceaddress,a_nmultisamples;
+  int npedsamples, atleastoneslot, atleastonechannel[NSLOTS];
   time_t now;
   int error, status;
   int ndnv, nw;
@@ -431,12 +438,13 @@ rol2trig(int a, int b)
   int islot, ichan, ii, jj, kk;
   int banknum = 0;
   int have_time_stamp, a_nevents2, a_event_type;
-  int a_event_number_l, a_timestamp_l, a_event_number_h, a_timestamp_h, a_bitpattern;
+  int a_event_number, a_event_number_l, a_timestamp_l, a_event_number_h, a_timestamp_h, a_bitpattern;
   int a_clusterN, a_clusterE, a_clusterY, a_clusterX, a_clusterT, a_type, a_data, a_time, a_top_nbot;
   int a_instance, a_view, a_coord, a_energy, a_coordU, a_coordV, a_coordW, a_lane;
   int a_hitmask0, a_hitmask1,a_hitmask2;
   int a_h1tag, a_h2tag, a_nhits, a_coordX, a_coordY;
   int a_h_l1l2x_geom_pass,a_h_l1l2_geom_pass,a_h_l2_pass,a_h_l1_pass,a_pde_pass,a_minx_pass,a_nmin_pass,a_emax_pass,a_emin_pass;
+  int a_region_pass[7];
   int a_res,a_coplanar_pass,a_edslope_pass,a_diff_pass,a_sum_pass,a_calib_type,a_calib_flags,a_mult_tot,a_mult_bot,a_mult_top;
   long long timestamp, latency, latency_offset;
 
@@ -493,7 +501,7 @@ rol2trig(int a, int b)
 
   BANKSCAN;
 
-#ifdef DEBUG
+#ifdef DEBUG0
   printf("\n\n\n\n\n nbanks=%d\n",nbanks);
   for(jj=0; jj<nbanks; jj++) printf("bankscan[%d]: tag 0x%08x typ=%d nr=%d nw=%d dataptr=0x%08x\n",
       jj,banktag[jj],banktyp[jj],banknr[jj],banknw[jj],bankdata[jj]);
@@ -512,8 +520,10 @@ rol2trig(int a, int b)
 #ifndef VXWORKS
 #ifndef NIOS
 #ifndef Linux_armv7l
+#ifndef Linux_x86_64
     /* swap input buffer (assume that data from VME is big-endian, and we are on little-endian Intel) */
     if(banktyp[jj] != 3) for(ii=0; ii<lenin; ii++) datain[ii] = LSWAP(datain[ii]);
+#endif
 #endif
 #endif
 #endif
@@ -648,7 +658,7 @@ lenE[jj][nB][nE[nB]] - event length in words
 #endif
 	      ii++;
           iii=1;
-          while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin ) /*must be one more word*/
+	      while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin ) /*must be one more word*/
 	      {
             a_trigtime[iii] = (datain[ii]&0xFFFFFF);
 #ifdef DEBUG
@@ -988,10 +998,23 @@ lenE[jj][nB][nE[nB]] - event length in words
           if(fd != NULL)
 	      {
             fprintf(fd,"%s\n",errmsg);
-            for(ii=0; ii<lenin; ii++) fprintf(fd,"[%5d] 0x%08x\n",ii,datain[ii]);
+            for(ii=0; ii<lenin; ii++) fprintf(fd,"[%5d] 0x%08x (tag=0x%02x)\n",ii,datain[ii],((datain[ii]>>27)&0x1F));
             fclose(fd);
 	      }
 	    }
+		{
+          int tag;
+          printf("\nPrinting entire buffer:\n");
+		  for(ii=0; ii<lenin; ii++)
+          {
+            tag = ((datain[ii]>>27)&0x1F);
+            printf("datain[%3d] 0x%08x (tag=0x%02x)",ii,datain[ii],tag);
+            if(tag==0x14) printf(" ---> a_channel = %d a_windowwidth = %d\n",((datain[ii]>>23)&0xF),(datain[ii]&0xFFF));
+            else printf("\n");
+		  }
+          printf("End of entire buffer\n\n");
+		}
+
         CPOPEN(rol->pid,1,0);
         for(ii=0; ii<lenin; ii++)
         {
@@ -2160,6 +2183,7 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
 
           else if( ((datain[ii]>>23)&0xF) == 0x6) /* HPS MULT TRIG */
           {
+            a_instance = ((datain[ii]>>22)&0x1);
             a_mult_tot = ((datain[ii]>>18)&0xF);
             a_mult_bot = ((datain[ii]>>14)&0xF);
             a_mult_top = ((datain[ii]>>10)&0xF);
@@ -2168,8 +2192,8 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
 
 
 #ifdef DEBUG7
-        printf("[%3d] HPS_CMULT_TRIG_(MULT_TOT,MULT_BOT,MUT_TOP,TIME): %d %d %d %d\n",ii,
-			   a_mult_tot,a_mult_bot,a_mult_top,a_time);
+        printf("[%3d] HPS_CMULT_TRIG_(INST,MULT_TOT,MULT_BOT,MUT_TOP,TIME): %d %d %d %d %d\n",ii,
+			   a_instance, a_mult_tot,a_mult_bot,a_mult_top,a_time);
 #endif
             while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
             {
@@ -2178,6 +2202,31 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
             }
           }
 
+          else if( ((datain[ii]>>23)&0xF) == 0x7) /* HPS FEE TRIG */
+          {
+            a_top_nbot       = ((datain[ii]>>19)&0x1);
+            a_region_pass[0] = ((datain[ii]>>10)&0x1);
+            a_region_pass[1] = ((datain[ii]>>11)&0x1);
+            a_region_pass[2] = ((datain[ii]>>12)&0x1);
+            a_region_pass[3] = ((datain[ii]>>13)&0x1);
+            a_region_pass[4] = ((datain[ii]>>14)&0x1);
+            a_region_pass[5] = ((datain[ii]>>15)&0x1);
+            a_region_pass[6] = ((datain[ii]>>16)&0x1);
+            a_time           = ((datain[ii]>>0)&0x3FF);
+            ii++;
+
+
+#ifdef DEBUG7
+        printf("[%3d] HPS_FEE_TRIG_(TOP/BOT,R0,1,2,3,4,5,6,TIME): %d %d %d %d %d %d %d %d\n",ii,
+			   a_top_nbot,a_region_pass[0],a_region_pass[1],a_region_pass[2],
+         a_region_pass[3],a_region_pass[4],a_region_pass[5],a_region_pass[6],a_time);
+#endif
+            while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
+            {
+              printf("ERROR2 in VTP:HPS_FEE_TRIG pass1 = 0x%08X\n",datain[ii]); 
+              ii++;
+            }
+          }
 
 
 
@@ -3104,6 +3153,275 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
 	  } /* while() */
 
 	} /* else if(0xe105) */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    else if(banktag[jj] == 0xe130) /* HPS SVT hardware format */
+	{
+      banknum = rol->pid;
+
+#ifdef DEBUG10
+      printf("\nFIRST PASS HPS SVT\n\n");
+#endif
+
+      error = 0;
+      ndnv = 0;
+      ii=0;
+      printing=1;
+      a_slot_prev = -1;
+      have_time_stamp = 1;
+      nB[jj]=0; /*cleanup block counter*/
+      while(ii<lenin)
+      {
+#ifdef DEBUG10
+        printf("[%5d] 0x%08x (lenin=%d)\n",ii,datain[ii],lenin);
+#endif
+        if( ((datain[ii]>>27)&0x1F) == 0x10) /*block header*/
+        {
+          a_slot_prev = a_slot;
+          a_slot = ((datain[ii]>>22)&0x1F);
+          a_module_id = ((datain[ii]>>18)&0xF);
+          a_blocknumber = ((datain[ii]>>8)&0x3FF);
+          a_nevents = (datain[ii]&0xFF);
+#ifdef DEBUG10
+	      printf("[%3d] BLOCK HEADER: slot %d, nevents %d, block number %d module id %d\n",ii,
+				 a_slot,a_nevents,a_blocknumber,a_module_id);
+          printf(">>> update iB and nB\n");
+#endif
+          nB[jj]++;                  /*increment block counter*/
+          iB[jj][nB[jj]-1] = ii;     /*remember block start index*/
+          sB[jj][nB[jj]-1] = a_slot; /*remember slot number*/
+          nE[jj][nB[jj]-1] = 0;      /*cleanup event counter in current block*/
+
+#ifdef DEBUG10
+		  printf("0xe130: jj=%d nB[jj]=%d\n",jj,nB[jj]);
+#endif
+
+	      ii++;
+        }
+        else if( ((datain[ii]>>27)&0x1F) == 0x11) /*block trailer*/
+        {
+          a_slot2 = ((datain[ii]>>22)&0x1F);
+          a_nwords = (datain[ii]&0x3FFFFF);
+#ifdef DEBUG10
+	      printf("[%3d] BLOCK TRAILER: slot %d, nwords %d\n",ii,
+				   a_slot2,a_nwords);
+          printf(">>> data check\n");
+#endif
+
+          /*"close" previous event if any*/
+          k = nB[jj]-1; /*current block index*/
+          if(nE[jj][k] > 0)
+	      {
+            m = nE[jj][k]-1; /*current event number*/
+            lenE[jj][k][m] = ii-iE[jj][k][m]; /*#words in current event*/
+	      }
+
+          if(a_slot2 != a_slot)
+	      {
+            error ++;
+            if(printing)
+            {
+              printf("[%3d][%3d] ERROR1 in HPS SVT data: blockheader slot %d != blocktrailer slot %d\n",mynev,
+				 ii,a_slot,a_slot2);
+              printing=0;
+	        }
+	      }
+          if(a_nwords != ( (ii-iB[jj][nB[jj]-1]+1) - ndnv ) )
+          {
+            error ++;
+            if(printing)
+            {
+              printf("[%3d][%3d] ERROR2 in HPS SVT data: trailer #words=%d != actual #words=%d - ndnv=%d)\n",
+					 mynev,ii,a_nwords,ii-iB[jj][nB[jj]-1]+1,ndnv);
+              printing=0;
+	        }
+          }
+          if(ndnv>0)
+          {
+            if(printing)
+            {
+              printf("[%3d] WARN in HPS SVT data: ndnv=%d)\n",mynev,ndnv);
+              printing=0;
+	        }
+          }
+
+	      ii++;
+        }
+
+        else if( ((datain[ii]>>27)&0x1F) == 0x12) /*event header*/
+        {
+          /*a_slot = ((datain[ii]>>22)&0x1F);*/
+          a_triggernumber = (datain[ii]&0x1FFFFF);
+#ifdef DEBUG10
+	      printf("[%3d] EVENT HEADER: trigger number %d\n",ii,
+				 a_triggernumber);
+          printf(">>> update iE and nE\n");
+#endif
+
+          /*"close" previous event if any*/
+          k = nB[jj]-1; /*current block index*/
+          if(nE[jj][k] > 0)
+	      {
+            m = nE[jj][k]-1; /*current event number*/
+            lenE[jj][k][m] = ii-iE[jj][k][m]; /*#words in current event*/
+	      }
+
+          /*"open" next event*/
+          nE[jj][k]++; /*increment event counter in current block*/
+          m = nE[jj][k]-1; /*current event number*/
+          iE[jj][k][m]=ii; /*remember event start index*/
+
+	      ii++;
+        }
+
+
+        else if( ((datain[ii]>>27)&0x1F) == HPSSVT_TYPE_BUILDER) /* (0x16<<27) */
+        {
+          a_event_number = datain[ii]&0x7FFFFFF;
+#ifdef DEBUG10
+	  printf("[%3d] HPS SVT BUILDER: event = %d\n",ii,a_event_number);
+#endif
+          ii++;
+	}
+
+
+        else if( ((datain[ii]>>27)&0x1F) == 0x13) /*trigger time: remember timestamp*/
+        {
+          a_trigtime[0] = (datain[ii]&0xFFFFFF);
+#ifdef DEBUG10
+	      printf("[%3d] TRIGGER TIME: 0x%06x\n",ii,a_trigtime[0]);
+#endif
+	      ii++;
+          iii=1;
+          while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin ) /*must be one more word*/
+	      {
+            a_trigtime[iii] = (datain[ii]&0xFFFFFF);
+#ifdef DEBUG10
+            printf("   [%3d] TRIGGER TIME: 0x%06x\n",ii,a_trigtime[iii]);
+            printf(">>> remember timestamp 0x%06x 0x%06x\n",a_trigtime[0],a_trigtime[1]);
+#endif
+            iii++;
+            if(iii>2) printf("ERROR1 in HPS SVT: iii=%d\n",iii); 
+            ii++;
+	      }
+        }
+
+
+
+
+
+        else if( ((datain[ii]>>27)&0x1F) == HPSSVT_TYPE_DATA) /*data (0x14<<27)*/
+        {
+              a_rceaddress =  (datain[ii]&0xFF);
+              a_nmultisamples = ( ((datain[ii]>>8)&0xFFFF) - 32) / 16;
+#ifdef DEBUG10
+	      printf("[%3d] HPS SVT DATA HEADER: RCEaddress=%d, nMultiSamples=%d\n",ii,a_rceaddress,a_nmultisamples);
+#endif
+              ii++;
+
+              for(iii=0; iii<a_nmultisamples; iii++)
+	      {
+#ifdef DEBUG10
+                printf("[%3d] HPS SVT DATA SAMPLE %d WORD 0: 0x%08x\n",ii,iii,datain[ii]);
+#endif
+	        ii++;
+
+#ifdef DEBUG10
+                printf("[%3d] HPS SVT DATA SAMPLE %d WORD 1: 0x%08x\n",ii,iii,datain[ii]);
+#endif
+	        ii++;
+
+#ifdef DEBUG10
+                printf("[%3d] HPS SVT DATA SAMPLE %d WORD 2: 0x%08x\n",ii,iii,datain[ii]);
+#endif
+	        ii++;
+
+#ifdef DEBUG10
+                printf("[%3d] HPS SVT DATA SAMPLE %d WORD 3: 0x%08x\n",ii,iii,datain[ii]);
+#endif
+                ii++;
+	      }
+	}
+
+
+        else if( ((datain[ii+3]>>27)&0x1F) == HPSSVT_TYPE_TAIL) /*tail (0x15<<27) (TAG IN WORD 4 !!!)*/
+        {
+          a_nmultisamples = datain[ii]&0xFFF;
+
+#ifdef DEBUG10
+	      printf("[%3d] HPS SVT DATA TAIL: 0x%08x 0x%08x 0x%08x 0x%08x (nMultiSamples=%d)\n",ii,
+		     datain[ii],datain[ii+1],datain[ii+2],datain[ii+3],a_nmultisamples);
+#endif
+          ii++;
+          ii++;
+          ii++;
+          ii++;
+	}
+
+
+
+
+
+
+        else if( ((datain[ii]>>27)&0x1F) == 0x1F)
+        {
+#ifdef DEBUG10
+	      printf("[%3d] FILLER WORD\n",ii);
+          printf(">>> do nothing\n");
+#endif
+	      ii++;
+        }
+        else if( ((datain[ii]>>27)&0x1F) == 0x1E)
+        {
+          ndnv ++;
+#ifdef DEBUG10
+	      printf("[%3d] DNV\n",ii);
+          printf(">>> do nothing\n");
+#endif
+	      ii++;
+        }
+        else
+		{
+          printf("HPS SVT UNKNOWN data: [%3d] 0x%08x\n",ii,datain[ii]);
+          ii++;
+		}
+
+	  } /* while() */
+
+	} /* else if(0xe130) */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4765,7 +5083,12 @@ if(a_pulsenumber == 0)
                 ii++;
               }
 
-
+              else if(((datain[ii]>>23)&0xF) == 0x7) /* HPS FEE TRIG */
+              {
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+              }
 
 
 
@@ -5555,6 +5878,188 @@ if(a_pulsenumber == 0)
 
 
 
+
+
+
+
+      else if(banktag[jj] == 0xe130) /* HPS SVT hardware format */
+	  {
+
+        banknum = iev; /*rol->pid;*/
+
+#ifdef DEBUG10
+		printf("\n\nSECOND PASS HPS SVT\n");
+#endif
+        for(ibl=0; ibl<nB[jj]; ibl++) /*loop over blocks*/
+        {
+#ifdef DEBUG10
+          printf("\n\n\n0xe130: Block %d, Event %2d, event index %2d, event lenght %2d\n",
+            ibl,iev,iE[jj][ibl][iev],lenE[jj][ibl][iev]);
+#endif
+
+          CPOPEN(0xe130,1,banknum);
+
+          a_slot = sB[jj][ibl];
+          ii = iE[jj][ibl][iev];
+          rlen = ii + lenE[jj][ibl][iev];
+          while(ii<rlen)
+          {
+#ifdef DEBUG10
+            printf("[%5d] 0x%08x (rlen=%d)\n",ii,datain[ii],rlen);
+#endif
+			
+            if( ((datain[ii]>>27)&0x1F) == 0x12) /*event header*/
+			{
+              a_triggernumber = (datain[ii]&0x7FFFFFF);
+#ifdef DEBUG10
+		      printf("[%3d] EVENT HEADER, a_triggernumber = %d\n",ii,a_triggernumber);
+#endif
+			
+              *dataout ++ = datain[ii];
+              b08 += 4;
+
+		      ii++;
+			}
+
+
+            else if( ((datain[ii]>>27)&0x1F) == HPSSVT_TYPE_BUILDER) /* (0x16<<27) */
+            {
+              a_event_number = datain[ii]&0x7FFFFFF;
+#ifdef DEBUG10
+	          printf("[%3d] HPS SVT BUILDER: event = %d\n",ii,a_event_number);
+#endif
+              *dataout ++ = datain[ii];
+              b08 += 4;
+
+              ii++;
+	        }
+
+
+            else if( ((datain[ii]>>27)&0x1F) == 0x13) /*trigger time: remember timestamp*/
+            {
+              a_trigtime[0] = (datain[ii]&0xFFFFFF);
+              *dataout ++ = datain[ii];
+              b08 += 4;
+	          ii++;
+
+              a_trigtime[1] = (datain[ii]&0xFFFFFF);
+              *dataout ++ = datain[ii];
+              b08 += 4;
+              ii++;
+
+#ifdef DEBUG10
+              printf(">>> remember timestamp 0x%06x 0x%06x\n",a_trigtime[0],a_trigtime[1]);
+#endif
+	        }
+
+
+
+
+
+
+        else if( ((datain[ii]>>27)&0x1F) == HPSSVT_TYPE_DATA) /*data (0x14<<27)*/
+        {
+              a_rceaddress =  (datain[ii]&0xFF);
+              a_nmultisamples = ( ((datain[ii]>>8)&0xFFFF) - 32) / 16;
+
+#ifdef DEBUG10
+	      printf("[%3d] HPS SVT DATA HEADER: RCEaddress=%d, nMultiSamples=%d\n",ii,a_rceaddress,a_nmultisamples);
+#endif
+              *dataout ++ = datain[ii];
+              b08 += 4;
+
+              ii++;
+
+              for(iii=0; iii<a_nmultisamples; iii++)
+	      {
+#ifdef DEBUG10
+                printf("[%3d] HPS SVT DATA SAMPLE %d WORD 0: 0x%08x\n",ii,iii,datain[ii]);
+#endif
+                *dataout ++ = datain[ii];
+                b08 += 4;
+	        ii++;
+
+#ifdef DEBUG10
+                printf("[%3d] HPS SVT DATA SAMPLE %d WORD 1: 0x%08x\n",ii,iii,datain[ii]);
+#endif
+                *dataout ++ = datain[ii];
+                b08 += 4;
+	        ii++;
+
+#ifdef DEBUG10
+                printf("[%3d] HPS SVT DATA SAMPLE %d WORD 2: 0x%08x\n",ii,iii,datain[ii]);
+#endif
+                *dataout ++ = datain[ii];
+                b08 += 4;
+	        ii++;
+
+#ifdef DEBUG10
+                printf("[%3d] HPS SVT DATA SAMPLE %d WORD 3: 0x%08x\n",ii,iii,datain[ii]);
+#endif
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+	      }
+	}
+
+
+        else if( ((datain[ii+3]>>27)&0x1F) == HPSSVT_TYPE_TAIL) /*tail (0x15<<27) (TAG IN WORD 4 !!!)*/
+        {
+          a_nmultisamples = datain[ii]&0xFFF;
+#ifdef DEBUG10
+	      printf("[%3d] HPS SVT DATA TAIL: 0x%08x 0x%08x 0x%08x 0x%08x (nMultiSamples=%d)\n",ii,
+		     datain[ii],datain[ii+1],datain[ii+2],datain[ii+3],a_nmultisamples);
+#endif
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+
+	}
+
+
+
+
+            else if( ((datain[ii]>>27)&0x1F) == 0x1F)
+            {
+#ifdef DEBUG10
+	          printf("[%3d] FILLER WORD\n",ii);
+              printf(">>> do nothing\n");
+#endif
+	          ii++;
+            }
+            else if( ((datain[ii]>>27)&0x1F) == 0x1E)
+            {
+#ifdef DEBUG10
+	          printf("[%3d] DNV\n",ii);
+              printf(">>> do nothing\n");
+#endif
+	          ii++;
+            }
+            else
+		    {
+              printf("HPS SVT UNKNOWN data: [%3d] 0x%08x\n",ii,datain[ii]);
+              ii++;
+		    }
+
+	      } /* while() */
+
+          CPCLOSE;
+
+        } /* loop over blocks */
+
+	  } /* HPS SVT hardware format */
 
 
 

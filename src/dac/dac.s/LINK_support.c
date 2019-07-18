@@ -707,12 +707,11 @@ retry1:
 
 
 /* main thread function; it calls 'put_cb_data()' to place data
-   on the circular buffer to the building thread */
+   on the circular buffer for the building thread */
 
 void *
-handle_link(trArg arg)
+handle_link(DATA_LINK theLink)
 {
-  DATA_LINK theLink = (DATA_LINK) arg->link;
   int fd;
   int numRead;
   int headerSize;
@@ -836,14 +835,6 @@ acceptagain:
 
 
 
-
-  /* Sergey ??? */
-  printf("call cfree ...\n"); fflush(stdout);
-  cfree(arg);
-  printf("... cfree done.\n"); fflush(stdout);
-
-
-
   /*************/
   /* main loop */
   while(1)
@@ -915,8 +906,12 @@ acceptagain:
       /* sets 'cbp->nevents[icb] = -1;' inside, need it in cb_events_get() call from coda_eb.c */
       put_cb_data(fd, &theLink->roc_queue, (void *) -1);
 
-      printf("[%2d] handle_link(): put_cb_data called\n",fd);fflush(stdout);
-      break; /* this is the only exit from while(1) loop; will call 'pthread_exit(0)' and return */
+      printf("[%2d] ===================================\n",fd);fflush(stdout);
+      printf("[%2d] ===================================\n",fd);fflush(stdout);
+      printf("[%2d] handle_link(): numRead=%d<=0, calling 'put_cb_data(,,-1)', first breaking while() loop\n",fd);fflush(stdout);
+      printf("[%2d] ===================================\n",fd);fflush(stdout);
+      printf("[%2d] ===================================\n",fd);fflush(stdout);
+      break; /* this is the first exit from while(1) loop; will call 'pthread_exit(0)' and return */
     }
 
     /* count total amount of data words */
@@ -950,20 +945,6 @@ acceptagain:
       continue;
     }
 
-
-
-    /* sleep here if our fifo 'almost' full; that suppose
-    to give CPU to another thread who probably need it more */
-    /*
-    #define NSLEP (QSIZE/2)
-    if(theLink->roc_queue->num_full > NSLEP)
-    {
-      printf("rocid=%2d: sleep %2d seconds\n",
-        theLink->roc_queue->rocid,theLink->roc_queue->num_full-NSLEP);
-      sleep(theLink->roc_queue->num_full-NSLEP);
-    }
-    */
-
     /* put buffer to the circular buffer manager */
     start2 = gethrtime();
 
@@ -980,9 +961,13 @@ acceptagain:
 #endif
     if(put_cb_data(fd, &theLink->roc_queue, (void *) buf) < 0)
     {
-      printf("[%2d] handle_link(): put_cb_data returns < 0 - break.\n",fd);
+      printf("[%2d] ----------------------------------------------\n",fd);
+      printf("[%2d] ----------------------------------------------\n",fd);
+      printf("[%2d] handle_link(): put_cb_data returns < 0, second breaking while() loop\n",fd);
+      printf("[%2d] ----------------------------------------------\n",fd);
+      printf("[%2d] ----------------------------------------------\n",fd);
       fflush(stdout);
-      break;
+      break; /* this is the second exit from while(1) loop; will call 'pthread_exit(0)' and return */
     }
 #endif /*#ifndef DO_NOT_PUT*/
 
@@ -1019,10 +1004,11 @@ acceptagain:
     }
 
 
+    /*printf("Checking for exit command theLink->exit=%d\n",theLink->exit);*/
     /* received command to exit */
     if(theLink->exit == 1)
 	{
-      printf("[%2d] handle_link(): got exit command\n",fd); fflush(stdout);
+      printf("[%2d] handle_link(): got exit command inside reading loop !!! breaking ..\n",fd); fflush(stdout);
       break;
 	}
 
@@ -1031,12 +1017,21 @@ acceptagain:
   /* end of main loop while(1) */
   /*****************************/
 
+  while(theLink->exit != 1)
+  {
+    printf("[%2d][%s] CHECKING FOR theLink->exit TO BECOME 1, currently it is %d\n",fd,theLink->name,theLink->exit); fflush(stdout);
+    sleep(1);
+  }
 
-
+  printf("[%2d] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",fd); fflush(stdout);
+  printf("[%2d] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",fd); fflush(stdout);
+  printf("[%2d][%s] handle_link(): got exit command\n",fd,theLink->name); fflush(stdout);
+  printf("[%2d] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",fd); fflush(stdout);
+  printf("[%2d] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",fd); fflush(stdout);
 
   /*printf("handle_link(): thread exit for %9.9s\n",theLink->name); fflush(stdout);*/
   /*NOTE: segm fault printing 'theLink->name', probably pointer is not good any more ??? free'ed in debCloseLink ? */
-  printf("[%2d] handle_link(): thread exit\n",fd); fflush(stdout);
+  printf("[%2d] handle_link(): thread exiting\n",fd); fflush(stdout);
 
 
   printf("[%2d] 907\n",fd); fflush(stdout);
@@ -1070,13 +1065,16 @@ debOpenLink(char *fromname, char *toname, char *tohost,  MYSQL *dbsock)
   struct sockaddr_in sin, from;
   int s, slen;
 
-  static trArg args;
-
 printf("++++++1+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[2]);
 
-  /* set 'theLink' */
+
+
+  /*******************************************************/
+  /* allocate memory for structure 'theLink' and fill it */
+  /* will be free'd in debCloseLink()                    */
+  /*******************************************************/
+
   theLink = (DATA_LINK) calloc(sizeof(DATA_LINK_S),1);
-  bzero((char *) theLink, sizeof(DATA_LINK_S));
 
   theLink->name = (char *) calloc(strlen(fromname)+1,1);
   strcpy(theLink->name, fromname); /* croctest1 etc */
@@ -1128,79 +1126,7 @@ printf("++++++2+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
     printf("debOpenLink: listening socket # %d\n",theLink->sock);
   }
 
-  /* set socket options */
-  /* was in dp
-  if(reuseAddr)
-  {
-	int one = 1;
-	res = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
-			    (char *)&one, sizeof(int));
-  }
-  {
-    int cval = 1;
-    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&cval, 4);
-  }
-  */
-
-
-
-  /*SERGEY: DOES NOT MESS WITH TCP ANY MORE !!!
-  slen = 65535;
-  if(setsockopt (s, SOL_SOCKET, SO_SNDBUF, &slen, sizeof(slen)) < 0)
-  {
-	printf("debOpenLink: setsockopt SO_SNDBUF failed\n");
-	return(NULL);
-  }
-
-  {
-    int nbytes, lbytes;
-
-    nbytes = 0;
-    lbytes = 4;
-
-    getsockopt(s, SOL_SOCKET, SO_SNDBUF, (int *) &nbytes, &lbytes); 
-    printf("debOpenLink: socket buffer size is %d(0x%08x) bytes\n",
-      nbytes,nbytes);
-  }
-printf("++++++3+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[2]);
-  */
-
-
-  /*
-  optval = 0;
-  if (setsockopt (s, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof (optval)) < 0)
-  {
-	printf("setsockopt TCP_NODELAY failed\n");
-	free(buffer);
-	exit(1);
-  }
-  */
-
-  /*
-  if (setsockopt (s, SOL_SOCKET, SO_SND_COPYAVOID, &on, sizeof (on)) < 0)
-  {
-	printf ("setsockopt SO_RCVBUF failed\n");
-	free (buffer);
-	exit (1);
-  }
-  */
-  /*
-    dp_socketOption $server noblock no
-    dp_socketOption $server autoClose yes
-    dp_socketOption $server keepAlive yes
-	# Explicitly set nodelay off for data link (VxWorks slows down)
-    #bugbug		dp_socketOption $server nodelay 1
-*/
-
-  /* connect for client only (ROC)
-  if(connect(s, (const struct sockaddr *)&sin, sizeof (sin)) < 0)
-  {
-    printf("debOpenLink: connect failed: host %s port %d\n",
-      inet_ntoa(sin.sin_addr), ntohs(sin.sin_port));
-    close(s);
-	return(NULL);
-  }
-  */
+  /* if want, set socket options here, but better do not */
 
   /* bind and listen for server only (EB) */
   if(bind(s, (struct sockaddr *)&sin, sizeof(sin)) < 0)
@@ -1338,9 +1264,6 @@ printf("++++++5+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
 ending_for_recv = 0;
 
 
-  /* allocate and fill thread parameter structure */
-  args = (trArg) calloc(sizeof(TRARGS),1);
-  args->link = theLink;
   theLink->roc_queue = roc_queues[roc_queue_ix++];
   /*theLink->roc_queue->parent = theLink->name;donotneedit???*/
   printf("theLink->name=%s\n",theLink->name);
@@ -1355,14 +1278,15 @@ printf("++++++6+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
 
     pthread_attr_init(&detached_attr);
     pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED); /* default is PTHREAD_CREATE_JOINABLE, can use pthread_join() but
-                                                                             at seems stuck if thread dies */
-
+                                                                             it seems stuck if thread dies */
     pthread_attr_setscope(&detached_attr, PTHREAD_SCOPE_SYSTEM);
 
 
-    /* start thread */
+    /**********************************************************/
+    /* start thread which will handle input data from the roc */
+
     if(pthread_create( &theLink->thread, &detached_attr,
-                 (void *(*)(void *)) handle_link, (void *) args) != 0)
+                 (void *(*)(void *)) handle_link, (void *) theLink) != 0)
     {
       printf("LINK_thread_init(): ERROR in thread creating\n"); fflush(stdout);
       perror("pthread_create: ");
@@ -1381,7 +1305,7 @@ debCloseLink(DATA_LINK theLink, MYSQL *dbsock)
 {
   void *status;
   char tmp[1000];
-  int exittimeout = 3;
+  int exittimeout = 5;
 
   /* */
   if(theLink == NULL)
@@ -1389,132 +1313,42 @@ debCloseLink(DATA_LINK theLink, MYSQL *dbsock)
     printf("debCloseLink: theLink=NULL -> return\n");
     return(CODA_OK);
   }
-  else
+  printf("debCloseLink: theLink=0x%08x -> closing\n",theLink);
+
+  theLink->exit = 1; /* tells thread to exit */
+  /* give it a time to exit */
+  while((theLink->exit!=-1) && (exittimeout>0))
   {
-    printf("debCloseLink: theLink=0x%08x -> closing\n",theLink);
-
-
-
-	/*
-
-from the web:
-
-1. How can I wait until my thread completes?
-
-Answer: This is directly supported by pthreads -- make your thread-to-be-stopped JOINABLE (when it is first started),
- and use pthread_join() to block your current thread until the thread-to-be-stopped is no longer running.
-
-2. How can I tell if my thread is still running?
-
-Answer: You can add a "thread_complete" flag to do the trick:
-
-Scenario: Thread A wants to know if Thread B is still alive.
-
-When Thread B is created, it is given a pointer to the "thread_complete" flag address. The "thread_complete" flag
-should be initialized to NOT_COMPLETED before the thread is created. Thread B's entry point function should immediately
-call pthread_cleanup_push() to push a "cleanup handler" which sets the "thread_complete" flag to COMPLETED.
-
-See details about cleanup handlers here: pthread cleanup handlers
-
-You'll want to include a corresponding pthread_cleanup_pop(1) call to ensure that the cleanup handler gets called
-no matter what (i.e. if the thread exits normally OR due to cancellation, etc.).
-
-Then, Thread A can simply check the "thread_complete" flag to see if Thread B has exited yet.
-
-NOTE: Your "thread_complete" flag should be declared "volatile" and should be an atomic type -- the GNU compilers
-provide the sig_atomic_t for this purpose. This allows the two threads consistent access the same data without
-the need for synchronization constructs (mutexes/semaphores).
-
-	*/
-
-	/*
- I used (pthread_kill(tid, 0) != ESRCH).
-
- the manpage (Linux) says this: 'POSIX.1-2008 recommends that if an implementation detects the use of a thread ID
- after the end of its lifetime, pthread_kill() should return the error ESRCH. The glibc implementation returns this
- error in the cases where an invalid thread ID can be detected. But note also that POSIX says that an attempt to use
- a thread ID whose lifetime has ended produces undefined behavior, and an attempt to use an invalid thread ID in
- a call to pthread_kill() can, for example, cause a segmentation fault
-	*/
-
-
-
-
-
-
-
-
-/* PIECE MOVED FROM handle_link() */
-
-/* SERGEY: SHOULD IT BE IN DESTRUCTOR ??? */
-
-/* SERGEY: FOLLOWING PIECE DOES NOT HANDLE BROKEN CONNECTIONS PROPERLY, 
-   FOR EXAMPLE IF coda_net DELETED IN ROC BEFORE 'GO', NEED TO FIX !!!!!!!!*/
-
-  /*
-   *
-   * If we're in non-blocking mode, and this would block, return.
-   * If the connection is closed (numRead == 0), don't return an
-   * error message.  Otherwise, return one.
-   *
-   * In either case, we close the file, delete the file handler, and
-   * return a null string.
-   */
-#if 0
-    theLink->thread = 0;  /* SERGEY: that thread is 'handle_link()', it is alive at that point .. all wierd ..*/
-                          /* should we tell 'handle_link()' to exit and clean itself instead of doing all following ?? */
-                          /* from other side what if handle_link() is dead ? */
-                          /* all problems here probably related to it */
-#endif
-    theLink->exit = 1; /* tells thread to exit */
-    /* give it a time to exit */
-    while((theLink->exit!=-1) && (exittimeout>0))
-	{
-      sleep(1);
-      exittimeout --;
-	}
-
-    printf("debCloseLink reached, fd=%d sock=%d exit=%d (exittimeout=%d)\n",
-		   theLink->fd,theLink->sock,theLink->exit,exittimeout);
-    fflush(stdout);
-
-    /* shutdown socket connection */
-    /* sergey: seg fault was happening, noticed that fd was big value, did check for <1000, need to investigate ..*/
-    if(theLink->fd != 0 || theLink->fd < 1000)
-    {
-	  printf("11: shutdown fd=%d\n",theLink->fd);fflush(stdout);
-      if(shutdown(theLink->fd, SHUT_RDWR)==0) /*SHUT_RD,SHUT_WR,SHUT_RDWR*/
-      {
-	    printf("12\n");fflush(stdout);
-        printf("debCloseLink: socket fd=%d sock=%d connection closed\n",theLink->fd,theLink->sock);
-
-        printf("903 %d\n",theLink->fd); fflush(stdout);
-        close(theLink->fd);/*??????????hungs here!!!!!!!!!!*/
-        printf("904 %d\n",theLink->fd); fflush(stdout);
-        close(theLink->sock);/*??????????hungs here!!!!!!!!!!*/
-        printf("905 %d\n",theLink->fd); fflush(stdout);
-      }
-      else
-      {
-	    printf("13\n");fflush(stdout);
-        printf("debCloseLink: ERROR in socket fd=%d sock=%d connection closing\n",
-          theLink->fd,theLink->sock);
-        exit(0);
-      }
-    }
-    else
-    {
-      printf("903-ERROR: theLink->fd=%d\n",theLink->fd); fflush(stdout);
-    }
-
-    printf("906\n"); fflush(stdout);
+    printf("debCloseLink: waiting for link thread to exit, exittimeout=%d\n",exittimeout);
+    sleep(1);
+    exittimeout --;
   }
 
-  /* !!!!!?????
-    if { "$direction" == "in" } {
-	database query "DELETE FROM links WHERE name='$name'"
-    }
-  */
+  printf("debCloseLink reached, fd=%d sock=%d exit=%d (exittimeout=%d)\n",
+		   theLink->fd,theLink->sock,theLink->exit,exittimeout);
+  fflush(stdout);
+
+  /* shutdown socket connection */
+  printf("11: shutdown fd=%d\n",theLink->fd);fflush(stdout);
+  if(shutdown(theLink->fd, SHUT_RDWR)==0) /*SHUT_RD,SHUT_WR,SHUT_RDWR*/
+  {
+	printf("12\n");fflush(stdout);
+    printf("debCloseLink: socket fd=%d sock=%d connection closed\n",theLink->fd,theLink->sock);
+
+    printf("903 %d\n",theLink->fd); fflush(stdout);
+    close(theLink->fd);
+    printf("904 %d\n",theLink->fd); fflush(stdout);
+    close(theLink->sock);
+    printf("905 %d\n",theLink->fd); fflush(stdout);
+  }
+  else
+  {
+	printf("13\n");fflush(stdout);
+    printf("debCloseLink: ERROR in socket fd=%d sock=%d connection closing\n",
+          theLink->fd,theLink->sock);
+    exit(0);
+  }
+  printf("906\n"); fflush(stdout);
 
   /* shut down a connection by telling the other end to shutdown (database must be opened in calling function) */
   /* set state 'down' */
@@ -1536,9 +1370,6 @@ the need for synchronization constructs (mutexes/semaphores).
 
 
   /* cancel thread if still exists */
-#if 0
-  if(theLink->thread)
-#endif
   if(theLink->exit!=-1)
   {
     pthread_t thread = theLink->thread;
@@ -1553,7 +1384,6 @@ the need for synchronization constructs (mutexes/semaphores).
   theLink->exit = 0;
 
   /* SHOULD DO FOLLOWING ONLY IF handle_thread() IS DONE !!! (AND PREVIOUS AS WELL ??) */
-
 
   /* release memory */
   printf("debCloseLink: free memory\n");

@@ -342,11 +342,12 @@ dbaseReader::connectMysql (void)
 
 
 
+/* sergey: we'll reconnect in dbaseReader::isDatabaseOpened (see below), do not have to do it here !!?? */
 int
 dbaseReader::reconnectMysql (void)
 {
   // check whether the mysql server is indeed went away
-/*sergey: "MSQL server has gone away" was denined and used in old msql, is it same for mysql ? */
+/*sergey: "MSQL server has gone away" was defined and used in old msql, is it same for mysql ? */
 /* to do similar thing, have to find out what error mysql calls return in case if server gone away */
 /* or maybe should always try ti reconnect */
 
@@ -366,15 +367,13 @@ Server dropped an incorrect or too large packet. If mysqld gets a packet that is
   /*sergey: if had following error, will try to reconnect, otherwise return error*/
   if (strcmp(mysql_error(dbaseSock_),"MySQL server has gone away") !=0 )
   {
-    fprintf(stderr,"dbaseReader::reconnectMysql: >%s< - do nothing\n",
-      mysql_error(dbaseSock_));
+    fprintf(stderr,"dbaseReader::reconnectMysql: >%s< - do nothing\n",mysql_error(dbaseSock_));
     return(CODA_ERROR);
   }
   else
 #endif
   {
-    fprintf(stderr,"dbaseReader::reconnectMysql: >%s< - will try to re-connect\n",
-      mysql_error(dbaseSock_));
+    fprintf(stderr,"dbaseReader::reconnectMysql: >%s< - will try to re-connect\n",mysql_error(dbaseSock_));
   }
 
   int i = 0;
@@ -425,10 +424,51 @@ Server dropped an incorrect or too large packet. If mysqld gets a packet that is
 
 
 int
-dbaseReader::isDatabaseOpen (void) const
+dbaseReader::isDatabaseOpened (void)
 {
+
+  /*sergey: try to do some checks and reconnect
   if (dbaseSock_ != NULL) return 1;
   return 0;
+  */
+  if(dbaseSock_ == NULL)
+  {
+    printf("dbaseReader::isDatabaseOpened: ERROR: dbaseSock_==NULL on entry\n");fflush(stdout);
+    return(0);
+  }
+
+  if(dbCheckConnection(dbaseSock_)==NULL)
+  {
+    printf("dbaseReader::isDatabaseOpened: WARN: dbCheckConnection() returned NULL, trying to reconnect\n");fflush(stdout);
+
+
+
+    if (::strcmp(run_.msqlhost(),"localhost"))
+    {
+      dbaseSock_ = ::dbConnect (run_.msqlhost(), getenv("EXPID"));
+    }
+    else
+    {
+      dbaseSock_ = ::dbConnect ("localhost", getenv("EXPID"));
+    }
+
+
+
+    if(dbaseSock_==NULL)
+	{
+      printf("dbaseReader::isDatabaseOpened: ERROR: dbConnect() returned NULL, cannot reconnect\n");fflush(stdout);
+      return(0);
+	}
+    else
+	{
+      printf("dbaseReader::isDatabaseOpened: INFO: successfully reconnected\n");fflush(stdout);
+      return(1);
+	}
+  }
+  else
+  {
+    return(1);
+  }
 }
 
 int
@@ -443,6 +483,12 @@ dbaseReader::insertRcServerToDbase (void)
 {
   char qstring[256];
   char valstr [128];
+
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 1\n");
+    return CODA_ERROR;
+  }
 
   sprintf (qstring, "insert into %s\n",	DBASE_PROCESS_TABLE);
   sprintf (valstr, "values ('%s', 0, 'rcServer', 'RCS', '%s', %d, 'dormant', 0, 'yes', 'no')", run_.exptname(), run_.hostname(), run_.udpPort ());
@@ -476,6 +522,12 @@ dbaseReader::removeRcServerFromDbase (void)
   sprintf (valstr, "where name = '%s'", run_.exptname() );
   strcat  (qstring, valstr);
 
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 2\n");
+    return CODA_ERROR;
+  }
+
   if (::mysql_query (dbaseSock_, qstring) != 0) {
     //printf (DBASE_DBG,"remove rcServer from database error: %s\n", mysql_error(dbaseSock_));
 
@@ -500,6 +552,12 @@ dbaseReader::listAllDatabases (void)
   int   numDbases = 0;
   MYSQL_RES *res;
   MYSQL_ROW row;
+
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 3\n");
+    return CODA_ERROR;
+  }
 
   res = mysql_list_dbs(dbaseSock_, NULL);
   if (!res) {
@@ -539,6 +597,12 @@ dbaseReader::listAllDatabases (void)
 void
 dbaseReader::database (char* path)
 {
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 4\n");
+    return;
+  }
+
   if (path != 0)
   {
     if (::mysql_select_db(dbaseSock_, path) < 0)
@@ -587,6 +651,12 @@ dbaseReader::listAllSessions (void)
   char qstring[1024];
   MYSQL_RES *res = 0;
   MYSQL_ROW    row;
+
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 5\n");
+    return CODA_ERROR;
+  }
 
   ::sprintf (qstring, "select * from %s", DBASE_SESSION_TABLE);
 
@@ -638,7 +708,7 @@ dbaseReader::listAllSessions (void)
 int
 dbaseReader::getAllSessions (void)
 {
-  if (!isDatabaseOpen ())
+  if (!isDatabaseOpened ())
   {
     reporter->cmsglog (CMSGLOG_ERROR,"Can't read sessions table: mysql server is not connected\n");
     return CODA_ERROR;
@@ -650,7 +720,7 @@ dbaseReader::getAllSessions (void)
     return CODA_ERROR;
   }
 
-  reporter->cmsglog (CMSGLOG_INFO1,"Check experimental seesion table ......\n");
+  reporter->cmsglog (CMSGLOG_INFO1,"Check experimental session table ......\n");
   return listAllSessions ();
 }
 
@@ -660,6 +730,12 @@ dbaseReader::sessionCreated (char* name)
   char qstring[1024];
   MYSQL_RES *res = 0;
   MYSQL_ROW    row;
+
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 6\n");
+    return CODA_ERROR;
+  }
 
   ::sprintf (qstring, "select * from %s", DBASE_SESSION_TABLE);
 
@@ -710,6 +786,12 @@ dbaseReader::sessionActive (char* name)
   MYSQL_RES *res = 0;
   MYSQL_ROW    row;
 
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 7\n");
+    return CODA_ERROR;
+  }
+
   ::sprintf (qstring, "select * from %s", DBASE_SESSION_TABLE);
 
   if (mysql_query (dbaseSock_, qstring) != 0)
@@ -755,6 +837,12 @@ dbaseReader::sessionActive (char* name)
 int
 dbaseReader::createSession (char* name)
 {
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 8\n");
+    return CODA_ERROR;
+  }
+
   if (sessionCreated (name))
   {
     reporter->cmsglog (CMSGLOG_WARN,"Cannot create session %s: already exists\n",
@@ -811,6 +899,12 @@ dbaseReader::createSession (char* name)
 int
 dbaseReader::selectSession (char* name)
 {
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 9\n");
+    return CODA_ERROR;
+  }
+
   if (!sessionCreated (name))
   {
     reporter->cmsglog (CMSGLOG_INFO1,"This session: %s has not yet been created\n", name);
@@ -872,6 +966,12 @@ dbaseReader::selectSession (char* name)
 int
 dbaseReader::giveupSession (char* session)
 {
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 10\n");
+    return CODA_ERROR;
+  }
+
   // Initially no session has been selected
   if (::strcmp (session, "unknown") == 0)
     return CODA_SUCCESS;
@@ -901,6 +1001,12 @@ int
 dbaseReader::getComponents (void)
 {
   char qstring[MAX_PROC_TABLE_STRING];
+
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 11\n");
+    return CODA_ERROR;
+  }
 
   reporter->cmsglog (CMSGLOG_INFO1,"Parsing process table ....\n");
 
@@ -951,6 +1057,12 @@ dbaseReader::getPriorities (void)
 {
   char qstring[64];
 
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 12\n");
+    return CODA_ERROR;
+  }
+
   reporter->cmsglog (CMSGLOG_INFO1,"Parsing priority table ......\n");
   ::sprintf (qstring, "select * from %s", DBASE_PRIORITY_TABLE);
 
@@ -996,6 +1108,12 @@ dbaseReader::getPriorities (void)
 void
 dbaseReader::setDefaultPriorities (void)
 {
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 12-1\n");
+    return;
+  }
+
   compFactory_->subSystemPriority ((char *)"ROC", 11);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem ROC has default priority of %d\n", 11);
   compFactory_->subSystemPriority ((char *)"EB",  15);
@@ -1004,6 +1122,10 @@ dbaseReader::setDefaultPriorities (void)
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem ANA has default priority of %d\n", 19);
   compFactory_->subSystemPriority ((char *)"ER",  23);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem ER has default priority of %d\n", 23);
+  compFactory_->subSystemPriority ((char *)"ET2ET",  24);
+  reporter->cmsglog (CMSGLOG_INFO1,"Subsystem ET2ET has default priority of %d\n", 24);
+  compFactory_->subSystemPriority ((char *)"ET",  25);
+  reporter->cmsglog (CMSGLOG_INFO1,"Subsystem ET has default priority of %d\n", 25);
   compFactory_->subSystemPriority ((char *)"LOG", 27);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem LOG has default priority of %d\n", 27);
   compFactory_->subSystemPriority ((char *)"TS",  -27);
@@ -1016,6 +1138,12 @@ int
 dbaseReader::getAllRunTypes (void)
 {
   char qstring[256];
+
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 13\n");
+    return CODA_ERROR;
+  }
 
   reporter->cmsglog (CMSGLOG_INFO1,"Parsing runtype table......\n");
   ::sprintf (qstring, "select * from %s order by name", DBASE_RUNTYPE_TABLE);
@@ -1078,6 +1206,12 @@ dbaseReader::getRunNumber   (void)
 {
   char qstring[256];
 
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 14\n");
+    return CODA_ERROR;
+  }
+
   ::sprintf (qstring, "select runNumber from %s where name = '%s'",
 	     DBASE_SESSION_TABLE, run_.exptname());
 
@@ -1121,6 +1255,12 @@ dbaseReader::putRunNumber   (int number)
 {
   char qstring[256];
 
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 15\n");
+    return;
+  }
+
   ::sprintf (qstring, "update %s set runNumber = %d where name = '%s'",
 	     DBASE_SESSION_TABLE, number, run_.exptname());
 
@@ -1152,6 +1292,12 @@ dbaseReader::putEventLimit   (int evlimit)
 {
   char qstring[256];
 
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 16\n");
+    return;
+  }
+
   if (strcmp(run_.runtype (), "unknown") == 0) return;
 
   ::sprintf (qstring, "update %s_option set value = '%d' where name = '%s'",
@@ -1174,6 +1320,13 @@ void
 dbaseReader::putDataLimit   (int dlimit)
 {
   char qstring[256];
+
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 17\n");
+    return;
+  }
+
   if (strcmp(run_.runtype (), "unknown") == 0) return;
 
   ::sprintf (qstring, "update %s_option set value = '%d' where name = '%s'",
@@ -1198,6 +1351,12 @@ dbaseReader::putDataFileName (char* name)
 {
   char qstring[256];
   
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 18\n");
+    return;
+  }
+
   if (strcmp(run_.runtype (), "unknown") == 0) return;
   
   ::sprintf (qstring, "update %s_option set value = '%s' where name = '%s'",
@@ -1224,6 +1383,12 @@ void
 dbaseReader::putTokenInterval   (int itval)
 {
   char qstring[256];
+
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 19\n");
+    return;
+  }
 
   if (strcmp(run_.runtype (), "unknown") == 0) return;
 
@@ -1253,6 +1418,12 @@ dbaseReader::putConfFileName (char* name)
   MYSQL_ROW row;
   int numRows;
   char qstring[1024];
+
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 20\n");
+    return;
+  }
 
   printf("dbaseReader::putConfFileName reached, name >%s<\n",name);fflush(stdout);
   
@@ -1329,6 +1500,13 @@ dbaseReader::getConfFileName (void)
   MYSQL_ROW row;
   char qstring[1024];
   int action;
+
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 21\n");
+    return CODA_ERROR;
+  }
+
   reporter->cmsglog (CMSGLOG_INFO1,"Geting confFile from option table ......\n");
   ::sprintf (qstring, "select * from %s%s where name = '%s'", run_.runtype (), DBASE_OPTION_TABLE, DBASE_CONFFILE);
 
@@ -1386,6 +1564,12 @@ dbaseReader::isConfigInUse (char* runtype)
   MYSQL_RES *res = 0;
   MYSQL_ROW    row;
 
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 22\n");
+    return CODA_ERROR;
+  }
+
   ::sprintf (qstring, "select * from %s", DBASE_RUNTYPE_TABLE);
 
   if (mysql_query (dbaseSock_, qstring) != 0) {
@@ -1431,6 +1615,12 @@ dbaseReader::configure (char* runtype)
   // first clean out old configuration information
   static int ft = 1;
   static char oldtype[80];
+
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 23\n");
+    return CODA_ERROR;
+  }
 
   if (ft == 1) {
     ::strncpy (oldtype, runtype, sizeof (oldtype));
@@ -1565,6 +1755,12 @@ dbaseReader::configure (char* runtype)
 int
 dbaseReader::giveupConfiguration (char* config)
 {
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 24\n");
+    return CODA_ERROR;
+  }
+
   // Initially no configuration has been selected
   if (::strcmp (config, "unknown") == 0)
     return CODA_ERROR;
@@ -1599,6 +1795,12 @@ dbaseReader::giveupConfiguration (char* config)
 int 
 dbaseReader::parseOptions (char* runtype)
 {
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 25\n");
+    return CODA_ERROR;
+  }
+
   /* first clean out all old script components */
   daqSystem& sys = run_.system ();
   sys.removeAllScriptComp ();
@@ -1823,12 +2025,24 @@ dbaseReader::parseOptions (char* runtype)
 char* 
 dbaseReader::database (void) const
 {
+  //if (!isDatabaseOpened ())
+  //{
+  //  reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 25-1\n");
+  //  return NULL;
+  //}
+
   return dbaseDir_;
 }
 
 int
 dbaseReader::configured (char *title)
 {
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 25-2\n");
+    return CODA_ERROR;
+  }
+
   /* make sure all script components are enabled */
   if (::strstr (title, CODA_USER_SCRIPT) != 0) return CODA_SUCCESS;
 
@@ -1855,6 +2069,12 @@ dbaseReader::configured (char *title)
 int
 dbaseReader::getNetConfigInfo (char *title, char* &config)
 {
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 25-3\n");
+    return CODA_ERROR;
+  }
+
   // find out which config info that belongs to this component 'title'
   codaSlist& nlist = cinfos_.bucketRef (title);
   if (nlist.isEmpty ())
@@ -1883,6 +2103,12 @@ dbaseReader::getNetConfigInfo (char *title, char* &config)
 int
 dbaseReader::setNetConfigInfo (char* title, char* config)
 {
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 25-4\n");
+    return CODA_ERROR;
+  }
+
   codaSlist& nlist = cinfos_.bucketRef (title);
 
   if (nlist.isEmpty ())
@@ -1906,6 +2132,12 @@ int
 dbaseReader::compInsideHash (char* title)
 {
   int found = 0;
+
+  if (!isDatabaseOpened ())
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 25-5\n");
+    return CODA_ERROR;
+  }
 
   codaSlist& nlist = cinfos_.bucketRef (title);
   if (nlist.isEmpty ())

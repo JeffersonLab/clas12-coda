@@ -150,7 +150,7 @@ static pthread_mutex_t vmescalers_lock;
 #endif
 
 
-static int nfadc, ndsc2_tcp, nvscm, nssp, nts, ntd, rflag, rmode;
+static int nfadc, ndsc2_tcp, nvscm, nssp, nts, ntd, nmo, rflag, rmode;
 static int mssp, mvscm;
 
 static unsigned int  vmescalersmap[MAXBOARDS+1];  /* crate map */
@@ -922,13 +922,19 @@ sspSetA32BaseAddress(sspA32Address);
 
 
 
+  /***********/
+  /* MO init */
+  nmo = moInit(0xa00000,0); /* returns OK if found board, ERROR otherwise */
+  printf("Finished MO initialization, nmo=%d\n",nmo);fflush(stdout);
+  if(nmo>=0) moConfigPrint();
 
+  
 
   /* always clean up init flag ! */
   init_boards = 0;
 
 
-
+  printf("\n=============================================================\n");
   printf("Starting readout loop, vmeScalersReadInterval=%d\n",vmeScalersReadInterval);fflush(stdout);
 
   while(1)
@@ -1551,6 +1557,11 @@ main(int argc, char *argv[])
   hostname[strlen(hostname)] = 0;
   while(*s)
   {
+    if(*s == '.')
+    {
+      *s = 0x00;
+      break;
+    }
     *s = toupper((unsigned char) *s);
     s++;
   }
@@ -1631,7 +1642,7 @@ main(int argc, char *argv[])
   }
   else if( (!strncmp(hostname,"ADCECAL",7)) || (!strncmp(hostname,"ADCPCAL",7)) || (!strncmp(hostname,"ADCFTOF",7)) ||
            (!strncmp(hostname,"ADCCTOF",7)) || (!strncmp(hostname,"ADCBAND",7)) || (!strncmp(hostname,"ADCCND",6)) ||
-           (!strncmp(hostname,"ADCFT",5))   || (!strncmp(hostname,"HPS1",4))    || (!strncmp(hostname,"HPS2",4)) )
+           (!strncmp(hostname,"ADCFT",5))   || (!strcmp(hostname,"HPS1"))    || (!strcmp(hostname,"HPS2")) )
   {
     epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "fadc");
   }

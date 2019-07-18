@@ -13,6 +13,12 @@ MAIN = daqmon
 #------------------
 include $(CODA)/src/Makefile.include
 
+#temporary because of old root
+#CC = /apps/gcc/4.9.4/bin/gcc 
+#CXX = /apps/gcc/4.9.4/bin/g++ 
+#temporary because of old root
+
+
 ROOTCFLAGS   := $(shell root-config --cflags)
 ROOTLIBS     := $(shell root-config --libs) 
 ROOTGLIBS    := $(shell root-config --glibs)
@@ -27,6 +33,9 @@ CLON_FLAGS += -I./src.s \
 				-I$(IPC_HOME)/include/activemq-cpp-$(IPC_VER) \
 				-I$(CODA)/src/ipc/ipc.s \
 				-I$(CODA)/src/codautil/codautil.s
+
+# for json.hpp
+CLON_FLAGS += -I$(RCDB_HOME)/cpp/include
 
 CLON_FLAGS += $(ROOTCFLAGS)
 
