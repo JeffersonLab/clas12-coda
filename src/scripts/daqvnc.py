@@ -10,9 +10,16 @@ class DaqVnc():
       self.cfg=json.load(xx)
     self.pidfile='%s/.vnc/%s:%d.pid'%\
         (os.getenv('HOME'),self.cfg['host'],int(self.cfg['port']))
+    self.passwdfile=None
+    if getpass.getuser() == self.cfg['user']:
+      self.passwdfile='%s/.vnc/passwd'%os.getenv('HOME')
 
   def startClient(self):
-    subprocess.call(['vncviewer','-Shared',self.cfg['host']+':'+self.cfg['port']])
+    cmd=['vncviewer']
+    if self.passwdfile is not None:
+      cmd.extend(['--passwordfile=%s'%self.passwdfile])
+    cmd.extend(['-Shared',self.cfg['host']+':'+self.cfg['port']])
+    subprocess.call(cmd)
 
   def killServer(self):
     subprocess.call(['vncserver','-kill',':'+self.cfg['port']])
