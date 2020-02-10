@@ -60,6 +60,7 @@
 //
 
 #include <stdio.h>
+#include <inttypes.h>
 
 #include <Xm/Frame.h>
 #include <Xm/Label.h>
@@ -789,8 +790,9 @@ rcRunDInfoPanel::attr0Callback (int status, void* arg, daqNetData* data)
   {
     if (status == CODA_SUCCESS)
     {
-      int temp = (int)(*data);
-      obj->numKbytes_ = ((unsigned long)temp)/256.0;
+      int64_t temp = (int64_t)(*data);
+	  /*printf("===> rcRunDInfoPanel::attr0Callback reached, temp=%lld (0x%llx)\n",temp,temp);*/
+      obj->numKbytes_ = temp/256.0;
     }
   }
 }
@@ -1069,6 +1071,8 @@ rcRunDInfoPanel::updateEventRate (void)
   XmStringFree (t);
 
 }
+
+
 
 // integrated data rate counter window (not histogram !)
 void

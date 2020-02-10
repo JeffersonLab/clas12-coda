@@ -26,6 +26,17 @@
 #include <daqDataTrigger.h>
 #include "daqData.h"
 
+daqData::daqData (char* compname, char* attrname, int64_t data)
+:data_ (compname, attrname, data), active_ (0), updater_ (0), trigger_ (0),
+ doTrigger_ (0),  writer_ (0), channels_ (), getCbkList_ (), setCbkList_ (),
+ offCbkList_ (), locked_ (0), writable_ (0), historyKept_ (0)
+{
+#ifdef _TRACE_OBJECTS
+  printf ("Create daqData Class Object\n");
+#endif
+  constructKey (compname, attrname);
+}
+
 daqData::daqData (char* compname, char* attrname, int data)
 :data_ (compname, attrname, data), active_ (0), updater_ (0), trigger_ (0),
  doTrigger_ (0),  writer_ (0), channels_ (), getCbkList_ (), setCbkList_ (),
@@ -74,6 +85,17 @@ daqData::daqData (char* compname, char* attrname, daqArbStruct* data)
 :data_ (compname, attrname, data), active_ (0), updater_ (0), trigger_ (0),
  doTrigger_ (0), writer_ (0), channels_(), getCbkList_ (), setCbkList_ (),
  offCbkList_ (), locked_ (0), writable_ (0), historyKept_ (0)
+{
+#ifdef _TRACE_OBJECTS
+  printf ("Create daqData Class Object\n");
+#endif
+  constructKey (compname, attrname);
+}
+
+daqData::daqData (char* compname, char* attrname, int64_t* data, int count)
+:data_ (compname, attrname, data, count), active_ (0), updater_ (0), 
+ trigger_ (0), doTrigger_ (0), writer_ (0),channels_(),  getCbkList_ (), 
+ setCbkList_ (), offCbkList_ (), locked_ (0), writable_ (0), historyKept_ (0)
 {
 #ifdef _TRACE_OBJECTS
   printf ("Create daqData Class Object\n");
@@ -297,6 +319,15 @@ daqData::operator = (const daqNetData& data)
 }
 
 void
+daqData::assignData (int64_t* data, int count)
+{
+  data_.assignData (data, count);
+  notifyChannels ();
+  if (writable_ && writer_)
+    writer_->write (this);
+}
+
+void
 daqData::assignData (int* data, int count)
 {
   data_.assignData (data, count);
@@ -330,6 +361,12 @@ daqData::assignData (char** data, int count)
   notifyChannels ();
   if (writable_ && writer_)
     writer_->write (this);
+}
+
+int
+daqData::getData (int64_t data[], int& count)
+{
+  return data_.getData (data, count);
 }
 
 int
@@ -399,13 +436,13 @@ daqData::update (void)
   {
     switch (data_.type_)
     {
-#ifdef Linux_x86_64
+//#ifdef Linux_x86_64
     case CODA_INT64:
       if (updater_) 
 	(*updater_)(data_.c_.compname_, data_.a_.attrname_, 
 		    (void *)&(data_.u_.lval), 1);
       break;
-#endif
+//#endif
     case CODA_INT32:
       if (updater_) 
 	(*updater_)(data_.c_.compname_, data_.a_.attrname_, 

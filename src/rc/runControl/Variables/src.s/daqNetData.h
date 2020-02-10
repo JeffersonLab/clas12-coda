@@ -135,11 +135,12 @@ public:
   // callers provide buffer memory, count will be size of buffer.
   // upon return, count will be real number of count.
   // return CODA_SUCCESS, exact match. CODA_WARNING mismatch
-  int  getData            (int    data[], int& count);
-  int  getData            (float  data[], int& count);
-  int  getData            (double data[], int& count);
+  int  getData            (int64_t data[], int& count);
+  int  getData            (int     data[], int& count);
+  int  getData            (float   data[], int& count);
+  int  getData            (double  data[], int& count);
   // callers have to free each data[] item
-  int  getData            (char*  data[], int& count);
+  int  getData            (char*   data[], int& count);
 
   // network byte ordering operation
   // encode data into a buffer with size int64_t

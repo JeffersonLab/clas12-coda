@@ -698,7 +698,8 @@ daqRun::createDynamicVars (void)
 	  /* dataManager_.findData(comp_name, attr_name, serverData) returns 'serverData', see daqDataManager.cc */
 
 
-
+/*sergey: IMPORTANT: in rcsDaqData() 3rd parameter type will define valiable type,
+ use right type !!! (for example since 'nlongs' must be int64_t, use '(int64_t)0' instead of '0') */
 
       /*nlongs*/
       if (dataManager_.findData (cs[i], (char *)DYN_ATTR0, serverData) == CODA_SUCCESS)
@@ -709,7 +710,7 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR0); /* without it was an error
       }
       else
       {
-	    daqData* ndata = new rcsDaqData (cs[i], (char *)DYN_ATTR0, 0);
+	    daqData* ndata = new rcsDaqData ((char *)cs[i], (char *)DYN_ATTR0, (int64_t)0);
 	    ndata->connect (dataManager_);
 	    // ndata->updater (compAttr);
 	    /* create trigger for nlong, insert into the new data */
@@ -719,6 +720,10 @@ sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR0); /* without it was an error
 	    dvars_[numDvars_++] = ndata;
 sprintf(newComp[newcount++],"%s:%s",cs[i],DYN_ATTR0); /* without it was an error: rcRunDInfoPanel::startMonitoringInfo: Cannot register monitor on ER15 nlongs */
       }
+
+
+
+
 
       /*nevents*/
       if (dataManager_.findData (cs[i], (char *)DYN_ATTR1, serverData) == CODA_SUCCESS)

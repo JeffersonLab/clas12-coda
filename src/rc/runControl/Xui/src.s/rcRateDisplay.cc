@@ -774,7 +774,7 @@ rcRateDisplay::addRatioData (double data)
 
 
 /*sergey*/
-/* livetime historgam update */
+/* livetime histogram update */
 void
 rcRateDisplay::addLivetimeData (double data)
 {

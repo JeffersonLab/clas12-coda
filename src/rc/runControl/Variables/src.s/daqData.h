@@ -46,13 +46,15 @@ class daqData
 public:
 
   // constructors and destructor
-  daqData (char* compname, char* attrname, int    data);
-  daqData (char* compname, char* attrname, float  data);
-  daqData (char* compname, char* attrname, double data);
-  daqData (char* compname, char* attrname, char*  data);
+  daqData (char* compname, char* attrname, int64_t data);
+  daqData (char* compname, char* attrname, int     data);
+  daqData (char* compname, char* attrname, float   data);
+  daqData (char* compname, char* attrname, double  data);
+  daqData (char* compname, char* attrname, char*   data);
   daqData (char* compname, char* attrname, daqArbStruct*  data);
 
   // constructors for array of elements
+  daqData (char* compname, char* attrname, int64_t* data, int count);
   daqData (char* compname, char* attrname, int* data, int count);
   daqData (char* compname, char* attrname, float* data, int count);
   daqData (char* compname, char* attrname, double* data, int count);
@@ -96,8 +98,8 @@ public:
   operator daqNetData&   (void);
 
   // set value
-  daqData& operator =    (int val);
   daqData& operator =    (int64_t val);
+  daqData& operator =    (int val);
   daqData& operator =    (float val);
   daqData& operator =    (double val);
   daqData& operator =    (char* val);
@@ -106,6 +108,7 @@ public:
   daqData& operator =    (const daqNetData& data);
 
   // assignment for array of elements
+  void assignData        (int64_t* data, int count);
   void assignData        (int* data, int count);
   void assignData        (float* data, int count);
   void assignData        (double* data, int count);
@@ -116,6 +119,7 @@ public:
   // upon return count will be real number of elements
   // return CODA_SUCCESS on complete match, return CODA_WARNING for
   // mismatch. return CODA_ERROR if initial count == 0
+  int getData            (int64_t data[], int& count);
   int getData            (int data[], int& count);
   int getData            (float data[], int& count);
   int getData            (double data[], int& count);
