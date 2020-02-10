@@ -412,6 +412,3 @@ CODA_encode_desc(unsigned int **datap, evDesc desc)
 #endif
   desc->desc_start[4] = desc->err[1];
 }
-
-
-
