@@ -164,6 +164,8 @@ int CODA_encode_spec(unsigned int **datap, evDesc desc); /* Generate the "specia
                                                              header from a descriptor. */
 
 
+int et_user(unsigned int *data, unsigned int *user);
+
 
 #define NHEAD   2 /* temporary, must be calculated */
 

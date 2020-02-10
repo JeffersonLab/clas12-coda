@@ -35,23 +35,18 @@
 
 
 
-static CIRCBUF rocqueues[MAX_ROCS];
+static CIRCBUF rocqueues[MAX_ROCS]; /* here index from 0 to nrocs */
 
+
+/* cb_init must be called in the very beginning of Prestart
+to cleanup everything in circular buffer package; we are calling it from 'debopenlinks()' */
 CIRCBUF *
-new_cb(int roc, char *name, char *parent)
+cb_init(int roc, char *name, char *parent)
 {
   CIRCBUF *cbp;
   int i;
   char temp[100];
 
-  /* use static array rocqueues[MAX_ROCS]
-  cbp = (CIRCBUF *) malloc(sizeof(CIRCBUF));
-  if(cbp == NULL)
-  {
-    printf("new_cb(): ERROR: cannot allocate memory.\n");
-    fflush(stdout);
-    return(NULL);
-  }*/
   cbp = (CIRCBUF *) &rocqueues[roc];
   memset((void *)cbp,0,sizeof(CIRCBUF));
 
@@ -70,40 +65,17 @@ new_cb(int roc, char *name, char *parent)
 
   for(i=0; i<QSIZE; i++) cbp->nattach[i] = 0;
   for(i=0; i<NTHREADMAX; i++) cbp->nbuf[i] = 0;
-  printf("new_cb(): circular buffer '%s' created by '%s' (addr=0x%08x)\n",
-            cbp->name,cbp->parent,cbp);
+  printf("cb_init(): circular buffer for roc=%d initialized\n",roc);
+  printf("cb_init(): circular buffer for roc=%d '%s' initialized by '%s' (addr=0x%08x)\n",
+		 roc,cbp->name,cbp->parent,cbp);
   fflush(stdout);
 
   return(cbp);
 }
 
-/* cb_init must be called in the very beginning of Prestart
-to cleanup everything in circular buffer package */
-void
-cb_init(int roc)
-{
-  CIRCBUF *cbp;
-  int i;
-
-  cbp = (CIRCBUF *) &rocqueues[roc];
-
-  pthread_mutex_init(&cbp->read_lock, NULL);
-  pthread_cond_init(&cbp->read_cond, NULL);
-
-  pthread_mutex_init(&cbp->write_lock, NULL);
-  pthread_cond_init(&cbp->write_cond, NULL);
-
-  cbp->write = cbp->read = 0;
-
-  for(i=0; i<QSIZE; i++) cbp->nattach[i] = 0;
-  for(i=0; i<NTHREADMAX; i++) cbp->nbuf[i] = 0;
-  printf("cb_init(): circular buffer for roc=%d initialized\n",roc);
-  fflush(stdout);
-
-  return;
-}
 
 
+/* here 'roc' from 0 to nrocs */
 void
 cb_delete(int roc)
 {
@@ -148,75 +120,6 @@ put_cb_data(int fd, CIRCBUF **cbh, void *data)
 #endif
   if((cbh == NULL)||(*cbh == NULL)) return(-1);
 
-
-  /*
->>>>> close link from >mvt2< link=0x08978588
-debCloseLink: theLink=0x08978588 -> closing
-debCloseLink reached, fd=18 sock=17
-11: shutdown fd=18
-[18] LINK_sized_read(): closed
-[18] handle_link(): LINK_sized_read() returns 0
-[18] handle_link(): put_cb_data calling ...
-12
-debCloseLink: socket fd=18 sock=17 connection closed
-903
-903-1 18
-904
-904-1 18
-905
-905-1 18
-906
-
-
-[18] PUT: fifo is being emptied !
-[18] handle_link(): put_cb_data called
-[18] handle_link(): thread exit
-[18] 907
-debCloseLink: link is down
-debCloseLink: free memory
-debCloseLink: done.
-
-=c====
-
-
-
-
-
->>>>> close link from >adcctof1< link=0x089786c0
-debCloseLink: theLink=0x089786c0 -> closing
-debCloseLink reached, fd=20 sock=19
-11: shutdown fd=20
-[20] LINK_sized_read(): closed
-[20] handle_link(): LINK_sized_read() returns 0
-[20] handle_link(): put_cb_data calling ...
-12
-debCloseLink: socket fd=20 sock=19 connection closed
-903
-903-1 20
-904
-904-1 20
-905
-905-1 20
-906
-
-
-debCloseLink: link is down
-debCloseLink: free memory
-debCloseLink: done.
-=cc============================================
-=cc============================================
-[20] PUT: ERROR return on chb<100000
-[20] handle_link(): put_cb_data called
-[20] handle_link(): thread exit
-[20] 907
-=cc============================================
-
-
-  */
-
-
-
-
   /*sergey: temporary until resolved (seems happens running EB on vme controllers)*/
   if(cbp <(CIRCBUF *)100000)
   {
@@ -224,9 +127,6 @@ debCloseLink: done.
     /*return(-11);*/
     exit(1);
   }
-
-
-
 
 
 #ifdef DEBUG
@@ -464,6 +364,8 @@ get_cb_count(CIRCBUF **cbh)
 
 
 
+
+/* here cba[] and evptrr[] index from 0 to nrocs */
 int
 cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk,
               unsigned int *evptrr[MAX_ROCS][NCHUNKMAX], int *nphys)
@@ -497,6 +399,10 @@ cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk,
   for(i=0; i<nrocs; i++)
   {
     cbp = cba[i]; /* pointer to the next fifo */
+#ifdef DEBUG
+	printf("[%1d] cbp = cba[%d] = 0x%08x (*cbp = 0x%08x)\n",id,i,cbp,*cbp);
+    fflush(stdout);
+#endif
 
     /* get first buffer number with valid data
     and the number of the next buffer */
@@ -818,25 +724,6 @@ exit(0);
 }
 
 
-int
-cb_events_init(CIRCBUF *cba[MAX_ROCS])
-{
-  int i;
-  CIRCBUF *f;
-
-  printf("cb_events_init() reached\n"); fflush(stdout);
-
-  for(i=0; i<MAX_ROCS; i++)
-  {
-    f = cba[i];
-    /*if(f != NULL) printf("[%2d] 2 %8.8s\n",i,f->name);*/
-  }
-
-  return(0);
-}
-
-
-
 
 /******************************************************************/
 /******************************************************************/
@@ -1093,57 +980,15 @@ exit(0); \
 }
 
 
-
-
 char *
-get_cb_name(CIRCBUF *cbp)
+get_cb_name(CIRCBUF **cbh)
 {
+  CIRCBUF *cbp = *cbh;
+
+  if((cbh == NULL)||(*cbh == NULL)) return("UNKNOWN");
+
   if(cbp == NULL) return("UNKNOWN");
   else            return(cbp->name);
 }
 
 
-/*
- * delete_cb() frees a circular buffer.
- */
-
-/* NOT IN USE !!! */
-
-void
-delete_cb(CIRCBUF **cbh)
-{
-  CIRCBUF *cbp = *cbh;
-
-  if((cbh == NULL)||(*cbh == NULL)) return;
-
-  printf("delete_cb 1\n");fflush(stdout);
-  pthread_mutex_trylock(&cbp->read_lock);
-  pthread_mutex_trylock(&cbp->write_lock);
-  if(cbp->deleting)
-  {
-    READ_UNLOCK;
-    WRITE_UNLOCK;
-    return;
-  }
-  
-  cbp->deleting = 1;
-
-  printf("delete_cb 2\n");fflush(stdout);
-  pthread_cond_broadcast(&cbp->read_cond);
-  pthread_cond_broadcast(&cbp->write_cond);
-
-  READ_UNLOCK;
-  WRITE_UNLOCK;
-
-  pthread_mutex_destroy(&cbp->read_lock);
-  pthread_mutex_destroy(&cbp->write_lock);
-
-  pthread_cond_destroy(&cbp->read_cond);
-  pthread_cond_destroy(&cbp->write_cond);
-
-  printf("delete_cb 3\n");fflush(stdout);
-  free(cbp->name);
-  free(cbp);
-
-  return;
-}

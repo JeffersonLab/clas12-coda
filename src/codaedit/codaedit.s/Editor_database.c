@@ -623,6 +623,24 @@ createScriptTable (char* config)
 #endif
   }
 
+
+  /* we want to overwrite existing intry with the same 'name' and 'state' (first 2 columns)*/
+  sprintf (queryString, "ALTER TABLE %s_script ADD UNIQUE INDEX(name,state)\n",config);
+  if (mysql_query (mysql, queryString) != 0)
+  {
+#ifdef _CODA_DEBUG
+    printf ("ALTER %s script table error: %s\n", config, mysql_error(mysql));
+#endif
+    return(-1);
+  }
+  else
+  {
+#ifdef _CODA_DEBUG
+    printf ("ALTERed %s script table\n", config);
+#endif
+  }
+
+
   return(0);
 }
 
@@ -1180,19 +1198,27 @@ insertValToScriptTable (char* config, char* name, codaScript* list)
 
   if (!databaseIsOpen ()) return(-1);
 
-  if (databaseSelected ()) {
-    /* MSQL is stupid: not to allow one to insert multiple values */
-    /* at the same time                                           */
-    for (p = list; p != 0; p = p->next) {
-      sprintf (queryString, "insert into %s_script\n",config);
-      sprintf (valString, "values ('%s', '%s', '%s')", 
-	       name, p->state, p->script);
+  if (databaseSelected ())
+  {
+
+    /* MSQL is stupid: not to allow one to insert multiple values at the same time */
+
+    for (p = list; p != 0; p = p->next)
+    {
+      /* form query using unique key owerwrite entry if exist */
+      sprintf (queryString, "insert into %s_script ",config);
+      sprintf (valString, "values ('%s', '%s', '%s') ON DUPLICATE KEY UPDATE script = '%s'", 
+	       name, p->state, p->script, p->script);
       strcat  (queryString, valString);
-      if (mysql_query (mysql, queryString) != 0) {
+
+      printf("\n\ninsertValToScriptTable: queryString >%s<\n\n\n",queryString);
+
+      if (mysql_query (mysql, queryString) != 0)
+      {
 #ifdef _CODA_DEBUG
-	printf ("insert %s to script table failed: %s\n", config, mysql_error(mysql));
+	    printf ("insert %s to script table failed: %s\n", config, mysql_error(mysql));
 #endif
-	return -1;
+	    return -1;
       }
     }
     return 0;

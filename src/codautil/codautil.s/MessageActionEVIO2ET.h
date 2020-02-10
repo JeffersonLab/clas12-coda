@@ -46,8 +46,8 @@ class MessageActionEVIO2ET : public MessageAction {
     int formatid;
 
     char *session     = (char*)NULL;
-    char *destination = NULL;
-    char *database    = (char*)"clasrun";
+    char *destination = (char*)NULL;
+    char *database    = (char*)NULL;
     int done          = 0;
     int debug         = 0;
 
@@ -103,12 +103,14 @@ class MessageActionEVIO2ET : public MessageAction {
     MessageActionEVIO2ET(char *session_)
     {
       session = strdup(session_);
+      database = getenv("EXPID");
     }
 
     MessageActionEVIO2ET(char *session_, char *destination_)
     {
       session = strdup(session_);
       destination = strdup(destination_);
+      database = getenv("EXPID");
     }
 
     MessageActionEVIO2ET(char *session_, char *destination_, char *database_)
@@ -311,9 +313,6 @@ class MessageActionEVIO2ET : public MessageAction {
 
 
 
-      /* sergey: get run state 
-      run_status = get_run_status(database,session);
-      */
 
 
 
@@ -361,6 +360,10 @@ class MessageActionEVIO2ET : public MessageAction {
       status = epics_msg_send("hallb_run_number","int",1,&run_number);
 
 #endif
+
+
+
+
 
 
       // get free event 
@@ -654,20 +657,41 @@ printf("filled et event length=%d\n",len);
 
 #endif
 
+
+
       // insert event into ET system
       if(et_alive(et_system_id)==1)
       {
-        status = et_event_put(et_system_id,et_attach_id,et_event_ptr);
-        if(status==ET_OK)
-        {
-          printf("Successfully put event into ET system, status=%d\n",status);
-          nev_to_et++;
-        }
-        else
-        {
-          if(debug==1) std::cerr << "?unable to put event, status is: " << status << std::endl;
-          nev_no_et++;
-        }
+        /* get run state from database; insert event into ET only if run state is 'active' */
+        run_status = get_run_status(database,session);
+        printf("Run status is '%s'\n",run_status);
+        if(!strcmp(run_status,"active"))
+		{
+          status = et_event_put(et_system_id,et_attach_id,et_event_ptr);
+          if(status==ET_OK)
+          {
+            printf("Successfully put event into ET system, status=%d\n",status);
+            nev_to_et++;
+          }
+          else
+          {
+            if(debug==1) std::cerr << "?unable to put event, status is: " << status << std::endl;
+            nev_no_et++;
+          }
+		}
+		else
+		{
+          printf("Run status is '%s' - dump ET event\n",run_status);
+          status = et_event_dump(et_system_id,et_attach_id,et_event_ptr);
+          if(status==ET_OK)
+          {
+            printf("Successfully dump ET event, status=%d\n",status);
+          }
+          else
+          {
+            if(debug==1) std::cerr << "?unable to dump event, status is: " << status << std::endl;
+          }
+		}
       }
 
 

@@ -180,6 +180,8 @@ int
 main(int argc,char **argv)
 {
   int status;
+  char *compname;
+  char *comphost;
 
   // synch with stdio
   ios::sync_with_stdio();
@@ -214,6 +216,9 @@ main(int argc,char **argv)
   */
 
 
+  /* found hostname where EB is running, assuming EB name starts from 'EB' */
+  get_comp_name_host(getenv("EXPID"), getenv("SESSION"), (char *)"EB", &compname, &comphost);
+  cout << "ipcbank2et: name=" << compname << ", host="<< comphost << endl;
 
 
 #ifdef USE_ACTIVEMQ
@@ -230,8 +235,8 @@ main(int argc,char **argv)
   control->setDebug(debug);
   server.AddCallback(control);
   
-  //MessageActionEVIO2ET *evio2et = new MessageActionEVIO2ET(session,"clondaq5");
-  MessageActionEVIO2ET *evio2et = new MessageActionEVIO2ET(session);
+  /*MessageActionEVIO2ET *evio2et = new MessageActionEVIO2ET(session);*/
+  MessageActionEVIO2ET *evio2et = new MessageActionEVIO2ET(session,comphost);
   server.AddCallback(evio2et);
 #else
   // set ipc parameters and connect to ipc system

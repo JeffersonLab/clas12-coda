@@ -73,7 +73,7 @@ static unsigned int hpsbuf[MAXBUF];
 */
 
 static unsigned int MAXBUF;
-static unsigned int *hpsbuf;
+static unsigned int *hpsbuf = NULL;
 
 
 #define EVIO_RECORD_HEADER(myptr, mylen) \
@@ -218,19 +218,21 @@ typedef struct EBpriv
   int nrocs;
   int roc_id[MAX_ROCS];
   int roc_nb[MAX_ROCS];
+  /*
   CIRCBUF **roc_stream[MAX_ROCS];
+  */
 
-  int active; /* obsolete ? */
+  /*int active;*/ /* obsolete ? */
 
   int ended;
   int ending;
   int end_event_done;
   int force_end;
 
-  int *interp_obsolete;
+  /*int *interp_obsolete;*/
 
-  pthread_mutex_t active_mutex; /* obsolete ? */
-  pthread_cond_t active_cond; /* obsolete ? */
+  /*pthread_mutex_t active_mutex;*/ /* obsolete ? */
+  /*pthread_cond_t active_cond;*/ /* obsolete ? */
 
   pthread_mutex_t data_mutex;
   pthread_cond_t data_cond;
@@ -706,9 +708,7 @@ printf("[%1d] .. done\n",id);fflush(stdout);
       itmp = 1;
       for(i=0; i<MAX_ROCS; i++)
       {
-        /*printf("[%2d] -> %d %d\n",i,roc_mask&itmp,roc_linked&itmp);
-        fflush(stdout);*/
-        if( CheckBit128(&roc_mask,i) != 0 && CheckBit128(&roc_linked,i) == 0 ) printf(" %2d",i);
+        if( CheckBit128(&roc_mask,i) != 0 && CheckBit128(&roc_linked,i) == 0 ) {printf(" %2d",i);fflush(stdout);}
       }
       printf("\n\n");
       fflush(stdout);
@@ -724,8 +724,10 @@ printf("[%1d] .. done\n",id);fflush(stdout);
 
     if(print_rocs_report)
     {
-      printf("ROC_MASK0:\n");
-      Print128(&roc_mask); Print128(&roc_linked);
+      printf("NEEDED:\n");
+      Print128(&roc_mask);
+      printf("RECEIVED:\n");
+      Print128(&roc_linked);
       printf("[%1d] all ROCs reported\n",arg->id);
       fflush(stdout);
       print_rocs_report = 0;
@@ -913,6 +915,9 @@ printf("!!!coda_ebc: data=0x%08x\n",data);
       if( (typ < EV_SYNC) || (typ >= (EV_SYNC+16)) ) /* physics event */
       {
         CODA_decode_frag(&temp,desc1);
+
+        /* extract some info from bank(s) and fill in user[] array (for example trigger bits) */
+        et_user(temp, desc1->user);
 		/*
 printf("!!!coda_ebc: roc=%d desc1->evnb=%d\n",roc,desc1->evnb);
 		*/
@@ -995,7 +1000,7 @@ printf("!!!coda_ebc: roc=%d desc1->evnb=%d\n",roc,desc1->evnb);
                  id,current_evnb,current_evty);
           fflush(stdout);
           printf(" -- %s (rocid %d) sent %d (type %d)\n",
-                  (get_cb_name(*ebp->roc_stream[ebp->roc_nb[desc1->rocid]])), 
+                  (get_cb_name(&roc_queues[ebp->roc_nb[desc1->rocid]])), 
                   desc1->rocid,desc1->evnb,desc1->type);
           fflush(stdout);
           printf("[%1d] ERROR: Discard data until next control event\n",id);
@@ -1086,12 +1091,15 @@ exit(0);
       printf("  Event Type Mismatch info:\n"); fflush(stdout);
       for(ix=0; ix<MAX_ROCS; ix++)
       {
-        if( CheckBit128(&type_mask,ix) != 0)
-	    /*if(type_mask&(1<<ix))*/
-        {
-          printf("    ROC ID = %d   Type = %d\n",ix,types[ix]);
-          fflush(stdout);
-        }
+        if(ebp->roc_id[ix]>=0)
+		{
+          if( CheckBit128(&type_mask,ix) != 0)
+	      /*if(type_mask&(1<<ix))*/
+          {
+            printf("    ROC ID = %d   Type = %d\n",ix,types[ix]);
+            fflush(stdout);
+          }
+		}
       }
 	  
     }
@@ -1116,7 +1124,10 @@ exit(0);
       printf("[%1d] following ROC IDs seems out of sync:\n",arg->id);
       for(i=0; i<MAX_ROCS; i++)
       {
-        if( CheckBit128(&fragment_mask,i) != 0 && CheckBit128(&sync_mask,i) == 0 ) printf(" %2d",i);
+        if(ebp->roc_id[i]>=0)
+		{
+          if( CheckBit128(&fragment_mask,i) != 0 && CheckBit128(&sync_mask,i) == 0 ) printf(" %2d",i);
+		}
       }
       printf("\n\n");
 
@@ -1236,7 +1247,7 @@ exit(0); /* should we ignore and try to recover ??? */
               else if(ebp->cur_cntl == EV_GO)    dtype = "go";
               else if(ebp->cur_cntl == EV_PAUSE) dtype = "pause";
               else if(ebp->cur_cntl == EV_END)   dtype = "end";
-              printf(", %s %s != %s ",(*ebp->roc_stream[ebp->roc_nb[desc1->rocid]])->name,ctype,dtype);
+              printf(", %s %s != %s ",(roc_queues[ebp->roc_nb[desc1->rocid]])->name,ctype,dtype);
             }
           }
           SetBit128(&ebp->ctl_mask,desc1->rocid);
@@ -1511,7 +1522,7 @@ if(++nevtime2 == NPROF2)
   /* shutdown fifos; it is enough to do it by one thread,
   but lets all threads do it, it is not harm (is it ?) */
   printf("[%1d] remove mutex locks and shutdown fifos\n",arg->id);
-  for(i=0; i<MAX_ROCS; i++)
+  for(i=0; i<ebp->nrocs; i++)
   {
     CIRCBUF *f = roc_queues[i];
     f->deleting = 1;
@@ -1519,8 +1530,7 @@ if(++nevtime2 == NPROF2)
     /* remove 'read' locks */
     if(pthread_mutex_trylock(&f->read_lock))
     {
-      printf("[%1d] Mutex for %s was read-locked so unlock it\n",
-        arg->id,get_cb_name(f));
+      printf("[%1d] Mutex for %s was read-locked so unlock it\n",arg->id,get_cb_name(&f));
       fflush(stdout);
     }
     pthread_mutex_unlock(&f->read_lock);
@@ -1528,8 +1538,7 @@ if(++nevtime2 == NPROF2)
     /* remove 'write' locks */
     if(pthread_mutex_trylock(&f->write_lock))
     {
-      printf("[%1d] Mutex for %s was write-locked so unlock it\n",
-        arg->id,get_cb_name(f));
+      printf("[%1d] Mutex for %s was write-locked so unlock it\n",arg->id,get_cb_name(&f));
       fflush(stdout);
     }
     pthread_mutex_unlock(&f->write_lock);
@@ -1538,21 +1547,11 @@ if(++nevtime2 == NPROF2)
     printf("\n[%1d] flushing input streams\n",arg->id);
     do
     {
-      printf("[%1d] count for %s = %d\n",
-        arg->id,get_cb_name(f),get_cb_count(&f));
+      printf("[%1d] count for %s = %d\n",arg->id,get_cb_name(&f),get_cb_count(&f));
       fflush(stdout);
       if(get_cb_count(&f) <= 0) break;
-
-
-
-
-      nevbuf = get_cb_data(&f,arg->id,chunk, evptr[i],   &lenbuf,&rocid);
-
-
-
-
+      nevbuf = get_cb_data(&f, arg->id, chunk, evptr[i], &lenbuf, &rocid);
     } while(nevbuf != -1);
-
   }
 
 
@@ -1751,47 +1750,13 @@ deb_constructor()
   ebp->nthreads = 0;
   for(i=0; i<NTHREADMAX; i++) ebp->idth[i] = 0;
 
-  /* allocate and initialize .. */
-  for(i=0; i<MAX_ROCS; i++)
-  {
-    roc_queues[i] = new_cb(i,"roc","EventBuilder");
-    ebp->roc_stream[i] = &roc_queues[i];
-  }
-  cb_events_init(roc_queues); /* dummy */
-
-
-
-#ifdef NOALLOC
-  printf("creating pool of buffers for %d ROCs ..\n",MAX_ROCS); fflush(stdout);
-  for(j=0; j<MAX_ROCS; j++)
-  {
-    for(i=0; i<QSIZE; i++)
-    {
-      bufpool[j][i] = (unsigned int *) malloc(TOTAL_RECEIVE_BUF_SIZE+128);
-      if(bufpool[j][i] == NULL)
-      {
-        printf("ERROR: cannot allocate buffer - exit.\n");
-        fflush(stdout);
-        exit(0);
-      }
-      else
-	  {
-        printf("[roc %2d][buf %2d] %d bytes has been allocated\n",j,i,TOTAL_RECEIVE_BUF_SIZE+128);
-	  }
-    }
-  }
-  printf("... done.\n"); fflush(stdout);
-#endif
-
-
-
   roc_queue_ix = 0; /* the number of ROCs; incremented in LINK_support.c */
 
   /* initialize mutex etc */
   pthread_mutexattr_init(&mattr);
   pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
-  pthread_mutex_init (&ebp->active_mutex, &mattr); /* obsolete ? */
-  pthread_cond_init (&ebp->active_cond, NULL); /* obsolete ? */
+  /*pthread_mutex_init (&ebp->active_mutex, &mattr);*/ /* obsolete ? */
+  /*pthread_cond_init (&ebp->active_cond, NULL);*/ /* obsolete ? */
   pthread_mutex_init (&ebp->data_mutex, &mattr);
   pthread_cond_init (&ebp->data_cond, NULL);
 
@@ -1830,7 +1795,7 @@ deb_destructor()
   void *status;
   int id;
 
-  ebp->active = 0; /* obsolete ? */
+  /*ebp->active = 0;*/ /* obsolete ? */
 
   SHUTDOWN_BUILD;
   ended_loop_exit = 1;
@@ -1989,21 +1954,22 @@ printf("=o=============================================\n");fflush(stdout);
 printf("debopenlinks reached\n");fflush(stdout);
 
 
+  /* cleanup everything from previous configuration(s) */
   for(ix=0; ix<MAX_ROCS; ix++)
   {
 	ebp->roc_id[ix] = -1;
+    ebp->roc_nb[ix] = -1;
 	ebp->links[ix] = NULL;
+    for(i=0; i<QSIZE; i++)
+	{
+      if(bufpool[ix][i] != NULL) free(bufpool[ix][i]);
+      bufpool[ix][i] = NULL;
+    }
   }
+  roc_queue_ix = 0;
 
 
-
-/*sergey*/
-roc_queue_ix = 0;
-
-
-
-
-
+  /* select configuration */
   dbsock = dbConnect(mysql_host, expid);
   if(dbsock==NULL)
   {
@@ -2023,9 +1989,7 @@ roc_queue_ix = 0;
     printf("selected\n");
   }
 
-
-
-  /* gets results from previous query */
+  /* gets results from selected configuration */
   if( !(result = mysql_store_result(dbsock)) )
   {
     printf("ERROR in mysql_store_result()\n");
@@ -2091,12 +2055,50 @@ roc_queue_ix = 0;
   }
 
 
-  /* for every ROC */
+  /* for every ROC from selected configuration, obtain rocid and init/allocate appropriate arrays */
+  nrocs = 0;
+  for(ix=0; ix<linkArgc; ix++)
+  {    
+    /* get ROC id from process table */
+	sprintf(tmp,"SELECT id FROM process WHERE name ='%s'",linkArgv[ix]);
+    if(dbGetInt(dbsock, tmp, &rocid)==CODA_ERROR) return(CODA_ERROR);
+    printf("rocid=%d\n",rocid);
+
+	ebp->roc_id[nrocs] = rocid; /* our rocid: DC1 is 1, CC1 is 12 etc */
+	ebp->roc_nb[rocid] = nrocs; /* roc numbers: 0,1,2,... */
+
+    /* allocate 'bufpool' for this ROC */
+    printf("creating pool of buffers for roc=%d (rocid=%d)\n",ix,rocid); fflush(stdout);
+    for(i=0; i<QSIZE; i++)
+    {
+      if(bufpool[ix][i] != NULL) free(bufpool[ix][i]);
+
+      bufpool[ix][i] = (unsigned int *) malloc(TOTAL_RECEIVE_BUF_SIZE+128);
+      if(bufpool[ix][i] == NULL)
+      {
+        printf("ERROR: cannot allocate buffer - exit.\n");
+        fflush(stdout);
+        exit(0);
+      }
+      else
+	  {
+        printf("[roc %2d][buf %2d] %d bytes has been allocated\n",rocid,i,TOTAL_RECEIVE_BUF_SIZE+128);
+	  }
+    }
+
+    roc_queues[ix] = cb_init(ix, linkArgv[ix], "EventBuilder");
+    /*ebp->roc_stream[ix] = &roc_queues[ix];*/
+
+	nrocs ++;
+  }
+  ebp->nrocs = nrocs;
+
+
+  /* for every ROC from selected configuration, create link to EB */
   for(ix=0; ix<linkArgc; ix++)
   {
     /* get the host name where it suppose to send data */
-	sprintf(tmp,"SELECT outputs FROM %s WHERE name ='%s'",
-      configname,linkArgv[ix]);
+	sprintf(tmp,"SELECT outputs FROM %s WHERE name ='%s'",configname,linkArgv[ix]);
     if(dbGetStr(dbsock, tmp, tmpp)==CODA_ERROR) return(CODA_ERROR);
     printf("tmpp>%s<\n",tmpp);
     len = strlen(tmpp);
@@ -2113,55 +2115,12 @@ roc_queue_ix = 0;
 
     /* create link */
 	printf("debOpenLink: >%s< >%s< >%s< 0x%08x\n",linkArgv[ix],object->name,tohost, dbsock);
-
     ebp->links[ix] = debOpenLink(linkArgv[ix], object->name, tohost, dbsock);
     printf(">>>>> open link from >%s< link=0x%08x\n",linkArgv[ix],ebp->links[ix]);
   }
 
 
-  /* for every ROC */
-  nrocs = 0;
-  for(ix=0; ix<linkArgc; ix++)
-  {    
-    /* get 'first' field, can be 'yes' or 'no' 
-	sprintf(tmp,"SELECT first FROM %s WHERE name ='%s'",
-      configname,linkArgv[ix]);
-    if(dbGetStr(dbsock, tmp, tmpp)==CODA_ERROR) return(CODA_ERROR);
-    printf("tmpp>%s<\n",tmpp);
-*/
-
-    /* get ROC id from process table */
-	sprintf(tmp,"SELECT id FROM process WHERE name ='%s'",linkArgv[ix]);
-    if(dbGetInt(dbsock, tmp, &rocid)==CODA_ERROR) return(CODA_ERROR);
-    printf("rocid=%d\n",rocid);
-
-    /* check status of 'first' ROC (WHAT ABOUT OTHERS ?????!!!!!) 
-    if(!strncmp(tmpp,"yes",3))
-    {*/
-      /*
-	  if { [catch "DP_ask $linkArgv[ix] status"] } {
-		puts "ERROR: Data link $linkArgv[ix] cannot be started, target system down"
-	  }
-	   */
-    /*}*/
-
-	ebp->roc_id[nrocs] = rocid; /* our rocid: DC1 is 1, CC1 is 12 etc */
-
-
-
-	ebp->roc_nb[rocid] = nrocs; /* roc numbers: 0,1,2,... */
-
-
-
-
-	nrocs ++;
-  }
-  ebp->nrocs = nrocs;
-
   dbDisconnect(dbsock);
-
-
-
 
 
 
@@ -2195,13 +2154,22 @@ printf("=c=============================================\n");fflush(stdout);
     exit(0);
   }
 
+  /* send force close command to all rocs */
   for(ix=0; ix<linkArgc; ix++)
   {
 	printf("=c====\n");fflush(stdout);
-    printf(">>>>> close link from >%s< link=0x%08x\n",
-      linkArgv[ix],ebp->links[ix]);
+    printf(">>>>> force close link from >%s< link=0x%08x\n",linkArgv[ix],ebp->links[ix]);
+    debForceCloseLink(ebp->links[ix], dbsock);
+  }
+
+  /* wait for links to be closed */
+  for(ix=0; ix<linkArgc; ix++)
+  {
+	printf("=c====\n");fflush(stdout);
+    printf(">>>>> check close link from >%s< link=0x%08x\n",linkArgv[ix],ebp->links[ix]);
     debCloseLink(ebp->links[ix], dbsock);
   }
+
   linkArgc = 0;
 
   dbDisconnect(dbsock);
@@ -2259,12 +2227,8 @@ static ebArg args[NTHREADMAX];
   debopenlinks();
 
 
-  printf("INFO: Prestarting (C)\n");
+  printf("INFO: Prestarting (C)\n");fflush(stdout);
 
-  /*******************************/
-  /* initialize circular buffers */
-
-  for(i=0; i<MAX_ROCS; i++) cb_init(i);
 
   /*******************/
   /* setup ET system */
@@ -2307,6 +2271,7 @@ static ebArg args[NTHREADMAX];
   /* ERROR: MUST BE SEPARATE FOR EVERY BUILDING THREAD !!! allocate memory for HPS_HACK */
   id = 0;
   MAXBUF = (et_eventsize/4) + 128;
+  if(hpsbuf != NULL) free(hpsbuf);
   if((hpsbuf = (int *) calloc(MAXBUF, sizeof(int))) == NULL)
   {
     printf("[%1d] deb ET init: cannot allocate buffer for HPS_HACK - exit\n",id);
@@ -2337,8 +2302,12 @@ static ebArg args[NTHREADMAX];
   ebp->ended = 0;
   ebp->end_event_done = 0;
 
-  /* Initialize queues */
-  for(ix=0; ix<MAX_ROCS; ix++) roc_queues[ix]->deleting = 0;
+  printf("11\n");fflush(stdout);
+
+  /* Initialize all queues */
+  for(ix=0; ix<ebp->nrocs; ix++) roc_queues[ix]->deleting = 0;
+
+  printf("12\n");fflush(stdout);
 
   /* connect to database */
   dbsocket = dbConnect(mysql_host, expid);
@@ -2816,12 +2785,12 @@ printf("codaEnd 10\n");fflush(stdout);
       printf("deb_end: set 'deleting=1' for all rocs\n");
 
       /* should call cb_delete() instead of following piece .. */
-      for(j=0; j<MAX_ROCS; j++)
+      for(j=0; j<ebp->nrocs; j++)
       {
-        CIRCBUF *f = roc_queues[j];
-        f->deleting = 1;
-        pthread_cond_broadcast(&f->read_cond);
-        pthread_cond_broadcast(&f->write_cond);
+          CIRCBUF *f = roc_queues[j];
+          f->deleting = 1;
+          pthread_cond_broadcast(&f->read_cond);
+          pthread_cond_broadcast(&f->write_cond);
       }
 
     }
@@ -2890,7 +2859,8 @@ printf("debShutdownBuild 1\n");
   /* set force end flag */
   ebp->force_end = 1;
 
-  for(i=0; i<MAX_ROCS; i++) cb_delete(i);
+  for(i=0; i<ebp->nrocs; i++) cb_delete(i);
+
   /*SHUTDOWN_BUILD; do not need: cb_delete will force handle_build to exit*/
 printf("debShutdownBuild 2\n");
 

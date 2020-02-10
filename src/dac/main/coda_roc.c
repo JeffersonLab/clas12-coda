@@ -78,7 +78,7 @@ static ROLPARAMS *rolPs[2]; /* will be allocated once in constructor */
 
 int rocMask = 0;
 
-/*static*/ int object_nlongs; /* instead of object->nlongs*/
+/*static*/ int64_t object_nlongs; /* instead of object->nlongs*/
 /*static*/ int clear_to_send = 0;
 /*static*/ int last_event_check = 0;
 /*static*/ int rocp_primefd;

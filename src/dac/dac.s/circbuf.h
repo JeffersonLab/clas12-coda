@@ -69,7 +69,7 @@
 #ifdef Linux_x86_64
 #define MAX_ROCS 127 /* must accomodate biggest roc id, not the number of rocs !!! */
 #else
-#define MAX_ROCS 77/*85*/
+#define MAX_ROCS 127/*77*//*85*/
 #endif
 
 #define QSIZE 8 /* the number of buffers in EB, normally 8, was set to 6 trying to decrease memory usage on clondaq5 */
@@ -139,25 +139,14 @@ typedef struct circbuf
 extern "C" {
 #endif
 
-CIRCBUF *new_cb(int roc, char *name, char *parent);
-void     cb_init(int roc);
+CIRCBUF *cb_init(int roc, char *name, char *parent);
 void     cb_delete(int roc);
-void     delete_cb(CIRCBUF **cbp);
-int      put_cb_data(int fd, CIRCBUF **cbp, void *data);
-int      get_cb_data(CIRCBUF **cbp, int id, int chunk,
-                     unsigned int *evptr[NCHUNKMAX], int *buflen, int *rocid);
-char    *get_cb_name(CIRCBUF *cbp);
-int     get_cb_count(CIRCBUF **cbp);
-
-int cb_events_init(CIRCBUF *cba[32]);
-int cb_events_get(CIRCBUF *cba[32], int id, int nrocs, int chunk,
-                 unsigned int *buf[32][NCHUNKMAX], int *nphys);
+int      put_cb_data(int fd, CIRCBUF **cbh, void *data);
+int      get_cb_data(CIRCBUF **cbh, int id, int chunk, unsigned int *evptr[NCHUNKMAX], int *buflen, int *rocid);
+char    *get_cb_name(CIRCBUF **cbh);
+int      get_cb_count(CIRCBUF **cbp);
+int      cb_events_get(CIRCBUF *cba[32], int id, int nrocs, int chunk, unsigned int *buf[32][NCHUNKMAX], int *nphys);
 
 #ifdef  __cplusplus
 }
 #endif
-
-
-
-
-

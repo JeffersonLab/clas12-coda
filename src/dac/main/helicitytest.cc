@@ -41,20 +41,30 @@ unsigned int *bufptr;
 int
 main(int argc, char **argv)
 {
-	int run = 11; /* sergey: was told to use 11, do not know why .. */
-	int ii, ind, fragtag, fragnum, tag, num, nbytes, ind_data;
-	int nhitp, nhiti, nhito, nhitp_offline, nhiti_offline, nhito_offline;
-	float tmp;
-    int event, type;
+  int run = 11; /* sergey: was told to use 11, do not know why .. */
+  int ii, ind, fragtag, fragnum, tag, num, nbytes, ind_data;
+  int nhitp, nhiti, nhito, nhitp_offline, nhiti_offline, nhito_offline;
+  float tmp;
+  int event, type;
 
-	int runnum = 0;
+  int runnum = 0;
 
-	char fnamein[1024];
-	char fnameout[1024];
-	int nfile, status, handlerin, handlerout, maxevents, iev;
-	nfile = 0;
+  char fnamein[1024];
+  char fnameout[1024];
+  int nfile, status, handlerin, handlerout, maxevents, iev;
+  nfile = 0;
+
+
+  /* emulate Prestart event */
+  helicity(bufptr, 17);
+  iev = 0;
+
+  for(nfile=0; nfile<=2; nfile++)
+  {
+    if(nfile==1) continue;
 
 	/* input evio file */
+
 	sprintf(fnamein, "%s.%05d", argv[1], nfile);
 	printf("opening input file >%s<\n", fnamein);
 	status = evOpen(fnamein, (char *)"r", &handlerin);
@@ -64,7 +74,10 @@ main(int argc, char **argv)
 		exit(-1);
 	}
 
+
+
 	/* output evio file */
+
 	sprintf(fnameout, "%s_out.%05d", argv[1], nfile);
 	printf("opening output file >%s<\n", fnameout);
 	status = evOpen(fnameout, (char *)"w", &handlerout);
@@ -83,10 +96,7 @@ main(int argc, char **argv)
 
 
 
-    /* emulate Prestart event */
-	helicity(bufptr, 17);
 
-	iev = 0;
 	while (iev < maxevents) {
 		iev++;
 
@@ -132,8 +142,14 @@ main(int argc, char **argv)
 
 	} /*while*/
 
-	printf("\n%d events processed\n\n", iev);
+
+	printf("file %d, %d events processed\n\n",nfile,iev);
 
 	evClose(handlerin);
 	evClose(handlerout);
+
+  } /* for */
+
+
+  exit(0);
 }

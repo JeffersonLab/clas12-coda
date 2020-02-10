@@ -42,7 +42,7 @@ main(int argc, char **argv)
 
   decode_command_line(argc,argv);
 
-  if(runconfig==NULL) runconfig=(char*)"PROD";
+  if(runconfig==NULL) runconfig=(char*)"PROD66";
 
   // try get_run_status
   datafile = get_run_datafile(msql_database,runconfig);

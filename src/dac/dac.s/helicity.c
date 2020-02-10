@@ -47,7 +47,8 @@
 ******************************************************************/
 
 /*#define DEBUG*/
-/*#define DEBUG1*/
+#define DEBUG1
+#define DEBUG2
 
 #define NDELAY 2         /* number of quartets between */
 						 /* present reading and present helicity  */
@@ -87,7 +88,7 @@ loadHelicity(int input_helicity, unsigned int *iseed, unsigned int *iseed_earlie
   unsigned int iseed0, iseed_earlier0;
   int tmp, i;
 
-#ifdef DEBUG1
+#ifdef DEBUG
   printf("NB=%d\n",nb);
 #endif
 
@@ -256,7 +257,7 @@ ranBit(unsigned int *ranseed)
   seed = ( (seed<<1) | newbit ) & 0x3FFFFFFF;
   *ranseed = seed;
 
-#ifdef DEBUG1
+#ifdef DEBUG
   printf("RANBIT=%d (0x%06x->0x%06x)\n",newbit,*ranseed,seed);
 #endif
 
@@ -340,7 +341,8 @@ getSeed()
 #define NPREV 3
 #define MIN(a,b)  ( (a) < (b) ? (a) : (b) )
 
-#define DELTATIME 8457485LL
+/*#define DELTATIME 8457488LL*/ /* 30Hz */
+#define DELTATIME 2083336LL /* 120Hz */
 
 /********************************************************************************/
 /*                           HALLB SECTION                                      */
@@ -376,9 +378,13 @@ helicity(unsigned int *bufptr, int type)
   int fragtag, fragnum, banktag, banknum, ind, nbytes, ind_data, itmp;
   int slot, trig, chan, nchan, ievent, iev, nn, mm, nsamples;
   unsigned char *end;
-  uint64_t fadctime, tstime, dtime, dtstime;
+  uint64_t fadctime, tstime, dtstime;
   uint64_t timestamp;
   uint64_t deltatime;
+  int64_t dtime;
+  static int64_t dtime_avg;
+  static int Navg = 1;
+  float missed_strobs;
   static uint64_t timestamp_old, tstime_old;
   uint32_t tstime1, tstime2;
   unsigned int dat32;
@@ -453,8 +459,8 @@ helicity(unsigned int *bufptr, int type)
       missed_helicity_triggers = 0;
       dtstime = tstime - tstime_old;
 #ifdef DEBUG1
-	  printf("+++++> 0x%llx - 0x%llx = 0x%llx\n",tstime,tstime_old,dtstime);
-      printf("HEAD: event=%d, fp_trig=0x%08x tstime=%lld(0x%llx) dtstime=%lld\n",ievent,itmp,tstime,tstime,dtstime);
+	  /*printf("+++++> 0x%llx - 0x%llx = 0x%llx\n",tstime,tstime_old,dtstime);*/
+      printf("TRIGGER BIT 0x1000 TIMESTAMP: event=%d, fp_trig=0x%08x tstime=%lld(0x%llx) dtstime=%lld(0x%llx)\n",ievent,itmp,tstime,tstime,dtstime,dtstime);
 #endif
       tstime_old = tstime;
 	}
@@ -607,7 +613,7 @@ helicity(unsigned int *bufptr, int type)
     /* 'tstime_old' is timestamp for last received helicity strob trigger (front panel bit 0x1000) */
 
     deltatime = timestamp - tstime_old;
-#ifdef DEBUG
+#ifdef DEBUG1
     printf("!!! timestamp=0x%llx(%llu) - tstime=0x%llx(%llu) = deltatime=0x%llx(%llu),  DELTATIME=0x%llx(%llu)\n",
                 timestamp,timestamp,tstime_old,tstime_old,deltatime,deltatime,DELTATIME,DELTATIME);
 #endif
@@ -617,8 +623,8 @@ helicity(unsigned int *bufptr, int type)
       {
         missed_helicity_triggers ++;
 #ifdef DEBUG1
-        printf("\nMISSED helicity trigger %d times ??? (event=%d) [0x%llx (%llu) > 0x%llx (%llu)]\n",
-			   missed_helicity_triggers,ievent,deltatime,deltatime,DELTATIME,DELTATIME);
+        printf("\nMISSED helicity trigger %d times ??? (event=%d) (timestamp=0x%llx(%llu)) [deltatime=0x%llx(%llu) > DELTATIME=0x%llx(%llu)]\n",
+			   missed_helicity_triggers,ievent,timestamp,timestamp,deltatime,deltatime,DELTATIME,DELTATIME);
         printf("Event %d SHOULD be in next helicity interval, expecting to see flip from FADC information\n",ievent);
 #endif
 
@@ -646,16 +652,67 @@ helicity(unsigned int *bufptr, int type)
 
   if(str_pipe[NPREV-2]==-1) return(0); /*skip first event, we need at least two events to check for flip */
 
-  /*if any value changed, we flipped */
-  if((strob!=str_pipe[NPREV-2])||(helicity!=hel_pipe[NPREV-2])||(quad!=quad_pipe[NPREV-2]))
+
+
+
+
+  /*if any value changed, we flipped 
+  if((strob!=str_pipe[NPREV-2])||(helicity!=hel_pipe[NPREV-2])||(quad!=quad_pipe[NPREV-2]))*/
+
+  /*
+missed_strobs = 0.989922
+
+== str/hel/quad befo: str=0 hel=1 quad=0 (event 20800) timestamp=0x63e1ab602
+== str/hel/quad afte: str=0 hel=0 quad=1 (event 20801) timestamp=0x63e1abd67 (dtime=0x7fbab4, dtime_avg=0x810765)
+
+missed_strobs = 0.000118
+
+== str/hel/quad befo: str=0 hel=0 quad=1 (event 20801) timestamp=0x63e1abd67
+== str/hel/quad afte: str=1 hel=0 quad=1 (event 20802) timestamp=0x63e1ac14a (dtime=0x3e3, dtime_avg=0x80f355)
+
+missed_strobs = 1.023029
+
+== str/hel/quad befo: str=1 hel=0 quad=1 (event 20898) timestamp=0x63e9bc313
+== str/hel/quad afte: str=0 hel=0 quad=1 (event 20899) timestamp=0x63e9eacd5 (dtime=0x83eb8b, dtime_avg=0x80f3cb)
+
+  ERROR: reading=1 predicted=0 (event 20899)
+missed_strobs = 0.980884
+  */
+
+
+
+
+
+
+  /* we flipped only if strob changed */
+  if((strob!=str_pipe[NPREV-2]))
   {
     dtime = timestamp-timestamp_old;
-#ifdef DEBUG1
+
+    if(dtime_avg > 0.0) missed_strobs = (float)dtime/(float)dtime_avg;
+    else                missed_strobs = 0LL;
+    printf("missed_strobs = %f\n",missed_strobs);
+    if( missed_strobs > 1.5 )
+	{
+      printf("IT SEEMS WE MISSED ABOUT %f HELICITY STROB(S)\n",missed_strobs);
+
+      for(ii=0; ii<(int)missed_strobs/4; ii++)
+	  {
+        predicted_reading = ranBit(&iseed_earlier);
+        present_helicity = ranBit(&iseed);
+	  }
+	}
+
+    dtime_avg = dtime_avg + (dtime-dtime_avg)/Navg;
+    Navg ++;
+#ifdef DEBUG2
     printf("\n== str/hel/quad befo: str=%d hel=%d quad=%d (event %d) timestamp=0x%llx\n",
 		   str_pipe[NPREV-2],hel_pipe[NPREV-2],quad_pipe[NPREV-2],ievent-1,time_pipe[NPREV-2]);
-    printf("== str/hel/quad afte: str=%d hel=%d quad=%d (event %d) timestamp=0x%llx\n\n",
-           strob,helicity,quad,ievent,timestamp);
+    printf("== str/hel/quad afte: str=%d hel=%d quad=%d (event %d) timestamp=0x%llx (dtime=0x%llx, dtime_avg=0x%llx)\n\n",
+           strob,helicity,quad,ievent,timestamp,dtime,dtime_avg);
 #endif
+
+
     timestamp_old = timestamp;
 
 
@@ -692,7 +749,7 @@ helicity(unsigned int *bufptr, int type)
     /* if we sync'ed already, check offset and bump it if necessary */
     if(done==1)
     {
-#ifdef DEBUG1
+#ifdef DEBUG
       printf("  checking offset=%d: strob1=%1d helicity1=%1d quad1=%d\n",offset,strob1,helicity1,quad1);
 #endif
       if(quad1==0)
@@ -716,7 +773,7 @@ helicity(unsigned int *bufptr, int type)
         else
         {
           offset=0;
-#ifdef DEBUG1
+#ifdef DEBUG
           printf("    INFO: set[1] offset to %d\n",offset);
 #endif
 	    }
@@ -724,7 +781,7 @@ helicity(unsigned int *bufptr, int type)
       else
       {
         offset++;
-#ifdef DEBUG1
+#ifdef DEBUG
         printf("    INFO: bump[2] offset to %d\n",offset);
 #endif
         if(offset>3)
@@ -741,7 +798,7 @@ helicity(unsigned int *bufptr, int type)
       }
     }
 
-#ifdef DEBUG1
+#ifdef DEBUG
     printf("  checking offset=%d done: strob1=%d helicity1=%1d quad1=%1d\n",offset,strob1,helicity1,quad1);
 #endif
 
@@ -756,6 +813,8 @@ helicity(unsigned int *bufptr, int type)
     if(done==-1)
     {
       printf("done=%d -> looking for the begining of quartet ..\n",done);
+      Navg = 1;
+      dtime_avg = 0LL;
       if(quad1==0)
       {
         done=0; /* quad1==0 means first in quartet */
@@ -776,7 +835,8 @@ helicity(unsigned int *bufptr, int type)
       if(done==1)
       {
         printf("=============== READY TO PREDICT (ev=%6d) =============== \n",ievent);
-
+        Navg = 1;
+        dtime_avg = 0LL;
 	  }
     }
 
@@ -787,7 +847,7 @@ helicity(unsigned int *bufptr, int type)
 
     if(done==1)
     {
-#ifdef DEBUG1
+#ifdef DEBUG
       printf("PATTERN WAS FOUND BEFORE, can determine helicity: done=%d quad1=%d\n",done,quad1);
 #endif
       if(quad1==0)
@@ -797,13 +857,13 @@ helicity(unsigned int *bufptr, int type)
         present_reading = helicity1;
         predicted_reading = ranBit(&iseed_earlier);
 
-#ifdef DEBUG1
+#ifdef DEBUG
         printf("  quad1=%d, ranBit(&iseed_earlier) returns %d\n",quad1,predicted_reading);
 #endif
 
         present_helicity = ranBit(&iseed);
 	        
-#ifdef DEBUG1
+#ifdef DEBUG
         printf("  helicity: predicted=%d present=%d corrected=%d\n",predicted_reading,present_reading,present_helicity);
 #endif
 
@@ -876,7 +936,7 @@ helicity(unsigned int *bufptr, int type)
 
     pred_read = predicted_reading;
     pres_heli = present_helicity;
-#ifdef DEBUG1
+#ifdef DEBUG
     printf("-------------------------------------------------------- offset=%d -> pred_read=%d\n",offset,pred_read);
 #endif
     if((offset==0) || (offset==3))
@@ -913,7 +973,7 @@ helicity(unsigned int *bufptr, int type)
 	}
     else
 	{
-#ifdef DEBUG1
+#ifdef DEBUG
       printf("  INFO: reading=%d predicted=%d (event %d)\n",tmp0,temp0,ievent);
 #endif
 
@@ -952,7 +1012,7 @@ helicity(unsigned int *bufptr, int type)
 
         /* put results into 6th 32bit word */
         itmp = itmp | (final_helicity<<1) | 1;
-#ifdef DEBUG1
+#ifdef DEBUG
         printf("put e10f: %d\n",itmp);
 #endif
         b08out = b08;
@@ -960,7 +1020,7 @@ helicity(unsigned int *bufptr, int type)
 
         /* read 6th 32bit word */
         GET32(itmp);
-#ifdef DEBUG1
+#ifdef DEBUG
         printf("get e10f: %d\n",itmp);
 #endif
       }

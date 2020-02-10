@@ -21,6 +21,7 @@ main()
 #include <fcntl.h>
 #include <time.h>
 #include <signal.h>
+#include <ctype.h>
 
 #ifdef Linux
 #include <sys/prctl.h>

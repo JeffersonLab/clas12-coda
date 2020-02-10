@@ -18,7 +18,7 @@ using namespace std;
 
 char *msql_database = getenv("EXPID");
 char *session       = getenv("SESSION");
-char *runconfig        = NULL;
+char *daqconfig        = NULL;
 
 #include "codautil.h"
 
@@ -42,10 +42,10 @@ main(int argc, char **argv)
 
   decode_command_line(argc,argv);
 
-  if(runconfig==NULL) runconfig=(char*)"PROD";
+  if(daqconfig==NULL) daqconfig=(char*)"PROD66";
 
   // try get_run_status
-  config = get_daq_config(msql_database,runconfig);
+  config = get_daq_config(msql_database, daqconfig);
   cout << config << endl;
 }
 
@@ -57,7 +57,7 @@ void
 decode_command_line(int argc, char **argv)
 {
   int i=1;
-  const char *help="\nusage:\n\n  run_status [-s session] [-m msql_database]\n\n\n";
+  const char *help="\nusage:\n\n  daq_config [-s session] [-m msql_database]\n\n\n";
 
   while(i<argc) {
     

@@ -143,7 +143,7 @@ typedef struct ETpriv
   int recvBufSize;
   int et_verbose;
   int nend;
-  /*int*/long nlongs;
+  int64_t nlongs;
 
   pthread_t process_thread;
 

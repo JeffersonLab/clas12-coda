@@ -19,6 +19,9 @@ extern "C" {
   void  get_roc_name(char *mysql_database, int id, char name[STRLEN]);
   void  get_roc_id(char *mysql_database, char *name, int *id);
 
+  void  get_run_config(char *mysql_database, char *session, int *run, char **config, char **conffile, char **datafile);
+  int   get_comp_name_host(char *mysql_database, char *session, char *name, char **compname, char **comphost);
+
 #ifdef  __cplusplus
 }
 #endif

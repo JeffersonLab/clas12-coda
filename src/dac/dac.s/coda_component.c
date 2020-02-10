@@ -32,6 +32,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <dlfcn.h>
+#include <inttypes.h>
 
 #ifdef Linux_vme
 #include "ipc.h"
@@ -99,7 +100,7 @@ static char ObjectsClass[80];
 static char    *debugString = NULL;
 FUNCPTR         process_poll_proc = NULL;
 unsigned int *eventNumber;
-uint64_t *dataSent;
+int64_t *dataSent;
 
 int            rcdebug_level__;
 int             global_code[32];
@@ -870,7 +871,7 @@ printf("\n\ncoda_constructor reached\n");fflush(stdout);
 	 localobject->codaid);
 
   eventNumber = (unsigned int *) &localobject->nevents;
-  dataSent = (uint64_t *) &localobject->nlongs;
+  dataSent = (int64_t *) &localobject->nlongs;
 
   /* set state to booted and update 'state' field in database*/
   if(codaUpdateStatus("booted") != CODA_OK) return(CODA_ERROR);
@@ -1738,6 +1739,7 @@ UDP_send(int socket)
     {
       nevents = *eventNumber;
       nlongs = *dataSent;
+	  /*printf("*dataSent = %lld\n",*dataSent);*/
 
       newtime = time(0); /* time in seconds */
 
@@ -1752,7 +1754,8 @@ UDP_send(int socket)
 	    {
           event_rate = eventdiff/timediff;
   	      /*printf("event_rate: %f (%u - %u)\n",event_rate,nevents,oldevents);*/
-          data_rate = 4*(nlongs - oldlongs)/timediff;
+          data_rate = 4.0*(((float)nlongs) - ((float)oldlongs)) / ((float)timediff);
+		  /*printf("RATE1 data_rate=%f (timediff=%d)\n",data_rate,timediff);*/
 
           oldlongs = nlongs;
           oldevents = nevents;
@@ -1760,15 +1763,15 @@ UDP_send(int socket)
 
 	      strcpy(tmp,udpstr[i].message);
           sprintf(tmpp," %d %9.3f %lld %12.3f",nevents,event_rate,nlongs,data_rate);
-	      /*printf("UDP_send[%d]: %d %9.3f %d %12.3f\n",i,nevents,event_rate,nlongs,data_rate);*/
           strcat(tmp,tmpp);
+	      /*printf("tmp1=>%s<=\n",tmp);*/
 		}
         else if(timediff>=3) /* if 3 seconds without rate, send message with zero rates: */
 		{                    /* have to send something to make runcontrol happy          */
 	      strcpy(tmp,udpstr[i].message);
           sprintf(tmpp," %d %9.3f %lld %12.3f",nevents,event_rate,nlongs,data_rate);
-	      /*printf("UDP_send[%d]: %d %9.3f %d %12.3f\n",i,nevents,event_rate,nlongs,data_rate);*/
           strcat(tmp,tmpp);
+	      /*printf("tmp2=>%s<=\n",tmp);*/
 		}
         else
 		{

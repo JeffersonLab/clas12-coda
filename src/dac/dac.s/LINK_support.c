@@ -1,4 +1,5 @@
 
+
 /* LINK_support.c */
 
 #include <stdio.h>
@@ -31,7 +32,7 @@
 
 extern char *mysql_host;
 
-extern unsigned int *dataSent; /* see coda_component.c */
+extern int64_t *dataSent; /* see coda_component.c */
 
 int deflt; /* 1 for CODA format, 0 for BOS format (see coda_eb_inc.c) */
 #ifdef USE_128
@@ -39,9 +40,9 @@ int deflt; /* 1 for CODA format, 0 for BOS format (see coda_eb_inc.c) */
 #else
   unsigned int roc_linked; /* see deb_component.c */
 #endif
-CIRCBUF *roc_queues[MAX_ROCS]; /* see deb_component.c */
+CIRCBUF *roc_queues[MAX_ROCS]; /* see coda_eb.c; index is just roc index from 0 to nrocs in this configuration */
 int      roc_queue_ix; /* see deb_component.c */
-unsigned int *bufpool[MAX_ROCS][QSIZE]; /* allocated in coda_ebc.c */
+unsigned int *bufpool[MAX_ROCS][QSIZE]; /* allocated in coda_ebc.c; first index is just roc index from 0 to nrocs in this configuration  */
 
 
 static int ending_for_recv;
@@ -691,15 +692,14 @@ retry1:
   /* set appropriate bit letting building thread know we are ready */
 #ifdef USE_128
   SetBit128(&roc_linked, tmp[2]);
+  /*printf("[%2d] LINK_sized_read(): set roc_linked for rocid=%d\n",fd,tmp[2]);
+  Print128(&roc_linked);*/
 #else
   roc_linked |= (1<<tmp[2]); /* tmp[2] contains rocid */
+  /*printf("[%2d] LINK_sized_read(): set roc_linked for rocid=%d\n",fd,tmp[2]);
+  printf("0x%08x\n",roc_linked);*/
 #endif
-
-  /*
-  printf("[%2d] LINK_sized_read(): set roc_linked for rocid=%d (0x%08x)\n",fd,
-    tmp[2],roc_linked);
-  fflush(stdout);
-  */
+  
 
   return(size);
 }
@@ -740,7 +740,12 @@ handle_link(DATA_LINK theLink)
   for(i=0; i<QSIZE; i++)
   {
     bufptr[i] = bufpool[theLink->roc_queue->roc][i];
-    bufptr[i][0] = 0; /* mark buffer as free */
+    if(bufptr[i] != NULL) bufptr[i][0] = 0; /* mark buffer as free */
+    else
+	{
+      printf("handle_link ERROR: bufptr[i]==NULL\n");
+      exit(0);
+    }
   }
   printf("handle_link .. done.\n");
   fflush(stdout);
@@ -853,15 +858,24 @@ acceptagain:
 #endif
       for(i=0; i<QSIZE; i++)
       {
-        if(bufptr[i][0] == 0) /* means 'free buffer'; it is marked as 'free' in cb_events_get() */
-        {
-          buf = (char *) bufptr[i];
+        if(bufptr[i]!=NULL)
+		{
+		  if(bufptr[i][0] == 0) /* means 'free buffer'; it is marked as 'free' in cb_events_get() */
+          {
+            buf = (char *) bufptr[i];
 #ifdef DEBUG
-          printf("[%2d] handle_link(): rocid=%d: got free buffer %d at 0x%08x\n",fd,theLink->roc_queue->rocid,i,buf);
-          fflush(stdout);
+            printf("[%2d] handle_link(): rocid=%d: got free buffer %d at 0x%08x\n",fd,theLink->roc_queue->rocid,i,buf);
+            fflush(stdout);
 #endif
-          break;
-        }
+            break;
+          }
+	    }
+		else
+		{
+          printf("[%2d] handle_link(): rocid=%d: got free buffer %d at 0x%08x\n",fd,theLink->roc_queue->rocid,i,buf);
+          printf("LINK_support: ERROR: bufptr[i]=0x%08x\n",bufptr[i]);
+          exit(0);
+		}
       }
       if(buf == NULL)
       {
@@ -1020,7 +1034,8 @@ acceptagain:
   while(theLink->exit != 1)
   {
     printf("[%2d][%s] CHECKING FOR theLink->exit TO BECOME 1, currently it is %d\n",fd,theLink->name,theLink->exit); fflush(stdout);
-    sleep(1);
+	/*usleep(USLEEP);*/
+	sleep(1);
   }
 
   printf("[%2d] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",fd); fflush(stdout);
@@ -1065,9 +1080,6 @@ debOpenLink(char *fromname, char *toname, char *tohost,  MYSQL *dbsock)
   struct sockaddr_in sin, from;
   int s, slen;
 
-printf("++++++1+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[2]);
-
-
 
   /*******************************************************/
   /* allocate memory for structure 'theLink' and fill it */
@@ -1098,8 +1110,6 @@ printf("++++++1+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
   /* set connection type to TCP */
   strcpy(type,"TCP");
 
-printf("++++++2+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[2]);
-  /* ... */
 
   /* */
   bzero((char *)&sin, sizeof(sin));
@@ -1157,8 +1167,6 @@ printf("++++++2+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
   port = ntohs(sin.sin_port);
   printf("debOpenLink: socket is listening: host %s port %d\n",
       inet_ntoa(sin.sin_addr), ntohs(sin.sin_port));
-
-printf("++++++4+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[2]);
 
 
   /* create 'links' table if it does not exist (database must be opened in calling function) */
@@ -1258,7 +1266,6 @@ printf("++++++4+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
 
   /* ================ end of database update =================== */
 
-printf("++++++5+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[2]);
 
 /* cleanup .. */
 ending_for_recv = 0;
@@ -1269,8 +1276,6 @@ ending_for_recv = 0;
   printf("theLink->name=%s\n",theLink->name);
   theLink->exit = 0;
   printf("LINK_thread_init(): creating thread ..\n"); fflush(stdout);
-
-printf("++++++6+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[2]);
 
   {
     /*Sergey: better be detached !!??*/
@@ -1299,15 +1304,29 @@ printf("++++++6+ 0x%08x 0x%08x 0x%08x\n",roc_queues[0],roc_queues[1],roc_queues[
 }
 
 
+int
+debForceCloseLink(DATA_LINK theLink, MYSQL *dbsock)
+{
+  if(theLink == NULL)
+  {
+    printf("debForceCloseLink: theLink=NULL -> return\n");
+    return(CODA_OK);
+  }
+  printf("debForceCloseLink: theLink=0x%08x -> closing\n",theLink);
+
+  theLink->exit = 1; /* tells thread to exit */
+
+  return(0);
+}
 
 int
 debCloseLink(DATA_LINK theLink, MYSQL *dbsock)
 {
   void *status;
   char tmp[1000];
-  int exittimeout = 5;
+  int exittimeout = 1;
 
-  /* */
+  /*
   if(theLink == NULL)
   {
     printf("debCloseLink: theLink=NULL -> return\n");
@@ -1315,12 +1334,15 @@ debCloseLink(DATA_LINK theLink, MYSQL *dbsock)
   }
   printf("debCloseLink: theLink=0x%08x -> closing\n",theLink);
 
-  theLink->exit = 1; /* tells thread to exit */
+  theLink->exit = 1;
+*/
+
   /* give it a time to exit */
   while((theLink->exit!=-1) && (exittimeout>0))
   {
     printf("debCloseLink: waiting for link thread to exit, exittimeout=%d\n",exittimeout);
     sleep(1);
+	/*usleep(USLEEP);*/
     exittimeout --;
   }
 

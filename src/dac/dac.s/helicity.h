@@ -1,6 +1,8 @@
 
 /* helicity.h - delay reporting correction main function */
 
+#define INTERVAL 0x7f2815
+
 #define FORCE_RECOVERY \
   forceRecovery(); \
   quad = -1; \

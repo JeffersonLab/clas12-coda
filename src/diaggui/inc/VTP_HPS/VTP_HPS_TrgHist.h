@@ -496,6 +496,8 @@ public:
     pHistPosition->Reset();
 
     int x, y;
+    float x_rates[46];
+    memset(x_rates, 0, sizeof(x_rates));
     for(int i = 0; i < 1024; i++)
     {
       float val = (float)buf[i];
@@ -510,10 +512,19 @@ public:
       if(x & 0x20) x |= 0xFFFFFFC0;
       if(y & 0x08) y |= 0xFFFFFFF0;
 
+      x_rates[x+22]+= val;
+
       if(y > 0) rate_top += val;
       else      rate_bot += val;
 
       pHistPosition->Fill(x, y, val);
+    }
+
+    printf("cluster column rates:\n");
+    for(int i=0; i<46; i++)
+    {
+      int x = (i < 23) ? i-23 : i-22;
+      printf("ix %4d = %f\n", x, x_rates[i]);
     }
 
     bb.DrawBox(-9+0.05,-1,0,1.97);

@@ -37,6 +37,7 @@ CLON_FLAGS += -I./src.s \
 				-I./inc/GTP \
 				-I./inc/GTP_HPS \
 				-I./inc/VTP_HPS \
+				-I./inc/VTP_FADCSTREAM \
 				-I./inc/SD \
 				-I./inc/SSP \
 				-I./inc/SSP_HPS \

@@ -30,3 +30,4 @@ int LINK_sized_read(int fd, char **buf, hrtime_t tprof[NPROFMAX]);
 void *handle_link(DATA_LINK theLink);
 DATA_LINK debOpenLink(char *fromname, char *toname, char *tohost, MYSQL *dbsock);
 int debCloseLink(DATA_LINK theLink, MYSQL *dbsock);
+int debForceCloseLink(DATA_LINK theLink, MYSQL *dbsock);

@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
 #include "libdb.h"
+#include "codautil.h"
 
 #ifdef VXWORKS
 extern char *mystrdup(const char *s);
