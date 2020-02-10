@@ -34,13 +34,15 @@ class rcsDaqData: public daqData
 public:
 
   // constructors and destructor
-  rcsDaqData (char* compname, char* attrname, int    data);
-  rcsDaqData (char* compname, char* attrname, float  data);
-  rcsDaqData (char* compname, char* attrname, double data);
-  rcsDaqData (char* compname, char* attrname, char*  data);
+  rcsDaqData (char* compname, char* attrname, int64_t data);
+  rcsDaqData (char* compname, char* attrname, int     data);
+  rcsDaqData (char* compname, char* attrname, float   data);
+  rcsDaqData (char* compname, char* attrname, double  data);
+  rcsDaqData (char* compname, char* attrname, char*   data);
   rcsDaqData (char* compname, char* attrname, daqArbStruct*  data);
 
   // constructors for array of elements
+  rcsDaqData (char* compname, char* attrname, int64_t* data, int count);
   rcsDaqData (char* compname, char* attrname, int* data, int count);
   rcsDaqData (char* compname, char* attrname, float* data, int count);
   rcsDaqData (char* compname, char* attrname, double* data, int count);

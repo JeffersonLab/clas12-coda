@@ -24,6 +24,15 @@
 //
 #include "rcsDaqData.h"
 
+rcsDaqData::rcsDaqData (char* compname, char* attrname, int64_t data)
+:daqData (compname, attrname, data)
+{
+#ifdef _TRACE_OBJECTS
+  printf ("    Create rcsDaqData Class Object\n");
+#endif
+  // empty
+}
+
 rcsDaqData::rcsDaqData (char* compname, char* attrname, int data)
 :daqData (compname, attrname, data)
 {
@@ -62,6 +71,15 @@ rcsDaqData::rcsDaqData (char* compname, char* attrname, char* data)
 
 rcsDaqData::rcsDaqData (char* compname, char* attrname, daqArbStruct* data)
 :daqData (compname, attrname, data)
+{
+#ifdef _TRACE_OBJECTS
+  printf ("    Create rcsDaqData Class Object\n");
+#endif
+  // empty
+}
+
+rcsDaqData::rcsDaqData (char* compname, char* attrname, int64_t* data, int count)
+:daqData (compname, attrname, data, count)
 {
 #ifdef _TRACE_OBJECTS
   printf ("    Create rcsDaqData Class Object\n");

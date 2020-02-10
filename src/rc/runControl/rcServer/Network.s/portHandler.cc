@@ -36,7 +36,9 @@
 //
 
 #include <stdio.h>
+#include <inttypes.h>
 #include <string.h>
+#include <stdlib.h>
 #include "portHandler.h"
 #include <daqConst.h>
 #include <daqState.h>
@@ -192,8 +194,8 @@ portHandler::handle_input (int)
 
     type = ntohl (type);
 #ifdef DEBUG_MSGS
-    //printf("portHandler: received message: type 0x%08x (%4.4s) content >%s< (>%s< %d)\n",
-    //  type,&type,&(brdrecvbuf[i]),&(brdrecvbuf[0]),i);
+    printf("portHandler: received message: type 0x%08x (%4.4s) content >%s< (>%s< %d)\n",
+      type,&type,&(brdrecvbuf[i]),&(brdrecvbuf[0]),i);
 #endif
     switch (type)
     {
@@ -208,10 +210,38 @@ portHandler::handle_input (int)
     case 0x3a617473:
       char compName[256];
       char status[256];
-      int nev, nlong;
+      int nev;
+      int64_t nlong;
       float evrate, nlongrate;
+      char *ptr, *str, *ss[20];
+      int ii;
 
-      sscanf(&(brdrecvbuf[i]),"%s %s %d %f %d %f",compName,status,&nev,&evrate,&nlong,&nlongrate);
+#if 0
+      /*sscanf(&(brdrecvbuf[i]),"%s %s %d %f %lld %f",compName,status,&nev,&evrate,&nlong,&nlongrate);*/
+      /*sscanf(&(brdrecvbuf[i]),"%s %s %d %f %" SCNd64 "%f",compName,status,&nev,&evrate,&nlong,&nlongrate);*/
+#endif
+	  str = &(brdrecvbuf[i]);
+
+      ii = 0;
+      ptr = strtok(str, " ");
+      while(ptr != NULL)
+	  {
+        /*printf(">%s<\n",ptr);*/
+        ss[ii++] = ptr;
+        ptr = strtok(NULL, " ");
+	  }
+      /* convert string(s) to values */
+      strcpy(compName, ss[0]);
+      strcpy(status, ss[1]);
+      nev = atoi(ss[2]);
+      evrate = atof(ss[3]);
+      nlong = atoll(ss[4]);
+      nlongrate = atof(ss[5]);
+
+	  /*
+      printf("+++> %s %s %d %f %lld %f\n",compName,status,nev,evrate,nlong,nlongrate);
+	  */
+
       if(system.has(compName, comp) == CODA_SUCCESS)
       {
         //printf("comp is %08x \n", comp);
@@ -274,7 +304,10 @@ portHandler::handle_input (int)
           {   
             if(dataManager.findData (compName, (char *)"nlongs", serverData) == CODA_SUCCESS)
             {
-              *serverData = nlong;
+              //printf("serverData->type_=%d\n",serverData->type_);
+			  //printf("portHandler: >%s< nlongs=%lld\n",compName,nlong);fflush(stdout);
+              *serverData = (int64_t)nlong;
+			  //printf("portHandler !!!\n");fflush(stdout);
             }
 
             if(dataManager.findData (compName, (char *)"erate", serverData) == CODA_SUCCESS)
@@ -286,6 +319,7 @@ portHandler::handle_input (int)
             if(dataManager.findData (compName, (char *)"drate", serverData) == CODA_SUCCESS)
             {
               *serverData = nlongrate;
+			  /*printf("portHandler: >%s< drate=%f\n",compName,nlongrate);*/
             }
           }
 		  /*
