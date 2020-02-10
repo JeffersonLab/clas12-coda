@@ -27,7 +27,7 @@ main(int argc, char *argv[])
 
   /* update firmware */
   
-  nvscm = vscmInit(0x100000,0x80000,20,0);
+  nvscm = vscmInit(0x100000,0x80000,20,1);
   vscmConfig ("");
 
   printf("NVSCM=%d\n",nvscm);

@@ -2255,8 +2255,8 @@ vmeBusUnlock();
 
 
 
-#ifdef DEBUG
-    printf("fadc1: start fadc processing\n");fflush(stdout);
+#ifdef DEBUG__
+    printf("rol1mvt: start processing\n");fflush(stdout);
 #endif
 
 
@@ -2457,6 +2457,9 @@ vmeBusUnlock();
 		{
 			gettimeofday(&mvt_t0, 0);
 			mvt_to_iter = 0;
+
+TIMERL_START;
+
 			do
 			{
 				vmeBusLock();
@@ -2470,6 +2473,9 @@ vmeBusUnlock();
 				gettimeofday(&mvt_t1, 0);
 				timersub(&mvt_t1,&mvt_t0,&mvt_dt);
 			} while( timercmp(&mvt_dt,&mvt_to,<) );
+
+TIMERL_STOP(100000/block_level,1000+rol->pid);
+
 			if( mvtgbr != mvtSlotMask )
 			{
 				mvt_to_cntr++;
@@ -3402,9 +3408,6 @@ vmeBusUnlock();
 
 
 
-#ifndef VXWORKS
-TIMERL_STOP(100000/block_level,1000+rol->pid);
-#endif
 
 
 

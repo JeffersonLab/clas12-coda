@@ -942,7 +942,9 @@ usleep(100);
 #endif
 
 TIMERL_START;
+      /*printf("  befor rogueCodaEvent\n");*/
       len = rogueCodaEvent(rcd,rol->dabufp,ii);
+      /*printf("  after rogueCodaEvent\n");*/
 TIMERL_STOP(100000/block_level,1000+rol->pid);
 
       if(len<3) printf("ERROR: rogueCodaEvent returns len=%d\n",len);

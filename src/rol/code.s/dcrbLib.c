@@ -625,6 +625,7 @@ dcrbStatus(int id, int sflag)
   unsigned int fifoWordCnt, fifoEventCnt, fifoBlockCnt;
   unsigned int readoutCfg;
   unsigned int chDisable[6], tdcConfig[6];
+  unsigned int gtp_ctrl[2], gtp_ctrl1[2], gtp_status[2], gtp_error[2];
 
   if(id==0) id=dcrbID[0];
 
@@ -670,6 +671,14 @@ dcrbStatus(int id, int sflag)
   chDisable[3] = ~(vmeRead32(&DCRBp[id]->Tdc[3].EnableN));
   chDisable[4] = ~(vmeRead32(&DCRBp[id]->Tdc[4].EnableN));
   chDisable[5] = ~(vmeRead32(&DCRBp[id]->Tdc[5].EnableN));
+  gtp_ctrl[0]  = vmeRead32(&DCRBp[id]->Ser[0].Ctrl);
+  gtp_ctrl[1]  = vmeRead32(&DCRBp[id]->Ser[1].Ctrl);
+  gtp_ctrl1[0] = vmeRead32(&DCRBp[id]->Ser[0].CtrlTile0);
+  gtp_ctrl1[1] = vmeRead32(&DCRBp[id]->Ser[1].CtrlTile1);
+  gtp_status[0] = vmeRead32(&DCRBp[id]->Ser[0].Status);
+  gtp_status[1] = vmeRead32(&DCRBp[id]->Ser[1].Status);
+  gtp_error[0]  = vmeRead32(&DCRBp[id]->Ser[0].ErrTile0);
+  gtp_error[1]  = vmeRead32(&DCRBp[id]->Ser[1].ErrTile0);
   DCRBUNLOCK;
 
 #ifdef VXWORKS
@@ -758,7 +767,14 @@ dcrbStatus(int id, int sflag)
   printf("   Events in FIFO  = %u\n", fifoEventCnt);
   printf("   Words in FIFO   = %u\n", fifoWordCnt);
   
-  printf("\n DAC Threshold: %dmV", dcrbGetDAC(id));
+  printf("\n DAC Threshold: %dmV\n", dcrbGetDAC(id));
+
+  printf("\n");
+  printf("   Serdes0: ctrl=%08X, ctrl1=%08X, status=%08X, errors=%08X\n", 
+    gtp_ctrl[0], gtp_ctrl1[0], gtp_status[0], gtp_error[0]);
+  printf("   Serdes1: ctrl=%08X, ctrl1=%08X, status=%08X, errors=%08X\n", 
+    gtp_ctrl[1], gtp_ctrl1[1], gtp_status[1], gtp_error[1]);
+
   printf("\n");
 }
 
@@ -2225,21 +2241,32 @@ dcrbLinkReset(int id)
     return(-1);
   }
 
-  vmeWrite32(&(DCRBp[id]->Ser[1].Ctrl), 0x201);
-//  vmeWrite32(&(DCRBp[id]->Ser[0].Ctrl), 0x201);
+  vmeWrite32(&(DCRBp[id]->Ser[1].Ctrl), 0x401);
   taskDelay(1);
-  vmeWrite32(&(DCRBp[id]->Ser[1].Ctrl), 0x200);
-//  vmeWrite32(&(DCRBp[id]->Ser[0].Ctrl), 0x200);
+  vmeWrite32(&(DCRBp[id]->Ser[1].Ctrl), 0x400);
   taskDelay(10);
-  vmeWrite32(&(DCRBp[id]->Ser[1].Ctrl), 0x800);
-//  vmeWrite32(&(DCRBp[id]->Ser[0].Ctrl), 0x800);
+  vmeWrite32(&(DCRBp[id]->Ser[1].Ctrl), 0x000);
   taskDelay(1);
 
 
   return(0);
 }
 
+int
+dcrbEnableLinkErrorCounts(int id)
+{
+  if(id==0) id=dcrbID[0];
 
+  if((id<=0) || (id>21) || (DCRBp[id] == NULL)) 
+  {
+    printf("%s: ERROR : DCRB in slot %d is not initialized \n",__func__,id);
+    return(-1);
+  }
+
+  vmeWrite32(&(DCRBp[id]->Ser[1].Ctrl), 0x800);
+
+  return 0;
+}
 
 
 

@@ -299,6 +299,7 @@ int dcrbSetTriggerPulseWidth(int id, unsigned int width);
 int dcrbGetTriggerPulseWidth(int id);
 int dcrbLinkStatus(int id);
 int dcrbLinkReset(int id);
+int dcrbEnableLinkErrorCounts(int id);
 
 int dcrbGetDAC(int id);
 int dcrbFirmwareUpdate(int id, const char *filename);

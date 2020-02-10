@@ -4064,7 +4064,7 @@ sspGtcSendErrors(int id)
   char name[100];
   unsigned int val;
   int i, data = 0;
-  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGTC))
     return ERROR;
 
   gethostname(host,sizeof(host));

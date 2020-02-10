@@ -1,3 +1,4 @@
+
 /*----------------------------------------------------------------------------*/
 /**
  * @mainpage
@@ -6590,11 +6591,12 @@ tipResetMGT()
     }
 
   /*sergey: need it for master as well ???*/
-  if(!tipMaster)
+  /*if(!tipMaster)
     {
       printf("%s: ERROR: TI is not the TI Master.\n",__FUNCTION__);
       return ERROR;
     }
+  */
 
   TIPLOCK;
   tipWrite(&TIPp->reset, TIP_RESET_MGT);
@@ -6618,11 +6620,13 @@ tipResetMGTReceiver()
       return ERROR;
     }
 
+  /*
   if(!tipMaster)
     {
       printf("%s: ERROR: TI is not the TI Master.\n",__FUNCTION__);
       return ERROR;
     }
+  */
 
   TIPLOCK;
   tipWrite(&TIPp->reset, TIP_RESET_MGT_RECEIVER);

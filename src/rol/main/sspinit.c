@@ -22,7 +22,7 @@ main(int argc, char *argv[])
   char myname[256];
   unsigned int addr, laddr;
   int slot = 0;
-
+  /*
   printf("\n");
   if(argc==2||argc==3)
   {
@@ -45,6 +45,7 @@ main(int argc, char *argv[])
     exit(0);
   }
   printf("\n");
+  */
 
   /* Open the default VME windows */
   vmeOpenDefaultWindows();

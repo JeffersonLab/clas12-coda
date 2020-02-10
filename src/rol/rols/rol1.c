@@ -1754,6 +1754,7 @@ vmeBusUnlock();
     DCRB_SLOT = dcrbSlot(ii);
 vmeBusLock();
     dcrbClear(DCRB_SLOT);
+    dcrbEnableLinkErrorCounts(DCRB_SLOT);
 vmeBusUnlock();
   }
 #endif

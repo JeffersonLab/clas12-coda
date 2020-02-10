@@ -523,7 +523,6 @@ vmeDataRead()
   int itype, id, ii, nw, nw_len, slot, fiber;
 
   SCALER_LOCK;
-
   for(itype=0; itype<SCALER_TYPE_MAX; itype++)
   {
     if(itype == SCALER_TYPE_SSP)    /* ssp board */
@@ -563,9 +562,9 @@ vmeBusUnlock();
 
 		    }
 	      }
-		}
         vmedatalen[slot] = nw;
         for(ii=0; ii<nw; ii++) vmedata[slot][ii] = sspbuf[ii];
+		}
       }
     }
   }

@@ -20,12 +20,13 @@
 
 void sig_handler(int signo);
 
+/* returns: error: -1, not found host: 0, found host: 1 */
 int
 load_firmware()
 {
   FILE *f;
   char buf[1000], host[100], hostfile[100], z7file[100], v7file[100];
-  int i;
+  int i, found;
 
   sprintf(buf, "%s/firmwares/vtp_firmware.txt", getenv("CLON_PARMS"));
   f = fopen(buf, "rt");
@@ -45,6 +46,7 @@ load_firmware()
     }
   }
 
+  found = 0;
   while(!feof(f))
   {
     fgets(buf, sizeof(buf), f);
@@ -53,6 +55,7 @@ load_firmware()
     {
       if(!strcmp(hostfile, host))
       {
+        found = 1;
         printf("%s: Found host %s, z7file: %s, v7file: %s\n", __func__, hostfile, z7file, v7file);
 
         sprintf(buf, "%s/firmwares/%s", getenv("CLON_PARMS"), z7file);
@@ -76,13 +79,14 @@ load_firmware()
   }
 
   fclose(f);
-  return 0;
+
+  return(found);
 }
 
 int
 main(int argc, char *argv[])
 {
-  int stat, count;
+  int stat, count, ret;
   pthread_t gScalerThread;
 
   if(signal(SIGINT, sig_handler) == SIG_ERR)
@@ -98,10 +102,20 @@ main(int argc, char *argv[])
     printf("vtpOpen'ed\n");
 
   /* read vtp firmware table and load into vtp here */
-  if(load_firmware())
+  ret = load_firmware();
+  if(ret<0)
   {
-    printf("Unabled to load firmware - exiting...\n");
+    printf("Error in loading firmware - exiting...\n");
     goto CLOSE;
+  }
+  else if(ret==0)
+  {
+    printf("Did not find our hostname in firmware's list - exiting...\n");
+    goto CLOSE;
+  }
+  else
+  {
+    printf("Firmware loaded successfully\n");
   }
 
   ltm4676_print_status();

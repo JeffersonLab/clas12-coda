@@ -503,7 +503,7 @@ vmeBusUnlock();
 
 #ifdef USE_MO
 vmeBusLock();
-  moInit(0xa00000,0);
+/*moInit(0xa00000,0); done once in DiagGuiServer*/
   moConfigPrint();
 vmeBusUnlock();
 #endif
