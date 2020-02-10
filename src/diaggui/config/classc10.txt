@@ -1,0 +1,7 @@
+###########################################################
+# Trigger System Configuration Setup for 12GeV Test Stand #
+###########################################################
+
+HOSTNAME classc10
+    MODULE MOD_TYPE_DSC2	0x00180000	# SLOT 3
+ENDHOST
