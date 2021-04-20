@@ -19,7 +19,6 @@
 --
 --------------------------------------------------------------------------------
 */
-
 #ifndef H_SysConfiguration
 #define H_SysConfiguration
 
@@ -45,7 +44,7 @@ int  TiRun(      TiParams *params, int run );
 int  TiGo(       TiParams *params );
 int  SdConfig(   SdParams *params );
 
-int  SysConfig(SysParams *params, int configs_to_do);
+int  SysConfig( SysParams *params, int configs_to_do );
 int  SysRun();
 int  SysStop();
 int  SysGo();
@@ -56,7 +55,5 @@ void SysConfig_CleanUp();
 int  SysConfig_SetLogFilePointer( FILE *fptr );
 void SysConfig_SetVerbosity( int ver_level );
 int  SysDumpFeuOptLnk();
-
-int  SysConfig_ClrLogFilePointer();
 
 #endif // #ifndef H_SysConfiguration

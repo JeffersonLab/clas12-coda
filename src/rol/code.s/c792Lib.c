@@ -89,7 +89,7 @@ int c792IntCount = 0;                         /* Count of interrupts from QDC */
 int c792EventCount[20];                       /* Count of Events taken by QDC (Event Count Register value) */
 int c792EvtReadCnt[20];                       /* Count of events read from specified QDC */
 
-unsigned int c792MemOffset = 0;               /* CPUs A24 or A32 address space offset */
+unsigned long c792MemOffset = 0;               /* CPUs A24 or A32 address space offset */
 
 static int use792[20] = {
   0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0};
@@ -133,7 +133,7 @@ c792Init (UINT32 addr, UINT32 addr_inc, int nadc, UINT16 crateID)
       return(ERROR);
     }
 #else
-    res = vmeBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr);
+    res = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)addr,(char **)&laddr);
     if (res != 0) {
       printf("c792Init: ERROR in vmeBusToLocalAdrs(0x39,0x%x,&laddr) \n",addr);
       return(ERROR);
@@ -154,7 +154,7 @@ c792Init (UINT32 addr, UINT32 addr_inc, int nadc, UINT16 crateID)
       return(ERROR);
     }
 #else
-    res = vmeBusToLocalAdrs(0x09,(char *)addr,(char **)&laddr);
+    res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)addr,(char **)&laddr);
     if (res != 0) {
       printf("c792Init: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",addr);
       return(ERROR);
@@ -178,7 +178,7 @@ c792Init (UINT32 addr, UINT32 addr_inc, int nadc, UINT16 crateID)
 #endif
     if(res < 0)
     {
-      printf("c792Init: ERROR: No addressable board at addr=0x%x\n",(UINT32) c792p[ii]);
+      printf("c792Init: ERROR: No addressable board at addr=0x%lx\n",(unsigned long) c792p[ii]);
       c792p[ii] = NULL;
       /*sergey: errFlag = 1;*/
       break;
@@ -186,7 +186,7 @@ c792Init (UINT32 addr, UINT32 addr_inc, int nadc, UINT16 crateID)
     else
     {
       /* Check if this is a Model 792 */
-      rp = (struct c792_ROM_struct *)((UINT32)c792p[ii] + C792_ROM_OFFSET);
+      rp = (struct c792_ROM_struct *)((unsigned long)c792p[ii] + C792_ROM_OFFSET);
       boardID = ((c792Read(&rp->ID_3)&(0xff))<<16) + 
 	     ((c792Read(&rp->ID_2)&(0xff))<<8) + (c792Read(&rp->ID_1)&(0xff)); 
 
@@ -203,8 +203,8 @@ c792Init (UINT32 addr, UINT32 addr_inc, int nadc, UINT16 crateID)
 #ifdef VXWORKS
     printf("Initialized QDC ID %d at address 0x%08x \n",ii,(UINT32) c792p[ii]);
 #else
-    printf("Initialized QDC ID %d at VME (USER) address 0x%08x (0x%08x) \n",ii,
-	   (UINT32)(c792p[ii]) - c792MemOffset, (UINT32) c792p[ii]);
+    printf("Initialized QDC ID %d at VME (USER) address 0x%08x (0x%lx) \n",ii,
+		   (UINT32)((unsigned long)c792p[ii] - c792MemOffset), (unsigned long) c792p[ii]);
 #endif
   }
 
@@ -321,8 +321,8 @@ c792Status( int id, int reg, int sflag)
 #ifdef VXWORKS
   printf("STATUS for QDC id %d at base address 0x%x \n",id,(UINT32) c792p[id]);
 #else
-  printf("STATUS for QDC id %d at base VME (USER) address 0x%x (0x%08x)\n",id,
-	 (UINT32)(c792p[id]) - c792MemOffset, (UINT32) c792p[id]);
+  printf("STATUS for QDC id %d at base VME (USER) address 0x%x (0x%lx)\n",id,
+		 (UINT32)((unsigned long)c792p[id] - c792MemOffset), (unsigned long) c792p[id]);
 #endif
   printf("---------------------------------------------- \n");
 
@@ -681,12 +681,12 @@ c792ReadBlock(int id, volatile UINT32 *data, int nwrds)
 
 #else  /* Linux readout with jvme library */
 
-  vmeAdr = (UINT32)(c792p[id]->data) - c792MemOffset;
+  vmeAdr = (unsigned long)(c792p[id]->data) - c792MemOffset;
 
   /*sergey
   retVal = vmeDmaSend((UINT32)data, vmeAdr, (nwrds<<2));
   */
-  retVal = usrVme2MemDmaStart(vmeAdr, (UINT32)data, (nwrds<<2));
+  retVal = usrVme2MemDmaStart(vmeAdr, (unsigned long)data, (nwrds<<2));
 
   if(retVal < 0)
   {

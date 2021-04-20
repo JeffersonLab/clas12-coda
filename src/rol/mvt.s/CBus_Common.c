@@ -15,10 +15,12 @@
 -- Create Date:    0.0 2011/01/27 IM
 -- Revision:       1.0 2011/02/14 IM Raw data read error counter added
 --                     2011/02/15 IM Last Event register added
---                     2011/02/18 IM Trigger drop counter udded
+--                     2011/02/18 IM Trigger drop counter added
 --                     2011/02/21 IM Clear stat function added
 --                     2011/02/25 IM DreamTrig delay measured in Core Clock ticks
---                     2012/02/23 IM Local trigger throtling added
+--                     2012/02/23 IM Local trigger throttling added
+--                 3.0 2018/11/04 IM Configuration register: Number of samples extended to 512 from 256
+--                                                           Sparse readout replaced data pipe length
 --
 -- Comments:
 --
@@ -26,6 +28,7 @@
 */
 
 #include <sys/time.h>
+#include <string.h>
 
 #include "Platform.h"
 #include "ReturnCodes.h"
@@ -85,7 +88,7 @@ char *TrigClk_Src2Str( TrigClk_Src src )
 		return ("Unknown");
 }
 
-// Iinitialize Csr with default values
+// Initialize Csr with default values
 int CBus_CommonCsr_Init( CBus_CommonCsr *csr )
 {
 	if( csr == NULL )
@@ -119,6 +122,7 @@ int CBus_CommonCsr_Sprintf( CBus_CommonCsr *csr, char *buf )
 	struct timeval delta;
 	double delta_sec;
 	int rate;
+	char append_str[256];
 
 	if( (csr==NULL) || (buf==NULL) )
 		return D_RetCode_Err_Null_Pointer;
@@ -126,66 +130,69 @@ int CBus_CommonCsr_Sprintf( CBus_CommonCsr *csr, char *buf )
 	// Command register
 	sprintf
 	(
-		buf,
-		" Cmd : Rst=%1d Cfg=%1d Run=%1d Pause=%1d\n\r",
+		append_str,
+		" Cmd : Rst=%1d Cfg=%1d Run=%1d Pause=%1d ReSync=%1d HwRst=%1d\n\r",
 		(int)D_Main_Cmd_Reset_Get( csr->Command ),
 		(int)D_Main_Cmd_Config_Get(csr->Command),
-		(int)D_Main_Cmd_Run_Get(csr->Command),
-		(int)D_Main_Cmd_Pause_Get(csr->Command)
+		(int)D_Main_Cmd_Run_Get(   csr->Command),
+		(int)D_Main_Cmd_Pause_Get( csr->Command),
+		(int)D_Main_Cmd_ReSync_Get(csr->Command),
+		(int)D_Main_Cmd_HwRst_Get( csr->Command)
 	);
+	strcat( buf, append_str);
 
 	// Config
 	sprintf
 	(
-		buf,
-		"%s Conf: Smp=%8d Msk=0x%02x DataPipeLen=%3d AdcDtp=%1d TrigClk=%s\n\r",
-		buf,
-		(int)D_Main_Conf_Samples_Get(csr->Config),
-		(int)D_Main_Conf_Mask_Get(   csr->Config),
-		(int)D_Main_Conf_PipeLen_Get(csr->Config),
-		(int)D_Main_Conf_AdcDtp_Get( csr->Config),
+		append_str,
+		" Conf: Smp=%8d Msk=0x%02x Pol=0x%02x Sparse=%3d TrigClk=%s\n\r",
+		(int)D_Main_Conf_Samples_Get( csr->Config),
+		(int)D_Main_Conf_Mask_Get(    csr->Config),
+		(int)D_Main_Conf_DrmPol_Get(  csr->Config),
+		(int)D_Main_Conf_SparseRd_Get(csr->Config),
 		TrigClk_Src2Str( D_Main_Conf_ClkSel_Get(csr->Config) )
 	);
+	strcat( buf, append_str);
 
 	// Trigger Config
 	sprintf
 	(
-		buf,
-		"%s Trig: TStamp=%4d OvrLwm=%2d OvrHwm=%2d OvrThesh=%2d LocThrot=%d\n\r",
-		buf,
+		append_str,
+		" Trig: TStamp=%4d OvrLwm=%2d OvrHwm=%2d OvrThesh=%2d LocThrot=%d\n\r",
 		(int)D_Main_Trig_TimeStamp_Get(csr->TrigConfig),
 		(int)D_Main_Trig_OvrWrnLwm_Get(csr->TrigConfig),
 		(int)D_Main_Trig_OvrWrnHwm_Get(csr->TrigConfig),
 		(int)D_Main_Trig_OvrThersh_Get(csr->TrigConfig),
 		(int)D_Main_Trig_LocThrot_Get( csr->TrigConfig)
 	);
+	strcat( buf, append_str);
 
 	// Status
 	sprintf
 	(
-		buf,
-		"%s Stat: Dreams=%1d Status=%s AcFsm=%s RcFsm=%s ClkOk=%1d Cfg=%1d\n\r",
-		buf,
+		append_str,
+		" Stat: Dreams=%1d Status=%s AcFsm=%s RcFsm=%s ClkOk=%1d Cfg=%1d\n\r",
 		(int)D_Main_Stat_NbOfDreams_Get(csr->Status),
-		PartStatus2Str( D_Main_Stat_Status_Get(csr->Status) ),
-		AcqFsm_State2String( D_Main_Stat_AcqFsm_Get(csr->Status) ),
-		RunCtrlFsm_State2String( D_Main_Stat_RcFsm_Get(csr->Status) ),
-		(int)D_Main_Stat_ClkValid_Get(csr->Status),
+		PartStatus2Str(          D_Main_Stat_Status_Get(csr->Status) ),
+		AcqFsm_State2String(     D_Main_Stat_AcqFsm_Get(csr->Status) ),
+		RunCtrlFsm_State2String( D_Main_Stat_RcFsm_Get( csr->Status) ),
+		(int)D_Main_Stat_ClkValid_Get(  csr->Status),
 		(int)D_Main_Stat_Configured_Get(csr->Status)
 	);
+	strcat( buf, append_str);
 
 	// Trigger statistics
 	sprintf
 	(
-		buf,
-		"%s Trig: Acpt=%4dM+%7d TrigDrop=%3d FifoDrop=%3d FifoMaxOcc=%2d",
-		buf,
+		append_str,
+		" Trig: Acpt=%4d M + %7d TrigDrop=%3d FifoDrop=%3d FifoMaxOcc=%2d",
 		(int)((csr->TrigActpCntr & 0xFFF00000) >> 20),
 		(int)(csr->TrigActpCntr & 0x000FFFFF),
 		(int)D_Main_Drop_TrigCntr_Get(csr->TrigDropCntr),
 		(int)D_Main_Drop_FifoCntr_Get(csr->TrigDropCntr),
 		(int)D_Main_Drop_FifoOcup_Get(csr->TrigDropCntr)
 	);
+	strcat( buf, append_str);
 
 	/*
 	 * Estimate trigger rate
@@ -197,19 +204,20 @@ int CBus_CommonCsr_Sprintf( CBus_CommonCsr *csr, char *buf )
 	// Then determine how many triggers received since last time
 	nb_of_triggers = ((csr->TrigActpCntr & 0xFFFFFF) - (previous_trig_acpt_cntr & 0xFFFFFF)) & 0xFFFFFF;
 	if( (delta_sec <= 0.0) || (nb_of_triggers < 0.0) )
-		sprintf(buf, "%s Trig Rate= Unknown\n\r", buf);
+		sprintf(append_str, " Trig Rate= Unknown\n\r" );
 	else
 	{
 		rate = (int)((double)nb_of_triggers/delta_sec + 0.5);
 		if( (0<= rate) && (rate <= 100000) )
-			sprintf(buf, "%s Trig Rate=%5d Hz\n\r", buf, rate);
+			sprintf(append_str, " Trig Rate=%5d Hz\n\r", rate);
 		else
-			sprintf(buf, "%s Trig Rate= Unknown\n\r", buf);
+			sprintf(append_str, " Trig Rate= Unknown\n\r");
 	}
+	strcat( buf, append_str);
 
 	previous_trig_acpt_cntr = csr->TrigActpCntr;
 	previous_time           = current_time;
-
+/*
 	// Error
 	sprintf
 	(
@@ -220,19 +228,19 @@ int CBus_CommonCsr_Sprintf( CBus_CommonCsr *csr, char *buf )
 		(int)D_Main_Error_RdErrCntr_Get(csr->Error),
 		(int)D_Main_Error_CombErr_Get(csr->Error)
 	);
-
+*/
 	// Last Event
 	sprintf
 	(
-		buf,
-		"%s Evt : Id=%4d Tstp=%4d (%5d ns) Del=%1d (%2d ns)",
-		buf,
+		append_str,
+		" Evt : Id=%4d Tstp=%4d (%5d ns) Del=%1d (%2d ns)",
 		(int)D_Main_LastEvent_Id_Get(  csr->LastEvent),
 		(int)D_Main_LastEvent_Tstp_Get(csr->LastEvent),
 		(int)D_Main_LastEvent_Tstp_Get(csr->LastEvent) * D_CoreClkPeriod_ns,
 		(int)D_Main_LastEvent_Del_Get( csr->LastEvent),
 		(int)D_Main_LastEvent_Del_Get( csr->LastEvent) * D_CoreClkPeriod_ns
 	);
+	strcat( buf, append_str);
 
 	return(D_RetCode_Sucsess);
 }

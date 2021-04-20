@@ -361,7 +361,7 @@ int BeuSspConf_Parse( BeuSspConf *params, int line_num )
 					params->TrgSrc = BeuTrgSrc_Ti2;
 				else
 				{
-					params->BsySrc = BeuTrgSrc_Undefined;
+					params->TrgSrc = BeuTrgSrc_Undefined;
 					fprintf( stderr, "%s: line %d: Beu ID %d usupporet value %s for TrgSrc\n", __FUNCTION__, line_num, beu, argv[3] ); 
 					return D_RetCode_Err_Wrong_Param;
 				}

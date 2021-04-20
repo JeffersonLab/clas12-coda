@@ -1,9 +1,3 @@
-/*
-#ifdef Linux_x86_64_vme
-#include "cinclude/tiLib.h"
-#else
-*/
-
 /*----------------------------------------------------------------------------*
  *  Copyright (c) 2012        Southeastern Universities Research Association, *
  *                            Thomas Jefferson National Accelerator Facility  *
@@ -29,15 +23,12 @@
 #ifndef VXWORKS
 #include <pthread.h>
 
-/*pthread_mutex_t tiISR_mutex=PTHREAD_MUTEX_INITIALIZER; sergey*/
+pthread_mutex_t tiISR_mutex=PTHREAD_MUTEX_INITIALIZER;
 #else
 /* #include <intLib.h> */
 extern int intLock();
 extern int intUnlock();
 #endif
-
-typedef void            (*VOIDFUNCPTR) ();
-
 
 #ifdef VXWORKS
 int intLockKeya;
@@ -121,7 +112,7 @@ struct TI_A24RegStruct
   /** 0x00140 */ volatile unsigned int trigTable[(0x180-0x140)/4];
   /** 0x00180 */ volatile unsigned int ts_scaler[6];
   /** 0x00198 */          unsigned int blank9;
-  /** 0x0019C */ volatile unsigned int busy_scaler2[9]; /*sergey: loopback, fiber1, ,,. fiber8 */
+  /** 0x0019C */ volatile unsigned int busy_scaler2[9];
   /** 0x001C0 */          unsigned int blank10[(0x1D0-0x1C0)/4];
   /** 0x001D0 */ volatile unsigned int hfbr_tiID[8];
   /** 0x001F0 */ volatile unsigned int master_tiID;
@@ -141,13 +132,15 @@ struct TI_A24RegStruct
                                      TS  trigger - Interrupt mode   1
                                      Ext trigger - polling  mode    2
                                      TS  trigger - polling  mode    3  */
-#define TI_READOUT_EXT_INT    0
-#define TI_READOUT_TS_INT     1
-#define TI_READOUT_EXT_POLL   2
-#define TI_READOUT_TS_POLL    3
+#define TI_READOUT_EXT_INT     0
+#define TI_READOUT_TS_INT      1
+#define TI_READOUT_EXT_POLL    2
+#define TI_READOUT_TS_POLL     3
+#define TI_READOUT_TSREV2_INT  4
+#define TI_READOUT_TSREV2_POLL 5
 
 /* Supported firmware version */
-#define TI_SUPPORTED_FIRMWARE 0x081
+#define TI_SUPPORTED_FIRMWARE 0x094
 #define TI_SUPPORTED_TYPE     3
 
 /* Firmware Masks */
@@ -335,7 +328,7 @@ struct TI_A24RegStruct
 #define TI_CLOCK_HFBR5       (1)
 #define TI_CLOCK_HFBR1       (2)
 #define TI_CLOCK_FP          (3)
-#define TI_CLOCK_MASK        0x3/*sergey: was 0x0000000F*/
+#define TI_CLOCK_MASK        0x0000000F
 
 /* 0x30 trig1Prescale bits and masks */
 #define TI_TRIG1PRESCALE_MASK          0x0000FFFF
@@ -343,10 +336,10 @@ struct TI_A24RegStruct
 /* 0x34 blockBuffer bits and masks */
 #define TI_BLOCKBUFFER_BUFFERLEVEL_MASK      0x000000FF
 #define TI_BLOCKBUFFER_BLOCKS_READY_MASK     0x0000FF00
-#define TI_BLOCKBUFFER_TRIGGERS_IN_BLOCK     0x00FF0000
-#define TI_BLOCKBUFFER_RO_NEVENTS_MASK       0x07000000
-#define TI_BLOCKBUFFER_BLOCKS_NEEDACK_MASK   0x7F000000
+#define TI_BLOCKBUFFER_TRIGGERS_IN_BLOCK     0x001F0000
+#define TI_BLOCKBUFFER_RO_NEVENTS_MASK       0x00E00000
 #define TI_BLOCKBUFFER_BREADY_INT_MASK       0x0F000000
+#define TI_BLOCKBUFFER_TRIGGER_MISSED        (1<<27)
 #define TI_BLOCKBUFFER_BUSY_ON_BLOCKLIMIT    (1<<28)
 #define TI_BLOCKBUFFER_SYNCRESET_REQUESTED   (1<<30)
 #define TI_BLOCKBUFFER_SYNCEVENT             (1<<31)
@@ -483,6 +476,7 @@ struct TI_A24RegStruct
 /* 0xB8 GTPtriggerBufferLength bits and masks */
 #define TI_GTPTRIGGERBUFFERLENGTH_GLOBAL_LENGTH_MASK 0x000007FF
 #define TI_GTPTRIGGERBUFFERLENGTH_SUBSYS_LENGTH_MASK 0x07FF0000
+#define TI_GTPTRIGGERBUFFERLENGTH_IODELAY_READY      (1<<26)
 #define TI_GTPTRIGGERBUFFERLENGTH_HFBR1_MGT_ERROR    (1<<28)
 #define TI_GTPTRIGGERBUFFERLENGTH_CLK250_DCM_LOCK    (1<<29)
 #define TI_GTPTRIGGERBUFFERLENGTH_CLK125_DCM_LOCK    (1<<30)
@@ -649,6 +643,9 @@ int  tiCheckTriggerBlock(volatile unsigned int *data);
 int  tiDecodeTriggerTypes(volatile unsigned int *data, int data_len,
 			  int nevents, unsigned int *evtypes);
 int  tiDecodeTriggerType(volatile unsigned int *data, int data_len, int event);
+int  tiDecodeTSrev2Data(volatile unsigned int *data, int data_len,
+			int *syncFlag, int *lateFail, int *evType);
+
 int  tiEnableFiber(unsigned int fiber);
 int  tiDisableFiber(unsigned int fiber);
 int  tiSetBusySource(unsigned int sourcemask, int rFlag);
@@ -671,6 +668,7 @@ void tiResetEB();
 void tiSyncResetResync();
 void tiClockReset();
 int  tiSetAdr32(unsigned int a32base);
+unsigned int tiGetAdr32();
 int  tiDisableA32();
 int  tiResetEventCounter();
 unsigned long long int tiGetEventCounter();
@@ -755,6 +753,10 @@ int  tiSetTSInputDelay(int chan, int delay);
 int  tiGetTSInputDelay(int chan);
 int  tiPrintTSInputDelay();
 unsigned int tiGetGTPBufferLength(int pflag);
+
+int  tiGetConnectedFiberMask();
+int  tiGetTrigSrcEnabledFiberMask();
+
 unsigned int tiGetSWAStatus(int reg);
 unsigned int tiGetSWBStatus(int reg);
 int  tiGetGeoAddress();
@@ -791,26 +793,7 @@ void tiClearEvTypeScalers();
 int  tiScanAndFillEvTypeScalers(volatile unsigned int *data, int nwords);
 void tiPrintEvTypeScalers();
 void tiUnload(int pflag);
-
-
-/*sergey*/
-int tiGetRandomTriggerSetting(int trigger);
-int tiGetRandomTriggerEnable(int trigger);
-int tiTrigDisable();
-int tiGetTSInputMask();
-int tiGetSlaveMask();
-int tiBusy();
-int tiAddRocSWA();
-int tiRemoveRocSWA();
-int tiGetNumberOfBlocksInBuffer();
-int tiGetConnectedFiberMask();
-/*
-unsigned int tiGetSyncDelay();
-*/
-/*sergey*/
+int  tiWaitForIODelayReset(int nwait);
 
 
 #endif /* TILIB_H */
-
-
-/*#endif*/ /*Linux_x86_64_vme*/

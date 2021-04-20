@@ -743,6 +743,7 @@ int faClearScalers(int id);
 int faLatchScalers(int id);
 int faEnableScalers(int id);
 int faDisableScalers(int id);
+int faReadChargeScalers(int id, volatile unsigned long long *data, unsigned int chmask);
 
 /* FADC Internal Trigger Routine prototypes */
 unsigned int faItrigStatus(int id, int sFlag);

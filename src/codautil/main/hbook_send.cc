@@ -21,8 +21,8 @@ main()
 
   Hbook hbook;
 
-  hbook.hbook1(1, (char *)"clondaq3:test1", 100, 0.0, 100.0);
-  hbook.hreset(1, (char *)"clondaq3:test1");
+  hbook.hbook1(1, (char *)"clondaq6:test1", 100, 0.0, 100.0);
+  hbook.hreset(1, (char *)"clondaq6:test1");
   for(int i=0; i<100; i++)
   {
     hbook.hfill(1, ((float)i), 0.0, ((float)i)*2./2.);

@@ -636,7 +636,7 @@ tsCheckAddresses()
     }
 
 
-  offset = ((unsigned int) &TSp->JTAGPROMBase[0]) - base;
+  offset = ((unsigned long) &TSp->JTAGPROMBase[0]) - base;
   expected = 0x10000;
   if(offset != expected)
     {
@@ -645,7 +645,7 @@ tsCheckAddresses()
       rval = ERROR;
     }
 
-  offset = ((unsigned int) &TSp->JTAGFPGABase[0]) - base;
+  offset = ((unsigned long) &TSp->JTAGFPGABase[0]) - base;
   expected = 0x20000;
   if(offset != expected)
     {
@@ -654,7 +654,7 @@ tsCheckAddresses()
       rval = ERROR;
     }
 
-  offset = ((unsigned int) &TSp->SWA[0]) - base;
+  offset = ((unsigned long) &TSp->SWA[0]) - base;
   expected = 0x30000;
   if(offset != expected)
     {
@@ -663,7 +663,7 @@ tsCheckAddresses()
       rval = ERROR;
     }
 
-  offset = ((unsigned int) &TSp->SWB[0]) - base;
+  offset = ((unsigned long) &TSp->SWB[0]) - base;
   expected = 0x40000;
   if(offset != expected)
     {
@@ -1043,7 +1043,7 @@ tsSlaveStatus(int pflag)
 
   TSUNLOCK;
 
-  TSBase = (unsigned int)TSp;
+  TSBase = (unsigned long)TSp;
 
   if(pflag>0)
     {
@@ -2279,7 +2279,7 @@ tsReadBlock(volatile unsigned int *data, int nwrds, int rflag)
       retVal = vmeDmaSend((unsigned long)laddr, vmeAdr, (nwrds<<2));
 #endif
 	  */
-    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int)laddr, (nwrds<<2));
+    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned long)laddr, (nwrds<<2));
 
       if(retVal != 0)
 	{
@@ -6571,7 +6571,7 @@ tsGetTrigInhibitWindow()
 int
 tsPartInit(int pID, unsigned int tAddr, unsigned int mode, int iFlag)
 {
-  unsigned int laddr;
+  unsigned long laddr;
   unsigned int rval, boardID;
   unsigned int firmwareInfo;
   int stat;
@@ -6613,7 +6613,7 @@ tsPartInit(int pID, unsigned int tAddr, unsigned int mode, int iFlag)
       printf("TS address = 0x%x\n",laddr);
     }
 #else
-  stat = vmeBusToLocalAdrs(0x39,(char *)tAddr,(char **)&laddr);
+  stat = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)tAddr,(char **)&laddr);
   if (stat != 0)
     {
       printf("%s: ERROR: Error in vmeBusToLocalAdrs res=%d \n",__FUNCTION__,stat);
@@ -6622,7 +6622,7 @@ tsPartInit(int pID, unsigned int tAddr, unsigned int mode, int iFlag)
   else
     {
       if(!noBoardInit)
-	printf("TS VME (Local) address = 0x%.8x (0x%.8x)\n",tAddr,laddr);
+	printf("TS VME (Local) address = 0x%.8x (0x%lx)\n",tAddr,laddr);
     }
 #endif
   tsA24Offset = laddr-tAddr;

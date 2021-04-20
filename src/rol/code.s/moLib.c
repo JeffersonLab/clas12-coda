@@ -54,7 +54,7 @@ pthread_mutex_t   moMutex = PTHREAD_MUTEX_INITIALIZER;
 #define CHECKMO {						\
     if(MOp == NULL) {						\
       logMsg("%s: ERROR : MO not initialized \n",		\
-	     (int)__FUNCTION__,2,3,4,5,6);			\
+	     __FUNCTION__,2,3,4,5,6);			\
       return ERROR;						\
     }								\
   }
@@ -67,7 +67,7 @@ typedef struct mo_chan_struct
 
 /* Global Variables */
 volatile struct mo_struct *MOp=NULL;   /* pointer to MO memory map */
-int moA24Offset=0;                     /* Difference in CPU A24 Base and VME A24 Base */
+unsigned long moA24Offset=0;                     /* Difference in CPU A24 Base and VME A24 Base */
 int moDefaultPS_0=16;                  /* Default value set for first level prescale */
 MO_CHAN moChan[10] =                   /* Default divider and duty mode to set during initialization: 2,0-presale=32, 4,0-prescale=64 */
   {
@@ -126,7 +126,7 @@ moInit(uint32_t tAddr, uint32_t iFlag)
       return ERROR;
     }
 #else
-  stat = vmeBusToLocalAdrs(0x39,(char *)tAddr,(char **)&laddr);
+  stat = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)tAddr,(char **)&laddr);
   if (stat != 0)
     {
       printf("flexioInit: ERROR: Error in vmeBusToLocalAdrs res=%d \n",stat);

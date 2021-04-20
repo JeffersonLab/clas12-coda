@@ -19,8 +19,8 @@
 --
 --------------------------------------------------------------------------------
 */
-#ifndef H_FeuConfiguration
-#define H_FeuConfiguration
+#ifndef H_SysConfiguration
+#define H_SysConfiguration
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,4 +92,4 @@ int  FeuMonit_Sprintf( FeuMonit *feu_monit, char *buf  );
 int  FeuMonit_Fprintf( FeuMonit *feu_monit, FILE *fptr );
 int  FeuMonit_Get(     FeuMonit *feu_monit, FeuParams *feu_params, int feu_id, int beu_id, int beu_lnk_id );
 
-#endif // #ifndef H_FeuConfiguration
+#endif // #ifndef H_SysConfiguration

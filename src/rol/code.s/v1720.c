@@ -32,7 +32,7 @@ IMPORT  STATUS sysIntDisable(int);
 #define CHECKID(id) {							\
     if((id<0) || (c1720p[id] == NULL)) {				\
       logMsg("%s: ERROR : ADC id %d not initialized \n",		\
-	     (int)__FUNCTION__,id,3,4,5,6);				\
+	     __FUNCTION__,id,3,4,5,6);				\
       return ERROR;							\
     }									\
   }
@@ -83,7 +83,7 @@ v1720Init(UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
   int ii, jj, res=0, errFlag = 0;
   unsigned short rdata=0;
   int boardID = 0;
-  unsigned int laddr;
+  unsigned long laddr;
   volatile struct v1720_ROM_struct *rp;
 
   /* Check for valid address */
@@ -105,7 +105,7 @@ v1720Init(UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 	  return(ERROR);
 	}
 #else
-    res = vmeBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr);
+    res = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)addr,(char **)&laddr);
     if (res != 0) 
 	{
 	  printf("v1720Init: ERROR in vmeBusToLocalAdrs(0x39,0x%x,&laddr) \n",addr);
@@ -126,7 +126,7 @@ v1720Init(UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 	  return(ERROR);
 	}
 #else
-    res = vmeBusToLocalAdrs(0x09,(char *)addr,(char **)&laddr);
+    res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)addr,(char **)&laddr);
     if (res != 0) 
 	{
 	  printf("v1720Init: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",addr);
@@ -149,7 +149,7 @@ v1720Init(UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
     if(res < 0 )
     /*       if(res < 0 || rdata==0xffff)  */
     {
-      printf("v1720Init: ERROR: No addressable board at addr=0x%x\n",(UINT32) c1720p[ii]);
+      printf("v1720Init: ERROR: No addressable board at addr=0x%lx\n",(unsigned long) c1720p[ii]);
       c1720p[ii] = NULL;
       errFlag = 1;
       break;
@@ -157,7 +157,7 @@ v1720Init(UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
     else 
     {
       /* Check if this is a Model 1720 */
-      rp = (struct v1720_ROM_struct *)((UINT32)c1720p[ii] + V1720_ROM_OFFSET);
+      rp = (struct v1720_ROM_struct *)((unsigned long)c1720p[ii] + V1720_ROM_OFFSET);
       boardID = ((vmeRead32(&(rp->board2))&(0xff))<<16) + 
 	    ((vmeRead32(&(rp->board1))&(0xff))<<8) + 
 	    (vmeRead32(&(rp->board0))&(0xff)); 
@@ -176,8 +176,8 @@ v1720Init(UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 	  } 
     }
     c1720vme[ii] = (addr&0xFF000000) + ii*0x01000000;
-    printf("Initialized ADC ID %2d at address 0x%08x (DMA address 0x%08x)\n",
-      ii,(UINT32)c1720p[ii],(UINT32)c1720vme[ii]);
+    printf("Initialized ADC ID %2d at address 0x%lx (DMA address 0x%08x)\n",
+      ii,(unsigned long)c1720p[ii],(UINT32)c1720vme[ii]);
 
     Nc1720++;
   }
@@ -1329,7 +1329,7 @@ v1720ReadBoardDmaStart(int ib, UINT32 *tdata)
 
   /*logMsg("vmeAdr=0x%08x\n",vmeAdr,2,3,4,5,6);*/
 
-  res = usrVme2MemDmaStart( vmeAdr, (UINT32)tdata, nbytes);
+  res = usrVme2MemDmaStart( vmeAdr, (unsigned long)tdata, nbytes);
 
   if(res < 0)
   {
@@ -1366,7 +1366,7 @@ v1720ReadBoardDmaDone(int ib)
     /*logMsg("%s: nbytes_save=%d res=%d -> mbytes=%d\n",__FUNCTION__,nbytes_save[id],res,mbytes,5,6);*/
     if(mbytes>0)
     {
-      logMsg("%s: WRONG: nbytes_save[%d]=%d, res=%d => mbytes=%d\n",(int)__FUNCTION__,
+      logMsg("%s: WRONG: nbytes_save[%d]=%d, res=%d => mbytes=%d\n",__FUNCTION__,
           ib,nbytes_save[ib],res,mbytes,6);
       return(-2);
     }
@@ -1563,8 +1563,8 @@ logMsg("[%d] ask=%d (%d bytes), got=%d (0x%08x to 0x%08x)\n",
 
   /* set DMA list */
   {
-    unsigned int adcadr[21];
-    for(ii=0; ii<Nc1720; ii++) adcadr[ii] = (unsigned int)c1720p[ii];
+    unsigned long adcadr[21];
+    for(ii=0; ii<Nc1720; ii++) adcadr[ii] = (unsigned long)c1720p[ii];
     usrVme2MemDmaListSet(adcadr, destination, nbytes_save, Nc1720);
   }
 

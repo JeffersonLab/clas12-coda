@@ -31,6 +31,8 @@ endif
 
 
 
+
+
 #------------------------
 # special building cases
 #------------------------
@@ -47,6 +49,22 @@ bin: $(BIN_FILES_PROG) ./$(OSTYPE_MACHINE)/bin/coda_roc_gef
 ###	$(CC) -DNEW_ROC $(CCBINOPT)
 
 endif
+
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
+
+bin: $(BIN_FILES_PROG) ./$(OSTYPE_MACHINE)/bin/coda_roc_gef
+
+  ./$(OSTYPE_MACHINE)/bin/coda_roc_gef : main/coda_roc.c $(LIBNAMES)
+	$(MKBINDIR)
+	$(CC) $(CCBINOPT)
+	$(CCLINKBIN)
+
+###	$(CC) -DNEW_ROC $(CCBINOPT)
+
+endif
+
+
+
 
 
 #-----------------------
@@ -124,6 +142,9 @@ else
   ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
     LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
   endif
+  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
+    LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+  endif
   ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
     LIBNAMES += /usr/lib/mysql/libmysqlclient.so
   endif
@@ -136,13 +157,17 @@ else
 
   ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
     LIBNAMES += $(CODA)/src/rol/jvme/libjvme.so
+    LIBNAMES += /usr/lib/gef/libvme.a
+  endif
+  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
+    LIBNAMES += $(CODA)/src/jvme/$(OSTYPE_MACHINE)/lib/libjvme.so
+    LIBNAMES += /usr/lib64/gef/libvme.a
   endif
 
+
   LIBNAMES += $(CODA)/src/evio-4.3/$(OSTYPE_MACHINE)/lib/libevio.a
-##  LIBNAMES += $(globallib)/libevio.a
 
   LIBNAMES += $(CODA)/src/et-14.0/$(OSTYPE_MACHINE)/lib/libet.a
-##  LIBNAMES += $(globallib)/libet.a
 
 
 

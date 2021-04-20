@@ -59,19 +59,19 @@ typedef void (*VOIDFUNCPTR) ();
 
 
 /* Prototype of Common Initialization of Modules */
-STATUS tdc1190CommonInit(int itdc, UINT32 laddr);
+STATUS tdc1190CommonInit(int itdc, unsigned long laddr);
 
 /* Macro to check id and c1190p */
 #define CHECKID(id) { \
     if((id<0) || (c1190p[id] == NULL)) { \
       logMsg("%s: ERROR : TDC id %d not initialized \n", \
-	     (int)__FUNCTION__,id,3,4,5,6);	\
+	     __FUNCTION__,id,3,4,5,6);	\
       return ERROR;	\
     }  \
     if(use1190[id]==0) \
     { \
 	  logMsg("%s: TDC id %d flagged to NOT be used.\n", \
-	       (int)__FUNCTION__,id,3,4,5,6); \
+	       __FUNCTION__,id,3,4,5,6); \
 	  return ERROR; \
     } \
   }
@@ -105,7 +105,7 @@ pthread_mutex_t c1190_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* Define global variables */
 
-unsigned int tdcAddrOffset = 0;                /* Difference in CPU (USERSPACE) Base */
+unsigned long tdcA32Offset = 0;                /* Difference in CPU (USERSPACE) Base */
 
 int Nc1190 = 0;                              /* Number of TDCs in crate */
 
@@ -168,7 +168,7 @@ tdc1190Init(UINT32 addr, UINT32 addr_inc, int ntdc, int iFlag)
   int ii, jj, itdc, res=0, errFlag = 0;
   unsigned short rdata=0;
   int boardID = 0;
-  unsigned int laddr;
+  unsigned long laddr=0, laddr_inc=0;
   volatile struct v1190_ROM_struct *rp;
   char boardmodel[3][7] = {"v1190","v1290","v1290N"};
 
@@ -190,15 +190,15 @@ tdc1190Init(UINT32 addr, UINT32 addr_inc, int ntdc, int iFlag)
 	  printf("tdc1190Init: ERROR in sysBusToLocalAdrs(0x39,0x%x,&laddr) \n",addr);
 	  return(ERROR);
 	}
-    tdcAddrOffset = (unsigned int)laddr-(unsigned int)addr;
+    tdcA32Offset = (unsigned int)laddr-(unsigned int)addr;
 #else
-    res = vmeBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr);
+    res = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)addr,(char **)&laddr);
     if (res != 0) 
 	{
 	  printf("tdc1190Init: ERROR in vmeBusToLocalAdrs(0x39,0x%x,&laddr) \n",addr);
 	  return(ERROR);
 	}
-    tdcAddrOffset = (unsigned int)laddr-(unsigned int)addr;
+    tdcA32Offset = laddr - addr;
 #endif
   }
   else /* A32 Addressing */
@@ -213,15 +213,15 @@ tdc1190Init(UINT32 addr, UINT32 addr_inc, int ntdc, int iFlag)
 	  printf("tdc1190Init: ERROR in sysBusToLocalAdrs(0x09,0x%x,&laddr) \n",addr);
 	  return(ERROR);
 	}
-    tdcAddrOffset = (unsigned int)laddr-(unsigned int)addr;
+    tdcA32Offset = (unsigned int)laddr-(unsigned int)addr;
 #else
-    res = vmeBusToLocalAdrs(0x09,(char *)addr,(char **)&laddr);
+    res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)addr,(char **)&laddr);
     if (res != 0) 
 	{
 	  printf("tdc1190Init: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",addr);
 	  return(ERROR);
 	}
-    tdcAddrOffset = (unsigned int)laddr-(unsigned int)addr;
+    tdcA32Offset = laddr - addr;
 #endif
   }
 
@@ -234,8 +234,9 @@ tdc1190Init(UINT32 addr, UINT32 addr_inc, int ntdc, int iFlag)
       c1190vme[Nc1190/*ii*/] = /*0x08000000 +*/ addr + ii*addr_inc;
       Nc1190++;
       itdc = Nc1190-1;
-      printf("Initialized TDC %s with ID=%d, DMA address 0x%08x, USER address 0x%08x in SLOT=%d\n",
-		boardmodel[use1190[itdc]-1],itdc,(UINT32)c1190vme[itdc],(UINT32)c1190p[itdc],tdc1190Slot(itdc));
+
+      printf("Initialized TDC %s with ID=%d, DMA address 0x%08x, USER address 0x%lx in SLOT=%d\n",
+		boardmodel[use1190[itdc]-1],itdc,(UINT32)c1190vme[itdc],(unsigned long)c1190p[itdc],tdc1190Slot(itdc));
 	}
 	else
 	{
@@ -275,7 +276,7 @@ tdc1190Init(UINT32 addr, UINT32 addr_inc, int ntdc, int iFlag)
  */
 
 STATUS
-tdc1190CommonInit(int itdc, UINT32 laddr)
+tdc1190CommonInit(int itdc, unsigned long laddr)
 {
   int ii, res=0, errFlag = 0;
   unsigned short rdata=0;
@@ -294,8 +295,8 @@ tdc1190CommonInit(int itdc, UINT32 laddr)
   if(res < 0 )
   /*       if(res < 0 || rdata==0xffff)  */
   {
-    printf("tdc1190CommonInit: ERROR: No addressable board at addr=0x%x\n",
-        (UINT32) c1190p[itdc]);
+    printf("tdc1190CommonInit: ERROR: No addressable board at addr=0x%lx\n",
+        (unsigned long) c1190p[itdc]);
     c1190p[itdc] = NULL;
     use1190[itdc] = 0;
     errFlag = 1;
@@ -304,7 +305,7 @@ tdc1190CommonInit(int itdc, UINT32 laddr)
   else 
   {
     /* Check if this is a Model 1190/1290 */
-    rp = (struct v1190_ROM_struct *)((UINT32)c1190p[itdc] + V1190_ROM_OFFSET);
+    rp = (struct v1190_ROM_struct *)((unsigned long)c1190p[itdc] + V1190_ROM_OFFSET);
     boardVersion = vmeRead16(&(rp->vers)) & 0xff;
     boardID = ((vmeRead16(&(rp->board2))&(0xff))<<16) +
 	  ((vmeRead16(&(rp->board1))&(0xff))<<8) +
@@ -414,7 +415,7 @@ tdc119GetBoardID(int id)
   volatile struct v1190_ROM_struct *rp;
 
   CHECKID(id);
-  rp = (struct v1190_ROM_struct *)((UINT32)c1190p[id] + V1190_ROM_OFFSET);
+  rp = (struct v1190_ROM_struct *)((unsigned long)c1190p[id] + V1190_ROM_OFFSET);
   LOCK_1190;
   rval = ((vmeRead16(&(rp->board1))&(0xff))<<8) | (vmeRead16(&(rp->board0))&(0xff));
   UNLOCK_1190;
@@ -429,7 +430,7 @@ tdc119GetBoardRev(int id)
   volatile struct v1190_ROM_struct *rp;
 
   CHECKID(id);
-  rp = (struct v1190_ROM_struct *)((UINT32)c1190p[id] + V1190_ROM_OFFSET);
+  rp = (struct v1190_ROM_struct *)((unsigned long)c1190p[id] + V1190_ROM_OFFSET);
   LOCK_1190;
   /*
   printf("  rp->revis3 addr=0x%08x  val=0x%04x \n", &(rp->revis3), *(&(rp->revis3)));
@@ -453,7 +454,7 @@ tdc119GetSerialNumber(int id)
   volatile struct v1190_ROM_struct *rp;
 
   CHECKID(id);
-  rp = (struct v1190_ROM_struct *)((UINT32)c1190p[id] + V1190_ROM_OFFSET);
+  rp = (struct v1190_ROM_struct *)((unsigned long)c1190p[id] + V1190_ROM_OFFSET);
   LOCK_1190;
   /*
   printf("  rp->sernum1 addr=0x%08x  val=0x%04x \n", &(rp->sernum1), *(&(rp->sernum1)));
@@ -480,7 +481,7 @@ tdc1190PrintROM(UINT32 addr_add, int loop)
 
   if (loop<=0) loop=0;
 
-  addr = (unsigned short *)((UINT32)c1190p[0] + addr_add);
+  addr = (unsigned short *)((unsigned long)c1190p[0] + addr_add);
 
   LOCK_1190;
 
@@ -1527,8 +1528,8 @@ tdc1190Status(int id)
 #ifdef VXWORKS
   printf("STATUS for %s TDC at base address 0x%x\n",tdcname,(UINT32)c1190p[id]);
 #else
-  printf("STATUS for %s TDC at VME (USER) base address 0x%x (0x%x)\n",
-	 tdcname, (UINT32)c1190p[id] - tdcAddrOffset, (UINT32)c1190p[id]);
+  printf("STATUS for %s TDC at VME (USER) base address 0x%lx (0x%lx)\n",
+	 tdcname, (unsigned long)c1190p[id] - tdcA32Offset, (unsigned long)c1190p[id]);
 #endif
   printf("---------------------------------------------- \n");
 
@@ -1629,7 +1630,7 @@ tdc1190GStatus(int mcFlag)
   LOCK_1190;
   for(itdc=0; itdc<Nc1190; itdc++)
     {
-      addr[itdc] = (UINT32)c1190p[itdc] - tdcAddrOffset;
+      addr[itdc] = (unsigned long)c1190p[itdc] - tdcA32Offset;
       st[itdc].control  = vmeRead16(&c1190p[itdc]->control);
       st[itdc].status   = vmeRead16(&c1190p[itdc]->status);
       st[itdc].geoAddr  = vmeRead16(&c1190p[itdc]->geoAddr);
@@ -2147,8 +2148,8 @@ tdc1190PrintEvent(int id, int pflag)
 	}
       else
 	{
-	  logMsg("  TDC DATA for Module at address 0x%08x\n",
-		 (UINT32)c1190p[id],2,3,4,5,6);
+	  logMsg("  TDC DATA for Module at address 0x%lx\n",
+		 (unsigned long)c1190p[id],2,3,4,5,6);
 	  evCount = (gheader&V1190_GHEAD_EVCOUNT_MASK)>>5;
 	  dCnt++;
 	  logMsg("  Global Header: 0x%08x   Event Count = %d \n",
@@ -2740,14 +2741,18 @@ tdc1190Align64(int id, UINT32 flag)
 int
 tdc1190ReadBoard(int itdc, UINT32 *tdata)
 {
+  /*
   volatile UINT32 *data;
   volatile UINT32 *fifo;
+  */
   UINT32 *output = tdata - 1;
   int fifodata, ndata, nev, ii;
 
+  /*
   UINT32 addr = (unsigned int) c1190p[itdc];
   data = (UINT32 *) addr;
   fifo = (UINT32 *) (addr+0x1038);
+  */
 
   if(berr_fifo == 0x01)
   {
@@ -2776,14 +2781,14 @@ int
 tdc1190ReadBoardDmaStart(int ib, UINT32 *tdata)
 {
   volatile UINT32 *vmeAdr;
-  volatile UINT32 *fifo;
+  /*volatile UINT32 *fifo;*/
   int mdata, fifodata, res;
   int i, ii, nbytes, nev;
   int ndata_save, extra_save;
-
+  /*
   UINT32 addr = (unsigned int) c1190p[ib];
   fifo = (UINT32 *) (addr+0x1038);
-
+  */
   if(berr_fifo == 0x01)
   {
     /* get event length in words */
@@ -2843,7 +2848,7 @@ tdc1190ReadBoardDmaStart(int ib, UINT32 *tdata)
 printf("tdc1190ReadBoardDmaStart[%d]: c1190vme=0x%08x, tdata=0x%08x, nbytes=%d\n",
 		 ib,c1190vme[ib],tdata, nbytes);
   */
-  res = usrVme2MemDmaStart( c1190vme[ib], (unsigned int)tdata, nbytes);
+  res = usrVme2MemDmaStart( c1190vme[ib], (unsigned long)tdata, nbytes);
 
   if(res < 0)
   {
@@ -2995,7 +3000,7 @@ repeat_dma:
         itdcbuf += res; /* output buffer index */
 		nbytes_save[jj] = mbytes; /* the number of bytes remains in buffer 'jj' */
 
-        res = usrVme2MemDmaStart( c1190vme[jj], (unsigned int)&tdcbuf[itdcbuf], mbytes);
+        res = usrVme2MemDmaStart( c1190vme[jj], (unsigned long)&tdcbuf[itdcbuf], mbytes);
         if(res < 0)
         {
           logMsg("tdc1190ReadEventDmaRepeat: ERROR: usrVme2MemDmaStart returned %d\n",res,0,0,0,0,0);
@@ -3180,7 +3185,7 @@ tdc1190ReadDone()
     /*logMsg("%s: nbytes_saved=%d res=%d -> mbytes=%d\n",__FUNCTION__,nbytes_saved,res,mbytes,5,6);*/
     if(mbytes>0)
     {
-      logMsg("%s: WRONG: nbytes_saved=%d, res=%d => mbytes=%d\n",(int)__FUNCTION__,
+      logMsg("%s: WRONG: nbytes_saved=%d, res=%d => mbytes=%d\n",__FUNCTION__,
           nbytes_saved,res,mbytes,5,6);
       return(-2);
     }
@@ -4481,12 +4486,12 @@ tdc1190InitMCST(UINT32 *vmeaddress)
 #ifdef VXWORKS
   sysBusToLocalAdrs(0x09,(char *)(baseadrs<<24),(char **)vmeaddress);
 #else
-  vmeBusToLocalAdrs(0x09,(char *)(baseadrs<<24),(char **)vmeaddress);
+  vmeBusToLocalAdrs(0x09,(char *)(unsigned long)(baseadrs<<24),(char **)vmeaddress);
 #endif
   c1190MCSTp = (struct v1190_struct *)(vmeaddress);
 
-  printf("tdc1190InitMCST: MCST VME (USER) base address 0x%x (0x%x):\n",
-	 (baseadrs<<24), (UINT32)c1190MCSTp);
+  printf("tdc1190InitMCST: MCST VME (USER) base address 0x%x (0x%lx):\n",
+	 (baseadrs<<24), (unsigned long)c1190MCSTp);
 
   /* Loop through use1190/c1190p array to set mcstBaseAddr
      and set First/intermediate/Last boards */
@@ -4499,17 +4504,17 @@ tdc1190InitMCST(UINT32 *vmeaddress)
     if(ii==tdcMinSlot)
 	{
 	  vmeWrite16(&(c1190p[ii]->mcstCtrl),2); /* active first */
-	  printf("\tFirst  board at 0x%08x\n",(UINT32)c1190p[ii]);
+	  printf("\tFirst  board at 0x%lx\n",(unsigned long)c1190p[ii]);
 	}
       else if(ii==tdcMaxSlot)
 	{
 	  vmeWrite16(&(c1190p[ii]->mcstCtrl),1); /* active last */
-	  printf("\tLast   board at 0x%08x\n",(UINT32)c1190p[ii]);
+	  printf("\tLast   board at 0x%lx\n",(unsigned long)c1190p[ii]);
 	}
       else
 	{
 	  vmeWrite16(&(c1190p[ii]->mcstCtrl),3); /* active intermediate */
-	  printf("\tMiddle board at 0x%08x\n",(UINT32)c1190p[ii]);
+	  printf("\tMiddle board at 0x%lx\n",(unsigned long)c1190p[ii]);
 	}
   }
 

@@ -162,8 +162,8 @@ main(int argc, char *argv[])
   
   res = sdInit(SD_INIT_IGNORE_VERSION);
   printf("sdInit returns %d\n",res);
-  if(res!=OK)
-    goto CLOSE;
+  /*if(res!=OK) goto CLOSE; sergey*/
+  if(res==0) goto CLOSE;
 
   current_fw_version = sdGetFirmwareVersion(0);
   printf("\n  Current SD Firmware Version = 0x%x\n\n",current_fw_version);

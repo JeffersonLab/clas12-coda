@@ -517,6 +517,10 @@ rol2trig(int a, int b)
   {
     datain = bankdata[jj];
     lenin = banknw[jj];
+
+
+
+
 #ifndef VXWORKS
 #ifndef NIOS
 #ifndef Linux_armv7l
@@ -527,6 +531,15 @@ rol2trig(int a, int b)
 #endif
 #endif
 #endif
+
+
+#ifdef Linux_x86_64_vme
+    /* swap input buffer (assume that data from VME is big-endian, and we are on little-endian Intel) */
+    if(banktyp[jj] != 3) for(ii=0; ii<lenin; ii++) datain[ii] = LSWAP(datain[ii]);
+#endif
+
+
+
 
     if(banktag[jj] == 0xe109) /* FADC250 hardware format */
 	{
@@ -1191,9 +1204,17 @@ lenE[jj][nB][nE[nB]] - event length in words
 
 		    if(a_nwords>7)
 		    {
+#ifdef DEBUG1
+		      printf("[%3d] TS word7 = 0x%08x\n",ii,datain[ii]);
+#endif
+		      ii++;
+		    }
+
+		    if(a_nwords>8)
+		    {
               int iii;
-		      printf("ERROR1: TI/TS has more then 7 data words (a_nwords=%d) - exit\n",a_nwords);
-              for(iii=-200; iii<200; iii++) printf("[%d] 0x%08x\n",iii,datain[ii+iii]);
+		      printf("ERROR1: TI/TS has more then 8 data words (a_nwords=%d) - exit\n",a_nwords);
+              //for(iii=-200; iii<200; iii++) printf("[%d] 0x%08x\n",iii,datain[ii+iii]);
 		      exit(0);
 		    }
 
@@ -4352,8 +4373,19 @@ if(a_pulsenumber == 0)
 
 		    if(a_nwords>7)
 		    {
+#ifdef DEBUG1
+		      printf("[%3d] TS word7 = 0x%08x\n",ii,datain[ii]);
+#endif
+              dataout[8] = datain[ii];
+              b08 += 4;
+
+		      ii++;
+		    }
+
+		    if(a_nwords>8)
+		    {
               int iii;
-		      printf("ERROR2: TI/TS has more then 7 data words (a_nwords=%d) - exit\n",a_nwords);
+		      printf("ERROR2: TI/TS has more then 8 data words (a_nwords=%d) - exit\n",a_nwords);
               for(iii=-200; iii<200; iii++) printf("[%d] 0x%08x\n",iii,datain[ii+iii]);
 		      exit(0);
 		    }

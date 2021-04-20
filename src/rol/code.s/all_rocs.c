@@ -83,6 +83,13 @@ void vmeWrite32(volatile unsigned int *addr, unsigned int val);
                          (((x) & 0xff00) >> 8))
 
 
+
+
+
+
+#if 0 /*have it in jvme*/
+
+
 unsigned char
 vmeRead8(volatile unsigned char *addr)
 {
@@ -140,6 +147,7 @@ vmeWrite32(volatile unsigned int *addr, unsigned int val)
   return;
 }
 
+#endif /*have it in jvme*/
 
 
 
@@ -179,6 +187,8 @@ static unsigned short PayloadPort20[MAX_VME_SLOTS+1] =
 
 
 
+
+#if 0 /* have it in jvme */
 
 int
 vmeSetMaximumVMESlots(int slots)
@@ -324,6 +334,7 @@ vmeSlotMask2vxsPayloadPortMask(unsigned int vmemask)
   return ppmask;
 }
 
+#endif /*have it in jvme*/
 
 
 

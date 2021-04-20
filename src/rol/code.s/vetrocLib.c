@@ -74,9 +74,9 @@ LOCAL UINT32      vetrocIntVec      = VETROC_VME_INT_VEC;           /* default i
 
 /* Define global variables */
 int nvetroc = 0;                                       /* Number of VETROCs in Crate */
-int vetrocA32Base   = 0x09000000;                      /* Minimum VME A32 Address for use by VETROCs */
-int vetrocA32Offset = 0x08000000;                      /* Difference in CPU A32 Base - VME A32 Base */
-int vetrocA24Offset = 0x0;                             /* Difference in CPU A24 Base - VME A24 Base */
+unsigned int  vetrocA32Base   = 0x09000000;                      /* Minimum VME A32 Address for use by VETROCs */
+unsigned long vetrocA32Offset = 0x08000000;                      /* Difference in CPU A32 Base - VME A32 Base */
+unsigned long vetrocA24Offset = 0x0;                             /* Difference in CPU A24 Base - VME A24 Base */
 volatile vetroc_regs *VETROCp[(VETROC_MAX_BOARDS+1)]; /* pointers to VETROC memory map */
 volatile unsigned int *VETROCpd[(VETROC_MAX_BOARDS+1)];      /* pointers to VETROC FIFO memory */
 volatile unsigned int *VETROCpmb;                        /* pointer to Multblock window */
@@ -159,7 +159,8 @@ vetrocInit(UINT32 addr, UINT32 addr_inc, int ndc, int iFlag)
   int maxSlot = 1;
   int minSlot = 21;
   int syncSrc=0, trigSrc=0, clkSrc=0, srSrc=0;
-  unsigned int rdata, laddr, laddr_inc, a32addr;
+  unsigned long laddr=0, laddr_inc=0;
+  unsigned int rdata, a32addr;
   volatile vetroc_regs *vetroc;
   unsigned short sdata;
   int noBoardInit=0;
@@ -201,7 +202,7 @@ vetrocInit(UINT32 addr, UINT32 addr_inc, int ndc, int iFlag)
 #ifdef VXWORKS
       res = sysBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr);
 #else
-      res = vmeBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr);
+      res = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)addr,(char **)&laddr);
 #endif
       if (res != 0) 
 	{
@@ -244,8 +245,8 @@ vetrocInit(UINT32 addr, UINT32 addr_inc, int ndc, int iFlag)
 #ifdef VXWORKS
 	  printf("vetrocInit: ERROR: No addressable board at addr=0x%x\n",(UINT32) vetroc);
 #else
-	  printf("vetrocInit: ERROR: No addressable board at VME (Local) addr=0x%x (0x%x)\n",
-		 (UINT32) laddr_inc-vetrocA24Offset, (UINT32) vetroc);
+	  printf("vetrocInit: ERROR: No addressable board at VME (Local) addr=0x%x (0x%lx)\n",
+		 (UINT32) laddr_inc-vetrocA24Offset, (unsigned long) vetroc);
 #endif
 	  /*errFlag = 1;*/
 /* 	  break; */
@@ -255,8 +256,8 @@ vetrocInit(UINT32 addr, UINT32 addr_inc, int ndc, int iFlag)
 	  /* Check that it is an VETROC board */
 	  if((rdata&VETROC_BOARD_MASK) != VETROC_BOARD_ID) 
 	  {
-	    printf(" ERROR: For board at 0x%x, Invalid Board ID: 0x%x\n",
-		     (UINT32) vetroc, rdata);
+	    printf(" ERROR: For board at 0x%x, Invalid Board ID: 0x%lx\n",
+		     (unsigned long) vetroc, rdata);
         continue;
 	  }
 	  /* Check if this is board has a valid slot number */
@@ -273,12 +274,12 @@ vetrocInit(UINT32 addr, UINT32 addr_inc, int ndc, int iFlag)
 	  if(boardID >= maxSlot) maxSlot = boardID;
 	  if(boardID <= minSlot) minSlot = boardID;
 	  
-	  printf("Initialized VETROC %2d  Slot # %2d at address 0x%08x (0x%08x) \n",
-		 nvetroc,vetrocID[nvetroc],(UINT32) VETROCp[(vetrocID[nvetroc])],
-		 (UINT32) VETROCp[(vetrocID[nvetroc])]-vetrocA24Offset);
+	  printf("Initialized VETROC %2d  Slot # %2d at address 0x%08x (0x%lx) \n",
+		 nvetroc,vetrocID[nvetroc],
+			 (UINT32) (((unsigned long)VETROCp[(vetrocID[nvetroc])])-vetrocA24Offset),
+             (unsigned long) VETROCp[(vetrocID[nvetroc])]);
+
 	  nvetroc++;
-/* 	  printf("Initialized VETROC %2d  Slot # %2d at address 0x%08x \n", */
-/* 		 ii,vetrocID[ii],(UINT32) VETROCp[(vetrocID[ii])]); */
 	}
   }
   printf("Finished boards initialization, nvetroc=%d\n",nvetroc);fflush(stdout);
@@ -323,7 +324,7 @@ vetrocInit(UINT32 addr, UINT32 addr_inc, int ndc, int iFlag)
       vetrocA32Offset = laddr - vetrocA32Base;
     }
 #else
-  res = vmeBusToLocalAdrs(0x09,(char *)vetrocA32Base,(char **)&laddr);
+  res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)vetrocA32Base,(char **)&laddr);
   if (res != 0) 
     {
       printf("vetrocInit: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",vetrocA32Base);fflush(stdout);
@@ -420,7 +421,7 @@ vetrocInit(UINT32 addr, UINT32 addr_inc, int ndc, int iFlag)
 	  return(ERROR);
 	}
 #else
-      res = vmeBusToLocalAdrs(0x09,(char *)a32addr,(char **)&laddr);
+      res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)a32addr,(char **)&laddr);
       if (res != 0) 
 	{
 	  printf("vetrocInit: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",a32addr);
@@ -462,7 +463,7 @@ vetrocInit(UINT32 addr, UINT32 addr_inc, int ndc, int iFlag)
 	  return(ERROR);
 	}
 #else
-      res = vmeBusToLocalAdrs(0x09,(char *)a32addr,(char **)&laddr);
+      res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)a32addr,(char **)&laddr);
       if (res != 0) 
 	{
 	  printf("vetrocInit: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",a32addr);
@@ -619,7 +620,7 @@ vetrocStatus(int id, int sflag)
 	 id, (UINT32) VETROCp[id]);
 #else
   printf("\nSTATUS for VETROC in slot %d at VME (Local) base address 0x%x (0x%x)\n",
-	 id, (UINT32) VETROCp[id] - vetrocA24Offset, (UINT32) VETROCp[id]);
+		 id, (UINT32) (((unsigned long)VETROCp[id]) - vetrocA24Offset), (unsigned long) VETROCp[id]);
 #endif
   printf("---------------------------------------------------------------------- \n");
 
@@ -628,7 +629,7 @@ vetrocStatus(int id, int sflag)
     {
       printf(" Alternate VME Addressing: Multiblock Enabled\n");
       if(adr32&VETROC_A32_ENABLE)
-	printf("   A32 Enabled at VME (Local) base 0x%08x (0x%08x)\n",(adr32&0xFF80)<<16,(UINT32) VETROCpd[id]);
+	printf("   A32 Enabled at VME (Local) base 0x%08x (0x%lx)\n",(adr32&0xFF80)<<16,(unsigned long) VETROCpd[id]);
       else
 	printf("   A32 Disabled\n");
     
@@ -638,7 +639,7 @@ vetrocStatus(int id, int sflag)
     {
       printf(" Alternate VME Addressing: Multiblock Disabled\n");
       if(adr32&VETROC_A32_ENABLE)
-	printf("   A32 Enabled at VME (Local) base 0x%08x (0x%08x)\n",(adr32&0xFF80)<<16,(UINT32) VETROCpd[id]);
+	printf("   A32 Enabled at VME (Local) base 0x%08x (0x%lx)\n",(adr32&0xFF80)<<16,(unsigned long) VETROCpd[id]);
       else
 	printf("   A32 Disabled\n");
     }
@@ -894,11 +895,11 @@ vetrocReadBlock(int id, volatile UINT32 *data, int nwrds, int rflag)
 	      VETROCUNLOCK;
 	      return(ERROR);
 	    }
-	  vmeAdr = (unsigned int)(VETROCpmb) - vetrocA32Offset;
+	  vmeAdr = (unsigned int)((unsigned long)(VETROCpmb) - vetrocA32Offset);
 	}
       else
 	{
-	  vmeAdr = (unsigned int)(VETROCpd[id]) - vetrocA32Offset;
+	  vmeAdr = (unsigned int)((unsigned long)(VETROCpd[id]) - vetrocA32Offset);
 	}
 	  /*
 #ifdef VXWORKS
@@ -907,7 +908,7 @@ vetrocReadBlock(int id, volatile UINT32 *data, int nwrds, int rflag)
       retVal = vmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2));
 #endif
 	  */
-    retVal = usrVme2MemDmaStart(vmeAdr, (UINT32)laddr, (nwrds<<2));
+    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned long)laddr, (nwrds<<2));
       if(retVal |= 0) 
 	{
 	  logMsg("vetrocReadBlock: ERROR in DMA transfer Initialization 0x%x\n",retVal,0,0,0,0,0);

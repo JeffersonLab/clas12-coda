@@ -14,6 +14,9 @@
 -- 
 -- Create Date:    0.0 2014/10/13 IM
 -- Revision:       1.0 2014/11/20 IM Take into account new Feu_RunCtrl_EvTstExt parameter
+--                 3.0 2018/11/04 IM Self trigger replaced PushButton trigger
+--                 4.0 2019/11/29 IM Feu_RunCtrl_ZsTyp added to support ToT ZS
+--                     2020/01/15 IM AdcReset added
 --
 -- Comments:
 --
@@ -22,15 +25,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <execinfo.h>
 
 #include "ReturnCodes.h"
 #include "Parser.h"
-
-#include "i2c_eeprom.h"
-#include "i2c_Max16031.h"
 
 #include "CBus.h"
 #include "CBus_Common.h"
@@ -405,6 +404,109 @@ int AdcConfig( AdcParams *adc_params, int feu_id, int beu_id, int beu_lnk_id )
 			}
 		} // if( adc_params->adc_reg[reg].flg != AdcRegFlag_Unset )
 	} // for( reg=1; reg<D_AdcPar_NumOfRegs; reg++ )
+	return D_RetCode_Sucsess;
+}
+
+/*****************************************************************
+ ******************       Adc Reset      ************************
+ *****************************************************************/
+int AdcReset( int feu_id, int beu_id, int beu_lnk_id )
+{
+	int ret;
+	unsigned char wr_val;
+	unsigned char rd_val;
+  int time_out;
+
+	// Set the ADC reset
+	wr_val = 0x03;
+	if( (ret = Spi_AdcRegWrite( 0x0008, &wr_val )) !=  D_RetCode_Sucsess )
+	{
+		fprintf( stderr,  "%s: Spi_AdcRegWrite( 0x0008, 0x03 ) failed for feu=%d beu=%d lnk=%d with %d\n",
+			__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		if( sys_log_fptr != (FILE *)NULL )
+			fprintf( sys_log_fptr,  "%s: Spi_AdcRegWrite( 0x0008, 0x03 ) failed for feu=%d beu=%d lnk=%d with %d\n",
+				__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		return ret;
+	}
+  // Force Adc to take into account internal register values
+	wr_val = 0x01;
+	if( Spi_AdcRegWrite( 0xFF, &wr_val ) !=  D_RetCode_Sucsess )
+	{
+		fprintf( stderr,  "%s: Spi_AdcRegWrite( 0xFF, 0x01 ) failed for feu=%d beu=%d lnk=%d with %d\n",
+			__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		if( sys_log_fptr != (FILE *)NULL )
+			fprintf( sys_log_fptr,  "%s: Spi_AdcRegWrite( 0xFF, 0x01 ) failed for feu=%d beu=%d lnk=%d with %d\n",
+				__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		return ret;
+	}
+	wr_val = 0x00;
+	if( Spi_AdcRegWrite( 0xFF, &wr_val ) !=  D_RetCode_Sucsess )
+	{
+		fprintf( stderr,  "%s: Spi_AdcRegWrite( 0xFF, 0x00 ) failed for feu=%d beu=%d lnk=%d with %d\n",
+			__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		if( sys_log_fptr != (FILE *)NULL )
+			fprintf( sys_log_fptr,  "%s: Spi_AdcRegWrite( 0xFF, 0x00 ) failed for feu=%d beu=%d lnk=%d with %d\n",
+				__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		return ret;
+	}
+
+	// Clear the ADC registers
+	wr_val = 0x00;
+	if( (ret = Spi_AdcRegWrite( 0x0008, &wr_val )) !=  D_RetCode_Sucsess )
+	{
+		fprintf( stderr,  "%s: Spi_AdcRegWrite( 0x0008, 0x00 ) failed for feu=%d beu=%d lnk=%d with %d\n",
+			__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		if( sys_log_fptr != (FILE *)NULL )
+			fprintf( sys_log_fptr,  "%s: Spi_AdcRegWrite( 0x0008, 0x03 ) failed for feu=%d beu=%d lnk=%d with %d\n",
+				__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		return ret;
+	}
+  // Force Adc to take into account internal register values
+	wr_val = 0x01;
+	if( Spi_AdcRegWrite( 0xFF, &wr_val ) !=  D_RetCode_Sucsess )
+	{
+		fprintf( stderr,  "%s: Spi_AdcRegWrite( 0xFF, 0x01 ) failed for feu=%d beu=%d lnk=%d with %d\n",
+			__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		if( sys_log_fptr != (FILE *)NULL )
+			fprintf( sys_log_fptr,  "%s: Spi_AdcRegWrite( 0xFF, 0x01 ) failed for feu=%d beu=%d lnk=%d with %d\n",
+				__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		return ret;
+	}
+	wr_val = 0x00;
+	if( Spi_AdcRegWrite( 0xFF, &wr_val ) !=  D_RetCode_Sucsess )
+	{
+		fprintf( stderr,  "%s: Spi_AdcRegWrite( 0xFF, 0x00 ) failed for feu=%d beu=%d lnk=%d with %d\n",
+			__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		if( sys_log_fptr != (FILE *)NULL )
+			fprintf( sys_log_fptr,  "%s: Spi_AdcRegWrite( 0xFF, 0x00 ) failed for feu=%d beu=%d lnk=%d with %d\n",
+				__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		return ret;
+	}
+
+	// Now verify that ADC is in running mode
+  time_out = 1000;
+	do
+	{
+    if( (ret = Spi_AdcRegRead( 0x08, &rd_val )) !=  D_RetCode_Sucsess )
+		{
+			fprintf( stderr,  "%s: Spi_AdcRegRead(0x08) failed for feu=%d beu=%d lnk=%d with %d\n",
+				__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+			if( sys_log_fptr != (FILE *)NULL )
+				fprintf( sys_log_fptr,  "%s: Spi_AdcRegRead(0x08) failed for feu=%d beu=%d lnk=%d with %d\n",
+					__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+			return ret;
+		}
+    time_out--;
+    if( time_out == 0 )
+    {
+      fprintf( stderr, "%s: timeout for feu=%d beu=%d lnk=%d with rd_val=0x%08x\n",
+	      __FUNCTION__, feu_id, beu_id, beu_lnk_id, rd_val );
+      if( sys_log_fptr != (FILE *)NULL )
+	      fprintf( sys_log_fptr, "%s: timeout for feu=%d beu=%d lnk=%d with rd_val=0x%08x\n",
+		      __FUNCTION__, feu_id, beu_id, beu_lnk_id, rd_val );
+      return D_RetCode_Err_NetIO;
+    }
+	} while( rd_val != 0 );
 	return D_RetCode_Sucsess;
 }
 
@@ -2033,6 +2135,12 @@ int _FeuReset( FeuParams *feu_params, int feu_id, int beu_id, int beu_lnk_id )
 		fprintf( stderr,  "%s: DrmClkConfig failed for feu=%d beu=%d lnk=%d with %d\n", __FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
 		return ret;
 	}
+  // Reset ADC
+	if( (ret = AdcReset( feu_id, beu_id, beu_lnk_id )) < 0 )
+	{
+		fprintf( stderr,  "%s: AdcReset failed for feu=%d beu=%d lnk=%d with %d\n", __FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
+		return ret;
+	}
 
 	// Make sure the FEU is not in running state
 	// Set address 
@@ -2248,14 +2356,17 @@ int _FeuConfig( FeuParams *feu_params, int feu_id, int beu_id, int beu_lnk_id )
 	(
 		( feu_params->Main_Conf_DreamMask >= 0 )
 		||
+		( feu_params->Main_Conf_DreamPol >= 0 )
+		||
 		( feu_params->Main_Conf_Samples >= 0 )
 		||
-		( feu_params->Main_Conf_DataPipeLen >= 0 )
+		( feu_params->Main_Conf_SparseRd >= 0 )
 	)
 	{
 		// Main module config parameters
 		// Only recovered clock is supported, this is even nonsence to setup 
-		wr_val = D_Main_Conf_Set( 0, feu_params->Main_Conf_Samples, (feu_params->Main_Conf_DreamMask&0xFF), feu_params->Main_Conf_DataPipeLen, 0, RecClk );
+//		wr_val = D_Main_Conf_Set( 0, (feu_params->Main_Conf_DreamMask&0xFF), feu_params->Main_Conf_Samples, feu_params->Main_Conf_SparseRd, RecClk );
+		wr_val = D_Main_Conf_Set( 0, (feu_params->Main_Conf_DreamMask&0xFF), feu_params->Main_Conf_Samples, feu_params->Main_Conf_SparseRd, RecClk, (feu_params->Main_Conf_DreamPol&0xFF) );
 		// Set address address 
 		reg_adr = D_CBus_SetModType( 0, D_CBus_Mod_Main );
 		reg_adr = D_MainAdr_Set( reg_adr, D_MainAdr_RegConfig );
@@ -2471,10 +2582,10 @@ printf("%s: Feu %d dream_pair=%d power wr_val 0x%08x (beu %d lnk %d)\n",
 		||
 		( feu_params->Feu_RunCtrl_ZS >= 0 )
 		||
-		( feu_params->Feu_RunCtrl_DrOvr >= 0 )
+		( feu_params->Feu_RunCtrl_ZsTyp >= 0 )
 		||
-		( feu_params->Feu_RunCtrl_DrDblSmpClk >= 0 )
-		||
+//		( feu_params->Feu_RunCtrl_DrOvr >= 0 ) // Depricated
+//		||
 		( feu_params->Feu_RunCtrl_RdDel >= 0 )
 		||
 		( feu_params->Feu_RunCtrl_EvTstExt >= 0 )
@@ -2487,7 +2598,8 @@ printf("%s: Feu %d dream_pair=%d power wr_val 0x%08x (beu %d lnk %d)\n",
 	)
 	{
 		// FEU Run Control parameters
-		wr_val = D_Feu_RunCtrl_Set( 0, feu_params->Feu_RunCtrl_Pd, feu_params->Feu_RunCtrl_CM, feu_params->Feu_RunCtrl_ZS, feu_params->Feu_RunCtrl_ZsChkSmp, feu_id, feu_params->Feu_RunCtrl_AdcDatRdyDel, feu_params->Feu_RunCtrl_DrDblSmpClk, feu_params->Feu_RunCtrl_DrOvr, feu_params->Feu_RunCtrl_EvTstExt, feu_params->Feu_RunCtrl_RdDel, feu_params->Feu_RunCtrl_CmOffset );
+//		wr_val = D_Feu_RunCtrl_Set( 0, feu_params->Feu_RunCtrl_Pd, feu_params->Feu_RunCtrl_CM, feu_params->Feu_RunCtrl_ZS, feu_params->Feu_RunCtrl_ZsTyp, feu_params->Feu_RunCtrl_ZsChkSmp, feu_id, feu_params->Feu_RunCtrl_AdcDatRdyDel, feu_params->Feu_RunCtrl_DrOvr, feu_params->Feu_RunCtrl_EvTstExt, feu_params->Feu_RunCtrl_RdDel, feu_params->Feu_RunCtrl_CmOffset );
+		wr_val = D_Feu_RunCtrl_Set( 0, feu_params->Feu_RunCtrl_Pd, feu_params->Feu_RunCtrl_CM, feu_params->Feu_RunCtrl_ZS, feu_params->Feu_RunCtrl_ZsTyp, feu_params->Feu_RunCtrl_ZsChkSmp, feu_id, feu_params->Feu_RunCtrl_AdcDatRdyDel, 0, feu_params->Feu_RunCtrl_EvTstExt, feu_params->Feu_RunCtrl_RdDel, feu_params->Feu_RunCtrl_CmOffset );
 		// Set address address 
 		reg_adr = D_CBus_SetModType( 0, D_CBus_Mod_Feu );
 		reg_adr = D_Feu_AdrReg_Set( reg_adr, C_Feu_AdrReg_RunCtrl );
@@ -2891,12 +3003,17 @@ printf("%s: Feu %d dream_pair=%d power wr_val 0x%08x (beu %d lnk %d)\n",
 	 */
 	if( (ret=DreamSpiConfigCheck( feu_params->dream_params, feu_id, beu_id, beu_lnk_id, feu_params->Main_Conf_DreamMask )) != D_RetCode_Sucsess )
 	{
-    fprintf( stderr,  "%s: DreamConfigCheck failed for feu=%d beu=%d lnk=%d with %d\n",
+    fprintf( stderr,  "%s: DreamSpiConfigCheck failed for feu=%d beu=%d lnk=%d with %d\n",
 			__FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
 		if( sys_log_fptr != (FILE *)NULL )
-		  fprintf( sys_log_fptr,  "%s: DreamConfigCheck failed for feu=%d beu=%d lnk=%d with %d\n",
+		  fprintf( sys_log_fptr,  "%s: DreamSpiConfigCheck failed for feu=%d beu=%d lnk=%d with %d\n",
 			  __FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
 //		getchar();
+    fprintf( stderr,  "%s: Attempt to reconfigure feu=%d beu=%d lnk=%d using DreamConfig\n",
+			__FUNCTION__, feu_id, beu_id, beu_lnk_id );
+		if( sys_log_fptr != (FILE *)NULL )
+		  fprintf( sys_log_fptr,  "%s: Attempt to reconfigure feu=%d beu=%d lnk=%d DreamConfig\n",
+			  __FUNCTION__, feu_id, beu_id, beu_lnk_id );
 		if( (ret=DreamConfig( feu_params->dream_params, feu_id, beu_id, beu_lnk_id, feu_params->Main_Conf_DreamMask )) != D_RetCode_Sucsess )
 		{
 			fprintf( stderr,  "%s: DreamConfig failed for feu=%d beu=%d lnk=%d with %d\n",
@@ -2914,6 +3031,11 @@ printf("%s: Feu %d dream_pair=%d power wr_val 0x%08x (beu %d lnk %d)\n",
 		    fprintf( sys_log_fptr,  "%s: DreamConfigCheck failed for feu=%d beu=%d lnk=%d with %d\n",
 			    __FUNCTION__, feu_id, beu_id, beu_lnk_id, ret );
 		}
+    fprintf( stderr,  "%s: DreamConfig for feu=%d beu=%d lnk=%d OK\n",
+			__FUNCTION__, feu_id, beu_id, beu_lnk_id );
+		if( sys_log_fptr != (FILE *)NULL )
+		  fprintf( sys_log_fptr,  "%s: DreamConfig for feu=%d beu=%d lnk=%d OK\n",
+			  __FUNCTION__, feu_id, beu_id, beu_lnk_id );
 	}
 
 
@@ -3714,7 +3836,7 @@ int FeuTrgScan_Init( FeuTrgScan *scan, FeuParams *feu_params, int feu_id, int be
 	reg_adr = D_Tg_AdrReg_Set(  reg_adr, D_Tg_RegAdr_Conf );
 	// Write
 	// Only optical link trigger is supported 
-	wr_val = D_Tg_RegConf_Set( 0, 0, feu_params->Trig_Conf_TrigPipeLen, Tg_Src_PushButton, 0 );
+	wr_val = D_Tg_RegConf_Set( 0, 0, feu_params->Trig_Conf_TrigPipeLen, Tg_Src_Self, 0 );
 	if( (ret = Beu_ReqResp(feu_id, beu_id, beu_lnk_id, reg_adr, wr_val, DEF_FEU_WRITE, &rd_val ) ) < 0 )
 	{
 		fprintf( stderr,  "%s: Beu_ReqResp failed for feu=%d beu=%d lnk=%d reg=0x%06x\n",

@@ -1,6 +1,6 @@
 /******************************************************************************
 *
-*  dcrbLib.h  - Driver library header file for readout of the dcrb boards
+*  dcrbLib.c  - Driver library header file for readout of the dcrb boards
 *
 *  Author: Ben Raydo
 *          Jefferson Lab Data Acquisition Group
@@ -81,9 +81,9 @@ LOCAL UINT32      dcrbIntVec      = DCRB_VME_INT_VEC;           /* default inter
 
 /* Define global variables */
 int ndcrb = 0;                                       /* Number of DCRBs in Crate */
-int dcrbA32Base   = 0x09000000;                      /* Minimum VME A32 Address for use by DCRBs */
-int dcrbA32Offset = 0x08000000;                      /* Difference in CPU A32 Base - VME A32 Base */
-int dcrbA24Offset = 0x0;                             /* Difference in CPU A24 Base - VME A24 Base */
+unsigned int dcrbA32Base   = 0x09000000;             /* Minimum VME A32 Address for use by DCRBs */
+unsigned long dcrbA32Offset = 0x08000000;            /* Difference in CPU A32 Base - VME A32 Base */
+unsigned long dcrbA24Offset = 0x0;                   /* Difference in CPU A24 Base - VME A24 Base */
 volatile dcrb_regs *DCRBp[(DCRB_MAX_BOARDS+1)];      /* pointers to DCRB memory map */
 volatile unsigned int *DCRBpd[(DCRB_MAX_BOARDS+1)];  /* pointers to DCRB FIFO memory */
 volatile unsigned int *DCRBpmb;                      /* pointer to Multblock window */
@@ -174,7 +174,8 @@ dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
   int maxSlot = 1;
   int minSlot = 21;
   int syncSrc=0, trigSrc=0, clkSrc=0, srSrc=0;
-  unsigned int rdata, laddr, laddr_inc, a32addr;
+  unsigned long laddr=0, laddr_inc=0;
+  unsigned int rdata, a32addr;
   volatile dcrb_regs *dcrb;
   unsigned short sdata;
   int noBoardInit=0;
@@ -216,7 +217,7 @@ dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
 #ifdef VXWORKS
       res = sysBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr);
 #else
-      res = vmeBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr);
+      res = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)addr,(char **)&laddr);
 #endif
       if (res != 0) 
 	{
@@ -259,8 +260,8 @@ dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
 #ifdef VXWORKS
 	  printf("dcrbInit: ERROR: No addressable board at addr=0x%x\n",(UINT32) dcrb);
 #else
-	  printf("dcrbInit: ERROR: No addressable board at VME (Local) addr=0x%x (0x%x)\n",
-		 (UINT32) laddr_inc-dcrbA24Offset, (UINT32) dcrb);
+	  printf("dcrbInit: ERROR: No addressable board at VME (Local) addr=0x%x (0x%lx)\n",
+		 (UINT32) laddr_inc-dcrbA24Offset, (unsigned long) dcrb);
 #endif
 	  /*errFlag = 1;*/
 /* 	  break; */
@@ -270,8 +271,8 @@ dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
 	  /* Check that it is an DCRB board */
 	  if((rdata&DCRB_BOARD_MASK) != DCRB_BOARD_ID) 
 	  {
-	    printf(" ERROR: For board at 0x%x, Invalid Board ID: 0x%x\n",
-		     (UINT32) dcrb, rdata);
+	    printf(" ERROR: For board at 0x%lx, Invalid Board ID: 0x%x\n",
+		     (unsigned long) dcrb, rdata);
         continue;
 	  }
 	  /* Check if this is board has a valid slot number */
@@ -289,9 +290,12 @@ dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
 	  if(boardID <= minSlot) minSlot = boardID;
 	  
     vers   = vmeRead32(&DCRBp[(dcrbID[ndcrb])]->Cfg.FirmwareRev) & DCRB_VERSION_MASK;
-	  printf("Initialized DCRB %2d  Slot # %2d at address 0x%08x (0x%08x), versoin 0x%08X \n",
-		 ndcrb,dcrbID[ndcrb],(UINT32) DCRBp[(dcrbID[ndcrb])],
-		 (UINT32) DCRBp[(dcrbID[ndcrb])]-dcrbA24Offset, vers);
+
+	  printf("Initialized DCRB %2d  Slot # %2d at address 0x%08x (0x%lx), version 0x%08X \n",
+		 ndcrb,dcrbID[ndcrb],
+			 (UINT32) (((unsigned long)DCRBp[(dcrbID[ndcrb])])-dcrbA24Offset),
+         (unsigned long) DCRBp[(dcrbID[ndcrb])],
+          vers);
 	  ndcrb++;
 /* 	  printf("Initialized DCRB %2d  Slot # %2d at address 0x%08x \n", */
 /* 		 ii,dcrbID[ii],(UINT32) DCRBp[(dcrbID[ii])]); */
@@ -337,7 +341,7 @@ dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
       dcrbA32Offset = laddr - dcrbA32Base;
     }
 #else
-  res = vmeBusToLocalAdrs(0x09,(char *)dcrbA32Base,(char **)&laddr);
+  res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)dcrbA32Base,(char **)&laddr);
   if (res != 0) 
     {
       printf("dcrbInit: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",dcrbA32Base);fflush(stdout);
@@ -436,7 +440,7 @@ dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
 	  return(ERROR);
 	}
 #else
-      res = vmeBusToLocalAdrs(0x09,(char *)a32addr,(char **)&laddr);
+      res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)a32addr,(char **)&laddr);
       if (res != 0) 
 	{
 	  printf("dcrbInit: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",a32addr);
@@ -450,6 +454,9 @@ dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
 	
 	  /* Set Default Block Level to 1 */
 	  vmeWrite32(&(DCRBp[dcrbID[ii]]->EB.BlockCfg),1);
+ 
+    /* Trigger busy threshold */ 
+	  vmeWrite32(&DCRBp[dcrbID[ii]]->EB.TrigCntBusyThr, 1/*2*/);
 
       /* berr for every board; TODO: multiblock needs it on last board only !!!*/
       vmeWrite32(&(DCRBp[dcrbID[ii]]->EB.ReadoutCfg), DCRB_ENABLE_BERR);
@@ -478,7 +485,7 @@ dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
 	  return(ERROR);
 	}
 #else
-      res = vmeBusToLocalAdrs(0x09,(char *)a32addr,(char **)&laddr);
+      res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)a32addr,(char **)&laddr);
       if (res != 0) 
 	{
 	  printf("dcrbInit: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",a32addr);
@@ -659,6 +666,7 @@ dcrbStatus(int id, int sflag)
   fifoEventCnt = vmeRead32(&DCRBp[id]->EB.FifoEventCnt);
   fifoBlockCnt = vmeRead32(&DCRBp[id]->EB.FifoBlockCnt);
   readoutCfg = vmeRead32(&DCRBp[id]->EB.ReadoutCfg);
+  trigBusyThreshold = vmeRead32(&DCRBp[id]->EB.TrigCntBusyThr);
   tdcConfig[0] = vmeRead32(&DCRBp[id]->Tdc[0].DeadCycles);
   tdcConfig[1] = vmeRead32(&DCRBp[id]->Tdc[1].DeadCycles);
   tdcConfig[2] = vmeRead32(&DCRBp[id]->Tdc[2].DeadCycles);
@@ -685,8 +693,8 @@ dcrbStatus(int id, int sflag)
   printf("\nSTATUS for DCRB in slot %d at base address 0x%x \n",
 	 id, (UINT32) DCRBp[id]);
 #else
-  printf("\nSTATUS for DCRB in slot %d at VME (Local) base address 0x%x (0x%x)\n",
-	 id, (UINT32) DCRBp[id] - dcrbA24Offset, (UINT32) DCRBp[id]);
+  printf("\nSTATUS for DCRB in slot %d at VME (Local) base address 0x%x (0x%lx)\n",
+		 id, (UINT32)(unsigned long)(DCRBp[id] - dcrbA24Offset), (unsigned long) DCRBp[id]);
 #endif
   printf("---------------------------------------------------------------------- \n");
 
@@ -695,7 +703,7 @@ dcrbStatus(int id, int sflag)
     {
       printf(" Alternate VME Addressing: Multiblock Enabled\n");
       if(adr32&DCRB_A32_ENABLE)
-	printf("   A32 Enabled at VME (Local) base 0x%08x (0x%08x)\n",(adr32&0xFF80)<<16,(UINT32) DCRBpd[id]);
+	printf("   A32 Enabled at VME (Local) base 0x%08x (0x%lx)\n",(adr32&0xFF80)<<16,(unsigned long) DCRBpd[id]);
       else
 	printf("   A32 Disabled\n");
     
@@ -705,7 +713,7 @@ dcrbStatus(int id, int sflag)
     {
       printf(" Alternate VME Addressing: Multiblock Disabled\n");
       if(adr32&DCRB_A32_ENABLE)
-	printf("   A32 Enabled at VME (Local) base 0x%08x (0x%08x)\n",(adr32&0xFF80)<<16,(UINT32) DCRBpd[id]);
+	printf("   A32 Enabled at VME (Local) base 0x%08x (0x%lx)\n",(adr32&0xFF80)<<16,(unsigned long) DCRBpd[id]);
       else
 	printf("   A32 Disabled\n");
     }
@@ -766,6 +774,8 @@ dcrbStatus(int id, int sflag)
   printf("   Blocks in FIFO  = %u  (Block level = %d)\n", fifoBlockCnt, blockConfig & 0x7ff);
   printf("   Events in FIFO  = %u\n", fifoEventCnt);
   printf("   Words in FIFO   = %u\n", fifoWordCnt);
+
+  printf("   Trigger Busy Threshold = %u\n", trigBusyThreshold);
   
   printf("\n DAC Threshold: %dmV\n", dcrbGetDAC(id));
 
@@ -989,11 +999,11 @@ dcrbReadBlock(int id, volatile unsigned int *data, int nwrds, int rflag)
 	      DCRBUNLOCK;
 	      return(ERROR);
 	    }
-	  vmeAdr = (unsigned int)(DCRBpmb) - dcrbA32Offset;
+	  vmeAdr = (unsigned int)((unsigned long)(DCRBpmb) - dcrbA32Offset);
 	}
       else
 	{
-	  vmeAdr = (unsigned int)(DCRBpd[id]) - dcrbA32Offset;
+	  vmeAdr = (unsigned int)((unsigned long)(DCRBpd[id]) - dcrbA32Offset);
 	}
 	  /*
 #ifdef VXWORKS
@@ -1002,7 +1012,7 @@ dcrbReadBlock(int id, volatile unsigned int *data, int nwrds, int rflag)
       retVal = vmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2));
 #endif
 	  */
-    retVal = usrVme2MemDmaStart(vmeAdr, (UINT32)laddr, (nwrds<<2));
+    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned long)laddr, (nwrds<<2));
       if(retVal |= 0) 
 	{
 	  logMsg("dcrbReadBlock: ERROR in DMA transfer Initialization 0x%x\n",retVal,0,0,0,0,0);

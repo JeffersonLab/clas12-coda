@@ -239,8 +239,8 @@ tdInit(UINT32 addr, UINT32 addr_inc, int nfind, int iFlag)
 	  /* Check that it is a TD */
 	  if(((rdata&TD_BOARDID_TYPE_MASK)>>16) != TD_BOARDID_TYPE_TD)
 	    {
-	      printf(" WARN: For board at 0x%x, Invalid Board ID: 0x%x\n",
-		     (UINT32) td, rdata);
+ 	      printf(" WARN: For board at VME addr=0x%x, Invalid Board ID: 0x%x\n",
+ 		     (UINT32)(laddr_inc - tdA24Offset), rdata);
 	      continue;
 	    }
 	  else 
@@ -3404,7 +3404,7 @@ tdGetTranceiverStatus(int id, unsigned int *data, int maxwords)
       return ERROR;
     }
 
-  i2cOptp = (unsigned int *)((unsigned int)TDp[id] + 0x50000);
+  i2cOptp = (unsigned int *)((unsigned long)TDp[id] + 0x50000);
 
   TDLOCK;
   /* set the i2c device address to 0xA0# */

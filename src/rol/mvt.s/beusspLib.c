@@ -836,46 +836,49 @@ int beusspGetMultiGTXStatus(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg, un
  *  RETURNS: OK if successful, otherwise ERROR.
  *
 */
-int  beusspResetMultiGTX(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
+int beusspResetMultiGTX(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
 {
-
   unsigned int res=0, timeout = 0;
 
   if(BEUSSPreg == NULL) 
+  {
+    fprintf( stderr,"%s: ERROR: BEUSSP not initialized\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  BEUSSPLOCK;
+  
+    vmeWrite32( &BEUSSPreg->regin_7, 0x00010000); //multigtx reset high
+    printf(" Resetting multigigabit transceivers. \n\r" );
+		do
     {
-      fprintf( stderr,"%s: ERROR: BEUSSP not initialized\n",__FUNCTION__);
-      return ERROR;
-    }
-
-		BEUSSPLOCK;
-	  
-		vmeWrite32( &BEUSSPreg->regin_7, 0x00010000);  //multigtx reset high
-		printf(" Resetting multigigabit transceivers. \n\r" );
-		do{
 			res = vmeRead32( &BEUSSPreg->regout_10  );
-		} while  ( (res & 0x00000001) == 1 )   ;        // check multigtx ready low        
+		}
+    while( (res & 0x1) == 1 ); // check multigtx ready low        
 
-		vmeWrite32( &BEUSSPreg->regin_7, 0x00000000);  //multigtx reset low
+		vmeWrite32( &BEUSSPreg->regin_7, 0x00000000); //multigtx reset low
 		timeout = 0;
 		usleep(100000);
-		do{
+		do
+    {
 			res = vmeRead32( &BEUSSPreg->regout_10  );
 			timeout += 1;
-		} while ( ( timeout < 0x001FFFFF ) && ((res & 0x00000001) == 0 ) ) ;  	// check multigtx ready high
+		}
+    while ( ( timeout < 0x001FFFFF ) && ( (res & 0x1) == 0 ) );  	// check multigtx ready high
 
-
-		if ( timeout < 0x001FFFFF )  {
+		if ( timeout < 0x001FFFFF )
+    {
 			printf("%s: Multi Gigabit tranceivers ready\n",__FUNCTION__);
-			BEUSSPUNLOCK;
 		}
 		else
 		{
-			fprintf( stderr,"%s: ERROR: Multi Gigabit tranceivers not ready res=0x%08x &0x1!=1\n",__FUNCTION__, res);
+			fprintf( stderr,"%s: ERROR: Multi Gigabit tranceivers not ready res=0x%08x & 0x1 = 0\n",__FUNCTION__, res);
 			BEUSSPUNLOCK;
 			return ERROR;
 		}
-			
-		return OK;
+
+  BEUSSPUNLOCK;
+  return OK;
 }
 /*******************************************************************************
  *
@@ -888,36 +891,38 @@ int  beusspResetMultiGTX(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
  *  RETURNS: OK if successful, otherwise ERROR.
  *
 */
-int  beusspResetGClkPll(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
+int beusspResetGClkPll(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
 {
-
   unsigned int res=0, timeout=0;
-	  if(BEUSSPreg == NULL) 
-		{
-		  fprintf( stderr,"%s: ERROR: BEUSSP not initialized\n",__FUNCTION__);
-		  return ERROR;
-		}
-				
-		BEUSSPLOCK;
-	  
+  if(BEUSSPreg == NULL) 
+  {
+    fprintf( stderr,"%s: ERROR: BEUSSP not initialized\n",__FUNCTION__);
+    return ERROR;
+  }
+			
+  BEUSSPLOCK;
+
 		vmeWrite32( &BEUSSPreg->regin_7, 0x00020000);  //glclk pll reset high
 		printf(" Resetting global clock pll. \n\r" );
-		do{
-			res = vmeRead32( &BEUSSPreg->regout_B  );
-		} while (  ( (res & 0x00000001) == 1 ) ||  ( (res & 0x00000100) == 1 )  ) ;                
+		do
+    {
+			res = vmeRead32( &BEUSSPreg->regout_B );
+		}
+    while( ( (res & 0x1) == 1 ) || ( (res & 0x100) == 0x100 ) );                
 
 		vmeWrite32( &BEUSSPreg->regin_7, 0x00000000); //glclk pll reset low
 		timeout = 0;
 		usleep(500);
-		do{
+		do
+    {
 			res = vmeRead32( &BEUSSPreg->regout_B  );
 			timeout += 1;
-		} while ( ( timeout < 0x001FFFFF ) && ((res & 0x00000100) == 0 ) ) ;  
+		}
+    while ( (timeout < 0x001FFFFF) && ( (res & 0x100) == 0 ) );  
 
-
-		if ( timeout < 0x001FFFFF )  {
+		if ( timeout < 0x001FFFFF )
+    {
 			printf("%s: GLOBAL clock PLL locked\n\r",__FUNCTION__); 
-			BEUSSPUNLOCK;
 		}
 		else
 		{
@@ -925,8 +930,9 @@ int  beusspResetGClkPll(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
 			BEUSSPUNLOCK;
 			return ERROR;
 		}
-			
-		return OK;
+
+  BEUSSPUNLOCK;
+  return OK;
 }
 
 
@@ -1212,7 +1218,7 @@ int beusspReadBlock(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  volatile u
 
 	/*printf("vmeAdr=0x%08x laddr=0x%08x\n",vmeAdr,laddr );  */
 	/*retVal = vmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2));*/
-	retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int)laddr, (nwrds << 2));
+	retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int *)laddr, (nwrds << 2));
 
       if(retVal |= 0) 
 	{
@@ -2955,7 +2961,7 @@ int beusspTokenReadBlock(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  volat
 
 	/*	retVal = vmeDmaSend          */
 
-	retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int)laddr, (nwrds << 2));
+	retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int *)laddr, (nwrds << 2));
 	
 	
       if(retVal |= 0) 

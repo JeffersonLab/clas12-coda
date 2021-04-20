@@ -93,10 +93,10 @@ LOCAL UINT32      fadcIntVec      = FA_VME_INT_VEC;           /* default interru
 
 /* Define global variables */
 int nfadc = 0;                                       /* Number of FADCs in Crate */
-int fadcA32Base   = 0x09000000;/*sergey*/            /* Minimum VME A32 Address for use by FADCs */
-int fadcA32Offset = 0x08000000;                      /* Difference in CPU A32 Base - VME A32 Base */
-int fadcA24Offset = 0x0;                             /* Difference in CPU A24 Base - VME A24 Base */
-int fadcA16Offset = 0x0;                             /* Difference in CPU A16 Base - VME A16 Base */
+unsigned int  fadcA32Base   = 0x09000000;/*sergey*/            /* Minimum VME A32 Address for use by FADCs */
+unsigned long fadcA32Offset = 0x08000000;                      /* Difference in CPU A32 Base - VME A32 Base */
+unsigned long fadcA24Offset = 0x0;                             /* Difference in CPU A24 Base - VME A24 Base */
+unsigned long fadcA16Offset = 0x0;                             /* Difference in CPU A16 Base - VME A16 Base */
 volatile struct fadc_struct *FAp[(FA_MAX_BOARDS+1)]; /* pointers to FADC memory map */
 volatile struct fadc_sdc_struct *FASDCp;             /* pointer to FADC Signal distribution card */
 volatile unsigned int *FApd[(FA_MAX_BOARDS+1)];      /* pointers to FADC FIFO memory */
@@ -185,7 +185,8 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
   int maxSlot = 1;
   int minSlot = 21;
   int trigSrc=0, clkSrc=0, srSrc=0;
-  unsigned int rdata, laddr, laddr_inc, a32addr, a16addr=0;
+  unsigned long laddr=0, laddr_inc=0;
+  unsigned int rdata, a32addr, a16addr=0;
   volatile struct fadc_struct *fa;
   unsigned short sdata;
   int noBoardInit=0;
@@ -235,7 +236,7 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 #ifdef VXWORKS
       res = sysBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr);
 #else
-      res = vmeBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr);
+      res = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)addr,(char **)&laddr);
 #endif
       if (res != 0) 
 	{
@@ -279,8 +280,8 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 #ifdef VXWORKS
 	  printf("faInit: ERROR: No addressable board at addr=0x%x\n",(UINT32) fa);
 #else
-	  printf("faInit: ERROR: No addressable board at VME (Local) addr=0x%x (0x%x)\n",
-		 (UINT32) laddr_inc-fadcA24Offset, (UINT32) fa);
+	  printf("faInit: ERROR: No addressable board at VME (Local) addr=0x%x (0x%lx)\n",
+		 (UINT32) laddr_inc-fadcA24Offset, (unsigned long) fa);
 #endif
 #endif
 	  errFlag = 1;
@@ -415,9 +416,15 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 		  if(boardID >= maxSlot) maxSlot = boardID;
 		  if(boardID <= minSlot) minSlot = boardID;
 	      
+	      printf("Initialized FADC %2d  Slot #%2d at VME (Local) address 0x%06x (0x%lx) \n",
+		     nfadc,fadcID[nfadc],
+		     (UINT32) (((unsigned long)FAp[(fadcID[nfadc])])-fadcA24Offset),
+		     (unsigned long) FAp[(fadcID[nfadc])]);
+		  /*
 		  printf("Initialized FADC %2d  Slot # %2d at address 0x%08x (0x%08x) \n",
 			 nfadc,fadcID[nfadc],(UINT32) FAp[(fadcID[nfadc])],
 			 (UINT32) FAp[(fadcID[nfadc])]-fadcA24Offset);
+		  */
 		}
 	  }
 	  nfadc++;
@@ -447,7 +454,7 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 
       res = vxMemProbe((char *) laddr,VX_READ,2,(char *)&sdata);
 #else
-      res = vmeBusToLocalAdrs(0x29,(char *)a16addr,(char **)&laddr);
+      res = vmeBusToLocalAdrs(0x29,(char *)(unsigned long)a16addr,(char **)&laddr);
       if (res != 0) 
 	{
 	  printf("faInit: ERROR in vmeBusToLocalAdrs(0x29,0x%x,&laddr) \n",a16addr);
@@ -475,8 +482,8 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 	  printf("Using JLAB FADC Signal Distribution Module at address 0x%x\n",
 		 (UINT32) FASDCp); 
 #else
-	  printf("Using JLAB FADC Signal Distribution Module at VME (Local) address 0x%x (0x%x)\n",
-		 (UINT32)a16addr, (UINT32) FASDCp); 
+	  printf("Using JLAB FADC Signal Distribution Module at VME (Local) address 0x%x (0x%lx)\n",
+		 (UINT32)a16addr, (unsigned long) FASDCp); 
 #endif
 	  fadcUseSDC=1;
 	}
@@ -524,10 +531,10 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
       fadcA32Offset = laddr - fadcA32Base;
     }
 #else
-  res = vmeBusToLocalAdrs(0x09,(char *)fadcA32Base,(char **)&laddr);
+  res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)fadcA32Base,(char **)&laddr);
   if (res != 0) 
     {
-      printf("faInit: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",fadcA32Base);
+      printf("faInit: ERROR in vmeBusToLocalAdrs(0x09,0x%lx,&laddr) \n",(unsigned long)fadcA32Base);
       return(ERROR);
     } 
   else 
@@ -708,7 +715,7 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 	  return(ERROR);
 	}
 #else
-      res = vmeBusToLocalAdrs(0x09,(char *)a32addr,(char **)&laddr);
+      res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)a32addr,(char **)&laddr);
       if (res != 0) 
 	{
 	  printf("faInit: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",a32addr);
@@ -747,7 +754,7 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 	  return(ERROR);
 	}
 #else
-    res = vmeBusToLocalAdrs(0x09,(char *)a32addr,(char **)&laddr);
+    res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)a32addr,(char **)&laddr);
     if (res != 0) 
 	{
 	  printf("faInit: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",a32addr);
@@ -791,6 +798,7 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
     return(OK);
   }
 }
+
 
 void
 faSetA32BaseAddress(unsigned int addr)
@@ -989,8 +997,8 @@ faStatus(int id, int sflag)
   printf("\nSTATUS for FADC in slot %d at base address 0x%x \n",
 	 id, (UINT32) FAp[id]);
 #else
-  printf("\nSTATUS for FADC in slot %d at VME (Local) base address 0x%x (0x%x)\n",
-	 id, (UINT32) FAp[id] - fadcA24Offset, (UINT32) FAp[id]);
+  printf("\nSTATUS for FADC in slot %d at VME (Local) base address 0x%x (0x%lx)\n",
+		 id, (UINT32)(unsigned long)(FAp[id] - fadcA24Offset), (unsigned long) FAp[id]);
 #endif
   printf("---------------------------------------------------------------------- \n");
 
@@ -1000,7 +1008,7 @@ faStatus(int id, int sflag)
     {
       printf(" Alternate VME Addressing: Multiblock Enabled\n");
       if(addr32&FA_A32_ENABLE)
-	printf("   A32 Enabled at VME (Local) base 0x%08x (0x%08x)\n",a32Base,(UINT32) FApd[id]);
+	printf("   A32 Enabled at VME (Local) base 0x%08x (0x%lx)\n",a32Base,(unsigned long) FApd[id]);
       else
 	printf("   A32 Disabled\n");
     
@@ -1010,7 +1018,7 @@ faStatus(int id, int sflag)
     {
       printf(" Alternate VME Addressing: Multiblock Disabled\n");
       if(addr32&FA_A32_ENABLE)
-	printf("   A32 Enabled at VME (Local) base 0x%08x (0x%08x)\n",a32Base,(UINT32) FApd[id]);
+	printf("   A32 Enabled at VME (Local) base 0x%08x (0x%lx)\n",a32Base,(unsigned long) FApd[id]);
       else
 	printf("   A32 Disabled\n");
     }
@@ -2128,11 +2136,11 @@ faReadBlock(int id, volatile UINT32 *data, int nwrds, int rflag)
 	    FAUNLOCK;
 	    return(ERROR);
 	  }
-	  vmeAdr = (unsigned int)(FApmb) - fadcA32Offset;
+	  vmeAdr = (unsigned int)((unsigned long)(FApmb) - fadcA32Offset);
 	}
     else
 	{
-	  vmeAdr = (unsigned int)(FApd[id]) - fadcA32Offset;
+	  vmeAdr = (unsigned int)((unsigned long)(FApd[id]) - fadcA32Offset);
 	}
 /*sergey
 #ifdef VXWORKS
@@ -2144,7 +2152,7 @@ faReadBlock(int id, volatile UINT32 *data, int nwrds, int rflag)
 /*
 	printf("faReadBlock: fadcA32Offset=0x%08x vmeAdr=0x%08x laddr=0x%08x nwrds=%d\n",fadcA32Offset,vmeAdr,laddr,nwrds);fflush(stdout);
 */
-    retVal = usrVme2MemDmaStart(vmeAdr, (UINT32)laddr, (nwrds<<2));
+    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned long)laddr, (nwrds<<2));
 
     if(retVal |= 0) 
 	{
@@ -6216,8 +6224,8 @@ faSDC_Status(int sFlag)
 #ifdef VXWORKS
   printf("\nSTATUS for FADC Signal Distribution Card at base address 0x%x \n",(UINT32) FASDCp);
 #else
-  printf("\nSTATUS for FADC Signal Distribution Card at VME (Local) base address 0x%x (0x%x)\n",
-	 (UINT32) FASDCp - fadcA16Offset, (UINT32) FASDCp);
+  printf("\nSTATUS for FADC Signal Distribution Card at VME (Local) base address 0x%x (0x%lx)\n",
+		 (UINT32)((unsigned long)FASDCp - fadcA16Offset), (unsigned long) FASDCp);
 #endif
   printf("---------------------------------------------------------------- \n");
 

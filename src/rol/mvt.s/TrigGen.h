@@ -87,7 +87,7 @@
 		Tg_Src_Int        = 0,
 		Tg_Src_ExtAsyn    = 1,
 		Tg_Src_ExtSyn     = 2,
-		Tg_Src_PushButton = 3,
+		Tg_Src_Self       = 3,
 		Tg_Src_Soft       = 4,
 		Tg_Src_Constant   = 5,
 		Tg_Src_Memory     = 6,

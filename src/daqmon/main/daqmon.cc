@@ -317,7 +317,7 @@ main(int argc, char **argv)
   {
     int CTAB = tab_id[itab];
     int s_pad = 1;
-    for(int ii=3; ii<=3; ii++)
+    for(int ii=6; ii<=6; ii++)
     {
       sprintf(srv_trig[ii].REM_HOST,"clondaq%d",ii);
 

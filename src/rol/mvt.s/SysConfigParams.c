@@ -177,6 +177,186 @@ int SysParams_Init( SysParams *params )
 	return D_RetCode_Sucsess;
 }
 
+// Initialize the SysParams structure with minimal default reasonable values
+int SysParams_MinSet( SysParams *params )
+{
+  int index;
+	int ret;
+	FeuParams  *feu_params;
+  BeuSspConf *beu_params;
+
+	// Check for Null pointer
+	if( params == (SysParams *)NULL )
+	{
+		fprintf( stderr, "%s: params=0\n", __FUNCTION__ );
+		return D_RetCode_Err_Null_Pointer;
+	}
+
+  /*
+   * Set default system parameters
+   */
+	params->ClkMode           = Smp40_Rd40;
+	params->NbOfEvtPerBlk     = 1;
+	params->BlockPrescale     = 1;
+	params->EventLimit        = 0;
+	params->RepRawData        = 0;
+	params->CmpDataFmt        = Sys_CmpDatFmt_Packed;
+	params->SelfTrigLat       = 256;
+	params->SelfTrigWin       = 0;
+	params->Verbose           = 0;
+
+  /*
+   * Set default bec parameters
+   */
+  params->Bec_Params[0].SelfTrigMult =   0;
+	params->Bec_Params[0].SelfTrigWin  = 150;
+  /*
+   * Set default beu parameters
+   */
+  beu_params = &(params->BeuSspConf_Col.beu_conf[0]);
+	// Self trigger parameters
+	beu_params->SelfTrigMult   = 3;
+	beu_params->SelfTrigWid    = 200;
+	// Derived from system and BEC parameters
+	  // beu_params
+	  // SelfTrigLat
+	  // SelfTrigWin
+
+	// Trigger FIFO Parameters
+	beu_params->TrgFifo_Lwm    = 40;
+	beu_params->TrgFifo_Hwm    = 48; 
+	beu_params->TrgFifo_Full   = 56;
+	beu_params->TrgTstp_Offset = 0;
+
+	// Synchronisation parameters
+	  // ClkSrc
+	beu_params->TrgSrc  = BeuTrgSrc_Ti1;
+	beu_params->BsySrc  = BeuBsySrc_TrgFifo | BeuBsySrc_InMem;
+	beu_params->SyncSrc = BeuSynSrc_Ti;
+
+	// Feu data packet concentration timeout
+	beu_params->timeout = 8000; 
+	beu_params->MaskToInput = 0;
+
+	// Input memory Parameters
+	beu_params->InMemBusyThr = 34768;
+
+  /*
+   * Set default feu parameters
+   */
+	// Main module config parameters
+  feu_params = &(params->FeuParams_Col.feu_params[0]);
+  sprintf( feu_params->Main_Conf_ClkSel, "RecClk" );
+	  // Main_Conf_SparseRd
+  feu_params->Main_Conf_DreamMask = 0;
+  feu_params->Main_Conf_DreamPol  = 0;
+    // 	Main_Conf_Samples;
+
+	// Main module Trigger logic parameters
+    // Will be set by systems
+	feu_params->Main_Trig_TimeStamp =  0;
+	feu_params->Main_Trig_OvrWrnLwm = 61;
+	feu_params->Main_Trig_OvrWrnHwm = 62;
+	feu_params->Main_Trig_OvrThersh = 63;
+	feu_params->Main_Trig_LocThrot  =  0;
+
+	// FEU PowerUp Register
+  feu_params->Feu_Pwr_Dream  = 0xF;
+  feu_params->Feu_Pwr_PrtFlt = 0xFFFF;
+
+	// FEU Run Control parameters
+	  // Feu_RunCtrl_Pd;
+	  // Feu_RunCtrl_CM;
+	  // Feu_RunCtrl_ZS;
+	  // Feu_RunCtrl_ZsTyp;
+	  // Feu_RunCtrl_ZsChkSmp;
+  feu_params->Feu_RunCtrl_CmOffset = 256;
+    //Feu_RunCtrl_Id;
+  feu_params->Feu_RunCtrl_AdcDatRdyDel = 8;
+  feu_params->Feu_RunCtrl_EvTstExt = 0;
+	feu_params->Feu_RunCtrl_RdDel = 0;
+	sprintf( feu_params->Feu_RunCtrl_PdFile, "None" );
+	sprintf( feu_params->Feu_RunCtrl_ZsFile, "None" );
+
+	// Common Pulser parameters
+  feu_params->Feu_Pulser_Enable = 0;
+  feu_params->Feu_Pulser_DreamTst = 0;
+  feu_params->Feu_Pulser_PulseWid = 0;
+
+	// FEU Prescale parameters
+  feu_params->Feu_PreScale_EvtData = 1;
+  feu_params->Feu_InterPacket_Delay = 0;
+
+	// Trigger Interface/Generator parameters
+  sprintf( feu_params->Trig_Conf_Src, "Tg_Src_Int" );
+  sprintf( feu_params->Trig_Conf_File, "None" );
+  feu_params->Trig_Conf_TrigPipeLen = 1;
+  feu_params->Trig_Conf_TrigVetoLen = 0;
+  feu_params->Trig_Conf_Rate = 0;
+
+	// Auxiliari Trigger Interface
+  feu_params->TI_Ignore = 1;
+  feu_params->TI_DcBal_Enc = 0;
+  feu_params->TI_DcBal_Dec = 0;
+  feu_params->TI_Bert = 0;
+
+	// Self Trigger parameters
+  feu_params->SelfTrig_CmbHitPropFb = 0;
+  feu_params->SelfTrig_CmbHitPropOl = 0;
+  feu_params->SelfTrig_DreamMask = 0xFF;
+  feu_params->SelfTrig_Mult = 7;
+  feu_params->SelfTrig_TrigTopo = 0;
+  feu_params->SelfTrig_DrmHitWid = 0x3F;
+  feu_params->SelfTrig_CmbHitWid = 0x3F;
+  feu_params->SelfTrig_Veto = 0xFFFFFF;
+  for( index=0; index<D_FeuPar_SelfTrigTopo_Size; index++ )
+    feu_params->SelfTrig_Topology[index] = 0;
+
+	// Communication registers
+  feu_params->ComChan_Enable = 1;
+  feu_params->UdpChan_Enable = 0;
+  feu_params->UdpChan_MultiPackEnb = 0;
+  feu_params->UdpChan_MultiPackThr = 0;
+    // NetChan_Ip[16]
+
+	// Set reasonable Dream register values 
+  // Multiplicity register 2
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[2].reg[0]=0x0E00; // Mult set to 55
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[2].reg[1]=0x0008; // EvId forced to 0
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[2].reg[2]=0;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[2].reg[3]=0;
+  // Pulser registers 3 and 4 : no pulser
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[3].reg[0]=0;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[3].reg[1]=0;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[3].reg[2]=0;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[3].reg[3]=0;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[4].reg[0]=0;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[4].reg[1]=0;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[4].reg[2]=0;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[4].reg[3]=0;
+  // Discriminator mask registers 8 and 9 : mask all discriminators
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[8].reg[0]=0xFFFF;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[8].reg[1]=0xFFFF;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[8].reg[2]=0;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[8].reg[3]=0;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[9].reg[0]=0xFFFF;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[9].reg[1]=0xFFFF;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[9].reg[2]=0;
+	feu_params->dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[9].reg[3]=0;
+
+
+/*
+	// propagate common beu parameters
+	if( ret = FeuParamsCol_PropComParams( &(params->FeuParams_Col) ) != D_RetCode_Sucsess )
+	{
+		fprintf( stderr, "%s: FeuParamsCol_PropComParams failed with %d\n", __FUNCTION__, ret );
+		return D_RetCode_Err_Null_Pointer;
+	}
+*/
+	// All went fine
+	return D_RetCode_Sucsess;
+}
+
 // Dump in ASCII the SysParams structure to a buffer
 int SysParams_Sprintf( SysParams *params, char *buf  )
 {
@@ -680,39 +860,8 @@ int SysParams_Prop( SysParams *params )
 		feu_params = &(params->FeuParams_Col.feu_params[0]);
 //		if( feu_params->Feu_RunCtrl_Id > 0 )
 //		{
-			feu_params->Main_Conf_Samples = params->NbOfSmpPerEvt;
-			sprintf( feu_params->Main_Conf_ClkSel, "RecClk" );
-//			feu_params->Feu_Pwr_Dream = 0xF;
-			feu_params->Feu_Pwr_PrtFlt = 0xFFFF;
-			feu_params->Feu_RunCtrl_DrDblSmpClk = 0;
-			feu_params->Main_Conf_DataPipeLen = params->SparseSmp;
-			feu_params->Feu_RunCtrl_AdcDatRdyDel = 8;
-			feu_params->Feu_RunCtrl_EvTstExt = 0;
-//			feu_params->Feu_Pulser_Enable = 0;
-//			feu_params->Feu_Pulser_DreamTst = 0;
-//			feu_params->Feu_Pulser_PulseWid = 0;
-			feu_params->Feu_PreScale_EvtData = 1;
-			sprintf( feu_params->Trig_Conf_Src, "Tg_Src_Int" );
-			sprintf( feu_params->Trig_Conf_File, "None" );
-			feu_params->Trig_Conf_TrigVetoLen = 0;
-			feu_params->Trig_Conf_Rate = 0;
-			feu_params->TI_Ignore = 1;
-			feu_params->TI_DcBal_Enc = 0;
-			feu_params->TI_DcBal_Dec = 0;
-			feu_params->TI_Bert = 0;
-			feu_params->SelfTrig_CmbHitPropFb = 0;
-			feu_params->SelfTrig_CmbHitPropOl = 0;
-/*
-			feu_params->SelfTrig_DreamMask = 0xFF;
-			feu_params->SelfTrig_Mult = 7;
-			feu_params->SelfTrig_CmbHitPropOl = 0;
-			feu_params->SelfTrig_TrigTopo = 0;
-			feu_params->SelfTrig_DrmHitWid = 0x3F;
-			feu_params->SelfTrig_CmbHitWid = 0x3F;
-			feu_params->SelfTrig_Veto = 0xFFFFFF;
-*/
-			feu_params->UdpChan_Enable = 0;
-			feu_params->ComChan_Enable = 1;
+			feu_params->Main_Conf_Samples  = params->NbOfSmpPerEvt;
+			feu_params->Main_Conf_SparseRd = params->SparseSmp;
 			// Dream clock parameters
 			feu_params->dream_clk_params.RdClk_Div    = PredefinedSysClcParams[params->ClkMode].DrmRdClkDiv;
 			feu_params->dream_clk_params.WrClk_Div    = PredefinedSysClcParams[params->ClkMode].DrmWrClkDiv;
@@ -727,7 +876,7 @@ int SysParams_Prop( SysParams *params )
 			// 1                 1 through 3                    5
 			// 2                 1 through 4                    6
 			// 3                 1 through 5                    7
-                        // 4                 1 through 6                    8
+      // 4                 1 through 6                    8
 			//
 			if( feu_params->Feu_RunCtrl_ZS == 1 )
 			{
@@ -738,6 +887,42 @@ int SysParams_Prop( SysParams *params )
 					feu_params->Feu_RunCtrl_ZsChkSmp = params->NbOfSmpPerEvt-4;
 				}
 			}
+
+/*
+			sprintf( feu_params->Main_Conf_ClkSel, "RecClk" );
+//			feu_params->Feu_Pwr_Dream = 0xF;
+			feu_params->Feu_Pwr_PrtFlt = 0xFFFF;
+
+			feu_params->Feu_RunCtrl_AdcDatRdyDel = 8;
+			feu_params->Feu_RunCtrl_EvTstExt = 0;
+//			feu_params->Feu_Pulser_Enable = 0;
+//			feu_params->Feu_Pulser_DreamTst = 0;
+//			feu_params->Feu_Pulser_PulseWid = 0;
+
+			feu_params->Feu_PreScale_EvtData = 1;
+			sprintf( feu_params->Trig_Conf_Src, "Tg_Src_Int" );
+			sprintf( feu_params->Trig_Conf_File, "None" );
+			feu_params->Trig_Conf_TrigVetoLen = 0;
+			feu_params->Trig_Conf_Rate = 0;
+			feu_params->TI_Ignore = 1;
+			feu_params->TI_DcBal_Enc = 0;
+			feu_params->TI_DcBal_Dec = 0;
+			feu_params->TI_Bert = 0;
+
+			feu_params->SelfTrig_CmbHitPropFb = 0;
+			feu_params->SelfTrig_CmbHitPropOl = 0;
+
+			feu_params->SelfTrig_DreamMask = 0xFF;
+			feu_params->SelfTrig_Mult = 7;
+			feu_params->SelfTrig_CmbHitPropOl = 0;
+			feu_params->SelfTrig_TrigTopo = 0;
+			feu_params->SelfTrig_DrmHitWid = 0x3F;
+			feu_params->SelfTrig_CmbHitWid = 0x3F;
+			feu_params->SelfTrig_Veto = 0xFFFFFF;
+
+			feu_params->UdpChan_Enable = 0;
+			feu_params->ComChan_Enable = 1;
+*/
 //		}
 //	}
 

@@ -16,7 +16,9 @@
  *                                                                         *
  ***************************************************************************/
 
+#define STR7201_BOARD_ID       0x0202
 #define SIS3801_BOARD_ID       0x3801
+#define SIS3820_BOARD_ID       0x3820
 #define SIS_MAX_SLOTS              21
 
 /* Level 2 defs */

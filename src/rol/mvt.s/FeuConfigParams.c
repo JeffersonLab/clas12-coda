@@ -35,6 +35,10 @@
 --                 1.3 2016/02/24 IM Number of Topological trigger registers increased from 8 to 32
 --                 1.4 2016/03/15 IM Max16031 registers added
 --                     2016/03/18 IM Gradually replace Main_Conf_DataPipeLen by Main_Conf_SparseRd parameter
+--                 3.0 2018/11/04 IM SparseRd parameter instead of the DataPipeLen
+--                                   Ignore deprecated DblSmpClk, AdcDtn and AdcPwr parameters
+--                 4.0 2018/11/29 IM Feu_RunCtrl_ZsTyp added to support ToT ZS
+--                 5.0 2019/10/07 IM Dream polarity parameter added
 --
 -- Comments:
 --
@@ -48,83 +52,6 @@
 #include "Parser.h"
 #include "ReturnCodes.h"
 #include "FeuConfigParams.h"
-
-/***************************************************************/
-/* Parse a command line                                        */
-/***************************************************************/
-/*
-#define LINE_SIZE	256
-#define NBMAX_ARGV 	32
-
-//typedef char ArgvArray[NBMAX_ARGV][LINE_SIZE];
-int        argc;
-ArgvArray  argv;
-
-void parse_line(char *s)
-{
-	int i = 0;
-	int j = 0;
-
-	argc=0;
-	while (    (*s != '\0')
-			&& (*s != '\n')
-			&& (*s != '\r')
-//			&& (*s != '*' )
-			&& (*s != '#' )  )
-	{
-		if ( (*s != ' ') && (*s != '\t') && (*s != '=') )
-		{
-			if( !i )
-				j = argc++;
-			argv[j][i++] = *s;
-		}
-		else
-		{
-			if( i )
-				argv[j][i++] = '\0';
-			i=0;
-		}
-		s++;
-	}
-	if( i )
-		argv[j][i++] = '\0';
-}
-*/
-/********************************************************************/
-/****** Extract a word from line ************************************/
-/********************************************************************/
-/*
-char *getword( line, word )
-char *line;
-char *word;
-{
-	int done;
-
-	done = 0;
-	while( (*line != '\0') && ((*line == ' ' ) || (*line == '\t') || (*line == '=')) )
-		line++;
-	while(done==0)
-	{
-		switch(*line)
-		{
-			case '=':
-			case ' ':
-			case '\t':
-			case '\0':
-			case '\n':
-				*word++ = '\0';
-				done = 1;
-				break;
-			default:
-				*word++ = *line++;
-		}
-	}
-	while( (*line != '\0') && ((*line == ' ' ) || (*line == '\t') || (*line == '=')) )
-		line++;
-
-	return line;
-}
-*/
 
 int FeuParams_Init( FeuParams *feu_params )
 {
@@ -140,9 +67,9 @@ int FeuParams_Init( FeuParams *feu_params )
 
 	// Main module config parameters
 	feu_params->Main_Conf_ClkSel[0]      ='\0';
-	feu_params->Main_Conf_AdcDtp         =  0; // Depricated
-	feu_params->Main_Conf_DataPipeLen    = -1; // Use for sparce readout
+	feu_params->Main_Conf_SparseRd       = -1;
 	feu_params->Main_Conf_DreamMask      = -1;
+	feu_params->Main_Conf_DreamPol       = -1;
 	feu_params->Main_Conf_Samples        = -1;
 	// Main module Trigger logic parameters
 	feu_params->Main_Trig_TimeStamp      = -1;
@@ -154,14 +81,13 @@ int FeuParams_Init( FeuParams *feu_params )
 	// FEU PowerUp Register
 	feu_params->Feu_Pwr_Dream            = -1;
 	feu_params->Feu_Pwr_PrtFlt           = -1; 
-	feu_params->Feu_Pwr_Adc              =  0; // Depricated
 	// FEU Run Control parameters
 	feu_params->Feu_RunCtrl_Pd           = -1;
 	feu_params->Feu_RunCtrl_CM           = -1;
 	feu_params->Feu_RunCtrl_ZS           = -1;
-	feu_params->Feu_RunCtrl_DrOvr        = -1;
-	feu_params->Feu_RunCtrl_DrDblSmpClk  = -1;
+	feu_params->Feu_RunCtrl_ZsTyp        = -1;
 	feu_params->Feu_RunCtrl_ZsChkSmp     = -1;
+//	feu_params->Feu_RunCtrl_DrOvr        = -1; // Depricated
 	feu_params->Feu_RunCtrl_Id           = -1;
 	feu_params->Feu_RunCtrl_AdcDatRdyDel = -1;
 	feu_params->Feu_RunCtrl_EvTstExt     = -1;
@@ -221,6 +147,19 @@ int FeuParams_Init( FeuParams *feu_params )
 	{
 		for( reg=0; reg<D_DreamPar_NumOfRegs; reg++ )
 			feu_params->dream_params[dream].dream_reg[reg].reg[0]=-1;
+	}
+	// Never touch Dream registers 10 and 11
+  // All 64 Dream channels must be anabled for readout
+	for( dream=0; dream<D_FeuPar_NumOfDreams; dream++ )
+	{
+		feu_params->dream_params[dream].dream_reg[10].reg[0]=0xFFFF;
+		feu_params->dream_params[dream].dream_reg[10].reg[1]=0xFFFF;
+		feu_params->dream_params[dream].dream_reg[10].reg[2]=0;
+		feu_params->dream_params[dream].dream_reg[10].reg[3]=0;
+		feu_params->dream_params[dream].dream_reg[11].reg[0]=0xFFFF;
+		feu_params->dream_params[dream].dream_reg[11].reg[1]=0xFFFF;
+		feu_params->dream_params[dream].dream_reg[11].reg[2]=0;
+		feu_params->dream_params[dream].dream_reg[11].reg[3]=0;
 	}
 	// Dream clock parameters
 	feu_params->dream_clk_params.RdClk_Div    = (double)0.0;
@@ -316,25 +255,19 @@ int FeuParamsCol_Sprintf( FeuParamsCol *feu_params_col, char *buf  )
 				sprintf( append_str, "Feu %s Main_Conf_ClkSel %s\n", feu_str, feu_params_col->feu_params[feu].Main_Conf_ClkSel );
 				strcat( buf, append_str);
 			}
-			if
-			(
-				( (feu == 0) && (feu_params_col->feu_params[0].Main_Conf_AdcDtp != 0) )
-				|| 
-				( feu_params_col->feu_params[feu].Main_Conf_AdcDtp != feu_params_col->feu_params[0].Main_Conf_AdcDtp )
-			)
+			if( (feu == 0) || ( feu_params_col->feu_params[feu].Main_Conf_SparseRd != feu_params_col->feu_params[0].Main_Conf_SparseRd) )
 			{
-				sprintf( append_str, "Feu %s Main_Conf_AdcDtp %d\n", feu_str, feu_params_col->feu_params[feu].Main_Conf_AdcDtp );
-				strcat( buf, append_str);
-			}
-			if( (feu == 0) || ( feu_params_col->feu_params[feu].Main_Conf_DataPipeLen != feu_params_col->feu_params[0].Main_Conf_DataPipeLen) )
-			{
-				sprintf( append_str, "Feu %s Main_Conf_SparseRd %d\n", feu_str, feu_params_col->feu_params[feu].Main_Conf_DataPipeLen );
-//				sprintf( append_str, "Feu %s Main_Conf_DataPipeLen %d\n", feu_str, feu_params_col->feu_params[feu].Main_Conf_DataPipeLen );
+				sprintf( append_str, "Feu %s Main_Conf_SparseRd %d\n", feu_str, feu_params_col->feu_params[feu].Main_Conf_SparseRd );
 				strcat( buf, append_str);
 			}
 			if( (feu == 0) || (feu_params_col->feu_params[feu].Main_Conf_DreamMask != feu_params_col->feu_params[0].Main_Conf_DreamMask) )
 			{
 				sprintf( append_str, "Feu %s Main_Conf_DreamMask 0x%02x\n", feu_str, feu_params_col->feu_params[feu].Main_Conf_DreamMask );
+				strcat( buf, append_str);
+			}
+			if( (feu == 0) || (feu_params_col->feu_params[feu].Main_Conf_DreamPol != feu_params_col->feu_params[0].Main_Conf_DreamPol) )
+			{
+				sprintf( append_str, "Feu %s Main_Conf_DreamPol 0x%02x\n", feu_str, feu_params_col->feu_params[feu].Main_Conf_DreamPol );
 				strcat( buf, append_str);
 			}
 			if( (feu == 0) || (feu_params_col->feu_params[feu].Main_Conf_Samples != feu_params_col->feu_params[0].Main_Conf_Samples) )
@@ -385,16 +318,6 @@ int FeuParamsCol_Sprintf( FeuParamsCol *feu_params_col, char *buf  )
 				sprintf( append_str, "Feu %s Feu_Pwr_PrtFlt 0x%04x\n", feu_str, feu_params_col->feu_params[feu].Feu_Pwr_PrtFlt );
 				strcat( buf, append_str);
 			}
-			if
-			(
-				( (feu == 0) && (feu_params_col->feu_params[0].Feu_Pwr_Adc != 0) ) 
-				||
-				(feu_params_col->feu_params[feu].Feu_Pwr_Adc != feu_params_col->feu_params[0].Feu_Pwr_Adc)
-			)
-			{
-				sprintf( append_str, "Feu %s Feu_Pwr_Adc %d\n", feu_str, feu_params_col->feu_params[feu].Feu_Pwr_Adc );
-				strcat( buf, append_str);
-			}
 //fprintf( stderr, "%s: Feu power OK\n", __FUNCTION__ );
 
 			// FEU Run Control parameters
@@ -414,16 +337,18 @@ int FeuParamsCol_Sprintf( FeuParamsCol *feu_params_col, char *buf  )
 				sprintf( append_str, "Feu %s Feu_RunCtrl_ZS %d\n", feu_str, feu_params_col->feu_params[feu].Feu_RunCtrl_ZS );
 				strcat( buf, append_str);
 			}
+			if( (feu == 0) || (feu_params_col->feu_params[feu].Feu_RunCtrl_ZsTyp != feu_params_col->feu_params[0].Feu_RunCtrl_ZsTyp) )
+			{
+				sprintf( append_str, "Feu %s Feu_RunCtrl_ZsTyp %d\n", feu_str, feu_params_col->feu_params[feu].Feu_RunCtrl_ZsTyp );
+				strcat( buf, append_str);
+			}
+/* // Depricated
 			if( (feu == 0) || (feu_params_col->feu_params[feu].Feu_RunCtrl_DrOvr != feu_params_col->feu_params[0].Feu_RunCtrl_DrOvr) )
 			{
 				sprintf( append_str, "Feu %s Feu_RunCtrl_DrOvr %d\n", feu_str, feu_params_col->feu_params[feu].Feu_RunCtrl_DrOvr );
 				strcat( buf, append_str);
 			}
-			if( (feu == 0) || (feu_params_col->feu_params[feu].Feu_RunCtrl_DrDblSmpClk != feu_params_col->feu_params[0].Feu_RunCtrl_DrDblSmpClk) )
-			{
-				sprintf( append_str, "Feu %s Feu_RunCtrl_DrDblSmpClk %d\n", feu_str, feu_params_col->feu_params[feu].Feu_RunCtrl_DrDblSmpClk );
-				strcat( buf, append_str);
-			}
+*/
 			if( (feu == 0) || (feu_params_col->feu_params[feu].Feu_RunCtrl_EvTstExt != feu_params_col->feu_params[0].Feu_RunCtrl_EvTstExt) )
 			{
 				sprintf( append_str, "Feu %s Feu_RunCtrl_EvTstExt %d\n", feu_str, feu_params_col->feu_params[feu].Feu_RunCtrl_EvTstExt );
@@ -480,7 +405,7 @@ int FeuParamsCol_Sprintf( FeuParamsCol *feu_params_col, char *buf  )
 			}
 			if( (feu == 0) || (feu_params_col->feu_params[feu].Feu_Pulser_DreamTst != feu_params_col->feu_params[0].Feu_Pulser_DreamTst) )
 			{
-				sprintf( append_str, "Feu %s Feu_Pulser_DreamTst 0x%2x\n", feu_str, feu_params_col->feu_params[feu].Feu_Pulser_DreamTst );
+				sprintf( append_str, "Feu %s Feu_Pulser_DreamTst 0x%02x\n", feu_str, feu_params_col->feu_params[feu].Feu_Pulser_DreamTst );
 				strcat( buf, append_str);
 			}
 			if( (feu == 0) || (feu_params_col->feu_params[feu].Feu_Pulser_PulseWid != feu_params_col->feu_params[0].Feu_Pulser_PulseWid) )
@@ -790,8 +715,16 @@ int FeuParamsCol_Sprintf( FeuParamsCol *feu_params_col, char *buf  )
 								(feu == 0)
 								&&
 								(dream != DEF_MAX_NB_OF_DREAM)
-								&& 
-								(feu_params_col->feu_params[0].dream_params[dream].dream_reg[reg].reg[0] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[0])
+								&&
+								(
+									(feu_params_col->feu_params[0].dream_params[dream].dream_reg[reg].reg[0] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[0])
+									||
+									(feu_params_col->feu_params[0].dream_params[dream].dream_reg[reg].reg[1] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[1])
+									||
+									(feu_params_col->feu_params[0].dream_params[dream].dream_reg[reg].reg[2] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[2])
+									||
+									(feu_params_col->feu_params[0].dream_params[dream].dream_reg[reg].reg[3] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[3])
+								)
 							)
 							||
 							(
@@ -800,7 +733,15 @@ int FeuParamsCol_Sprintf( FeuParamsCol *feu_params_col, char *buf  )
 								&&
 								(dream == DEF_MAX_NB_OF_DREAM)
 								&&
-								(feu_params_col->feu_params[feu].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[0] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[0])
+								(
+									(feu_params_col->feu_params[feu].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[0] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[0])
+									||
+									(feu_params_col->feu_params[feu].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[1] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[1])
+									||
+									(feu_params_col->feu_params[feu].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[2] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[2])
+									||
+									(feu_params_col->feu_params[feu].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[3] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[3])
+								)
 							)
 							||
 							(
@@ -816,6 +757,30 @@ int FeuParamsCol_Sprintf( FeuParamsCol *feu_params_col, char *buf  )
 										(feu_params_col->feu_params[feu].dream_params[dream].dream_reg[reg].reg[0] != feu_params_col->feu_params[0].dream_params[dream].dream_reg[reg].reg[0])
 										&&
 										(feu_params_col->feu_params[feu].dream_params[dream].dream_reg[reg].reg[0] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[0])
+									)
+									||
+									(
+										(feu_params_col->feu_params[feu].dream_params[dream].dream_reg[reg].reg[1] != feu_params_col->feu_params[feu].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[1])
+										&&
+										(feu_params_col->feu_params[feu].dream_params[dream].dream_reg[reg].reg[1] != feu_params_col->feu_params[0].dream_params[dream].dream_reg[reg].reg[1])
+										&&
+										(feu_params_col->feu_params[feu].dream_params[dream].dream_reg[reg].reg[1] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[1])
+									)
+									||
+									(
+										(feu_params_col->feu_params[feu].dream_params[dream].dream_reg[reg].reg[2] != feu_params_col->feu_params[feu].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[2])
+										&&
+										(feu_params_col->feu_params[feu].dream_params[dream].dream_reg[reg].reg[2] != feu_params_col->feu_params[0].dream_params[dream].dream_reg[reg].reg[2])
+										&&
+										(feu_params_col->feu_params[feu].dream_params[dream].dream_reg[reg].reg[2] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[2])
+									)
+									||
+									(
+										(feu_params_col->feu_params[feu].dream_params[dream].dream_reg[reg].reg[3] != feu_params_col->feu_params[feu].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[3])
+										&&
+										(feu_params_col->feu_params[feu].dream_params[dream].dream_reg[reg].reg[3] != feu_params_col->feu_params[0].dream_params[dream].dream_reg[reg].reg[3])
+										&&
+										(feu_params_col->feu_params[feu].dream_params[dream].dream_reg[reg].reg[3] != feu_params_col->feu_params[0].dream_params[DEF_MAX_NB_OF_DREAM].dream_reg[reg].reg[3])
 									)
 								)
 							)
@@ -1003,19 +968,17 @@ int FeuParamsCol_Parse( FeuParamsCol *feu_params_col, int line_num )
 			{
 				strcpy( feu_params_col->feu_params[feu].Main_Conf_ClkSel, argv[3] );
 			}
-			else if( (strcmp( argv[2], "Main_Conf_DataPipeLen" ) == 0) || (strcmp( argv[2], "Main_Conf_SparseRd" ) == 0) )
+			else if( strcmp( argv[2], "Main_Conf_SparseRd" ) == 0 )
 			{
-				feu_params_col->feu_params[feu].Main_Conf_DataPipeLen=atoi(argv[3]);
+				feu_params_col->feu_params[feu].Main_Conf_SparseRd=atoi(argv[3]);
 			}
-			/*
-			else if( strcmp( argv[2], "Main_Conf_AdcDtp"   ) == 0 )
-			{
-				feu_params_col->feu_params[feu].Main_Conf_AdcDtp=atoi(argv[3]);
-			}
-			*/
 			else if( strcmp( argv[2], "Main_Conf_DreamMask"   ) == 0 )
 			{
 				feu_params_col->feu_params[feu].Main_Conf_DreamMask=strtol( argv[3], &end_ptr, 16 );
+			}
+			else if( strcmp( argv[2], "Main_Conf_DreamPol"   ) == 0 )
+			{
+				feu_params_col->feu_params[feu].Main_Conf_DreamPol=strtol( argv[3], &end_ptr, 16 );
 			}
 			else if( strcmp( argv[2], "Main_Conf_Samples"   ) == 0 )
 			{
@@ -1070,14 +1033,16 @@ int FeuParamsCol_Parse( FeuParamsCol *feu_params_col, int line_num )
 			{
 				feu_params_col->feu_params[feu].Feu_RunCtrl_ZS=atoi(argv[3]);
 			}
+			else if( strcmp( argv[2], "Feu_RunCtrl_ZsTyp" ) == 0 )
+			{
+				feu_params_col->feu_params[feu].Feu_RunCtrl_ZsTyp=atoi(argv[3]);
+			}
+/* // Depricated
 			else if( strcmp( argv[2], "Feu_RunCtrl_DrOvr" ) == 0 )
 			{
 				feu_params_col->feu_params[feu].Feu_RunCtrl_DrOvr=atoi(argv[3]);
 			}
-			else if( strcmp( argv[2], "Feu_RunCtrl_DrDblSmpClk" ) == 0 )
-			{
-				feu_params_col->feu_params[feu].Feu_RunCtrl_DrDblSmpClk=atoi(argv[3]);
-			}
+*/
 			else if( strcmp( argv[2], "Feu_RunCtrl_EvTstExt" ) == 0 )
 			{
 				feu_params_col->feu_params[feu].Feu_RunCtrl_EvTstExt=atoi(argv[3]);
@@ -1282,8 +1247,6 @@ int FeuParamsCol_Parse( FeuParamsCol *feu_params_col, int line_num )
 	return D_RetCode_Sucsess;
 }
 
-
-
 int FeuParamsCol_Fread( FeuParamsCol *feu_params_col, FILE *fptr )
 {
 	char line[LINE_SIZE];
@@ -1340,11 +1303,12 @@ int FeuParamsCol_PropComParams( FeuParamsCol *feu_params_col )
 			sprintf(feu_params_col->feu_params[feu].Main_Conf_ClkSel, "%s", feu_params_col->feu_params[0].Main_Conf_ClkSel);
 		if( feu_params_col->feu_params[feu].Main_Conf_DreamMask < 0 )
 			feu_params_col->feu_params[feu].Main_Conf_DreamMask = feu_params_col->feu_params[0].Main_Conf_DreamMask;
+		if( feu_params_col->feu_params[feu].Main_Conf_DreamPol < 0 )
+			feu_params_col->feu_params[feu].Main_Conf_DreamPol = feu_params_col->feu_params[0].Main_Conf_DreamPol;
 		if( feu_params_col->feu_params[feu].Main_Conf_Samples < 0 )
 			feu_params_col->feu_params[feu].Main_Conf_Samples = feu_params_col->feu_params[0].Main_Conf_Samples;
-		feu_params_col->feu_params[feu].Main_Conf_AdcDtp = 0;
-		if( feu_params_col->feu_params[feu].Main_Conf_DataPipeLen < 0 )
-			feu_params_col->feu_params[feu].Main_Conf_DataPipeLen = feu_params_col->feu_params[0].Main_Conf_DataPipeLen;
+		if( feu_params_col->feu_params[feu].Main_Conf_SparseRd < 0 )
+			feu_params_col->feu_params[feu].Main_Conf_SparseRd = feu_params_col->feu_params[0].Main_Conf_SparseRd;
 
 		// Dream Clock parameters
 		if( feu_params_col->feu_params[feu].dream_clk_params.RdClk_Div == 0.0 )
@@ -1373,7 +1337,6 @@ int FeuParamsCol_PropComParams( FeuParamsCol *feu_params_col )
 			feu_params_col->feu_params[feu].Feu_Pwr_Dream = feu_params_col->feu_params[0].Feu_Pwr_Dream;
 		if( feu_params_col->feu_params[feu].Feu_Pwr_PrtFlt < 0 )
 			feu_params_col->feu_params[feu].Feu_Pwr_PrtFlt = feu_params_col->feu_params[0].Feu_Pwr_PrtFlt;
-		feu_params_col->feu_params[feu].Feu_Pwr_Adc = 0;
 
 		// FEU Run Control parameters
 		if( feu_params_col->feu_params[feu].Feu_RunCtrl_Pd < 0 )
@@ -1382,10 +1345,12 @@ int FeuParamsCol_PropComParams( FeuParamsCol *feu_params_col )
 			feu_params_col->feu_params[feu].Feu_RunCtrl_CM = feu_params_col->feu_params[0].Feu_RunCtrl_CM;
 		if( feu_params_col->feu_params[feu].Feu_RunCtrl_ZS < 0 )
 			feu_params_col->feu_params[feu].Feu_RunCtrl_ZS = feu_params_col->feu_params[0].Feu_RunCtrl_ZS;
+/* // Depricated
 		if( feu_params_col->feu_params[feu].Feu_RunCtrl_DrOvr < 0 )
 			feu_params_col->feu_params[feu].Feu_RunCtrl_DrOvr = feu_params_col->feu_params[0].Feu_RunCtrl_DrOvr;
-		if( feu_params_col->feu_params[feu].Feu_RunCtrl_DrDblSmpClk < 0 )
-			feu_params_col->feu_params[feu].Feu_RunCtrl_DrDblSmpClk = feu_params_col->feu_params[0].Feu_RunCtrl_DrDblSmpClk;
+*/
+		if( feu_params_col->feu_params[feu].Feu_RunCtrl_ZsTyp < 0 )
+			feu_params_col->feu_params[feu].Feu_RunCtrl_ZsTyp = feu_params_col->feu_params[0].Feu_RunCtrl_ZsTyp;
 		if( feu_params_col->feu_params[feu].Feu_RunCtrl_ZsChkSmp < 0 )
 			feu_params_col->feu_params[feu].Feu_RunCtrl_ZsChkSmp = feu_params_col->feu_params[0].Feu_RunCtrl_ZsChkSmp;
 //		if( feu_params_col->feu_params[feu].Feu_RunCtrl_Id < 0 )
@@ -1404,7 +1369,7 @@ int FeuParamsCol_PropComParams( FeuParamsCol *feu_params_col )
 		// 1                 1 through 3                    5
 		// 2                 1 through 4                    6
 		// 3                 1 through 5                    7
-                // 4                 1 through 6                    8
+    // 4                 1 through 6                    8
 		//
 		if( feu_params_col->feu_params[feu].Feu_RunCtrl_ZS == 1 )
 		{
@@ -1482,10 +1447,6 @@ int FeuParamsCol_PropComParams( FeuParamsCol *feu_params_col )
 		// Network Interface parameters
 		if( feu_params_col->feu_params[feu].UdpChan_Enable < 0 )
 			feu_params_col->feu_params[feu].UdpChan_Enable = feu_params_col->feu_params[0].UdpChan_Enable;
-/*
-		if( feu_params_col->feu_params[feu].UdpChan_Delay < 0 )
-			feu_params_col->feu_params[feu].UdpChan_Delay = feu_params_col->feu_params[0].UdpChan_Delay;
-*/
 		feu_params_col->feu_params[feu].UdpChan_Delay = 0;
 		if( feu_params_col->feu_params[feu].UdpChan_MultiPackEnb < 0 )
 			feu_params_col->feu_params[feu].UdpChan_MultiPackEnb = feu_params_col->feu_params[0].UdpChan_MultiPackEnb;
@@ -1577,241 +1538,3 @@ int FeuParamsCol_PropComParams( FeuParamsCol *feu_params_col )
 
 	return D_RetCode_Sucsess;
 }
-
-/* Old version
-int FeuParamsCol_PropComParams( FeuParamsCol *feu_params_col )
-{
-	int feu;
-	int index;
-
-	// Check input parameter
-	if( feu_params_col == (FeuParamsCol *)NULL )
-	{
-		fprintf( stderr, "FeuParamsCol_PropComParams: Null feu_params_col\n" );
-		return D_RetCode_Err_Null_Pointer;
-	}
-
-	for( feu=1; feu<D_FeuParamsCol_NumOfFeuParams; feu++ )
-	{
-		// Main module config parameters
-		if
-		(
-			( feu_params_col->feu_params[feu].Main_Conf_ClkSel[0] != '\0' )
-			||
-			( feu_params_col->feu_params[feu].Main_Conf_DreamMask >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Main_Conf_Samples >= 0 )
-		)
-		{
-			if( feu_params_col->feu_params[feu].Main_Conf_ClkSel[0]=='\0' )
-				sprintf(feu_params_col->feu_params[feu].Main_Conf_ClkSel, "%s", feu_params_col->feu_params[0].Main_Conf_ClkSel);
-			if( feu_params_col->feu_params[feu].Main_Conf_DreamMask < 0 )
-				feu_params_col->feu_params[feu].Main_Conf_DreamMask = feu_params_col->feu_params[0].Main_Conf_DreamMask;
-			if( feu_params_col->feu_params[feu].Main_Conf_Samples < 0 )
-				feu_params_col->feu_params[feu].Main_Conf_Samples = feu_params_col->feu_params[0].Main_Conf_Samples;
-			feu_params_col->feu_params[feu].Main_Conf_AdcDtp = 0;
-			feu_params_col->feu_params[feu].Main_Conf_DataPipeLen = 0;
-		}
-
-
-		// Main module trigger register
-		if
-		(
-			( feu_params_col->feu_params[feu].Main_Trig_TimeStamp >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Main_Trig_OvrWrnLwm >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Main_Trig_OvrWrnHwm >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Main_Trig_OvrThersh >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Main_Trig_LocThrot >= 0 )
-		)
-		{
-			if( feu_params_col->feu_params[feu].Main_Trig_TimeStamp < 0 )
-				feu_params_col->feu_params[feu].Main_Trig_TimeStamp = feu_params_col->feu_params[0].Main_Trig_TimeStamp;
-			if( feu_params_col->feu_params[feu].Main_Trig_OvrWrnLwm < 0 )
-				feu_params_col->feu_params[feu].Main_Trig_OvrWrnLwm = feu_params_col->feu_params[0].Main_Trig_OvrWrnLwm;
-			if( feu_params_col->feu_params[feu].Main_Trig_OvrWrnHwm < 0 )
-				feu_params_col->feu_params[feu].Main_Trig_OvrWrnHwm = feu_params_col->feu_params[0].Main_Trig_OvrWrnHwm;
-			if( feu_params_col->feu_params[feu].Main_Trig_OvrThersh < 0 )
-				feu_params_col->feu_params[feu].Main_Trig_OvrThersh = feu_params_col->feu_params[0].Main_Trig_OvrThersh;
-			if( feu_params_col->feu_params[feu].Main_Trig_LocThrot < 0 )
-				feu_params_col->feu_params[feu].Main_Trig_LocThrot = feu_params_col->feu_params[0].Main_Trig_LocThrot;
-		}
-
-		// FEU PowerUp Register
-		if
-		(
-			( feu_params_col->feu_params[feu].Feu_Pwr_Dream >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Feu_Pwr_PrtFlt >= 0 )
-		)
-		{
-			if( feu_params_col->feu_params[feu].Feu_Pwr_Dream < 0 )
-				feu_params_col->feu_params[feu].Feu_Pwr_Dream = feu_params_col->feu_params[0].Feu_Pwr_Dream;
-			if( feu_params_col->feu_params[feu].Feu_Pwr_PrtFlt < 0 )
-				feu_params_col->feu_params[feu].Feu_Pwr_PrtFlt = feu_params_col->feu_params[0].Feu_Pwr_PrtFlt;
-			feu_params_col->feu_params[feu].Feu_Pwr_Adc = 0;
-		}
-
-		// FEU Run Control parameters
-		if
-		(
-			( feu_params_col->feu_params[feu].Feu_RunCtrl_Pd >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Feu_RunCtrl_CM >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Feu_RunCtrl_ZS >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Feu_RunCtrl_DrOvr >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Feu_RunCtrl_DrDblSmpClk >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Feu_RunCtrl_EvTstExt >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Feu_RunCtrl_RdDel >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Feu_RunCtrl_ZsChkSmp >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Feu_RunCtrl_CmOffset >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Feu_RunCtrl_AdcDatRdyDel >= 0 )
-		)
-		{
-			if( feu_params_col->feu_params[feu].Feu_RunCtrl_Pd < 0 )
-				feu_params_col->feu_params[feu].Feu_RunCtrl_Pd = feu_params_col->feu_params[0].Feu_RunCtrl_Pd;
-			if( feu_params_col->feu_params[feu].Feu_RunCtrl_CM < 0 )
-				feu_params_col->feu_params[feu].Feu_RunCtrl_CM = feu_params_col->feu_params[0].Feu_RunCtrl_CM;
-			if( feu_params_col->feu_params[feu].Feu_RunCtrl_ZS < 0 )
-				feu_params_col->feu_params[feu].Feu_RunCtrl_ZS = feu_params_col->feu_params[0].Feu_RunCtrl_ZS;
-			if( feu_params_col->feu_params[feu].Feu_RunCtrl_DrOvr < 0 )
-				feu_params_col->feu_params[feu].Feu_RunCtrl_DrOvr = feu_params_col->feu_params[0].Feu_RunCtrl_DrOvr;
-			if( feu_params_col->feu_params[feu].Feu_RunCtrl_DrDblSmpClk < 0 )
-				feu_params_col->feu_params[feu].Feu_RunCtrl_DrDblSmpClk = feu_params_col->feu_params[0].Feu_RunCtrl_DrDblSmpClk;
-			if( feu_params_col->feu_params[feu].Feu_RunCtrl_ZsChkSmp < 0 )
-				feu_params_col->feu_params[feu].Feu_RunCtrl_ZsChkSmp = feu_params_col->feu_params[0].Feu_RunCtrl_ZsChkSmp;
-			if( feu_params_col->feu_params[feu].Feu_RunCtrl_Id < 0 )
-				feu_params_col->feu_params[feu].Feu_RunCtrl_Id = feu_params_col->feu_params[0].Feu_RunCtrl_Id;
-			if( feu_params_col->feu_params[feu].Feu_RunCtrl_AdcDatRdyDel < 0 )
-				feu_params_col->feu_params[feu].Feu_RunCtrl_AdcDatRdyDel = feu_params_col->feu_params[0].Feu_RunCtrl_AdcDatRdyDel;
-			if( feu_params_col->feu_params[feu].Feu_RunCtrl_EvTstExt < 0 )
-				feu_params_col->feu_params[feu].Feu_RunCtrl_EvTstExt = feu_params_col->feu_params[0].Feu_RunCtrl_EvTstExt;
-			if( feu_params_col->feu_params[feu].Feu_RunCtrl_RdDel < 0 )
-				feu_params_col->feu_params[feu].Feu_RunCtrl_RdDel = feu_params_col->feu_params[0].Feu_RunCtrl_RdDel;
-			if( feu_params_col->feu_params[feu].Feu_RunCtrl_CmOffset < 0 )
-				feu_params_col->feu_params[feu].Feu_RunCtrl_CmOffset = feu_params_col->feu_params[0].Feu_RunCtrl_CmOffset;
-		}
-
-		// FEU Pulser Register
-		if
-		(
-			( feu_params_col->feu_params[feu].Feu_Pulser_DreamTst >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Feu_Pulser_PulseWid >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Feu_Pulser_Enable >= 0 )
-		)
-		{
-			if( feu_params_col->feu_params[feu].Feu_Pulser_DreamTst < 0 )
-				feu_params_col->feu_params[feu].Feu_Pulser_DreamTst = feu_params_col->feu_params[0].Feu_Pulser_DreamTst;
-			if( feu_params_col->feu_params[feu].Feu_Pulser_PulseWid < 0 )
-				feu_params_col->feu_params[feu].Feu_Pulser_PulseWid = feu_params_col->feu_params[0].Feu_Pulser_PulseWid;
-			if( feu_params_col->feu_params[feu].Feu_Pulser_Enable < 0 )
-				feu_params_col->feu_params[feu].Feu_Pulser_Enable = feu_params_col->feu_params[0].Feu_Pulser_Enable;
-		}
-
-		// Trigger generator parameters
-		if
-		(
-			( feu_params_col->feu_params[feu].Trig_Conf_Rate >= 0 )
-			||
-			( feu_params_col->feu_params[feu].Trig_Conf_Src[0] != '\0' )
-			||
-			( feu_params_col->feu_params[feu].Trig_Conf_TrigPipeLen >= 0 )
-		)
-		{
-			if( feu_params_col->feu_params[feu].Trig_Conf_Rate < 0 )
-				feu_params_col->feu_params[feu].Trig_Conf_Rate = feu_params_col->feu_params[0].Trig_Conf_Rate;
-			if( feu_params_col->feu_params[feu].Trig_Conf_Src[0]=='\0' )
-				sprintf(feu_params_col->feu_params[feu].Trig_Conf_Src, "%s", feu_params_col->feu_params[0].Trig_Conf_Src);
-			if( feu_params_col->feu_params[feu].Trig_Conf_TrigPipeLen < 0 )
-				feu_params_col->feu_params[feu].Trig_Conf_TrigPipeLen = feu_params_col->feu_params[0].Trig_Conf_TrigPipeLen;
-		}
-
-		// Auxiliary Trigger Interface parameters
-		if
-		(
-			( feu_params_col->feu_params[feu].TI_Ignore >= 0 )
-			||
-			( feu_params_col->feu_params[feu].TI_DcBal_Enc >= 0 )
-			||
-			( feu_params_col->feu_params[feu].TI_DcBal_Dec >= 0 )
-			||
-			( feu_params_col->feu_params[feu].TI_Bert >= 0 )
-		)
-		{
-			if( feu_params_col->feu_params[feu].TI_Ignore < 0 )
-				feu_params_col->feu_params[feu].TI_Ignore = feu_params_col->feu_params[0].TI_Ignore;
-			if( feu_params_col->feu_params[feu].TI_DcBal_Enc < 0 )
-				feu_params_col->feu_params[feu].TI_DcBal_Enc = feu_params_col->feu_params[0].TI_DcBal_Enc;
-			if( feu_params_col->feu_params[feu].TI_DcBal_Dec < 0 )
-				feu_params_col->feu_params[feu].TI_DcBal_Dec = feu_params_col->feu_params[0].TI_DcBal_Dec;
-			if( feu_params_col->feu_params[feu].TI_Bert < 0 )
-				feu_params_col->feu_params[feu].TI_Bert = feu_params_col->feu_params[0].TI_Bert;
-		}
-
-		// Self Trigger parameters
-		if
-		(
-			( feu_params_col->feu_params[feu].SelfTrig_DreamMask >= 0 )
-			||
-			( feu_params_col->feu_params[feu].SelfTrig_Mult >= 0 )
-			||
-			( feu_params_col->feu_params[feu].SelfTrig_CmbHitProp >= 0 )
-			||
-			( feu_params_col->feu_params[feu].SelfTrig_DrmHitWid >= 0 )
-			||
-			( feu_params_col->feu_params[feu].SelfTrig_CmbHitWid >= 0 )
-			||
-			( feu_params_col->feu_params[feu].SelfTrig_TrigTopo >= 0 )
-		)
-		{
-			if( feu_params_col->feu_params[feu].SelfTrig_DreamMask < 0 )
-				feu_params_col->feu_params[feu].SelfTrig_DreamMask = feu_params_col->feu_params[0].SelfTrig_DreamMask;
-			if( feu_params_col->feu_params[feu].SelfTrig_Mult < 0 )
-				feu_params_col->feu_params[feu].SelfTrig_Mult = feu_params_col->feu_params[0].SelfTrig_Mult;
-			if( feu_params_col->feu_params[feu].SelfTrig_CmbHitProp < 0 )
-				feu_params_col->feu_params[feu].SelfTrig_CmbHitProp = feu_params_col->feu_params[0].SelfTrig_CmbHitProp;
-			if( feu_params_col->feu_params[feu].SelfTrig_DrmHitWid < 0 )
-				feu_params_col->feu_params[feu].SelfTrig_DrmHitWid = feu_params_col->feu_params[0].SelfTrig_DrmHitWid;
-			if( feu_params_col->feu_params[feu].SelfTrig_CmbHitWid < 0 )
-				feu_params_col->feu_params[feu].SelfTrig_CmbHitWid = feu_params_col->feu_params[0].SelfTrig_CmbHitWid;
-			if( feu_params_col->feu_params[feu].SelfTrig_TrigTopo < 0 )
-				feu_params_col->feu_params[feu].SelfTrig_TrigTopo = feu_params_col->feu_params[0].SelfTrig_TrigTopo;
-		}
-		// Topology parameters
-		for( index=0; index<D_FeuPar_SelfTrigTopo_Size; index++ )
-		{
-			if( feu_params_col->feu_params[feu].SelfTrig_Topology[index] == 0 )
-					feu_params_col->feu_params[feu].SelfTrig_Topology[index] = feu_params_col->feu_params[0].SelfTrig_Topology[index];
-		}
-
-		// FEU Prescale Register
-		if
-		(
-			(feu_params_col->feu_params[feu].Feu_PreScale_EvtData > 0)
-			||
-			(feu_params_col->feu_params[feu].Feu_InterPacket_Delay > 0)
-		)
-		{
-			if( feu_params_col->feu_params[feu].Feu_PreScale_EvtData < 0 )
-				feu_params_col->feu_params[feu].Feu_PreScale_EvtData = feu_params_col->feu_params[0].Feu_PreScale_EvtData;
-			if( feu_params_col->feu_params[feu].Feu_InterPacket_Delay < 0 )
-				feu_params_col->feu_params[feu].Feu_InterPacket_Delay = feu_params_col->feu_params[0].Feu_InterPacket_Delay;
-		}
-	}
-
-	return D_RetCode_Sucsess;
-}
-*/

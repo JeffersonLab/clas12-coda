@@ -22,10 +22,20 @@
 
 #ifdef Linux_vme
 #include "jvme.h"
+#include "daqLib.h"
 #include "dsc2Lib.h"
+#include "dsc2Config.h"
 #include "fadcLib.h"
+#include "fadc250Config.h"
 #include "vscmLib.h"
 #include "sspLib.h"
+#include "sspConfig.h"
+#include "tiLib.h"
+#include "tiConfig.h"
+#include "tdLib.h"
+#include "tsLib.h"
+#include "tsConfig.h"
+#include "moLib.h"
 #endif
 
 #ifdef Linux_armv7l
@@ -161,7 +171,7 @@ static unsigned int *vmescalers[MAXBOARDS];     /*scalers memory space address*/
 static unsigned int  vmedatalen[MAXBOARDS];  /*data space (the number of words) */
 static unsigned int *vmedata[MAXBOARDS];     /*data memory space address*/
 
-static unsigned int i2_from_rol1;
+static unsigned long i2_from_rol1;
 
 static unsigned int *tdcbuf;
 static unsigned int adcbuf[400];
@@ -232,7 +242,7 @@ vmeScalersRead()
       {
         slot = dsc2Slot_tcp(id);
 		rflag = 0xFF;
-		/*printf("reading DSC2 slot %d\n",slot);*/
+		/*printf("reading DSC2 slot %d\n",slot);fflush(stdout);*/
 vmeBusLock();
         nw = dsc2ReadScalers(slot, tdcbuf, MAXWORDS, rflag, 1/*rmode*/);
 /*vmeBusUnlock(); move below trying to debug problem 'in FADC data: trailer #words 58 != actual #words 54'*/
@@ -471,7 +481,7 @@ vmeBusLock();
         livetime = tsLive(0); /* returns 3 digits, for ex 97.5 returned as 975 */
 vmeBusUnlock();
         live_percent = (float)livetime/10.0;
-	    printf("============= Livetime=%f percent\n",live_percent);
+	    /*printf("============= Livetime=%f percent\n",live_percent);*/
 
         /*printf("nw1=%d nw2=%d\n",nw1,nw2);fflush(stdout);*/
         nw = nw1 + nw2;
@@ -782,10 +792,10 @@ vmeReadTask()
 
   /* dma */
   usrVmeDmaSetConfig(2,3,0); /*A32,MBLT*/
-  printf("!!!!!!!!! set DMA as A32,MBLT\n");
+  printf("!!!!!!!!! set DMA as A32,MBLT\n");fflush(stdout);
 
   tdcbuf = (unsigned int *)i2_from_rol1;
-
+  printf("tdcbuf=0x%lx\n",tdcbuf);fflush(stdout);
 
 
   /*************/
@@ -800,8 +810,10 @@ vmeReadTask()
   /*iFlag |= (1<<19);*/ /* ignore slot numbers, enumerate boards from 0 */
 
   dsc2Init(0x100000,0x80000,20,iFlag);
+
   dsc2Config("");
 maxA32Address = dsc2GetA32MaxAddress();
+printf("dsc2GetA32MaxAddress returned 0x%08x\n",maxA32Address);
 fadcA32Address = maxA32Address + FA_MAX_A32_MEM;
 sspA32Address = maxA32Address + FA_MAX_A32_MEM;
   ndsc2_tcp = dsc2GetNdsc_tcp();
@@ -1615,17 +1627,17 @@ main(int argc, char *argv[])
 
 #ifdef Linux_vme
   {
-    int i1, i2, i3;
+    unsigned long i1, i2, i3;
 
     usrVmeDmaInit();
 
     usrVmeDmaMemory(&i1, &i2, &i3);
     i2_from_rol1 = i2;
-    printf("tiprimarytinit: i2_from_rol1 = 0x%08x\n",i2_from_rol1);
-    i2_from_rol1 = (i2_from_rol1 & 0xFFFFFFF0);
-    printf("tiprimarytinit: i2_from_rol1 = 0x%08x\n",i2_from_rol1);
+    printf("tiprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);
+    i2_from_rol1 = (i2_from_rol1 & 0xFFFFFFFFFFFFFFF0LL);
+    printf("tiprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);
     i2_from_rol1 = i2_from_rol1 + 0x10;
-    printf("tiprimarytinit: i2_from_rol1 = 0x%08x\n",i2_from_rol1);
+    printf("tiprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);
   }
 #endif
 

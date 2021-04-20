@@ -20,6 +20,8 @@
 --
 --------------------------------------------------------------------------------
 */
+#ifndef H_FeuMemConfig
+#define H_FeuMemConfig
 
 // Pedestal and threshold memory initialisation
 int PedMemInit( int feu, unsigned char feu_ip[4], short feu_port );
@@ -29,3 +31,5 @@ int  FeuMemConfig( char *conf_file_name, int mem_type, int feu, unsigned char fe
 // Trigger generator memory configuration
 int  TrgMemConfig( char *conf_file_name, int feu, unsigned char feu_ip[4], short feu_port );
 void MemConfig_CleanUp();
+
+#endif // #ifndef H_FeuMemConfig

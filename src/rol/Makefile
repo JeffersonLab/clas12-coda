@@ -26,13 +26,13 @@ $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/rol1_master.so \
 	./$(OSTYPE_MACHINE)/rol/scaler1_slave.so \
 	./$(OSTYPE_MACHINE)/rol/fbrol1_master.so \
 	./$(OSTYPE_MACHINE)/rol/fbrol1_slave.so \
-	./$(OSTYPE_MACHINE)/rol/hpssvt1_master.so \
-	./$(OSTYPE_MACHINE)/rol/hpssvt1_slave.so \
 	./$(OSTYPE_MACHINE)/rol/srs1_master.so \
 	./$(OSTYPE_MACHINE)/rol/srs1_slave.so \
 	./$(OSTYPE_MACHINE)/rol/rol1mvt_master.so \
 	./$(OSTYPE_MACHINE)/rol/rol1mvt_slave.so
 
+#	./$(OSTYPE_MACHINE)/rol/hpssvt1_master.so \
+#	./$(OSTYPE_MACHINE)/rol/hpssvt1_slave.so \
 
 ./$(OSTYPE_MACHINE)/rol/rol1mvt_master.o : rols/rol1mvt.c
 	$(MKROLDIR)
@@ -94,11 +94,15 @@ $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/rol1_master.so \
 LDCC = $(LDCXX)
 LDFC = $(LDCXX)
 
-CLON_FLAGS += -I./inc -I./code.s -I./mvt.s -I./jvme -I./sfi.s -I../vtp -I$(CODA)/common/include
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
+  CLON_FLAGS +=  -DLinux_x86_64_vme -I$(CODA)/src/jvme/src.s
+endif
+CLON_FLAGS += -I./inc -I./code.s -I./mvt.s -I./sfi.s -I../vtp -I$(CODA)/common/include
+
 CLON_FLAGS += -DIPC
 
 # hps run
-CLON_FLAGS += -I$(CLAS)/slac_svt/heavy-photon-daq/software/rogue_coda/include/hps/builder/client/
+##############CLON_FLAGS += -I$(CLAS)/slac_svt/heavy-photon-daq/software/rogue_coda/include/hps/builder/client/
 
 ifeq ("$(OSTYPE)","Linux")
   CLON_FLAGS += -I/usr/local/src/tirpci/tirpci_installation/include
@@ -111,9 +115,12 @@ ifeq ("$(OSTYPE)","Linux")
 endif
 
 ifeq ("$(OSTYPE)","VXWORKS")
+
   CLON_FLAGS += -I$(CODA)/VXWORKS_ppc/include
   LIBNAMES +=
+
 else ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+
   CLON_FLAGS += -I$(CODA)/Linux_armv7l/include
   LIBNAMES += $(CODA)/src/codautil/$(OSTYPE_MACHINE)/lib/libcodautil.a
   LIBNAMES += /usr/lib/libmysqlclient.so
@@ -145,7 +152,7 @@ else
 ### for hps run
   ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
 #    LIBNAMES += $(CLAS)/slac_svt/heavy-photon-daq/software/rogue_coda/install/lib/libhps-builder-client-real.so
-    LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libhps-builder-client-real.so
+########    LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libhps-builder-client-real.so
   endif
 
 ### 
@@ -161,9 +168,22 @@ else
   ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
     LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
   endif
+
+  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
+    LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+    LIBNAMES += $(CODA)/src/jvme/$(OSTYPE_MACHINE)/lib/libjvme.a
+    LIBNAMES += /usr/lib64/gef/libvme.a
+    LIBNAMES += $(CODA)/src/ipc/$(OSTYPE_MACHINE)/lib/libipc.a
+    LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
+    LIBNAMES += -lapr-1
+    LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
+    LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
+  endif
+
   ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
     LIBNAMES += /usr/lib/mysql/libmysqlclient.so
   endif
+
   ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
     LIBNAMES += /usr/lib/mysql/libmysqlclient.so
   endif

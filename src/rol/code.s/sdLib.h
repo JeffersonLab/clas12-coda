@@ -184,4 +184,9 @@ unsigned int sdTestGetClkACounter();
 unsigned int sdTestGetClkBCounter();
 unsigned int sdTestGetSWALoopback();
 
+/*sergey*/
+int sdGetNsd();
+int sdGetTrigoutLogic(int *type_out, int *threshold_out);
+/*sergey*/
+
 #endif /* SDLIB_H */

@@ -33,21 +33,14 @@
 --                 1.3 2016/02/24 IM Number of Topological trigger registers increased from 8 to 32
 --                 1.4 2016/03/15 IM Max16031 registers added
 --                 1.5 2016/03/15 IM Max16031 registers added
+--                 3.0 2018/11/04 IM SparseRd parameter instead of the DataPipeLen
+--                                   Ignore deprecated DblSmpClk, AdcDtn and AdcPwr parameters
+--                 4.0 2018/11/29 IM Feu_RunCtrl_ZsTyp added to support ToT ZS
+--                 5.0 2019/10/07 IM Dream polarity parameter added
 --
 -- Comments:
 --
 --------------------------------------------------------------------------------
-*/
-//#include "Platform.h"
-/*
-#define LINE_SIZE	256
-#define NBMAX_ARGV 	32
-
-typedef char ArgvArray[NBMAX_ARGV][LINE_SIZE];
-extern int        argc;
-extern ArgvArray  argv;
-
-extern void parse_line(char *s);
 */
 
 #ifndef H_FeuConfigParams
@@ -55,10 +48,6 @@ extern void parse_line(char *s);
 
 #ifndef DEF_MAX_NB_OF_FEU
 #define DEF_MAX_NB_OF_FEU 64
-#endif
-
-#ifndef DEF_MAX_FEU_SN
-#define DEF_MAX_FEU_SN 255
 #endif
 
 #ifndef DEF_MAX_NB_OF_DREAM
@@ -116,9 +105,9 @@ typedef struct _FeuParams
 {
 	// Main module config parameters
 	char Main_Conf_ClkSel[16];
-	int  Main_Conf_AdcDtp;
-	int  Main_Conf_DataPipeLen;
+	int  Main_Conf_SparseRd;
 	int  Main_Conf_DreamMask;
+	int  Main_Conf_DreamPol;
 	int  Main_Conf_Samples;
 	// Main module Trigger logic parameters
 	int  Main_Trig_TimeStamp;
@@ -130,14 +119,13 @@ typedef struct _FeuParams
 	// FEU PowerUp Register
 	int  Feu_Pwr_Dream;
 	int  Feu_Pwr_PrtFlt; 
-	int  Feu_Pwr_Adc;
 	// FEU Run Control parameters
 	int  Feu_RunCtrl_Pd;
 	int  Feu_RunCtrl_CM;
 	int  Feu_RunCtrl_ZS;
-	int  Feu_RunCtrl_DrOvr;
-	int  Feu_RunCtrl_DrDblSmpClk;
+	int  Feu_RunCtrl_ZsTyp;
 	int  Feu_RunCtrl_ZsChkSmp;
+//	int  Feu_RunCtrl_DrOvr;
 	int  Feu_RunCtrl_Id;
 	int  Feu_RunCtrl_AdcDatRdyDel;
 	int  Feu_RunCtrl_EvTstExt;

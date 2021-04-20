@@ -105,12 +105,11 @@ volatile unsigned int *SSPpf[MAX_VME_SLOTS + 1]; /* pointers to VSCM FIFO memory
 volatile unsigned int *SSPpmb;                   /* pointer to Multiblock Window */
 int sspSL[MAX_VME_SLOTS+1];                      /* array of slot numbers for SSPs */ 
 unsigned int sspAddrList[MAX_VME_SLOTS+1];       /* array of a24 addresses for SSPs */ 
-int sspFirmwareType[MAX_VME_SLOTS+1];               /* array of firmware type for SSPs */ 
+int sspFirmwareType[MAX_VME_SLOTS+1];            /* array of firmware type for SSPs */ 
 
-static int sspA32Base   = 0x08800000;
-//static int sspA32Base   = 0x11000000/*0x08800000*/;                   /* Minimum VME A32 Address for use by FADCs */
-static int sspA32Offset = 0x00080000;                   /* Difference in CPU A32 Base - VME A32 Base */
-static int sspA24Offset=0;                              /* Difference in Local A24 Base and VME A24 Base */ 
+static unsigned int sspA32Base   =  0x08800000;  /* Minimum VME A32 Address for use by FADCs */
+static unsigned long sspA32Offset = 0x00080000;  /* Difference in CPU A32 Base - VME A32 Base */
+static unsigned long sspA24Offset=0;             /* Difference in Local A24 Base and VME A24 Base */ 
 
 static int minSlot = 21;
 static int maxSlot = 1;
@@ -240,7 +239,8 @@ int
 sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag) 
 {
   int useList=0, noBoardInit=0, noFirmwareCheck=0;; 
-  unsigned int rdata, laddr, laddr_inc, boardID, a32addr; 
+  unsigned long laddr=0, laddr_inc=0;
+  unsigned int rdata, boardID, a32addr; 
   int issp=0, islot=0, res; 
   int result=OK; 
   volatile SSP_regs *ssp; 
@@ -304,7 +304,7 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
 #ifdef VXWORKS 
   res = sysBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr); 
 #else 
-  res = vmeBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr); 
+  res = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)addr,(char **)&laddr); 
 #endif 
  
   if (res != 0)
@@ -329,19 +329,22 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
     if(useList==1) 
     { 
 	  laddr_inc = sspAddrList[issp] + sspA24Offset; 
+	  printf("laddr_inc=0x%llx (list)\n",laddr_inc);
 	} 
     else 
 	{ 
 	  laddr_inc = laddr + issp*addr_inc; 
+	  printf("laddr=0x%llx laddr_inc=0x%llx (issp=%d, addr_inc=0x%08x)\n",laddr,laddr_inc,issp,addr_inc);
 	} 
  
     ssp = (volatile SSP_regs *)laddr_inc; 
-
+	printf("laddr=0x%llx laddr_inc=0x%llx\n",laddr,laddr_inc);
 
       /* Check if Board exists at that address */ 
 #ifdef VXWORKS 
     res = vxMemProbe((char *) &(ssp->Cfg.BoardId),VX_READ,4,(char *)&rdata); 
 #else 
+	printf("&(ssp->Cfg.BoardId)=0x%llx\n",&(ssp->Cfg.BoardId));fflush(stdout);
     res = vmeMemProbe((char *) &(ssp->Cfg.BoardId),4,(char *)&rdata); 
 #endif 
  
@@ -351,9 +354,9 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
 	  printf("%s: ERROR: No addressable board at addr=0x%x\n", 
 		 __FUNCTION__,(UINT32) ssp); 
 #else 
-	  printf("%s: ERROR: No addressable board at VME (Local) addr=0x%x (0x%x)\n", 
+	  printf("%s: ERROR: No addressable board at VME (Local) addr=0x%x (0x%lx)\n", 
 		 __FUNCTION__, 
-		 (UINT32) laddr_inc-sspA24Offset, (UINT32) ssp); 
+		 (UINT32) laddr_inc-sspA24Offset, (unsigned long) ssp); 
 #endif 
 	} 
     else  
@@ -421,9 +424,10 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
 		    continue; 
 		  } 
   
-		  printf("Initialized SSP %2d  Slot # %2d at address 0x%08x (0x%08x)\n", 
-			 nSSP, sspSL[nSSP],(UINT32) pSSP[(sspSL[nSSP])], 
-				 (UINT32) pSSP[(sspSL[nSSP])]-sspA24Offset); 
+		  printf("Initialized SSP %2d  Slot # %2d at VME (Local) address 0x%08x (0x%lx)\n", 
+			 nSSP, sspSL[nSSP], 
+			 (UINT32)(((unsigned long)pSSP[(sspSL[nSSP])])-sspA24Offset), 
+		     (unsigned long)pSSP[(sspSL[nSSP])] );
 		} 
 	  } 
 	  nSSP++; 
@@ -448,7 +452,7 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
 	  return(ERROR);
 	}
 #else
-    res = vmeBusToLocalAdrs(0x09,(char *)a32addr,(char **)&laddr);
+    res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)a32addr,(char **)&laddr);
     if (res != 0) 
 	{
 	  printf("sspInit: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",a32addr);
@@ -460,10 +464,12 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
     sspA32Offset = laddr - a32addr;
     printf("sspInit: laddr(am=0x09) = 0x%08x, sspA32Offset=0x%08x\n",laddr, sspA32Offset);
 
-	printf("SSP %2d  Slot # %2d at address 0x%08x (0x%08x) assigned A32 address 0x%08x (0x%08x)\n", 
-			 ii, sspSL[ii],(UINT32) pSSP[(sspSL[ii])], 
-		   (UINT32) pSSP[(sspSL[ii])]-sspA24Offset,
-           (unsigned int)SSPpf[sspSL[ii]], (unsigned int)SSPpf[sspSL[ii]]-sspA32Offset);
+	printf("SSP %2d  Slot # %2d at address 0x%08x (0x%lx) assigned A32 address 0x%08x (0x%lx)\n", 
+			 ii, sspSL[ii],
+		   (UINT32) (((unsigned long)pSSP[(sspSL[ii])])-sspA24Offset),
+           (unsigned long) pSSP[(sspSL[ii])], 
+	       (unsigned int) (((unsigned long)SSPpf[sspSL[ii]])-sspA32Offset),
+	       (unsigned long) SSPpf[sspSL[ii]] );
   }
 
 
@@ -486,7 +492,7 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
       return(ERROR);
     }
 #else
-    res = vmeBusToLocalAdrs(0x09, (char *)a32addr, (char **)&laddr);
+    res = vmeBusToLocalAdrs(0x09, (char *)(unsigned long)a32addr, (char **)&laddr);
     if (res != 0)
     {
 	  printf("ERROR: %s: in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",__func__, a32addr);
@@ -570,7 +576,7 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
 void 
 sspCheckAddresses(int id) 
 { 
-  unsigned int offset=0, expected=0, base=0; 
+  unsigned long offset=0, expected=0, base=0; 
   int iser=0; 
  
   if(id==0) id=sspSL[0]; 
@@ -582,21 +588,21 @@ sspCheckAddresses(int id)
    
   printf("%s:\n\t ---------- Checking SSP address space ---------- \n",__FUNCTION__); 
  
-  base = (unsigned int) &pSSP[id]->Cfg; 
+  base = (unsigned long) &pSSP[id]->Cfg; 
  
-  offset = ((unsigned int) &pSSP[id]->Clk) - base; 
+  offset = ((unsigned long) &pSSP[id]->Clk) - base; 
   expected = 0x100; 
   if(offset != expected) 
     printf("%s: ERROR pSSP[%d]->Clk not at offset = 0x%x (@ 0x%x)\n", 
 	   __FUNCTION__,id,expected,offset); 
  
-  offset = ((unsigned int) &pSSP[id]->Sd) - base; 
+  offset = ((unsigned long) &pSSP[id]->Sd) - base; 
   expected = 0x200; 
   if(offset != expected) 
     printf("%s: ERROR pSSP[%d]->Sd not at offset = 0x%x (@ 0x%x)\n", 
 	   __FUNCTION__,id,expected,offset); 
  
-  offset = ((unsigned int) &pSSP[id]->Trigger) - base; 
+  offset = ((unsigned long) &pSSP[id]->Trigger) - base; 
   expected = 0x2100; 
   if(offset != expected) 
     printf("%s: ERROR pSSP[%d]->Trigger not at offset = 0x%x (@ 0x%x)\n", 
@@ -604,7 +610,7 @@ sspCheckAddresses(int id)
  
   for(iser=0; iser<10; iser++) 
     { 
-      offset = ((unsigned int) &pSSP[id]->Ser[iser]) - base; 
+      offset = ((unsigned long) &pSSP[id]->Ser[iser]) - base; 
       expected = 0x1000 + iser*0x100; 
       if(offset != expected) 
 	printf("%s: ERROR pSSP[%d]->Ser[%d] not at offset = 0x%x (@ 0x%x)\n", 
@@ -817,7 +823,7 @@ sspStatus(int id, int rflag)
   int showregs=0; 
   int i=0; 
   unsigned int fiberEnabledMask=0; 
-  unsigned int SSPBase=0; 
+  unsigned long SSPBase=0; /*sergey: long ? */
   SSP_regs st;
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
     return ERROR;
@@ -827,7 +833,7 @@ sspStatus(int id, int rflag)
  
  
   SSPLOCK(); 
-  SSPBase             = (unsigned int)pSSP[id]; 
+  SSPBase             = (unsigned long)pSSP[id];  /*sergey: long ? */
   
   st.EB.BlockCfg      = sspReadReg(&pSSP[id]->EB.BlockCfg);
   st.EB.ReadoutCfg    = sspReadReg(&pSSP[id]->EB.ReadoutCfg);
@@ -852,11 +858,11 @@ sspStatus(int id, int rflag)
   SSPUNLOCK(); 
  
 #ifdef VXWORKS 
-  printf("\nSTATUS for SSP in slot %d at base address 0x%x \n", 
+  printf("\nSTATUS for SSP in slot %d at base address 0x%08x \n", 
 	 id, (UINT32) pSSP[id]); 
 #else 
-  printf("\nSTATUS for SSP in slot %d at VME (Local) base address 0x%x (0x%x)\n", 
-	 id, (UINT32) pSSP[id] - sspA24Offset, (UINT32) pSSP[id]); 
+  printf("\nSTATUS for SSP in slot %d at VME (Local) base address 0x%x (0x%lx)\n", 
+		 id, (UINT32)(unsigned long)(pSSP[id] - sspA24Offset), (unsigned long) pSSP[id]); 
 #endif 
   printf("--------------------------------------------------------------------------------\n"); 
  
@@ -864,20 +870,20 @@ sspStatus(int id, int rflag)
   { 
     printf("\n"); 
     printf(" Registers (offset):\n"); 
-    printf("  Cfg.BoardID    (0x%04x) = 0x%08x\t", (unsigned int)(&pSSP[id]->Cfg.BoardId) - SSPBase, st.Cfg.BoardId); 
-    printf("  Cfg.FirmwareRev(0x%04x) = 0x%08x\n", (unsigned int)(&pSSP[id]->Cfg.FirmwareRev) - SSPBase, st.Cfg.FirmwareRev); 
-    printf("  Clk.Ctrl       (0x%04x) = 0x%08x\t", (unsigned int)(&pSSP[id]->Clk.Ctrl) - SSPBase, st.Clk.Ctrl); 
-    printf("  Clk.Status     (0x%04x) = 0x%08x\n", (unsigned int)(&pSSP[id]->Clk.Status) - SSPBase, st.Clk.Status); 
+    printf("  Cfg.BoardID    (0x%04x) = 0x%08x\t", (unsigned int)((unsigned long)(&pSSP[id]->Cfg.BoardId) - SSPBase), st.Cfg.BoardId); 
+	printf("  Cfg.FirmwareRev(0x%04x) = 0x%08x\n", (unsigned int)((unsigned long)(&pSSP[id]->Cfg.FirmwareRev) - SSPBase), st.Cfg.FirmwareRev); 
+    printf("  Clk.Ctrl       (0x%04x) = 0x%08x\t", (unsigned int)((unsigned long)(&pSSP[id]->Clk.Ctrl) - SSPBase), st.Clk.Ctrl); 
+    printf("  Clk.Status     (0x%04x) = 0x%08x\n", (unsigned int)((unsigned long)(&pSSP[id]->Clk.Status) - SSPBase), st.Clk.Status); 
  
     for(i=0; i < SD_SRC_NUM; i=i+2) 
 	 { 
-	   printf("  Sd.SrcSel[%2d]  (0x%04x) = 0x%08x\t", i, (unsigned int)(&pSSP[id]->Sd.SrcSel[i]) - SSPBase, st.Sd.SrcSel[i]); 
-	   printf("  Sd.SrcSel[%2d]  (0x%04x) = 0x%08x\n", i+1, (unsigned int)(&pSSP[id]->Sd.SrcSel[i+1]) - SSPBase, st.Sd.SrcSel[i+1]); 
+	   printf("  Sd.SrcSel[%2d]  (0x%04x) = 0x%08x\t", i, (unsigned int)((unsigned long)(&pSSP[id]->Sd.SrcSel[i]) - SSPBase), st.Sd.SrcSel[i]); 
+	   printf("  Sd.SrcSel[%2d]  (0x%04x) = 0x%08x\n", i+1, (unsigned int)((unsigned long)(&pSSP[id]->Sd.SrcSel[i+1]) - SSPBase), st.Sd.SrcSel[i+1]); 
 	 } 
     for(i=0; i < SSP_SER_NUM; i=i+2) 
 	 { 
-	   printf("  Ser[%2d].Ctrl   (0x%04x) = 0x%08x\t", i, (unsigned int)(&pSSP[id]->Ser[i].Ctrl) - SSPBase, st.Ser[i].Ctrl); 
-	   printf("  Ser[%2d].Ctrl   (0x%04x) = 0x%08x\n", i+1, (unsigned int)(&pSSP[id]->Ser[i+1].Ctrl) - SSPBase, st.Ser[i+1].Ctrl); 
+	   printf("  Ser[%2d].Ctrl   (0x%04x) = 0x%08x\t", i, (unsigned int)((unsigned long)(&pSSP[id]->Ser[i].Ctrl) - SSPBase), st.Ser[i].Ctrl); 
+	   printf("  Ser[%2d].Ctrl   (0x%04x) = 0x%08x\n", i+1, (unsigned int)((unsigned long)(&pSSP[id]->Ser[i+1].Ctrl) - SSPBase), st.Ser[i+1].Ctrl); 
 	 } 
   } 
   printf("\n"); 
@@ -6797,13 +6803,13 @@ sspReadBlock(int id, unsigned int *data, int nwrds, int rflag)
 		   vmeRead32(&pSSP[id]->EB.FifoWordCnt),
 		   vmeRead32(&pSSP[id]->EB.FifoEventCnt));
 	*/
-    vmeAdr = (unsigned int)(SSPpf[id]) - sspA32Offset;
+    vmeAdr = (unsigned int)((unsigned long)(SSPpf[id]) - sspA32Offset);
 
 	/*
     printf("sspReadBlock: vmeAdr=0x%08x (0x%08x - 0x%08x)\n",vmeAdr,(unsigned int)(SSPpf[id]),sspA32Offset);fflush(stdout);
 	*/
 
-    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int)laddr, (nwrds << 2));
+    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned long)laddr, (nwrds << 2));
 
     if (retVal |= 0)
     {

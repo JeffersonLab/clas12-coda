@@ -88,9 +88,9 @@ volatile uintptr_t *VSCMpf[VSCM_MAX_BOARDS + 1];        /* pointers to VSCM FIFO
 volatile uintptr_t *VSCMpmb;                            /* pointer to Multiblock Window */
 int vscmID[VSCM_MAX_BOARDS];                            /* array of slot numbers for VSCMs */
 
-int vscmA32Base = 0x09000000;
-int vscmA32Offset = 0x0;                                /* Difference in CPU A32 Base - VME A32 Base */
-int vscmA24Offset = 0x0;                                /* Difference in CPU A24 Base - VME A24 Base */
+unsigned int vscmA32Base = 0x09000000;
+unsigned long vscmA32Offset = 0x0;                                /* Difference in CPU A32 Base - VME A32 Base */
+unsigned long vscmA24Offset = 0x0;                                /* Difference in CPU A24 Base - VME A24 Base */
 
 int vscmInited = 0;
 int minSlot = 21;
@@ -1430,8 +1430,8 @@ vscmReadBlock(int id, volatile uintptr_t *data, int nwrds, int rflag)
     retVal = vmeDmaSend((unsigned long)laddr, vscmA32Base, (nwrds << 2));
 #endif
 #else
-    vmeAdr = (unsigned int)(VSCMpf[id]) - vscmA32Offset;
-    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned int)laddr, (nwrds << 2));
+    vmeAdr = (unsigned int)((unsigned long)(VSCMpf[id]) - vscmA32Offset);
+    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned long)laddr, (nwrds << 2));
 #endif
     if (retVal |= 0) {
       logMsg("ERROR: %s: DMA transfer Init @ 0x%x Failed\n", __func__, retVal);
@@ -2378,7 +2378,8 @@ int
 vscmInit(uintptr_t addr, uint32_t addr_inc, int numvscm, int flag)
 {
   uintptr_t rdata;
-  uintptr_t laddr, laddr2, vmeaddr, a32addr;
+  unsigned long laddr=0, laddr2=0;
+  uintptr_t vmeaddr, a32addr;
   volatile VSCM_regs *vreg;
   int i, res;
   int boardID = 0;
@@ -2406,7 +2407,7 @@ vscmInit(uintptr_t addr, uint32_t addr_inc, int numvscm, int flag)
 #ifdef VXWORKS
     res = sysBusToLocalAdrs(0x39, (char *)addr, (char **)&laddr);
 #else
-    res = vmeBusToLocalAdrs(0x39, (char *)addr, (char **)&laddr);
+    res = vmeBusToLocalAdrs(0x39, (char *)(unsigned long)addr, (char **)&laddr);
 #endif
     if (res != 0)
     {
@@ -2519,7 +2520,7 @@ vscmInit(uintptr_t addr, uint32_t addr_inc, int numvscm, int flag)
         return 0;
       }
 #else
-      res = vmeBusToLocalAdrs(0x09, (char *)a32addr, (char **)&laddr2);
+      res = vmeBusToLocalAdrs(0x09, (char *)(unsigned long)a32addr, (char **)&laddr2);
       if (res != 0)
       {
         logMsg("ERROR: %s: vmeBusToLocalAdrs(0x09, %p, &laddr2)\n",
@@ -2548,7 +2549,7 @@ vscmInit(uintptr_t addr, uint32_t addr_inc, int numvscm, int flag)
         return EXIT_FAILURE;
       }
 #else
-      res = vmeBusToLocalAdrs(0x09, (char *)a32addr, (char **)&laddr);
+      res = vmeBusToLocalAdrs(0x09, (char *)(unsigned long)a32addr, (char **)&laddr);
       if (res != 0)
       {
         printf("ERROR: %s: in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",

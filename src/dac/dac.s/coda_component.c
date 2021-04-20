@@ -37,6 +37,12 @@
 #ifdef Linux_vme
 #include "ipc.h"
 #endif
+#ifdef Linux_x86_64
+#include "ipc.h"
+#endif
+#ifdef Linux_armv7l
+#include "ipc.h"
+#endif
 
 #include "rc.h"
 #include "rolInt.h"
@@ -915,6 +921,9 @@ coda_destructor()
 #ifdef Linux_vme
   epics_json_msg_close();
 #endif
+#ifdef Linux_x86_64
+  epics_json_msg_close();
+#endif
 #ifdef Linux_armv7l
   epics_json_msg_close();
 #endif
@@ -1075,6 +1084,12 @@ printf("1\n");fflush(stdout);
 printf("2\n");fflush(stdout);
 
 #ifdef Linux_vme
+  printf("CODA_Init: Connecting to IPC server ..\n");
+  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
+  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
+  printf(".. done connecting to IPC server.\n");
+#endif
+#ifdef Linux_x86_64
   printf("CODA_Init: Connecting to IPC server ..\n");
   /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
   epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
@@ -1455,6 +1470,8 @@ UDP_establish(char *host, int port)
   }
 
 
+
+#if 0
   /**********************/
   /* set socket options */
   /**********************/
@@ -1507,6 +1524,10 @@ UDP_establish(char *host, int port)
     }
   }
 #endif
+#endif /*if 0*/
+
+
+
 
   /* connect */
   if(connect(s, (const struct sockaddr *)&sin, sizeof (sin)) < 0)
@@ -1793,7 +1814,18 @@ UDP_send(int socket)
       epics_json_msg_send(name, "float", 4, data);
 #endif
 
+#ifdef Linux_x86_64
+      /* send AMQ message */
+      sprintf(name,"STA:%s",localobject->name);
+      data[0] = (float)nevents;
+      data[1] = event_rate;
+      data[2] = (float)((nlongs*4)/1048576);
+      data[3] = data_rate/1048576;
+      epics_json_msg_send(name, "float", 4, data);
+#endif
+
 #ifdef Linux_armv7l
+      /* send AMQ message */
       sprintf(name,"STA:%s",localobject->name);
       data[0] = (float)nevents;
       data[1] = event_rate;
@@ -1823,6 +1855,7 @@ UDP_send(int socket)
     nbytes++; /* add one char for the end of string sign */
     rembytes = nbytes;
     buffer2 = tmp;
+	/*printf("UDP_send: rembytes=%d\n",rembytes);*/
     while(rembytes)
     {
 retry3:
@@ -1837,8 +1870,10 @@ retry3:
         {
           printf("UDP_send: Operation would block 2: retry ...\n");
           goto retry3;
+
         }
 
+        /*printf("UDP_send: socket=%d\n",socket);*/
         if(errno==ENOBUFS) printf("UDP_send: No buffer space available (errno=%d)\n",errno);
         else if(errno==EPIPE) printf("UDP_send: Broken pipe (errno=%d)\n",errno);
         else if(errno==EHOSTDOWN) printf("UDP_send: Host is down (errno=%d)\n",errno);
@@ -1848,14 +1883,18 @@ retry3:
           while mv5100 does not !!!; I think mv5100 is right and others are
           wrong, but must figure it out ... */
 
-          /* following message will be printed if rcServer killed, vety annoying - comment it out */
+          /* following message will be printed if rcServer killed, very annoying - comment it out */
 		  /*
           printf("UDP_send: Connection to host %s port %d refused (udpsocket=%d, errno=%d)\n",udphost,udpport,udpsocket,errno);
 		  */
           ;
         }
-        else printf("UDP_send: Unknown error errno=%d\n",errno);
-
+        else
+		{
+          perror("UDP_send error");
+          printf("Useful command to check port remotely: 'nping --udp -p 37209 129.57.167.227'\n");
+          printf("Useful command to check port locally:  'netstat -anp | grep 5001'\n");
+		}
 
 
 
@@ -1870,6 +1909,7 @@ netStackSysPoolShow
         nbytes = -1;
         goto exit3;
       }
+	  /*else printf("UDP_send: sent !!!\n");*/
 
       buffer2 += cc;
       rembytes -= cc;

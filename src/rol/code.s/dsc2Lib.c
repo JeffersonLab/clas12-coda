@@ -45,9 +45,9 @@ static int Ndsc = 0;                                     /* Number of DSCs in Cr
 static volatile DSC2 *dscp[DSC_MAX_SLOTS+1]; /* pointers to DSC A24 memory map */
 static volatile unsigned int *dscpd[DSC_MAX_SLOTS+1];     /* pointers to DSC A32 memory map */
 static int dscID[DSC_MAX_BOARDS+1];                       /* array of slot numbers for DSCs */
-static unsigned int dscA24Offset = 0;       /* Offset between VME A24 and Local address space */
-static unsigned int dscA32Offset = 0;       /* Offset between VME A32 and Local address space */
 static unsigned int dscA32Base   = 0x09000000/*0x08000000*/;
+static unsigned long dscA24Offset = 0;       /* Offset between VME A24 and Local address space */
+static unsigned long dscA32Offset = 0;       /* Offset between VME A32 and Local address space */
 static unsigned int a32addrMax = 0;
 static unsigned int dscAddrList[DSC_MAX_BOARDS];            /* array of a24 addresses for DSCs */
 static int dscIndexedBySlotNumber = 1;  /* How the library pointers are indexed */
@@ -108,7 +108,8 @@ dsc2GetNdsc()
 int
 dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
 {
-  unsigned int laddr, laddr_inc, errFlag, fwrev;
+  unsigned long laddr=0, laddr_inc=0;
+  unsigned int errFlag, fwrev;
   int res, ii, slotno, slotno_save;
   unsigned int boardID;
   int noBoardInit=0;
@@ -157,7 +158,7 @@ dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
 #ifdef VXWORKS
   res = sysBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr);
 #else
-  res = vmeBusToLocalAdrs(0x39,(char *)addr,(char **)&laddr);
+  res = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)addr,(char **)&laddr);
 #endif
   if (res != 0) 
     {
@@ -186,11 +187,14 @@ dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
 	}
 
     dsc = (struct dsc_struct *)laddr_inc;
-      
+    printf("laddr=0x%llx laddr_inc=0x%llx\n",laddr,laddr_inc);
+
+
       /* Check if Board exists at that address */
 #ifdef VXWORKS
     res = vxMemProbe((char *) &(dsc->boardID),VX_READ,4,(char *)&boardID);
 #else
+	printf("&(dsc->boardID)=0x%llx\n",&(dsc->boardID));fflush(stdout);
     res = vmeMemProbe((char *) &(dsc->boardID),4,(char *)&boardID);
 #endif
 
@@ -209,7 +213,7 @@ dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
 	{
 #ifdef DEBUG
 	  printf("%s: ERROR: Board ID at addr=0x%x does not match: 0x%08x \n",
-		 __FUNCTION__,(UINT32) dsc - dscA24Offset,boardID);
+		 __FUNCTION__,(UINT32) dsc - dscA24Offset, boardID);
 #endif
 	  errFlag = 1;
 	  continue;
@@ -219,8 +223,8 @@ dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
     fwrev = vmeRead32(&dsc->firmwareRev);
     if(fwrev < DSC_SUPPORTED_FIRMWARE)
 	{
-	  printf("%s: ERROR: dsc2 firmware (0x%x) at addr=0x%x not supported by this driver. \n",
-		 __FUNCTION__,fwrev,(UINT32) dsc - dscA24Offset);
+	  printf("%s: ERROR: dsc2 firmware (0x%x) at addr=0x%lx not supported by this driver. \n",
+		 __FUNCTION__,fwrev,(unsigned long) dsc - dscA24Offset);
 	  printf("  Minimum required = 0x%x\n",DSC_SUPPORTED_FIRMWARE);
 	  errFlag = 1;
 	  if(!allowOlderFirmware)
@@ -238,8 +242,8 @@ dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
     /*printf("slotno=%d\n",slotno);*/
     if((slotno<1) || (slotno>DSC_MAX_SLOTS))
 	{
-	  printf("%s: Module at addr=0x%x has an invalid slot number (%d)\n",
-		 __FUNCTION__, (UINT32) dsc - dscA24Offset, slotno);
+	  printf("%s: Module at addr=0x%lx has an invalid slot number (%d)\n",
+		 __FUNCTION__, (unsigned long) dsc - dscA24Offset, slotno);
 	  errFlag = 1;
 
       if(indexByOrder)
@@ -250,7 +254,7 @@ dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
       else /* sergey: set slot number by address */
 	  {
         /*continue;*/
-        a24addr = (UINT32)dsc - dscA24Offset;
+        a24addr = (unsigned int)((unsigned long)dsc - dscA24Offset);
         if(a24addr==0x100000)      slotno =  2;
         else if(a24addr==0x180000) slotno =  3;
         else if(a24addr==0x200000) slotno =  4;
@@ -278,8 +282,10 @@ dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
     dscID[Ndsc] = slotno;
 
     dscp[dscID[Ndsc]] = (struct dsc_struct*)laddr_inc;
-    printf("Initialized dsc2 ID %d slot %d at VME (USER) address 0x%x (0x%x) firmware 0x%08x.\n",
-		   Ndsc, dscID[Ndsc], (UINT32) dscp[dscID[Ndsc]] - dscA24Offset, (UINT32) dscp[dscID[Ndsc]],fwrev);
+
+    printf("Initialized dsc2 ID %d slot %d at VME (USER) address 0x%x (0x%lx) firmware 0x%08x.\n",
+		   Ndsc, dscID[Ndsc], (UINT32) ((unsigned long)dscp[dscID[Ndsc]] - dscA24Offset), (unsigned long) dscp[dscID[Ndsc]],fwrev);
+
     Ndsc++;
     if(Ndsc>=ndsc) break;
   }
@@ -301,7 +307,7 @@ dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
       dscA32Offset = laddr - dscA32Base;
     }
 #else
-  res = vmeBusToLocalAdrs(0x09,(char *)dscA32Base,(char **)&laddr);
+  res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)dscA32Base,(char **)&laddr);
   if (res != 0) 
     {
       printf("%s: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",
@@ -337,7 +343,7 @@ dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
 	  return(ERROR);
 	}
 #else
-      res = vmeBusToLocalAdrs(0x09,(char *)a32addr,(char **)&laddr);
+      res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)a32addr,(char **)&laddr);
       if (res != 0) 
 	{
 	  printf("%s: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",
@@ -369,8 +375,13 @@ dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
 unsigned int
 dsc2GetA32MaxAddress()
 {
-  printf("dsc2GetA32MaxAddress returns 0x%08x\n",a32addrMax);
-  return(a32addrMax);
+  unsigned int maxbase;
+
+  if(Ndsc==0) maxbase = dscA32Base;
+  else        maxbase = a32addrMax;
+  printf("dsc2GetA32MaxAddress: maxbase=0x%08x\n",maxbase);
+
+  return(maxbase);
 }
 
 /*******************************************************************************
@@ -449,14 +460,14 @@ dsc2Status(UINT32 id, int pflag)
   readoutStart = vmeRead32(&dscp[id]->readoutStart);
   DSCUNLOCK;
 
-  printf("\nSTATUS for DSC in slot %d at VME (USER) base address 0x%x (0x%x)\n",
-	 id,  (UINT32) dscp[id]-dscA24Offset, (UINT32) dscp[id]);
+  printf("\nSTATUS for DSC in slot %d at VME (USER) base address 0x%x (0x%lx)\n",
+		 id,  (UINT32)(unsigned long)(dscp[id]-dscA24Offset), (unsigned long) dscp[id]);
   printf("-----------------------------------------------------------------------\n");
   printf(" Board Firmware = 0x%04x  Board ID = 0x%08x (%4.4s)\n",
 		 firmwareRev&DSC_FIRMWAREREV_MASK, boardID, &boardID);
   if(Adr32&DSC_ADR32_ENABLE)
-    printf(" A32 Enabled at VME (Local) base 0x%08x (0x%08x)\n",
-	   ((Adr32 & DSC_ADR32_BASE_MASK)<<16),(UINT32) dscpd[id]);
+    printf(" A32 Enabled at VME (Local) base 0x%08x (0x%lx)\n",
+	   ((Adr32 & DSC_ADR32_BASE_MASK)<<16),(unsigned long) dscpd[id]);
   else
     printf(" A32 Disabled\n");
 
@@ -1748,7 +1759,8 @@ dsc2GetAdr32(int id)
 int
 dsc2SetAdr32(UINT32 id, UINT32 a32base, UINT16 enable)
 {
-  UINT32 a32addr=0, a32base_set=0, laddr=0;
+  unsigned long laddr=0;
+  UINT32 a32addr=0, a32base_set=0;
   int res=0;
   
   CHECKID(id);
@@ -1771,7 +1783,7 @@ dsc2SetAdr32(UINT32 id, UINT32 a32base, UINT16 enable)
       return(ERROR);
     }
 #else
-  res = vmeBusToLocalAdrs(0x09,(char *)a32addr,(char **)&laddr);
+  res = vmeBusToLocalAdrs(0x09,(char *)(unsigned long)a32addr,(char **)&laddr);
   if (res != 0) 
     {
       printf("%s: ERROR in vmeBusToLocalAdrs(0x09,0x%x,&laddr) \n",
@@ -2017,7 +2029,7 @@ dsc2ReadBlock(UINT32 id, volatile UINT32 *data, int nwrds, int rmode)
 	  laddr = data;
 	}
       
-      vmeAdr = ((unsigned int)(dscpd[id]) - dscA32Offset);
+      vmeAdr = (unsigned int) ((unsigned long)(dscpd[id]) - dscA32Offset);
 	  /*
 #ifdef VXWORKS
       retVal = sysVmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2), 0);
@@ -2025,7 +2037,7 @@ dsc2ReadBlock(UINT32 id, volatile UINT32 *data, int nwrds, int rmode)
       retVal = vmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2));
 #endif
 	  */
-    retVal = usrVme2MemDmaStart(vmeAdr, (UINT32)laddr, (nwrds<<2));
+    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned long)laddr, (nwrds<<2));
       if(retVal |= 0) 
 	{
 	  logMsg("\n%s: ERROR in DMA transfer Initialization 0x%x\n",__FUNCTION__,retVal,0,0,0,0);
@@ -2295,6 +2307,7 @@ dsc2ReadScalers(UINT32 id, volatile UINT32 *data, int nwrds, int rflag, int rmod
         /*printf("%s(%2d): ready... \n",__FUNCTION__,id)*/;
 	  }
 
+
       /* Assume that the DMA programming is already setup. */
 
       /* Check for 8 byte boundary for address - insert dummy word */
@@ -2313,8 +2326,9 @@ dsc2ReadScalers(UINT32 id, volatile UINT32 *data, int nwrds, int rflag, int rmod
 	  dummy = 0;
 	  laddr = data;
 	}
-      
-      vmeAdr = ((unsigned int)(dscpd[id]) - dscA32Offset);
+
+
+      vmeAdr = (unsigned int)((unsigned long)(dscpd[id]) - dscA32Offset);
       /*printf("%s: vmeAdr = 0x%08x\n",__FUNCTION__,vmeAdr);*/
 	  /*
 #ifdef VXWORKS
@@ -2323,7 +2337,7 @@ dsc2ReadScalers(UINT32 id, volatile UINT32 *data, int nwrds, int rflag, int rmod
       retVal = vmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2));
 #endif
 	  */
-    retVal = usrVme2MemDmaStart(vmeAdr, (UINT32)laddr, (nwrds<<2));
+    retVal = usrVme2MemDmaStart(vmeAdr, (unsigned long)laddr, (nwrds<<2));
       if(retVal |= 0) 
 	{
 	  logMsg("\n%s: ERROR in DMA transfer Initialization 0x%x\n",__FUNCTION__,retVal,0,0,0,0);
@@ -2378,7 +2392,6 @@ dsc2ReadScalers(UINT32 id, volatile UINT32 *data, int nwrds, int rflag, int rmod
 	  return(retVal>>2);
 	  
 	}
-
 
 
 

@@ -95,6 +95,9 @@ extern "C" {
   int evLinkFrag(unsigned int *buf, int fragtag, int fragnum);
   int evLinkBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum, int *nbytes, int *ind_data);
 
+  int evCopyFrag(unsigned int *buf, int fragtag, int fragnum, unsigned int *bufout);
+  int evCopyBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum, unsigned int *bufout);
+
   int evDropFrag(unsigned int *buf, int fragtag, int fragnum);
   int evDropBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum);
 

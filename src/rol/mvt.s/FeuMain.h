@@ -44,7 +44,7 @@
 	} Main_Csr;
 	int Main_CsrInit(    Main_Csr *csr );
 	int Main_CsrGet(     Main_Csr *csr );
-	int Main_CsrSprintf( Main_Csr *csr, char *buf );
+	int Main_CsrSprintf( Main_Csr *csr, char *buf, int detailed );
 
 	// Optional message container
 	extern char *main_msg;

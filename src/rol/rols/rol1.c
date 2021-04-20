@@ -20,6 +20,7 @@ static int nusertrig, ndone;
 #define USE_DCRB
 #define USE_VETROC
 //#define USE_FLP
+#define USE_SIS3801
 
 
 //#define USE_ED
@@ -381,6 +382,32 @@ getFadcPedsFilename(int rocid)
 
 #endif
 
+#ifdef USE_SIS3801
+#include "sis3801.h"
+static unsigned long run_trig_count = 0;
+static int nsis;
+unsigned int addr;
+#define MASK    0x00000000   /* unmask all 32 channels (0-enable,1-disable) */
+
+/* general settings */
+void
+sis3801config(int id, int mode)
+{
+  sis3801control(id, DISABLE_EXT_NEXT);
+  sis3801reset(id);
+  sis3801clear(id);
+  sis3801setinputmode(id,mode);
+  sis3801enablenextlogic(id);
+  sis3801control(id, ENABLE_EXT_DIS);
+}
+
+static int mode = 2;
+
+#endif
+
+
+
+
 static void
 __download()
 {
@@ -498,9 +525,6 @@ if(rol->pid==18)
 
 
 
-
-
-
   /******************/
   /* USER code here */
 
@@ -510,6 +534,7 @@ vmeBusLock();
   if(ret >= 0)
   {
     sd_found = 1;
+    SD_READ_CONF_FILE;
   }
   else
   {
@@ -783,7 +808,7 @@ vmeBusLock();
   {
     sdSetActiveVmeSlots(fadcSlotMask); /* Use the fadcSlotMask to configure the SD */
     sdStatus();
-    sdSetTrigoutLogic(0, 2); /* Enable SD trigout as OR by default */
+    /*sdSetTrigoutLogic(0, 2);*/ /* Enable SD trigout as OR by default */
   }
 vmeBusUnlock();
 
@@ -966,6 +991,7 @@ vmeBusLock();
 vmeBusUnlock();
 
 
+
 /*
   flpEnableOutput(0);
   flpEnableOutput(1);
@@ -988,6 +1014,42 @@ vmeBusUnlock();
 */
 
 #endif
+
+
+#ifdef USE_SIS3801
+  printf("SIS3801 Download() starts =========================\n");
+
+vmeBusLock();
+
+  mode = 2; /* Control Inputs mode = 2  */
+  //nsis = sis3801Init(0x11800000, 0x100000, 2, mode);
+  nsis = sis3801Init(0x800000, 0x100000, 2, mode);
+  /*nsis = sis3801Init(0x10000000, 0x1000000, 2, mode);*/
+  printf("nsis=%d\n",nsis);
+  /*if(nsis>0) TDC_READ_CONF_FILE;*/
+
+  for(id = 0; id < nsis; id++)
+  {
+    sis3801config(id, mode);
+    sis3801control(id, DISABLE_EXT_NEXT);
+
+    printf("    Status = 0x%08x\n",sis3801status(id));
+  }
+
+#if 0
+  /* Set up the 0th scaler as the interrupt source */
+  /* 2nd arg: vector = 0 := use default */
+  scalIntInit(0, 0);
+
+  /* Connect service routine */
+  scalIntConnect(myISR, 0);
+#endif
+
+vmeBusUnlock();
+
+  printf("SIS3801 Download() ends =========================\n\n");
+#endif
+
 
 
   sprintf(rcname,"RC%02d",rol->pid);
@@ -1076,11 +1138,7 @@ vmeBusLock();
     tiSetBusySource(TI_BUSY_SWB,0);
 	sdSetActiveVmeSlots(vscmSlotMask);
 
-#if 0
-    if(rol->pid == 4) sdSetTrigoutLogic(0, 2); /* SD Trigout when VSCM multiplicity >= 2 - DO FOR SVT4: R1+R2*/
-    else              sdSetTrigoutLogic(0, 1); /* SD Trigout when VSCM multiplicity >= 1 - DO FOR SVT5: R3*/
-#endif
-    sdSetTrigoutLogic(0, 2);
+    /*sdSetTrigoutLogic(0, 2);*/
 
 vmeBusUnlock();
 
@@ -1143,6 +1201,9 @@ vmeBusUnlock();
 
   printf("VETROC Prestart() ends =========================\n\n");
 #endif
+
+
+
 
 
 #ifdef USE_DCRB
@@ -1214,6 +1275,14 @@ vmeBusUnlock();
     if(dcrbLinkStatus(DCRB_SLOT)) printf("Link at slot %d is UP\n",DCRB_SLOT);
     else printf("Link at slot %d is DOWN\n",DCRB_SLOT);
   }
+
+  /* SD Trigout when DCRB multiplicity >= 1 */
+  if(sd_found)
+  {
+    sdSetTrigoutLogic(0, 1);
+  }
+
+
   printf("DCRB Prestart() ends =========================\n\n");
 #endif
 
@@ -1547,6 +1616,21 @@ vmeBusUnlock();
   }
 #endif
 
+
+#ifdef USE_SIS3801
+
+vmeBusLock();
+  for(id = 0; id < nsis; id++)
+  {
+    /*sis3801clear(id);*/
+    sis3801config(id, mode);
+    sis3801control(id, DISABLE_EXT_NEXT);
+  }
+vmeBusUnlock();
+
+#endif
+
+
 vmeBusLock();
   tiStatus(1);
 vmeBusUnlock();
@@ -1567,6 +1651,22 @@ __end()
   int id;
 
   printf("\n\nINFO: End1 Reached\n");fflush(stdout);
+
+#ifdef USE_SIS3801
+
+  for(id = 0; id < nsis; id++)
+  {
+vmeBusLock();
+    sis3801control(id, DISABLE_EXT_NEXT);
+vmeBusUnlock();
+    printf("    Status = 0x%08x\n",sis3801status(id));
+  }
+#if 0
+  scalIntDisable();
+#endif
+
+#endif
+
 
   CDODISABLE(TIPRIMARY,TIR_SOURCE,0);
 
@@ -1621,6 +1721,20 @@ vmeBusUnlock();
 static void
 __pause()
 {
+  int id;
+
+#ifdef USE_SIS3801
+
+  for(id=0; id<nsis; id++)
+  {
+vmeBusLock();
+    sis3801clear(id);
+    sis3801control(id, DISABLE_EXT_NEXT);
+vmeBusUnlock();
+  }
+
+#endif
+
   CDODISABLE(TIPRIMARY,TIR_SOURCE,0);
   logMsg("INFO: Pause Executed\n",1,2,3,4,5,6);
   
@@ -1780,6 +1894,22 @@ vmeBusUnlock();
   }
 #endif
 
+#ifdef USE_SIS3801
+  run_trig_count = 0;
+  for(id=0; id<nsis; id++)
+  {
+vmeBusLock();
+    sis3801control(id, DISABLE_EXT_NEXT);
+    sis3801clear(id);
+vmeBusUnlock();
+  }
+#if 0
+  /* Enable interrupts */
+  scalIntEnable(0x1);
+#endif
+
+#endif
+
   /* always clear exceptions */
   jlabgefClearException(1);
 
@@ -1796,10 +1926,11 @@ vmeBusUnlock();
 void
 usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
 {
-  int *jw, ind, ind2, i, ii, jj, jjj, blen, len, rlen, itdcbuf, nbytes;
+  int *jw, ind, ind2, i, ii, jj, kk, jjj, blen, len, rlen, itdcbuf, nbytes;
   unsigned int *tdcbuf_save, *tdc, utmp;
   unsigned int *dabufp1, *dabufp2;
   int njjloops, slot, type;
+  int dready = 0, sistimeout = 0, siswasread = 0;
   int nwords;
 #ifndef VXWORKS
   TIMERL_VAR;
@@ -1809,7 +1940,7 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
   unsigned short *dabufp16, *dabufp16_save;
   int id;
   int dCnt, idata;
-  int stat, itime, gbready;
+  int status, stat, itime, gbready;
 #endif
 #ifdef USE_V1190
   int nev, rlenbuf[22];
@@ -1839,6 +1970,38 @@ usleep(100);
   /*
   sleep(1);
   */
+
+#ifdef USE_SIS3801
+  run_trig_count++;
+  if(run_trig_count==1)
+  {
+    printf("First event - sis3801: nsis=%d, ENABLE_EXT_NEXT\n",nsis);
+vmeBusLock();
+    for(id = 0; id < nsis; id++)
+    {
+      sis3801control(id, ENABLE_EXT_NEXT);
+    }
+vmeBusUnlock();
+
+/* read and trash whatever in buffers */
+
+
+    for(ii = 0; ii < nsis; ii++)
+    {
+vmeBusLock();
+      while( ! (sis3801status(ii) & FIFO_EMPTY) )
+      {
+        tdcbuf[0] = 10000;
+        len = sis3801read(ii, tdcbuf);
+        printf("INFO(FIRST EVENT): sis3801[%d] returned %d bytes\n",ii,len);
+	  }
+vmeBusUnlock();
+	}
+
+  }
+
+#endif
+
 
 
 
@@ -1876,10 +2039,13 @@ usleep(100);
     tiSetOutputPort(1,0,0,0);
     */
 
+/*printf("1\n");fflush(stdout);*/
     /* Grab the data from the TI */
+    tdcbuf = tdcbuf_save;
 vmeBusLock();
-    len = tiReadBlock(tdcbuf,900>>2,1);
+    len = tiReadBlock(tdcbuf,2048,1);
 vmeBusUnlock();
+/*printf("2 len=%d tdcbuf=0x%lx\n",len,tdcbuf);fflush(stdout);*/
     if(len<=0)
     {
       printf("ERROR in tiReadBlock : No data or error, len = %d\n",len);
@@ -1887,13 +2053,15 @@ vmeBusUnlock();
     }
     else
     {
-	  /*
-	  if(len != 164)
+	  
+#ifdef DEBUG
+	  //if((len != 163) && (len != 164))
 	  {
-        printf("ti: len=%d\n",len);
+        //printf("ERROR ROL1 TI: len=%d\n",len);
         for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
 	  }
-	  */
+#endif
+
       BANKOPEN(0xe10A,1,rol->pid);
       for(jj=0; jj<len; jj++) *rol->dabufp++ = tdcbuf[jj];
       BANKCLOSE;
@@ -1923,11 +2091,18 @@ TIMERL_START;
 
 
 #ifdef USE_V1190
+
+    tdcbuf = tdcbuf_save;
 	if(ntdcs>0)
 	{
 vmeBusLock();
       tdc1190ReadStart(tdcbuf, rlenbuf);
 vmeBusUnlock();
+
+
+/*#if 0*/
+
+
 	  /*
 	  rlenbuf[0] = tdc1190ReadBoard(0, tdcbuf);
 	  rlenbuf[1] = tdc1190ReadBoard(1, &tdcbuf[rlenbuf[0]]);
@@ -1950,6 +2125,7 @@ vmeBusUnlock();
       njjloops = ntdcs;
 
       BANKOPEN(0xe10B,1,rol->pid);
+
       for(ii=0; ii<njjloops; ii++)
       {
         rlen = rlenbuf[ii];
@@ -2003,18 +2179,139 @@ vmeBusUnlock();
 #endif
 
         for(jj=0; jj<rlen; jj++) *rol->dabufp ++ = tdc[jj];
-      }
+
+      } /*for(ii=0; ii<njjloops; ii++)*/
+
       BANKCLOSE;
 
-	}
+
+
+/*#endif*/ /*if 0*/
+
+
+
+	} /*if(ntdcs>0)*/
 
 
 #endif /* USE_V1190 */
+
+
+
+#ifdef USE_SIS3801
+
+    if(nsis>0)
+    {
+      /* get status from all boards */
+      status = 0;
+      for(ii=0; ii<nsis; ii++)
+      {
+vmeBusLock();
+        status |= sis3801status(ii);
+vmeBusUnlock();
+
+	  }
+
+      /* if at least one board is full, reset */
+      if(status & FIFO_FULL)
+      {
+        printf("SIS3801 IS FULL - CLEAN IT UP AND START AGAIN\n");fflush(stdout);
+
+        for(id=0; id<nsis; id++)
+        {
+vmeBusLock();
+          sis3801config(id, mode);
+          sis3801control(id, ENABLE_EXT_NEXT);
+vmeBusUnlock();
+          printf("    Status = 0x%08x\n",sis3801status(id));
+        }
+	  }
+      else
+	  {
+        siswasread = 0;
+        for(ii=0; ii<nsis; ii++)
+        {
+          sistimeout = 0;
+          dready = 0;
+          while((dready == 0) && (sistimeout++ < 10))
+          {
+vmeBusLock();
+            dready = (sis3801status(ii) & FIFO_EMPTY) ? 0 : 1;
+vmeBusUnlock();
+          }
+
+          if(dready == 0)
+		  {
+            /*printf("NOT READY\n");fflush(stdout)*/;
+		  }
+          else
+          {
+            //printf("READY =======================================\n");fflush(stdout);
+            tdcbuf[0] = 10000;
+vmeBusLock();
+            len = sis3801read(ii, tdcbuf);
+vmeBusUnlock();
+            if(len>=10000) printf("WARN: sis3801[%d] returned %d bytes\n",ii,len);
+            len = len >> 2;
+            /*printf("\nsis3801[%d]: read %d words\n",ii,len);fflush(stdout);
+            for(jj = 0; jj <len; jj++)
+	        {
+	          if((jj%4) == 0) printf("\n%4d: ", jj);
+	          printf(" 0x%08x ",tdcbuf[jj]);
+	        }
+            printf("\n");
+			*/
+            BANKOPEN(0xe125,1,/*rol->pid*/ii);
+            for(jj=0; jj<len; jj++) *rol->dabufp++ = LSWAP(tdcbuf[jj]);
+            BANKCLOSE;
+
+            siswasread = 1;
+		  }
+
+		  /*
+          ret = scaler7201readHLS(scaler0, ring0, nHLS);
+          if(ret==0) printRingFull = 1;
+          else if(ret==-1 && printRingFull==1)
+          {
+            printf("scaler: ring0 is full\n",0,0,0,0,0,0);
+            printRingFull = 0;
+          }
+		  */
+        }
+
+#ifdef USE_DSC2
+        if(siswasread)
+		{
+	      if(ndsc2_daq>0)
+	      {
+            BANKOPEN(0xe115,1,rol->pid);
+            for(jj=0; jj<ndsc2_daq; jj++)
+            {
+              slot = dsc2Slot_daq(jj);
+vmeBusLock();
+              /* in following argument 4 set to 0xFF means latch and read everything, 0x3F - do not latch and read everything */
+              nwords = dsc2ReadScalers(slot, tdcbuf, 0x10000, 0xFF, 1);
+              /*printf("nwords=%d, nwords = 0x%08x 0x%08x 0x%08x 0x%08x\n",nwords,tdcbuf[0],tdcbuf[1],tdcbuf[2],tdcbuf[3]);*/
+vmeBusUnlock();
+              /* unlike other boards, dcs2 scaler readout already swapped in 'dsc2ReadScalers', so swap it back, because
+              rol2.c expects big-endian format*/
+              for(kk=0; kk<nwords; kk++) *rol->dabufp ++ = LSWAP(tdcbuf[kk]);
+            }
+            BANKCLOSE;
+	      }
+		}
+#endif
+
+	  }
+    }
+#endif
+
+
 
 #ifdef USE_SSP_RICH
     ///////////////////////////////////////
     // SSP_CFG_SSPTYPE_HALLBRICH Readout //
     ///////////////////////////////////////
+    tdcbuf = tdcbuf_save;
     dCnt=0;
     for(ii=0; ii<nssp; ii++)
     {
@@ -2318,11 +2615,11 @@ vmeBusUnlock();
 	    {
 #ifndef DMA_TO_BIGBUF
 #ifdef DEBUG
-          printf("fadc: moving %d words to dabufp starting from address 0x%08x\n",dCnt,rol->dabufp);fflush(stdout);
+          printf("fadc: moving %d words to dabufp starting from address 0x%lx\n",dCnt,rol->dabufp);fflush(stdout);
 #endif
           for(jj=0; jj<dCnt; jj++) *rol->dabufp++ = tdcbuf[jj];
 #ifdef DEBUG
-          printf("fadc: ending dabufp address 0x%08x\n",rol->dabufp);fflush(stdout);
+          printf("fadc: ending dabufp address 0x%lx\n",rol->dabufp);fflush(stdout);
 #endif
 #endif
         }
@@ -3021,7 +3318,7 @@ vmeBusUnlock();
 	  */
       *rol->dabufp ++ = LSWAP((0x12<<27)+(event_number&0x7FFFFFF)); /*event header*/
 
-      nwords = 5; /* UPDATE THAT IF THE NUMBER OF WORDS CHANGED BELOW !!! */
+      nwords = 6; /* UPDATE THAT IF THE NUMBER OF WORDS CHANGED BELOW !!! */
       *rol->dabufp ++ = LSWAP((0x14<<27)+nwords); /*head data*/
 
       /* COUNT DATA WORDS FROM HERE */
@@ -3031,10 +3328,12 @@ vmeBusUnlock();
       if(ii==(block_level-1))
 	  {
         *rol->dabufp ++ = LSWAP(time(0)); /*event unix time */
-        *rol->dabufp ++ = LSWAP(EVTYPE); /*event type */
+        *rol->dabufp ++ = LSWAP(EVTYPE);  /*event type */
+        *rol->dabufp ++ = 0;              /*reserved for L3 info*/
 	  }
       else
 	  {
+        *rol->dabufp ++ = 0;
         *rol->dabufp ++ = 0;
         *rol->dabufp ++ = 0;
 	  }

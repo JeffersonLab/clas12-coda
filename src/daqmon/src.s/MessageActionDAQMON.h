@@ -66,7 +66,9 @@ class MessageActionHist : public MessageAction {
 
     int check(std::string fmt)
     {
+	  /*
       printf("\n===== MessageActionDAQMON check: testing fmt >%4.4s< (len of fmt is: %i) \n",fmt.c_str(),strlen(fmt.c_str()));
+	  */
       for(int i=0; i<NFORMATS; i++)
 	  {
         std::string f = formats[i];

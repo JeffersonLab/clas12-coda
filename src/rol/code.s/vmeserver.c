@@ -104,7 +104,7 @@ static unsigned int  vmescalersbegin[MAXSCALERS];   /*VME address of the first s
 static unsigned int  vmescalersend[MAXSCALERS];     /*last scaler, the same address space */
 static unsigned int  vmescalerslen[MAXSCALERS];     /*scalers space (the number of bytes) */
 static unsigned int  vmescalersaddr[MAXSCALERS];    /*actual VME address (after sysBusToLocalAdrs()) */
-static unsigned int  vmescalersenable[MAXSCALERS];  /*actual VME address (after sysBusToLocalAdrs()) */
+static unsigned long  vmescalersenable[MAXSCALERS];  /*actual VME address (after sysBusToLocalAdrs()) */
 static unsigned int  vmescalersdisable[MAXSCALERS]; /*actual VME address (after sysBusToLocalAdrs()) */
 static unsigned int *vmescalers[MAXSCALERS];        /*scalers memory space address*/
 
@@ -199,7 +199,7 @@ vmeScalersReadoutAdd(unsigned int addr, unsigned int len, unsigned int enable)
 #ifdef VXWORKS
     if(sysBusToLocalAdrs(0x39, enable&0xFFFFFF, &vmescalersenable[vmescalersnum]) < 0)
 #else
-	if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(enable&0xFFFFFF)), (char **)&vmescalersenable[vmescalersnum]) < 0)
+	if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long)(enable&0xFFFFFF)), (char **)&vmescalersenable[vmescalersnum]) < 0)
 #endif
     {
       printf("vmeScalersReadoutAdd ERROR: cannot set enable address\n");
@@ -214,7 +214,7 @@ vmeScalersReadoutAdd(unsigned int addr, unsigned int len, unsigned int enable)
   vmescalerslen[vmescalersnum] = len;
   vmescalersbegin[vmescalersnum] = addr;
   vmescalersend[vmescalersnum] = addr+(len<<2)-4;
-  printf("vmeScalersReadoutAdd: Scalers Addresses: 0x%08x:0x%08x->0x%08x, len=%d words, enable=0x%08x\n",
+  printf("vmeScalersReadoutAdd: Scalers Addresses: 0x%08x:0x%08x->0x%08x, len=%d words, enable=0x%lx\n",
       vmescalersbegin[vmescalersnum],vmescalersend[vmescalersnum],
       vmescalersaddr[vmescalersnum],vmescalerslen[vmescalersnum],
       vmescalersenable[vmescalersnum]);
@@ -249,7 +249,7 @@ vmeScalersEnableAdd(unsigned int addr, unsigned int enable)
 #ifdef VXWORKS
   if(sysBusToLocalAdrs(0x39,addr&0xFFFFFF,&address) < 0)
 #else
-	if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(addr&0xFFFFFF)), (char **)&address) < 0)
+	if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long)(addr&0xFFFFFF)), (char **)&address) < 0)
 #endif
   {
     printf("vmeScalersEnableAdd ERROR: cannot set base address\n");
@@ -268,7 +268,7 @@ vmeScalersEnableAdd(unsigned int addr, unsigned int enable)
 #ifdef VXWORKS
       if(sysBusToLocalAdrs(0x39,enable&0xFFFFFF,&vmescalersenable[k]) < 0)
 #else
-		if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(enable&0xFFFFFF)), (char **)&vmescalersenable[k]) < 0)
+		if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long)(enable&0xFFFFFF)), (char **)&vmescalersenable[k]) < 0)
 #endif
       {
         printf("vmeScalersEnableAdd ERROR: cannot set enable address\n");
@@ -296,7 +296,7 @@ vmeScalersDisableAdd(unsigned int addr, unsigned int disable)
 #ifdef VXWORKS
   if(sysBusToLocalAdrs(0x39,addr&0xFFFFFF,&address) < 0)
 #else
-	if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long int)(addr&0xFFFFFF)), (char **)&address) < 0)
+	if(vmeBusToLocalAdrs(0x39, (char *)((unsigned long)(addr&0xFFFFFF)), (char **)&address) < 0)
 #endif
   {
     printf("vmeScalersEnableAdd ERROR: cannot set base address\n");
@@ -421,10 +421,10 @@ vmeScalersRead()
     if(vmescalersenable[k] > 0)
     {
 #ifdef PHOTON_RUN
-      ptr32 = (volatile unsigned int *)((unsigned long int)vmescalersenable[k]);
+      ptr32 = (volatile unsigned int *)((unsigned long)vmescalersenable[k]);
       *ptr32 = 0x0; /*disable scalers*/
 #else
-      ptr16 = (volatile unsigned short *)((unsigned long int)vmescalersenable[k]);
+      ptr16 = (volatile unsigned short *)((unsigned long)vmescalersenable[k]);
       *ptr16 = 0x0; /*disable scalers*/
 #endif
       /*printf("disable: write 0 to 0x%08x\n",ptr16);*/
@@ -479,10 +479,10 @@ vmeScalersRead()
     if(vmescalersenable[k] > 0)
     {
 #ifdef PHOTON_RUN
-      ptr32 = (volatile unsigned int *)((unsigned long int)vmescalersenable[k]);
+      ptr32 = (volatile unsigned int *)((unsigned long)vmescalersenable[k]);
       *ptr32 = 0x1; /*enable scalers*/
 #else
-      ptr16 = (volatile unsigned short *)((unsigned long int)vmescalersenable[k]);
+      ptr16 = (volatile unsigned short *)((unsigned long)vmescalersenable[k]);
       /*printf("enable: write 1 to 0x%08x\n",ptr16);*/
       *ptr16 = 0x1; /*enable scalers*/
 #endif
@@ -1172,7 +1172,7 @@ vmetcpServer(void)
 
     /* fill the structure for thread */
     targ.newFd = gClientSocket;
-    targ.address = (char *) ((int) inet_ntoa(clientAddr.sin_addr));
+    targ.address = (char *) ((long) inet_ntoa(clientAddr.sin_addr));
     targ.port = ntohs (clientAddr.sin_port);
 
 
@@ -1200,7 +1200,7 @@ vmetcpServer(void)
         targ.newFd, targ.address, targ.port); fflush(stdout);
 	  */
       /* block annoying IP address(es) */
-      if(!strncmp( (char *)((int)inet_ntoa (clientAddr.sin_addr)), "129.57.71.",10))
+      if(!strncmp( (char *)((long)inet_ntoa (clientAddr.sin_addr)), "129.57.71.",10))
 	  {
         printf("WARN: ignore request from %s\n",targ.address);
         close(targ.newFd);

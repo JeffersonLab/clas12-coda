@@ -34,10 +34,16 @@ ifeq ("$(OSTYPE)","Darwin")
 endif
 
 
-#obtain Linux release number (works on RHEL at least ..)
+#obtain Linux release number (works on RHEL and CentOS at least ..)
 ifeq ("$(OSTYPE)","Linux")
-  OSRELEASE = $(shell cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 7)
+	FILE=centos-release
+	ifeq ($(findstring ${FILE},$(wildcard /etc/*)),) # RHEL
+		OSRELEASE = $(shell cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 7)
+	else #CentOS
+		OSRELEASE = $(shell cat /etc/centos-release | cut -d "." -f 1 | cut -d " " -f 4)
+	endif
 endif
+
 
 #redefine MACHINE for 64bit RHEL6, use different naming scheme
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
@@ -301,6 +307,11 @@ ifeq ("$(OSRELEASE)","7")
     TERMCAPLIBS += -lXft -lfontconfig
 endif
 endif
+ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64_vme")
+ifeq ("$(OSRELEASE)","7")
+    TERMCAPLIBS += -lXft -lfontconfig
+endif
+endif
 
     SYSLIBDIRS = /usr/lib
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
@@ -331,7 +342,11 @@ FILE=vmeinfo
 ifeq ($(findstring ${FILE},$(wildcard /proc/*)),)
 	CFLAGS +=
 else
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
+	CFLAGS += -DLinux_vme
+else
 	CFLAGS += -DLinux_vme -I$(CODA)/src/rol/jvme
+endif
 endif
 
 #==============
@@ -847,6 +862,7 @@ JAR = clonjava/$(MAIN).jar
 #	echo ">$(OSTYPE)<"
 #	echo ">$(MACHINE)<"
 #	echo ">$(PLATFORM)<"
+#	echo ">$(OSTYPE_MACHINE)<"
 #	echo ">$(OSTYPE_PLATFORM)<"
 #	echo ">$(OSRELEASE)<"
 #	echo ">$(MAKECMDGOALS)<"

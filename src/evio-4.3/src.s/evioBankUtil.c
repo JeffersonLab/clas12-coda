@@ -325,7 +325,7 @@ evLinkFrag(unsigned int *buf, int fragtag, int fragnum)
 {
   int ind, len, nw, tag1, pad1, typ1, num1;
 
-  len = buf[0]+1; /* event length */
+  len = buf[0]+1;  /* event length */
   ind = 2;         /* skip event header */
   while(ind<len)
   {
@@ -360,6 +360,97 @@ evLinkFrag(unsigned int *buf, int fragtag, int fragnum)
 
   return(0);
 }
+
+int
+evCopyFrag(unsigned int *buf, int fragtag, int fragnum, unsigned int *bufout)
+{
+  int status, ind1, ind2, nw, num, ii;
+
+  /* if input fragment does not exist - return */
+  if( (ind1 = evLinkFrag(buf, fragtag, fragnum)) <= 0)
+  {
+    printf("evCopyFrag ERROR: input fragment tag=%d num=%d does not exist\n",fragtag,fragnum);
+    return(-1);
+  }
+
+  printf("evCopyFrag: input frag ind=%d, header=%d 0x%08x\n",ind1,buf[ind1],buf[ind1+1]);
+  if(fragnum<0)
+  {
+    num = buf[ind1+1]&0xff;
+  }
+  else
+  {
+    num = fragnum;
+  }
+  printf("evCopyFrag: input fragnum=%d\n",num);
+
+  /* if output fragment exist, cannot create it */
+  if( evLinkFrag(bufout, fragtag, num) > 0)
+  {
+    printf("evCopyFrag ERROR: output fragment tag=%d num=%d exist already\n",fragtag,num);
+    return(-1);
+  }
+
+  ind2 = bufout[0] + 1; /* index of the first word after existing event */
+
+  nw = buf[ind1]+1;
+  memcpy(&bufout[ind2],&buf[ind1],nw<<2);
+  bufout[0] += nw; /* increase event length */
+
+  return(0);
+}
+
+#if 0
+int
+evCopyBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum, unsigned int *bufout)
+{
+  int status, ind1, ind2, nw, num, ii, nbytes, ind_data;
+
+  /* if input bank does not exist - return */
+  if( (ind1 = evLinkBank(buf, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data)) <= 0)
+  {
+    printf("evCopyBank ERROR: input bank fragtag=%d fragnum=%d banktag=%d banknum=%d does not exist\n",fragtag,fragnum,banktag,banknum);
+    return(-1);
+  }
+
+  printf("evCopyFrag: input bank ind=%d, header=%d 0x%08x\n",ind1,buf[ind1],buf[ind1+1]);
+  if(fragnum<0)
+  {
+    num = buf[ind1+1]&0xff;
+  }
+  else
+  {
+    num = fragnum;
+  }
+  printf("evCopyFrag: input fragnum=%d\n",num);
+
+  /* if output fragment exist, cannot create it */
+  if( evLinkFrag(bufout, fragtag, num) > 0)
+  {
+    printf("evCopyFrag ERROR: output fragment tag=%d num=%d exist already\n",fragtag,num);
+    return(-1);
+  }
+
+  ind2 = bufout[0] + 1; /* index of the first word after existing event */
+
+  nw = buf[ind1]+1;
+  memcpy(&bufout[ind2],&buf[ind1],nw<<2);
+  bufout[0] += nw; /* increase event length */
+
+  return(0);
+}
+#endif
+
+
+
+
+
+
+
+
+
+
+
 
 
 

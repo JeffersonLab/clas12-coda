@@ -686,6 +686,7 @@ int  tsGetTriggerHoldoff(int rule);
 int  tsSetTriggerHoldoffMin(int rule, unsigned int value);
 int  tsGetTriggerHoldoffMin(int rule, int pflag);
 int  tsLoadTriggerTable();
+int  tsLatchTimers();
 unsigned int tsGetLiveTime();
 unsigned int tsGetBusyTime();
 unsigned int tsGetLiveTime_InputHigh();

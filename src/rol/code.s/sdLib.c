@@ -53,6 +53,12 @@ pthread_mutex_t   sdMutex = PTHREAD_MUTEX_INITIALIZER;
 volatile struct SDStruct  *SDp=NULL;    /* pointer to SD memory map */
 static int sdTestMode=0;                /* 1 if SD Jumper set to "test" mode */
 
+/*sergey*/
+static int Nsd = 0;                     /*Number of SDs in Crate */
+static int TrigoutLogic_type;
+static int TrigoutLogic_threshold;
+/*sergey*/
+
 /* Firmware updating variables */
 #ifndef VXWORKSPPC
 static unsigned char *progFirmware=NULL;
@@ -64,6 +70,16 @@ static size_t progFirmwareSize=0;
 /* External TI/TS Local Pointers */
 extern volatile struct TI_A24RegStruct *TIp;
 extern volatile struct TS_A24RegStruct *TSp;
+
+
+/* sergey: returns some globals */
+int
+sdGetNsd()
+{
+  return(Nsd);
+}
+/*sergey*/
+
 /*
   sdInit
   - Initialize the Signal Distribution Module
@@ -166,7 +182,12 @@ sdInit(int flag)
   else
     sdTestMode=0;
 
+/*sergey: return the number of SDs (1)
   return OK;
+*/
+  Nsd = 1;
+  return(Nsd);
+
 }
 
 /*
@@ -1221,7 +1242,30 @@ sdSetTrigoutLogic(int type, int threshold)
   vmeWrite32(&SDp->trigoutCtrl, 0x8008);
   vmeWrite32(&SDp->trigoutCtrl, 0x8008);
   SDUNLOCK;
+
+  TrigoutLogic_type = type;
+  TrigoutLogic_threshold = threshold;
 }
+
+/*sergey*/
+int
+sdGetTrigoutLogic(int *type_out, int *threshold_out)
+{
+  if(SDp==NULL)
+  {
+    printf("%s: ERROR: SD not initialized\n",__FUNCTION__);
+    return ERROR;
+  }
+
+  SDLOCK;
+
+  *type_out = TrigoutLogic_type;
+  *threshold_out = TrigoutLogic_threshold;
+
+  SDUNLOCK;
+
+}
+/*sergey*/
 
 
 /*************************************************************

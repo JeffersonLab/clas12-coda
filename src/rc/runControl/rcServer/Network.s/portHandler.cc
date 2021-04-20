@@ -46,6 +46,8 @@
 #include "daqSystem.h"
 #include "daqComponent.h"
 
+#define DEBUG_MSGS
+
 /* sergey: to be able to send messages to runControl log window */
 #include <rcMsgReporter.h>
 

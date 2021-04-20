@@ -3,15 +3,19 @@
  *
  */
 
-#ifdef VXWORKS
+#if defined(VXWORKS) || defined(Linux_vme)
 
-#include <vxWorks.h> 
 #include <stdio.h>
+
+#ifdef VXWORKS
+#include <vxWorks.h>
 #include <logLib.h>
+#endif
 
 #include "scaler7201.h"
-/*#include "polar.h"*/
+/*
 #include "ttutils.h"
+*/
 
 /* base address A23-A16 could be set by switches on a board */
 
@@ -163,6 +167,11 @@ scaler7201read(int addr, int *value)
   return((int)(outbuf - value));
 }
 
+
+
+
+#if 0
+
 /* special readout for eg1 run */
 
 int
@@ -192,10 +201,14 @@ scaler7201readHLS(int addr, int *ring, int counter)
   return(ret);
 }
 
+#endif
+
+
+
 int
 scaler7201restore(int addr, int mask)
 {
-  logMsg("scaler7201restore reached\n",1,2,3,4,5,6);
+  /*logMsg("scaler7201restore reached\n",1,2,3,4,5,6);*/
 
   scaler7201reset(addr);
   scaler7201mask(addr, mask);
@@ -206,96 +219,6 @@ scaler7201restore(int addr, int mask)
   scaler7201ledon(addr);
 
   return(0);
-}
-
-/* test scaler7201 board using internal tests */
-
-void
-scaler7201test(int addr)
-{
-  unsigned int i, len, value, buffer[100];
-  volatile unsigned int *bufptr;
-
-  bufptr = (volatile unsigned int *) addr;
-
-/* initialization */
-
-  scaler7201reset(addr);
-  scaler7201mask(addr, 0xfffffffc); /* disable all channels except 0-1 */
-  scaler7201enablenextlogic(addr);
-  scaler7201nextclock(addr);
-
-/* test 1 */
-
-  scaler7201control(addr, ENABLE_TEST);
-  for(i=0; i<8; i++) scaler7201testclock(addr);
-  scaler7201control(addr, DISABLE_TEST);
-
-  scaler7201nextclock(addr);
-  printf("Reading fifo1 ...\n");
-  while( !(scaler7201status(addr) & FIFO_EMPTY))
-  {
-    value = scaler7201readfifo(addr);
-    printf("value=%08x status=%08x\n",value,scaler7201status(addr));
-  }
-  printf("... done.\n");
-
-/* test 2 */
-
-  scaler7201control(addr, ENABLE_TEST);
-  scaler7201control(addr, ENABLE_25MHZ);
-  for(i=0; i<100000; i++) {;}
-  scaler7201control(addr, DISABLE_25MHZ);
-  scaler7201control(addr, DISABLE_TEST);
-
-  scaler7201nextclock(addr);
-  printf("Reading fifo2 ...\n");
-  len = scaler7201read(addr,buffer);
-  for(i=0; i<len; i++) printf("value=%08x\n",buffer[i]);
-  printf("... done.\n");
-
-/* test 3 */
-
-  scaler7201control(addr, ENABLE_TEST);
-  scaler7201control(addr, ENABLE_25MHZ);
-  for(i=0; i<10000; i++) {;}
-  scaler7201control(addr, DISABLE_25MHZ);
-  scaler7201control(addr, DISABLE_TEST);
-
-  scaler7201nextclock(addr);
-  printf("Reading fifo2 ...\n");
-  len = scaler7201read(addr,buffer);
-  for(i=0; i<len; i++) printf("value=%08x\n",buffer[i]);
-  printf("... done.\n");
-
-/* test 4 */
-
-  scaler7201control(addr, ENABLE_TEST);
-  scaler7201control(addr, ENABLE_25MHZ);
-  for(i=0; i<10000; i++) {;}
-  scaler7201control(addr, DISABLE_25MHZ);
-  scaler7201control(addr, DISABLE_TEST);
-
-  scaler7201nextclock(addr);
-  printf("Reading fifo4 ...\n");
-  len = scaler7201read(addr,buffer);
-  for(i=0; i<len; i++) printf("value=%08x\n",buffer[i]);
-  printf("... done.\n");
-
-/* test 5 */
-
-  scaler7201control(addr, ENABLE_TEST);
-  scaler7201control(addr, ENABLE_25MHZ);
-  for(i=0; i<10000; i++) {;}
-  scaler7201control(addr, DISABLE_25MHZ);
-  scaler7201control(addr, DISABLE_TEST);
-
-  scaler7201nextclock(addr);
-  printf("Reading fifo5 ...\n");
-  len = scaler7201read(addr,buffer);
-  for(i=0; i<len; i++) printf("value=%08x\n",buffer[i]);
-  printf("... done.\n");
-
 }
 
 #else /* no UNIX version */

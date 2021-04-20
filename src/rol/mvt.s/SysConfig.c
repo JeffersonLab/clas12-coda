@@ -19,7 +19,6 @@
 --
 --------------------------------------------------------------------------------
 */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,7 +37,6 @@
 #include "SysConfigParams.h"
 #include "FeuConfig.h"
 #include "BeuConfig.h"
-
 #include "SysConfig.h"
 
 // System configuration parameters structure
@@ -175,6 +173,11 @@ int SysConfigFromFile( char *sys_conf_params_filename )
 		fprintf( stderr, "%s: SysParams_Init failed with %d\n", __FUNCTION__, ret );
 		return ret;
 	}
+	if( (ret = SysParams_MinSet( sys_params_ptr ) ) != D_RetCode_Sucsess )
+	{
+		fprintf( stderr, "%s: SysParams_MinSet failed with %d\n", __FUNCTION__, ret );
+		return ret;
+	}
 
 	// Read system parameters from file
 	if( (ret = SysParams_Fread( &sys_params, sys_conf_params_fptr ) ) != D_RetCode_Sucsess )
@@ -210,6 +213,7 @@ int SysConfigFromFile( char *sys_conf_params_filename )
 		    time_struct->tm_year%100, time_struct->tm_mon+1, time_struct->tm_mday,
 		    time_struct->tm_hour, time_struct->tm_min
       );
+	    sprintf( filename, "LOGFILE" );
     }
     else
     {
@@ -231,24 +235,24 @@ int SysConfigFromFile( char *sys_conf_params_filename )
 		    return D_RetCode_Err_FileIO;
 	    }
     }
+
+    // Copy configuration to the file
+    if( (ret = SysParams_Fprintf( &sys_params, sys_conf_params_fptr )) != D_RetCode_Sucsess )
+    {
+	    fprintf( stderr, "%s: SysParams_Fprintf failed for config copy file %s with %d\n", __FUNCTION__, filename, ret );
+      return ret;
+    }
+
+	  // Close config file
+    if( sys_log_fptr == (FILE *)NULL )
+	    fclose( sys_conf_params_fptr );
+	  sys_conf_params_fptr = (FILE *)NULL;
   }
-
-	// Copy configuration to the file
-	if( (ret = SysParams_Fprintf( &sys_params, sys_conf_params_fptr )) != D_RetCode_Sucsess )
-	{
-		fprintf( stderr, "%s: SysParams_Fprintf failed for config file %s with %d\n", __FUNCTION__, filename, ret );
-		return ret;
-	}
-
-	// Close config file
-  if( sys_log_fptr == (FILE *)NULL )
-	  fclose( sys_conf_params_fptr );
-	sys_conf_params_fptr = (FILE *)NULL;
 
 	/*
 	 * Configure the system
 	 */
-	if( (ret = SysConfig( (SysParams *)&sys_params, 1 )) != D_RetCode_Sucsess )
+	if( (ret=SysConfig( &sys_params, 1 )) != D_RetCode_Sucsess )
 	{
 		fprintf( stderr, "%s: SysConfig failed for parameters from conf file %s with %d\n", __FUNCTION__, sys_conf_params_filename, ret );
 		return ret;
@@ -323,8 +327,7 @@ int SysConfig( SysParams *params, int configs_to_do )
 			{
 				if( params->Ti_Params[bec].Id > 0 )
 				{
-					//if( (ret=TiConfig( &(params->Ti_Params[1]))) != D_RetCode_Sucsess )			// SOMETHING STRANGE HERE and below : should it be  params->Ti_Params[bec] ??
-					if( (ret=TiConfig( &(params->Ti_Params[bec]))) != D_RetCode_Sucsess )			// SOMETHING STRANGE HERE and below : should it be  params->Ti_Params[bec] ??
+					if( (ret=TiConfig( &(params->Ti_Params[bec]))) != D_RetCode_Sucsess )
 					{
 						fprintf(stderr, "%s: TiConfig failed with %d for ti %d\n", __FUNCTION__, ret, params->Ti_Params[bec].Id );
 						return ret;
@@ -337,7 +340,7 @@ int SysConfig( SysParams *params, int configs_to_do )
 			/* Next configure SD */
 			if( params->Sd_Params[bec].Id > 0 )
 			{
-				if( (ret=SdConfig( &(params->Sd_Params[bec]))) != D_RetCode_Sucsess )  // SOMETHING STRANGE HERE and below : should it be  params->Sd_Params[bec] ??
+				if( (ret=SdConfig( &(params->Sd_Params[bec]))) != D_RetCode_Sucsess )
 				{
 					fprintf(stderr, "%s: SdConfig failed with %d\n", __FUNCTION__, ret );
 					return ret;

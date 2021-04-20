@@ -269,7 +269,7 @@ int beusspSelfTrigEnable(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg);
 int beusspSelfTrigDisable(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg);
 int beusspSelfTrigEnableLinks(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg, unsigned int selftrigenabledlinks );
 int beusspSelfTrigSetWindow(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  int selftrigwindow );
-int beusspSelfTrigSetPulseWidth(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  int selftrigpulsewidth );
+//int beusspSelfTrigSetPulseWidth(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  int selftrigpulsewidth );
 
 
 
@@ -280,7 +280,8 @@ int beusspSelfTrigSetPulseWidth(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,
 //#define BEUSSP_SUPPORTED_FIRMWARE 0x20170310
 //#define BEUSSP_SUPPORTED_FIRMWARE 0x20170320
 //#define BEUSSP_SUPPORTED_FIRMWARE 0x20170509
-#define BEUSSP_SUPPORTED_FIRMWARE 0x20170607
+//#define BEUSSP_SUPPORTED_FIRMWARE 0x20170607
+#define BEUSSP_SUPPORTED_FIRMWARE 0x20191122
 
 
 /* boardID bits and masks */

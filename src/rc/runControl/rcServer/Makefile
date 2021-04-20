@@ -40,6 +40,9 @@ LIBNAMES += ../../sace3.1/$(OSTYPE_MACHINE)/lib/libsace3.1.a
 
 LIBNAMES += $(globallib)/libcodautil.a
 
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+endif
 ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
 endif

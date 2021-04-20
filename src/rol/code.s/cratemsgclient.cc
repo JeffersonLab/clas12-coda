@@ -19,6 +19,11 @@
 #include "libtcp.h"
 #include "libdb.h"
 
+#define LSWAP(v)                        ((((v) & 0x000000ff) << 24) | \
+                                        (((v) & 0x0000ff00) <<  8) | \
+                                        (((v) & 0x00ff0000) >>  8) | \
+                                        (((v) & 0xff000000) >> 24))
+
 /*
 #define DEBUG_PRINT 1
 */
@@ -133,27 +138,29 @@ int CrateMsgClient::RecvRaw(void* buffer, int length/*, ESendRecvOptions opt = k
   int len, lll;
   unsigned char *buf = (unsigned char *) buffer;
 
-  printf("ReadFromSocket INFO: trying to read...\n");fflush(stdout);
+  //printf("ReadFromSocket INFO: trying to read...\n");fflush(stdout);
   len = read(sFd,(void *)buf, length);
   if(len<=0)
   {
+    printf("ReadFromSocket ERROR: trying to read...\n");fflush(stdout);
     perror ("read");
     printf("errno=%d len=%d\n",errno,len);
     return(len);
   }
-  printf("ReadFromSocket INFO: len=%d length=%d\n",len,length);fflush(stdout);
+  //printf("ReadFromSocket INFO: len=%d length=%d\n",len,length);fflush(stdout);
 
   while(len<length)
   {
-    printf("ReadFromSocket INFO: trying to read the rest ...\n");fflush(stdout);
+    //printf("ReadFromSocket INFO: trying to read the rest ...\n");fflush(stdout);
     lll = read(sFd,(void *)&buf[len], length-len);
     if(lll<=0)
     {
+      printf("ReadFromSocket ERROR: trying to read the rest ...\n");fflush(stdout);
       perror ("read");
       printf("errno=%d lll=%d\n",errno,lll);
       return(lll);
     }
-    printf("ReadFromSocket INFO: ... received %d (expected %d)\n",lll,length-len);fflush(stdout);
+    //printf("ReadFromSocket INFO: ... received %d (expected %d)\n",lll,length-len);fflush(stdout);
     len += lll;
   }
  

@@ -18,6 +18,8 @@
 --                     2014/02/25 IM Add DrDblSmpClk parameter
 --                     2014/11/11 IM RunCtrl register: AdcDataRdy becomes 5 bit wide
 --                                                     EvtTstpExt bit added
+--                 4.0 2018/11/29 IM RunCtrl register: ZsTyp parameter added for ZS ToT support
+--                                                     DrOvr moved to DrDblSmpClk
 --
 -- Comments:
 --
@@ -209,18 +211,18 @@
 
 	/*
 	-- Run Control Register
-	--| CMN  |Read |EvtTstp| ADC   |     |SmpClk|         Algo                       |
-	--|Offset|Delay|  Ext  |DataRdy|FeuId|  Dbl |ZsChkSmp|DrOvh| ZS |ComModSub|PedSub|
-	--|31-23 |  22 |   21  | 20-16 |15-8 |   7  |  6-4   |  3  |  2 |    1    |  0   |
+	--| CMN  |Read |EvtTstp| ADC   |     |     |          Algo                       |
+	--|Offset|Delay|  Ext  |DataRdy|FeuId|DrOvh|ZsChkSmp|ZsType| ZS |ComModSub|PedSub|
+	--|31-23 |  22 |   21  | 20-16 |15-8 |   7 |  6-4   |   3  |  2 |    1    |  0   |
 	*/
 
 	#define D_Feu_RegRC_Pd_Ind            0
 	#define D_Feu_RegRC_CM_Ind            1
 	#define D_Feu_RegRC_ZS_Ind            2
-	#define D_Feu_RegRC_DrOvr_Ind         3
+	#define D_Feu_RegRC_ZsType_Ind        3
 	#define D_Feu_RegRC_ZsChkSmp_Ofs      4
 	#define D_Feu_RegRC_ZsChkSmp_Len        3
-	#define D_Feu_RegRC_DrDblSmpClk_Ind   7
+	#define D_Feu_RegRC_DrOvr_Ind         7
 	#define D_Feu_RegRC_Id_Ofs            8
 	#define D_Feu_RegRC_Id_Len              8
 	#define D_Feu_RegRC_AdcDatRdyDel_Ofs  16
@@ -242,17 +244,17 @@
 	#define D_Feu_RegRC_ZS_Clr( word )            ClrBits(word, D_Feu_RegRC_ZS_Ind, 1 )
 	#define D_Feu_RegRC_ZS_Set( word )            SetBits(word, D_Feu_RegRC_ZS_Ind, 1 )
 
-	#define D_Feu_RegRC_DrOvr_Get( word )         GetBits(word, D_Feu_RegRC_DrOvr_Ind, 1 )
-	#define D_Feu_RegRC_DrOvr_Clr( word )         ClrBits(word, D_Feu_RegRC_DrOvr_Ind, 1 )
-	#define D_Feu_RegRC_DrOvr_Set( word )         SetBits(word, D_Feu_RegRC_DrOvr_Ind, 1 )
-
-	#define D_Feu_RegRC_DrDblSmpClk_Get( word )   GetBits(word, D_Feu_RegRC_DrDblSmpClk_Ind, 1 )
-	#define D_Feu_RegRC_DrDblSmpClk_Clr( word )   ClrBits(word, D_Feu_RegRC_DrDblSmpClk_Ind, 1 )
-	#define D_Feu_RegRC_DrDblSmpClk_Set( word )   SetBits(word, D_Feu_RegRC_DrDblSmpClk_Ind, 1 )
+	#define D_Feu_RegRC_ZsType_Get( word )        GetBits(word, D_Feu_RegRC_ZsType_Ind, 1 )
+	#define D_Feu_RegRC_ZsType_Clr( word )        ClrBits(word, D_Feu_RegRC_ZsType_Ind, 1 )
+	#define D_Feu_RegRC_ZsType_Set( word )        SetBits(word, D_Feu_RegRC_ZsType_Ind, 1 )
 
 	#define D_Feu_RegRC_ZsChkSmp_Get( word )      GetBits(word, D_Feu_RegRC_ZsChkSmp_Ofs,  D_Feu_RegRC_ZsChkSmp_Len )
 	#define D_Feu_RegRC_ZsChkSmp_Clr( word )      ClrBits(word, D_Feu_RegRC_ZsChkSmp_Ofs,  D_Feu_RegRC_ZsChkSmp_Len )
 	#define D_Feu_RegRC_ZsChkSmp_Set( word, val ) PutBits(word, D_Feu_RegRC_ZsChkSmp_Ofs,  D_Feu_RegRC_ZsChkSmp_Len, val )
+
+	#define D_Feu_RegRC_DrOvr_Get( word )         GetBits(word, D_Feu_RegRC_DrOvr_Ind, 1 )
+	#define D_Feu_RegRC_DrOvr_Clr( word )         ClrBits(word, D_Feu_RegRC_DrOvr_Ind, 1 )
+	#define D_Feu_RegRC_DrOvr_Set( word )         SetBits(word, D_Feu_RegRC_DrOvr_Ind, 1 )
 
 	#define D_Feu_RegRC_Id_Get( word )            GetBits(word, D_Feu_RegRC_Id_Ofs,  D_Feu_RegRC_Id_Len )
 	#define D_Feu_RegRC_Id_Clr( word )            ClrBits(word, D_Feu_RegRC_Id_Ofs,  D_Feu_RegRC_Id_Len )
@@ -274,7 +276,7 @@
 	#define D_Feu_RegRC_CmnOfs_Clr( word )      ClrBits(word, D_Feu_RegRC_CmnOfs_Ofs,  D_Feu_RegRC_CmnOfs_Len )
 	#define D_Feu_RegRC_CmnOfs_Set( word, val ) PutBits(word, D_Feu_RegRC_CmnOfs_Ofs,  D_Feu_RegRC_CmnOfs_Len, val )
 
-	#define D_Feu_RunCtrl_Set( reg, pd, cms, zs, zs_smp_id, feu_id, adc_dat_rdy_del, dr_dbl_smp_clk, dr_ovr, ev_tst_ext, rd_del, cmn_ofs ) \
+	#define D_Feu_RunCtrl_Set( reg, pd, cms, zs, zs_typ, zs_smp_id, feu_id, adc_dat_rdy_del, dr_ovr, ev_tst_ext, rd_del, cmn_ofs ) \
 	PutBits \
 	( \
 		reg, \
@@ -283,7 +285,7 @@
 		(pd              << D_Feu_RegRC_Pd_Ind)           + \
 		(cms             << D_Feu_RegRC_CM_Ind)           + \
 		(zs              << D_Feu_RegRC_ZS_Ind)           + \
-		(dr_dbl_smp_clk  << D_Feu_RegRC_DrDblSmpClk_Ind)  + \
+		(zs_typ          << D_Feu_RegRC_ZsType_Ind)       + \
 		(dr_ovr          << D_Feu_RegRC_DrOvr_Ind)        + \
 		(zs_smp_id       << D_Feu_RegRC_ZsChkSmp_Ofs)     + \
 		(feu_id          << D_Feu_RegRC_Id_Ofs)           + \

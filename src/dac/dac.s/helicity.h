@@ -34,6 +34,7 @@ int ranBit0(unsigned int *seed);
 unsigned int getSeed();
 
 int helicity(unsigned int *jw, int type);
+int helicity_hdice(unsigned int *jw, int type);
 
 
 #ifdef  __cplusplus

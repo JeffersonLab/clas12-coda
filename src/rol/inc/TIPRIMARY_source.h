@@ -23,15 +23,37 @@
 #define MVT_READ_CONF_FILE  {mvtSetExpid(expid);                        mvtConfig("");     if(strncasecmp(rol->confFile,"none",4)) mvtConfig(rol->confFile);}
 #define FTT_READ_CONF_FILE  {fttConfig("");                                                if(strncasecmp(rol->confFile,"none",4)) fttConfig(rol->confFile);}
 #define FLP_READ_CONF_FILE  {flpSetExpid(expid);                        flpConfig("");     if(strncasecmp(rol->confFile,"none",4)) flpConfig(rol->confFile);}
+#define SD_READ_CONF_FILE   {sdSetExpid(expid);                         sdConfig("");      if(strncasecmp(rol->confFile,"none",4)) sdConfig(rol->confFile);}
 
 
 #include <stdio.h>
 #include <libdb.h>
 
+
+
+
+
+
+#ifndef Linux_x86_64_vme
+
 #ifndef VXWORKS
 #include "../jvme/jlabgef.h"
 #include "../jvme/jvme.h"
 #endif
+
+#else
+
+#include "jlabgef.h"
+#include "jvme.h"
+
+#endif
+
+
+
+
+
+
+
 
 #include "../code.s/tiLib.h"
 
@@ -124,12 +146,13 @@ TIPRIMARY_int_handler(int arg)
 #endif
 
 
-static unsigned int i2_from_rol1;
+static unsigned long i2_from_rol1;
 
 static void
 tiprimarytinit(int code)
 {
-  int ii, i1, i2, i3, ret;
+  int ii, ret, j1, j2;
+  unsigned long i1, i2, i3;
   unsigned int slavemask, connectmask;
 
   /*int overall_offset=0x80;*/
@@ -161,13 +184,13 @@ usrVmeDmaSetMemSize(0x200000);
   usrVmeDmaMemory(&i1, &i2, &i3);
 #endif
   i2_from_rol1 = i2;
-  printf("tiprimarytinit: i2_from_rol1 = 0x%08x\n",i2_from_rol1);
+  printf("tiprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);
 
-  i2_from_rol1 = (i2_from_rol1 & 0xFFFFFFF0);
-  printf("tiprimarytinit: i2_from_rol1 = 0x%08x\n",i2_from_rol1);
+  i2_from_rol1 = (i2_from_rol1 & 0xFFFFFFFFFFFFFFF0LL);
+  printf("tiprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);
 
   i2_from_rol1 = i2_from_rol1 + 0x10;
-  printf("tiprimarytinit: i2_from_rol1 = 0x%08x\n",i2_from_rol1);
+  printf("tiprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);
 
 
 
@@ -213,6 +236,8 @@ vmeBusLock();
   tiDisableTSInput(TI_TSINPUT_ALL);
 vmeBusUnlock();
 
+  tiSetFPInputReadout(0);
+
 #else
 
   /* only 1 trigger type for physics trigger */
@@ -224,6 +249,10 @@ vmeBusLock();
   tiEnableTSInput( TI_TSINPUT_1 | TI_TSINPUT_2 | TI_TSINPUT_3 | TI_TSINPUT_4 | TI_TSINPUT_5 | TI_TSINPUT_6);
 */
   tiLoadTriggerTable(3);
+
+  tiSetFPInputReadout(1); /* add extra word in data, it contains front panel bits */
+
+  tiSetBusySource(TI_BUSY_FP,0); /* for master TI, always enable front panel inhibit */
 
 vmeBusUnlock();
 
@@ -286,12 +315,12 @@ vmeBusLock();
 vmeBusUnlock();
   for(ii=0; ii<8; ii++)
   {
-    i1 = slavemask&(1<<ii);
-    if(i1)
+    j1 = slavemask&(1<<ii);
+    if(j1)
 	{
-      i2 = (i1 & connectmask) >> ii;
-      printf("======> ii=%d i1=%d i2=%d\n",ii,i1,i2);
-      if(i2==0)
+      j2 = (j1 & connectmask) >> ii;
+      printf("======> ii=%d j1=%d j2=%d\n",ii,j1,j2);
+      if(j2==0)
 	  {
         printf("Fiber %d lost connection - trying to recover\n");
 vmeBusLock();

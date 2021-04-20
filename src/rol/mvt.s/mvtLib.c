@@ -20,7 +20,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -32,7 +31,6 @@
 #include "SysConfig.h"
 #include "ReturnCodes.h"
 #include "BeuConfig.h"
-#include "tiUtils.h"
 
 // For the moment an ugly declaration
 extern SysParams *sys_params_ptr; // DEFINED IN SysConfig.c
@@ -236,6 +234,7 @@ char *mvtRocId2SysName( int roc_id )
 {
          if( roc_id == 0x45 ) return "MVT"; // 69 mvt1
     else if( roc_id == 0x44 ) return "MVT"; // 68 mvt2
+    else if( roc_id == 0x51 ) return "FMT"; // 81 mvt3
     else if( roc_id == 0x4B ) return "FTT"; // 75 mmft1
     else if( roc_id == 0x3F ) return "JTB"; // 63 svt3
     else if( roc_id == 0x01 ) return "STB"; //  1 sedipcq156
@@ -246,6 +245,7 @@ int mvtRocName2RocId( char *roc_str )
 {
 	     if( strcmp( roc_str, "mvt1"       ) == 0 ) return 0x45; // 69 mvt1
 	else if( strcmp( roc_str, "mvt2"       ) == 0 ) return 0x44; // 68 mvt2
+	else if( strcmp( roc_str, "mvt3"       ) == 0 ) return 0x51; // 81 mvt3
 	else if( strcmp( roc_str, "mmft1"      ) == 0 ) return 0x4B; // 75 mmft1
 	else if( strcmp( roc_str, "svt3"       ) == 0 ) return 0x3F; // 63 svt3
 	else if( strcmp( roc_str, "sedipcq156" ) == 0 ) return 0x01; //  1 sedipcq156
@@ -256,6 +256,7 @@ char *mvtRocId2RocName( int roc_id )
 {
          if( roc_id == 0x45 ) return "mvt1";       // 69 mvt1
     else if( roc_id == 0x44 ) return "mvt2";       // 68 mvt2
+    else if( roc_id == 0x51 ) return "mvt3";       // 81 mvt3
     else if( roc_id == 0x4B ) return "mmft1";      // 75 mmft1
     else if( roc_id == 0x3F ) return "svt3";       // 63 svt3
     else if( roc_id == 0x01 ) return "sedipcq156"; //  1 sedipcq156
@@ -343,7 +344,7 @@ int mvtDownload()
 	/* SysConfig (start)  */
 	/*--------------------*/
 	// Set up config file name
-        sprintf(conf_file_name, "%s", "/home/daq/Software/SysConfig/Implementation/Projects/Software/CentOs/bin/Mvt.cfg");
+  sprintf(conf_file_name, "%s", "/home/daq/Software/SysConfig/Implementation/Projects/Software/CentOs/bin/Mvt.cfg");
 	if( (ret=SysConfigFromFile(conf_file_name)) != D_RetCode_Sucsess )
 	{
 		fprintf( stderr, "%s: SysConfigFromFile failed for file %s with %d\n", __FUNCTION__, conf_file_name, ret );
@@ -386,7 +387,9 @@ int mvtPrestart()
 	/**********************
 	 * Configure the system
 	 **********************/
+  // Do only MVT config staff here; no TI/SD
 	// Move this from download
+  // First pass
 	if( (ret=SysConfig( sys_params_ptr, 2 )) != D_RetCode_Sucsess )
 	{
 		fprintf( stderr, "%s: SysConfig failed with %d at first pass\nSecond attempt...\n",
@@ -394,7 +397,11 @@ int mvtPrestart()
 		if( sys_log_fptr != (FILE *)NULL )
 			fprintf( sys_log_fptr, "%s: SysConfig failed with %d at first pass\nSecond attempt...\n",
 				__FUNCTION__, ret );
-		// Do only MVT config staff here; no TI/SD
+		tiStatus(1);
+		sdStatus(1);
+    // Second pass
+    fprintf(stdout, "%s: **** Temp : press netr to continue ****\n", __FUNCTION__);
+//    getchar();
 		if( (ret=SysConfig( sys_params_ptr, 2 )) != D_RetCode_Sucsess )
 		{
 			fprintf( stderr, "%s: SysConfig failed with %d at second pass\nThird attempt...\n",
@@ -402,15 +409,23 @@ int mvtPrestart()
 			if( sys_log_fptr != (FILE *)NULL )
 				fprintf( sys_log_fptr, "%s: SysConfig failed with %d at second pass\nThird attempt...\n",
 					__FUNCTION__, ret );
-			if( (ret=SysConfig( sys_params_ptr, 2 )) != D_RetCode_Sucsess )
-		  	{
-		 	   	fprintf( stderr, "%s: SysConfig failed with %d at third pass\nAbandon...\n",
-					__FUNCTION__, ret );
-				if( sys_log_fptr != (FILE *)NULL )
-					fprintf( sys_log_fptr, "%s: SysConfig failed with %d at third pass\nAbandon...\n",
-						__FUNCTION__, ret );
-		   		return ret;
-		  	}
+		  tiStatus(1);
+		  sdStatus(1);
+      // Third pass
+      fprintf(stdout, "%s: **** Temp : press netr to continue ****\n", __FUNCTION__);
+//      getchar();
+			if( (ret=SysConfig( sys_params_ptr, 3 )) != D_RetCode_Sucsess )
+//			if( (ret=SysConfig( sys_params_ptr, 2 )) != D_RetCode_Sucsess )
+		  {
+        fprintf( stderr, "%s: SysConfig failed with %d at third pass\nAbandon...\n",
+          __FUNCTION__, ret );
+        if( sys_log_fptr != (FILE *)NULL )
+          fprintf( sys_log_fptr, "%s: SysConfig failed with %d at third pass\nAbandon...\n",
+            __FUNCTION__, ret );
+		    tiStatus(1);
+		    sdStatus(1);
+        return ret;
+		  }
 		}
 	}
 
@@ -641,8 +656,16 @@ int mvtGetZSMode(int id)
 	for( bec=1; bec<DEF_MAX_NB_OF_BEC; bec++ )
 	{
 		if( sys_params_ptr->Bec_Params[bec].Crate_Id == id )
-		{ 
-			zsmode = sys_params_ptr->FeuParams_Col.feu_params[0].Feu_RunCtrl_ZS;
+		{
+      if( sys_params_ptr->FeuParams_Col.feu_params[0].Feu_RunCtrl_ZS == 0 )
+        zsmode = 0;
+      else
+      {
+        if( sys_params_ptr->FeuParams_Col.feu_params[0].Feu_RunCtrl_ZsTyp == 0 )
+          zsmode = 1;
+        else if( sys_params_ptr->FeuParams_Col.feu_params[0].Feu_RunCtrl_ZsTyp == 1 )
+          zsmode = 2;
+      }
 		} 
 	} 
 	return( zsmode );
@@ -693,18 +716,18 @@ int mvtSetCurrentBlockLevel( int block_level )
   int beu;
   // Go through back end crates
   for( bec=1; bec<DEF_MAX_NB_OF_BEC; bec++ )
-    {
-      if( sys_params_ptr->Bec_Params[bec].Crate_Id > 0 )
-	{ 
-	  for( beu=1; beu<DEF_MAX_NB_OF_BEU; beu++ )
+  {
+    if( sys_params_ptr->Bec_Params[bec].Crate_Id > 0 )
+    { 
+      for( beu=1; beu<DEF_MAX_NB_OF_BEU; beu++ )
 	    {
-	      if( sys_params_ptr->Bec_Params[bec].Beu_Id[beu] > 0 )
-		{
-		  beusspSetSampleBlock(beu_reg_control[beu], sys_params_ptr->NbOfSmpPerEvt, block_level );
-		}
-	    } 					
-	}
+        if( sys_params_ptr->Bec_Params[bec].Beu_Id[beu] > 0 )
+        {
+          beusspSetSampleBlock(beu_reg_control[beu], sys_params_ptr->NbOfSmpPerEvt, block_level );
+        }
+      } 					
     }
+  }
   sys_params_ptr->NbOfEvtPerBlk = block_level;
   return 0;
 }
@@ -901,6 +924,11 @@ int mvtConfig( char *sys_conf_params_filename, int run_number, int bec_id )
 	if( (ret = SysParams_Init( sys_params_ptr ) ) != D_RetCode_Sucsess )
 	{
 		fprintf( stderr, "%s: SysParams_Init failed with %d\n", __FUNCTION__, ret );
+		return ret;
+	}
+	if( (ret = SysParams_MinSet( sys_params_ptr ) ) != D_RetCode_Sucsess )
+	{
+		fprintf( stderr, "%s: SysParams_MinSet failed with %d\n", __FUNCTION__, ret );
 		return ret;
 	}
 
@@ -1135,12 +1163,14 @@ int mvtConfig( char *sys_conf_params_filename, int run_number, int bec_id )
 					beu_id2slot[num_of_beu]=sys_params_ptr->Bec_Params[bec].Beu_Slot[beu];
 					num_of_beu++;
  					if( sys_params_ptr->Bec_Params[bec].Beu_Mblk_Rank[beu] == MblkRank_First )
+          {
 						first_beu_in_token = beu;
+            fprintf(stdout, "%s: first_beu_in_token = %d\n", __FUNCTION__, first_beu_in_token );
+          }
  				}
 			}
 		} // if( sys_params_ptr->Bec_Params[bec].Crate_Id == id )
 	} // for( bec=1; bec<DEF_MAX_NB_OF_BEC; bec++ )
-fprintf(stderr, "%s: first_beu_in_token = %d\n", __FUNCTION__, first_beu_in_token );
 	return num_of_beu;
 }
 

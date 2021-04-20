@@ -70,7 +70,8 @@ int TiConfig( TiParams *params )
 		// For the moment only polling mode is supported
 		if( params->TrgSrc == TiTrgSrc_HFBR1 )
 		{
-			if( (ret = tiInit(0, TI_READOUT_TS_POLL, 0)) != OK )
+//			if( (ret = tiInit(0, TI_READOUT_TS_POLL, 0)) != OK )
+                        if( (ret = tiInit(0, TI_READOUT_TS_POLL, 0)) < 0 )
 			{
 				fprintf( stderr, "%s: tiInit failed for TI_READOUT_TS_POLL with %d\n", __FUNCTION__, ret );
 				return ret;
@@ -79,7 +80,8 @@ int TiConfig( TiParams *params )
 		}
 		else if( params->TrgSrc == TiTrgSrc_HFBR5 )
 		{
-			if( (ret = tiInit(0, TI_READOUT_TS_POLL, TI_INIT_SLAVE_FIBER_5)) != OK )
+//			if( (ret = tiInit(0, TI_READOUT_TS_POLL, TI_INIT_SLAVE_FIBER_5)) != OK )
+                        if( (ret = tiInit(0, TI_READOUT_TS_POLL, TI_INIT_SLAVE_FIBER_5)) < 0 )
 			{
 				fprintf( stderr, "%s: tiInit failed for TI_READOUT_TS_POLL with %d\n", __FUNCTION__, ret );
 				return ret;
@@ -88,7 +90,8 @@ int TiConfig( TiParams *params )
 		}
 		else
 		{
-			if( (ret = tiInit(0,TI_READOUT_EXT_POLL,0)) != OK )
+//			if( (ret = tiInit(0,TI_READOUT_EXT_POLL,0)) != OK )
+                        if( (ret = tiInit(0,TI_READOUT_EXT_POLL,0)) < 0 )
 			{
 				fprintf( stderr, "%s: tiInit failed for TI_READOUT_EXT_POLL with %d\n", __FUNCTION__, ret );
 				return ret;
@@ -403,7 +406,8 @@ int SdConfig( SdParams *params )
 	}
 	
 	/* Initialize  */
-	if( (ret=sdInit(0)) != OK )
+//	if( (ret=sdInit(0)) != OK )
+        if( (ret=sdInit(0)) < 0 )
 	{
 		fprintf( stderr, "%s: sdInit() failed for id=%d with %d\n", __FUNCTION__, params->Id, ret );
 		return ret;

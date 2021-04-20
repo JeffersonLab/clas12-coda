@@ -372,7 +372,7 @@ main(int argc AMQCPP_UNUSED, char* argv[] AMQCPP_UNUSED)
     printf("Cannot get broker_host name  - exit\n");
     exit(0);
   }
-  printf("Looking for broker on host >%s<\n",broker_host);
+  printf("Will be looking for broker on host >%s<\n",broker_host);
 
     activemq::library::ActiveMQCPP::initializeLibrary();
     {
@@ -415,7 +415,7 @@ main(int argc AMQCPP_UNUSED, char* argv[] AMQCPP_UNUSED)
     //
 
     std::string brokerURI =
-        "failover:(tcp://clondb1new:61616"
+        "failover:(tcp://clon00:61616"
         ")";
 
 
@@ -430,20 +430,20 @@ main(int argc AMQCPP_UNUSED, char* argv[] AMQCPP_UNUSED)
 
     long long startTime = System::currentTimeMillis();
 
-    /* create producer */
+    cout << "Creating producer" << endl;
     IpcProducer producer(brokerURI, numMessages, useTopics);
 
-    /* create consumer */
+    cout << "Creating consumer" << endl;
     IpcConsumer consumer(brokerURI, numMessages, useTopics, sessionTransacted);
 
-    /* Start the consumer thread */
+    cout << "Starting the consumer thread" << endl;
     Thread consumerThread(&consumer);
     consumerThread.start();
 
-    /* Wait for the consumer to indicate that its ready to go */
+    cout << "Wait for the consumer to indicate that it is ready to go" << endl;
     consumer.waitUntilReady();
 
-    /* Start the producer thread */
+    cout << "Starting the producer thread" << endl;
     Thread producerThread(&producer);
     producerThread.start();
 
@@ -451,7 +451,7 @@ main(int argc AMQCPP_UNUSED, char* argv[] AMQCPP_UNUSED)
 
 
 
-    /* Wait for the threads to complete */
+    cout << "Waiting for the threads to complete" << endl;
     producerThread.join();
     consumerThread.join();
 

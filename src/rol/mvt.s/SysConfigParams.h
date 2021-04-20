@@ -95,6 +95,7 @@ typedef struct _SysParams
 	FeuParamsCol FeuParams_Col;
 } SysParams;
 int SysParams_Init(    SysParams *sys_params );
+int SysParams_MinSet(  SysParams *params );
 int SysParams_Sprintf( SysParams *sys_params, char *buf  );
 int SysParams_Fprintf( SysParams *sys_params, FILE *fptr );
 int SysParams_Fread(   SysParams *sys_params, FILE *fptr );

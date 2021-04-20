@@ -42,6 +42,9 @@ LIBNAMES += $(globallib)/libcodautil.a
 ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
 endif
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+endif
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
   LIBNAMES += /usr/lib/mysql/libmysqlclient.so
 endif

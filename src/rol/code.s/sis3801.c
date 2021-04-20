@@ -40,7 +40,7 @@
 
 static int Nsis = 0;		/* Number of SISs in Crate */
 static volatile SIS3801 *sisp[SIS_MAX_SLOTS + 1];	/* pointers to SIS A24 memory map */
-static unsigned int sisA24Offset = 0;	/* Offset between VME A24 and Local address space */
+static unsigned int vmeLocalOffset = 0;	/* Offset between VME and Local address space */
 
 #ifdef VXWORKSPPC
 IMPORT STATUS intDisconnect(int);
@@ -92,12 +92,36 @@ sis3801Init(unsigned int addr, unsigned int addr_inc, int nsis, int iFlag)
   input_control = iFlag & S3801_INIT_INPUT_MODE_FLAG;
   noInit = (iFlag & S3801_INIT_NO_INIT) ? 1 : 0;
   
+
+
+  /*sergey*/
+  if(addr==0) 
+  {
+    printf("%s: ERROR: Must specify a Bus (VME-based A32/A24) address\n",__func__);
+    return(ERROR);
+  }
+  else if(addr > 0x00ffffff)  /* A32 Addressing */
+  {
+    printf("A32 Addressing will be used\n");
+
+    res = vmeBusToLocalAdrs(0x09, (char *) addr, (char **) &laddr);
+    if (res != 0)
+    {
+      printf("%s: ERROR in vmeBusToLocalAdrs(0x%x,0x%x,&laddr) \n",
+	     __func__, 0x09, addr);
+      return (ERROR);
+    }
+    vmeLocalOffset = laddr - addr;
+  }
+  else  /* A24 will be used */
+  {
+    printf("A24 Addressing will be used\n");
 #ifdef VXWORKS
-  res = sysBusToLocalAdrs(0x39, (char *) addr, (char **) &laddr);
+    res = sysBusToLocalAdrs(0x39, (char *) addr, (char **) &laddr);
 #else
-  res = vmeBusToLocalAdrs(0x39, (char *) addr, (char **) &laddr);
+    res = vmeBusToLocalAdrs(0x39, (char *) addr, (char **) &laddr);
 #endif
-  if (res != 0)
+    if (res != 0)
     {
 #ifdef VXWORKS
       printf("%s: ERROR in sysBusToLocalAdrs(0x%x,0x%x,&laddr) \n",
@@ -108,70 +132,74 @@ sis3801Init(unsigned int addr, unsigned int addr_inc, int nsis, int iFlag)
 #endif
       return (ERROR);
     }
-  sisA24Offset = laddr - addr;
+    vmeLocalOffset = laddr - addr;
+  }
+
+
 
   Nsis = 0;
-  for (ii = 0; ii < SIS_MAX_SLOTS; ii++)
-    {
-      /*printf("ii = %d\n",ii); */
-      laddr_inc = laddr + ii * addr_inc;
+  for (ii = 0; ii < nsis; ii++)
+  {
+    /*printf("ii = %d\n",ii); */
+    laddr_inc = laddr + ii * addr_inc;
 
-      sis = (SIS3801 *) laddr_inc;
+    sis = (SIS3801 *) laddr_inc;
 
 
-      /* Check if Board exists at that address */
+    /* Check if Board exists at that address */
 #ifdef VXWORKS
-      res = vxMemProbe((char *) &(sis->irq), VX_READ, 4, (char *) &boardID);
+    res = vxMemProbe((char *) &(sis->irq), VX_READ, 4, (char *) &boardID);
 #else
-      res = vmeMemProbe((char *) &(sis->irq), 4, (char *) &boardID);
+    res = vmeMemProbe((char *) &(sis->irq), 4, (char *) &boardID);
 #endif
-      if (res < 0)
+    if (res < 0)
 	{
-#ifdef DEBUG
-	  printf("%s: ERROR: No addressable board at A24 Address 0x%x\n",
-		 __func__, (UINT32) sis - sisA24Offset);
-#endif
+/*#ifdef DEBUG*/
+	  printf("%s: INFO: No addressable board at Address 0x%x\n",
+		 __func__, (UINT32) sis - vmeLocalOffset);
+/*#endif*/
 	  errFlag = 1;
 	  continue;
 	}
-      else
+    else
 	{
 	  boardID = (boardID >> 16) & 0xFFFF;
 	  fwrev   = (boardID & 0xF000) >> 12;
-	  printf("%s:  Found  boardID=0x%04X  version = 0x%X\n",
-		 __func__, boardID, fwrev);
+	  printf("%s: INFO: Found  boardID=0x%04X  version = 0x%X at Address 0x%x\n",
+			 __func__, boardID, fwrev, (UINT32) sis - vmeLocalOffset);
 	}
 
-      /* Check if this is a SIS3801 */
-      if (boardID != SIS3801_BOARD_ID)
+    /* Check if this is a SIS3801 */
+    if( (boardID != SIS3801_BOARD_ID) && (boardID != SIS3820_BOARD_ID) && (boardID != STR7201_BOARD_ID) )
 	{
-#ifdef DEBUG
-	  printf("%s: ERROR: Board ID at addr=0x%x does not match: 0x%08x \n",
-		 __func__, (UINT32) sis - sisA24Offset, boardID);
-#endif
+/*#ifdef DEBUG*/
+	  printf("%s: INFO: Board ID at addr=0x%x does not match: 0x%08x \n",
+		 __func__, (UINT32) sis - vmeLocalOffset, boardID);
+/*#endif*/
 	  errFlag = 1;
 	  continue;
 	}
 
-      sisp[Nsis] = (SIS3801 *) laddr_inc;
-      printf("Initialized sis3801 (V%X) ID %d at VME (LOCAL) address 0x%x (0x%x).\n",
-	     fwrev, Nsis, (UINT32) sisp[Nsis] - sisA24Offset, (UINT32) sisp[Nsis]);
+    sisp[Nsis] = (SIS3801 *) laddr_inc;
+    printf("Initialized sis3801 (V%X) ID %d at VME (LOCAL) address 0x%x (0x%x).\n",
+	     fwrev, Nsis, (UINT32) sisp[Nsis] - vmeLocalOffset, (UINT32) sisp[Nsis]);
 
-      Nsis++;
-      if (Nsis >= nsis)
-	break;
-    }
+    Nsis++;
+    if (Nsis >= nsis) break;
+  }
 
-  /* Set up control inputs */
-  if(!noInit)
+  if(Nsis>0)
+  {
+    /* Set up control inputs */
+    if(!noInit)
     {
-      printf("\tSetting control input mode to %d\n",
-	     input_control);
+      printf("\tSetting control input mode to %d\n",input_control);
       for(ii = 0; ii < Nsis; ii++)
-	{
-	  sis3801setinputmode(ii, input_control);
-	}
+	  {
+	    sis3801setinputmode(ii, input_control);
+	  }
     }
+  }
 
   return (Nsis);
 }
@@ -1358,7 +1386,7 @@ hist()
 unsigned int
 sis3801GetAddress(int id)
 {
-  return ((UINT32) sisp[id] /* - sisA24Offset */ );
+  return ((UINT32) sisp[id] /* - vmeLocalOffset */ );
 }
 
 #else /* dummy version */

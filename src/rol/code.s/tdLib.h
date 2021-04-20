@@ -455,4 +455,9 @@ int    tdPrintTranceiverStatus(int id);
 
 int tdGetNtds();
 
+/*from Alex Somov*/
+unsigned int tdReadScalers(int id, volatile unsigned int *data);
+
+
+
 #endif /* TDLIB_H */

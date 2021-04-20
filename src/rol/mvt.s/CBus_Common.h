@@ -4,7 +4,7 @@
 -- Engineers:      Irakli.MANDJAVIDZE@cea.fr (IM)
 -- 
 -- Project Name:   Clas12 Micromegas Vertex Tracker
--- Design Name:    Clas12 Dream memory manager testbench
+-- Design Name:    Front end unit (FEU)
 --
 -- Module Name:    Cbus_Common.h
 -- Description:    Control Bus registers common to all projects library
@@ -19,6 +19,9 @@
 --                     2011/02/21 IM Clear stat function added
 --                     2012/02/23 IM Local trigger throttling added
 --                     2014/04/16 IM Clear EvtCntr, Tstp & Resync commands added
+--                 3.0 2018/11/03 IM Configuration register: Number of samples extended to 512 from 256
+--                                   Configuration register: SparseRd instead of DataPipeLen
+--                 5.0 2019/07/10 IM Configuration register: Dream polarity support added
 --
 -- Comments:
 --
@@ -52,9 +55,9 @@
 
 /*
 // Command register
-	--    10     |   9    |   8    |     7      |     6      |     5     |    4      |   3   |  2  |     1     |   0   |
-	-- DrmClkRst | EthRst | Resync | ClrTimeStp | ClrEvtCntr | ClearStat | LatchStat | Pause | Run | Configure | Reset |
-	--     0     |   0    |   0    |      0     |      0     |       0   |      0    |    0  |   0 |      0    |    0  |
+	--  11   |    10     |   9    |   8    |     7      |     6      |     5     |    4      |   3   |  2  |     1     |   0   |
+	-- HwRst | DrmClkRst | EthRst | Resync | ClrTimeStp | ClrEvtCntr | ClearStat | LatchStat | Pause | Run | Configure | Reset |
+	--   0   |     0     |   0    |   0    |      0     |      0     |       0   |      0    |    0  |   0 |      0    |    0  |
 */
 #define D_Main_Cmd_Reset_Ind       0
 #define D_Main_Cmd_Config_Ind      1
@@ -68,7 +71,6 @@
 #define D_Main_Cmd_EthRst_Ind      9
 #define D_Main_Cmd_DrmClkRst_Ind  10
 #define D_Main_Cmd_HwRst_Ind      11
-
 // Command register field manipulation macros
 #define D_Main_Cmd_Reset_Get( word )       GetBits(word, D_Main_Cmd_Reset_Ind, 1 )
 #define D_Main_Cmd_Reset_Clr( word )       ClrBits(word, D_Main_Cmd_Reset_Ind, 1 )
@@ -110,14 +112,9 @@
 #define D_Main_Cmd_DrmClkRst_Clr( word ) ClrBits(word, D_Main_Cmd_DrmClkRst_Ind, 1 )
 #define D_Main_Cmd_DrmClkRst_Set( word ) SetBits(word, D_Main_Cmd_DrmClkRst_Ind, 1 )
 
-#define D_Main_Cmd_DrmClkRst_Get( word ) GetBits(word, D_Main_Cmd_DrmClkRst_Ind, 1 )
-#define D_Main_Cmd_DrmClkRst_Clr( word ) ClrBits(word, D_Main_Cmd_DrmClkRst_Ind, 1 )
-#define D_Main_Cmd_DrmClkRst_Set( word ) SetBits(word, D_Main_Cmd_DrmClkRst_Ind, 1 )
-
 #define D_Main_Cmd_HwRst_Get( word ) GetBits(word, D_Main_Cmd_HwRst_Ind, 1 )
 #define D_Main_Cmd_HwRst_Clr( word ) ClrBits(word, D_Main_Cmd_HwRst_Ind, 1 )
 #define D_Main_Cmd_HwRst_Set( word ) SetBits(word, D_Main_Cmd_HwRst_Ind, 1 )
-
 
 /*
 -- Configuration register
@@ -134,59 +131,62 @@ typedef enum _TrigClk_Src
 } TrigClk_Src;
 char *TrigClk_Src2Str( TrigClk_Src src );
 /*
--- AdcDtp
---    Forces ADC to output digital data pattern
--- DataPipeLen
---    Determins Dummu Dream data pipeline length in Wclk ticks
---    Example: for 16 µs trigger latency with 48ns sampling clock period
---    333 clock ticks are needed, hense the 9 bits
--- Mask
--- 	a bit per Dream, 1 - masked, 0 - active
---    Up to 8 Dreams, hense 8 bits
--- NbOfSamples
--- 	Current absolute maximum for Dreams is 256 cels / channel, hense 8 bits
---
--- |   27-26    |   25   |    24-16    | 15-8 |     7-0     |
--- |Clock Select| AdcDtp | DataPipeLen | Mask | NbOfSamples |
--- |    0       |   0    |     333     |   0  |      4      |
+	-- SparseRd
+	--    Determines number of samples to skip between every retained samples
+	-- NbOfSamples
+	-- 	Current absolute maximum for Dreams is 512 cells / channel, hence 9 bits
+	-- Mask
+	-- 	a bit per Dream, 1 - masked, 0 - active
+	--    Up to 8 Dreams, hence 8 bits
+	--
+	-- |31-24 | 23-22 | 21-20 |  19-17   |   16-8      |  7-0
+	-- |DrmPol| Rsrvd |ClkSel | SparseRd | NbOfSamples |  Mask
+	-- |   0  |   0   |   0   |    0     |     4       |   0
 */
-#define D_Main_Conf_Samples_Ofs      0
-#define D_Main_Conf_Samples_Len         8
-#define D_Main_Conf_Mask_Ofs         8
-#define D_Main_Conf_Mask_Len            8
-#define D_Main_Conf_DataPipeLen_Ofs 16
-#define D_Main_Conf_DataPipeLen_Len     9
-#define D_Main_Conf_AdcDtp_Ind      25
-#define D_Main_Conf_ClkSel_Ofs      26 
-#define D_Main_Conf_ClkSel_Len          2
+#define D_Main_Conf_Mask_Ofs            0
+#define D_Main_Conf_Mask_Len               8
+#define D_Main_Conf_Samples_Ofs         8
+#define D_Main_Conf_Samples_Len            9
+#define D_Main_Conf_SparseRd_Ofs       17
+#define D_Main_Conf_SparseRd_Len           3
+#define D_Main_Conf_ClkSel_Ofs         20
+#define D_Main_Conf_ClkSel_Len             2
+#define D_Main_Conf_Rsrvd_Ofs          22
+#define D_Main_Conf_Rsrvd_Len              2
+#define D_Main_Conf_DrmPol_Ofs         24
+#define D_Main_Conf_DrmPol_Len             8
+
 // Configuration register field manipulation macros
-#define D_Main_Conf_Samples_Get( word )      GetBits(word, D_Main_Conf_Samples_Ofs, D_Main_Conf_Samples_Len )
-#define D_Main_Conf_Samples_Set( word, val ) PutBits(word, D_Main_Conf_Samples_Ofs, D_Main_Conf_Samples_Len, val )
+#define D_Main_Conf_Mask_Get( word )          GetBits(word, D_Main_Conf_Mask_Ofs, D_Main_Conf_Mask_Len )
+#define D_Main_Conf_Mask_Set( word, val )     PutBits(word, D_Main_Conf_Mask_Ofs, D_Main_Conf_Mask_Len, val )
 
-#define D_Main_Conf_Mask_Get( word )         GetBits(word, D_Main_Conf_Mask_Ofs, D_Main_Conf_Mask_Len )
-#define D_Main_Conf_Mask_Set( word, val )    PutBits(word, D_Main_Conf_Mask_Ofs, D_Main_Conf_Mask_Len, val )
+#define D_Main_Conf_Samples_Get( word )       GetBits(word, D_Main_Conf_Samples_Ofs, D_Main_Conf_Samples_Len )
+#define D_Main_Conf_Samples_Set( word, val )  PutBits(word, D_Main_Conf_Samples_Ofs, D_Main_Conf_Samples_Len, val )
 
-#define D_Main_Conf_PipeLen_Get( word )      GetBits(word, D_Main_Conf_DataPipeLen_Ofs, D_Main_Conf_DataPipeLen_Len )
-#define D_Main_Conf_PipeLen_Set( word, val ) PutBits(word, D_Main_Conf_DataPipeLen_Ofs, D_Main_Conf_DataPipeLen_Len, val )
+#define D_Main_Conf_SparseRd_Get( word )      GetBits(word, D_Main_Conf_SparseRd_Ofs, D_Main_Conf_SparseRd_Len )
+#define D_Main_Conf_SparseRd_Set( word, val ) PutBits(word, D_Main_Conf_SparseRd_Ofs, D_Main_Conf_SparseRd_Len, val )
 
-#define D_Main_Conf_AdcDtp_Get( word )       GetBits(word, D_Main_Conf_AdcDtp_Ind, 1 )
-#define D_Main_Conf_AdcDtp_Clr( word )       ClrBits(word, D_Main_Conf_AdcDtp_Ind, 1 )
-#define D_Main_Conf_AdcDtp_Set( word, val )  SetBits(word, D_Main_Conf_AdcDtp_Ind, 1, val )
+#define D_Main_Conf_ClkSel_Get( word )        GetBits(word, D_Main_Conf_ClkSel_Ofs, D_Main_Conf_ClkSel_Len )
+#define D_Main_Conf_ClkSel_Set( word, val )   PutBits(word, D_Main_Conf_ClkSel_Ofs, D_Main_Conf_ClkSel_Len, val )
 
-#define D_Main_Conf_ClkSel_Get( word )       GetBits(word, D_Main_Conf_ClkSel_Ofs, D_Main_Conf_ClkSel_Len )
-#define D_Main_Conf_ClkSel_Set( word, val )  PutBits(word, D_Main_Conf_ClkSel_Ofs, D_Main_Conf_ClkSel_Len, val )
+#define D_Main_Conf_Rsrvd_Get( word )        GetBits(word, D_Main_Conf_Rsrvd_Ofs, D_Main_Conf_Rsrvd_Len )
+#define D_Main_Conf_Rsrvd_Set( word, val )   PutBits(word, D_Main_Conf_Rsrvd_Ofs, D_Main_Conf_Rsrvd_Len, val )
 
-#define D_Main_Conf_Set( reg, smp, msk, dpl, adcdtp, clksel ) \
+#define D_Main_Conf_DrmPol_Get( word )        GetBits(word, D_Main_Conf_DrmPol_Ofs, D_Main_Conf_DrmPol_Len )
+#define D_Main_Conf_DrmPol_Set( word, val )   PutBits(word, D_Main_Conf_DrmPol_Ofs, D_Main_Conf_DrmPol_Len, val )
+
+#define D_Main_Conf_Set( reg, msk, smp, srd, clksel, pol ) \
 	PutBits \
 	( \
-		reg, D_Main_Conf_Samples_Ofs, \
-		(D_Main_Conf_Samples_Len+D_Main_Conf_Mask_Len + D_Main_Conf_DataPipeLen_Len + 1 + D_Main_Conf_ClkSel_Len), \
-		(clksel << D_Main_Conf_ClkSel_Ofs ) + (adcdtp<< D_Main_Conf_AdcDtp_Ind) + \
-		(dpl<<D_Main_Conf_DataPipeLen_Ofs) + (msk<<D_Main_Conf_Mask_Ofs) + (smp) \
+		reg, D_Main_Conf_Mask_Ofs, \
+		(D_Main_Conf_Mask_Len + D_Main_Conf_Samples_Len + D_Main_Conf_SparseRd_Len + D_Main_Conf_ClkSel_Len + D_Main_Conf_Rsrvd_Len + D_Main_Conf_DrmPol_Len), \
+		((pol)    << D_Main_Conf_DrmPol_Ofs ) + (  0   << D_Main_Conf_Rsrvd_Ofs) + \
+		((clksel) << D_Main_Conf_ClkSel_Ofs ) + ((srd) << D_Main_Conf_SparseRd_Ofs) + \
+		((smp)    << D_Main_Conf_Samples_Ofs) + ((msk) << D_Main_Conf_Mask_Ofs) \
 	)
 
 // Default value
-#define D_Def_Main_Conf D_Main_Conf_Set( 0, 4, 0, 332, 0, 0 )
+#define D_Def_Main_Conf D_Main_Conf_Set( 0, 0, 4, 0, 0, 0 )
 
 
 /*

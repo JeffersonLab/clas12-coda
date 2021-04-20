@@ -1,6 +1,6 @@
 // daq_config
 
-//  gets daq config
+//  gets daq config (trigger.trg file name)
 
 //  ejw, 9-apr-97
 
@@ -39,14 +39,18 @@ main(int argc, char **argv)
   int msql_run;
   int stat;
 
-
   decode_command_line(argc,argv);
 
-  if(daqconfig==NULL) daqconfig=(char*)"PROD66";
+  if(session==NULL) session=(char *)"clasprod";
+  get_run_config(msql_database,session,&run,&config,&conffile,&datafile);
+  cout << conffile << endl;
 
+  /*
+  if(daqconfig==NULL) daqconfig=(char*)"PROD66";
   // try get_run_status
   config = get_daq_config(msql_database, daqconfig);
   cout << config << endl;
+  */
 }
 
 

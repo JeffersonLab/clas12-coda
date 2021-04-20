@@ -33,11 +33,7 @@
 static char ssname[80];
 #endif
 
-#include "daqLib.h"
 #include "circbuf.h"
-int getTdcTypes(int *typebyslot);
-int getTdcSlotNumbers(int *slotnumbers);
-
 
 /****************************************************
  * USE_MVT
@@ -60,8 +56,8 @@ int getTdcSlotNumbers(int *slotnumbers);
 /*#define DEBUG3*/              /*SSP*/
 /*#define DEBUG4*/              /*VSCM*/
 /*#define DEBUG5*/              /*HEAD*/
-/*#define DEBUG6_MVT_1ST_PASS*/ /*MVT*/
-/*#define DEBUG6_MVT_2ND_PASS*/ /*MVT*/
+//#define DEBUG6_MVT_1ST_PASS   /*MVT*/
+//#define DEBUG6_MVT_2ND_PASS   /*MVT*/
 /*#define DEBUG7*/              /*VTP*/
 /*#define DEBUG8*/              /*DCRB*/
 /*#define DEBUG9*/              /*SSP_RICH*/
@@ -144,8 +140,8 @@ int mynev; /*defined in tttrans.c */
 #define CCCLOSE \
 { \
   unsigned int padding; \
-  dataout = (unsigned int *) ( ( ((unsigned long int)b08+3)/4 ) * 4); \
-  padding = (unsigned long int)dataout - (unsigned long int)b08; \
+  dataout = (unsigned int *) ( ( ((unsigned int)b08+3)/4 ) * 4); \
+  padding = (unsigned int)dataout - (unsigned int)b08; \
   /*dataout_save1[1] |= (padding&0x3)<<14;*/ \
   dataout_save2[1] |= (padding&0x3)<<14; \
   /*printf("CCCLOSE: 0x%08x %d --- 0x%08x %d --> padding %d\n",dataout,dataout,b08,b08,((dataout_save2[1])>>14)&0x3);*/ \
@@ -325,6 +321,18 @@ unsigned int mFEU[MAXBANKS][MAXBLOCK][MAXEVENT][MAXSAMPLES]={0};
 int nbchannelsFEU[MAXBANKS][MAXBLOCK][MAXEVENT][MAXSAMPLES][MAXFEU]={0};
 int       sizeFEU[MAXBANKS][MAXBLOCK][MAXEVENT][MAXSAMPLES][MAXFEU]={0};
 
+/* table to reshaffle TPC data */  
+#define MAX_FEU_EVT  40  /* max number of events in one block */
+#define MAX_FEU_NUM  18  /* max number of FEUs per BEU */
+#define MAX_FEU_CHN 512  /* max number of channels per FEU */
+#define MAX_FEU_SMP 128  /* max number of samples per FEU */
+
+unsigned short feu_act_msk[MAX_FEU_EVT] = {0};
+         short feu_chn_cnt[MAX_FEU_EVT][MAX_FEU_NUM]={0};
+          char feu_chn_ent_ind[MAX_FEU_EVT][MAX_FEU_NUM][MAX_FEU_CHN]={-1};
+          char feu_chn_ent_cnt[MAX_FEU_EVT][MAX_FEU_NUM][MAX_FEU_CHN]={0};
+unsigned short feu_chn_ent_val[MAX_FEU_EVT][MAX_FEU_NUM][MAX_FEU_CHN][2+MAX_FEU_SMP]={0xFFFF};
+
 FILE *mvt_fptr_err_2 = (FILE *)NULL;
 
 #endif // USE_MVT
@@ -494,6 +502,10 @@ __prestart()
  ***************************************************/
 #ifdef USE_MVT
   int ibeu;
+	int i_evt;
+	int i_feu;
+	int i_chan;
+  
 /*
 	char logfilename[128];
 	// time variables
@@ -653,6 +665,23 @@ __prestart()
 	{
 		printf("INFO: MVT_NBR_OF_FEU %d %d\n", ibeu, MVT_NBR_OF_FEU[ibeu] );
 	}
+  // Initialize data rearangement structures
+  for( i_evt=0; i_evt<MAX_FEU_EVT; i_evt++ )
+  {
+    feu_act_msk[i_evt]=0;
+    for( i_feu=0; i_feu<MAX_FEU_NUM; i_feu++ )
+    {
+      feu_chn_cnt[i_evt][i_feu]=0;
+      for( i_chan=0; i_chan<MAX_FEU_CHN; i_chan++ )
+      {
+        feu_chn_ent_ind[i_evt][i_feu][i_chan]=-1;
+        feu_chn_ent_cnt[i_evt][i_feu][i_chan]=0;
+        feu_chn_ent_val[i_evt][i_feu][i_chan][0]=0x0;
+        feu_chn_ent_val[i_evt][i_feu][i_chan][1]=0x0;
+        feu_chn_ent_val[i_evt][i_feu][i_chan][2]=0x0;
+      } // for( i_chan=0; i_chan<MAX_FEU_CHN; i_chan++ )
+    } // for( i_feu=0; i_feu<MAX_FEU_NUM; i_feu++ )
+  } // for( i_evt=0; i_evt<MAX_FEU_EVT; i_evt++ )
 #endif // USE_MVT
 /****************************************************
  * MVT START : __prestart
@@ -795,6 +824,8 @@ rol2trig(int a, int b)
 
   int mvt_error_counter;
   int mvt_error_type;
+  int cur_chan_1st_smp_ptr;
+  int cur_chan_smp_ptr;
 
   int local_event_number_high;
   int local_event_number_low;
@@ -815,7 +846,10 @@ rol2trig(int a, int b)
   int i_channel;
   int i_feu;
   int i_sample;
-  unsigned char c_number_of_bytes;
+  int i_pul;
+  unsigned char   c_number_of_bytes;
+  unsigned short *pul_dat_ptr;
+  unsigned char   nb_of_smp;
 #endif
 /****************************************************
  * MVT START : rol2trig
@@ -2716,7 +2750,87 @@ FCCA FCAA
         }
 #endif
 				if( nbchannelsFEU[jj][k][m][l][p] > 0 )
-					ii+= ((sizeFEU[jj][k][m][l][p]  -2) >> 1 ) ;   //big jump over the data
+        {
+          if( MVT_ZS_MODE != 2 ) // Traet No ZS and Tracker ZS cases
+					  ii+= ((sizeFEU[jj][k][m][l][p]  -2) >> 1 ) ;   //big jump over the data
+          else // Traet TPC ZS case
+          {
+            // skip FEU packet header F311 LnkNumSize (2 16-bit words) and FEU data header 4 16-bit words
+            ii+=3;
+            do
+            {
+              current_channel_id = ((( datain[ ii ] ) & 0x01FF0000) >> 16 );
+#ifdef DEBUG_FP_MVT					
+				      if( mvt_fptr_err_2 != (FILE *)NULL )
+				      {
+					      fprintf(mvt_fptr_err_2,
+                  "%s: FIRST PASS 0xe118: ZS TPC: smp=%d feu=%d size %d nbchannelsFEU %d currentFeuId=%d current_channel_id=%d\n",
+						      __FUNCTION__, l, p, sizeFEU[jj][k][m][l][p], nbchannelsFEU[jj][k][m][l][p], currentFeuId, current_channel_id);
+					      fflush(mvt_fptr_err_2);
+				      }
+#endif
+              cur_chan_1st_smp_ptr = feu_chn_ent_ind[m][p][current_channel_id];
+#ifdef DEBUG_FP_MVT					
+			        if( mvt_fptr_err_2 != (FILE *)NULL )
+			        {
+				        fprintf(mvt_fptr_err_2,
+                  "%s: FIRST PASS 0xe118: ZS TPC: currentFeuId=%d current_channel_id=%d cur_chan_1st_smp_ptr=%d\n",
+					        __FUNCTION__, currentFeuId, current_channel_id, cur_chan_1st_smp_ptr);
+				        fflush(mvt_fptr_err_2);
+			        }
+#endif
+              if( cur_chan_1st_smp_ptr == -1 )
+              {
+                cur_chan_1st_smp_ptr = 0;
+                feu_chn_ent_ind[m][p][current_channel_id]=cur_chan_1st_smp_ptr;
+                feu_chn_ent_val[m][p][current_channel_id][cur_chan_1st_smp_ptr  ]=l;
+                feu_chn_ent_val[m][p][current_channel_id][cur_chan_1st_smp_ptr+1]=0;
+                feu_chn_ent_cnt[m][p][current_channel_id]=1;
+                feu_chn_cnt[m][p]++;
+#ifdef DEBUG_FP_MVT					
+				        if( mvt_fptr_err_2 != (FILE *)NULL )
+				        {
+					        fprintf(mvt_fptr_err_2,
+                    "%s: FIRST PASS 0xe118: ZS TPC: First: currentFeuId=%d current_channel_id=%d cur_chan_1st_smp_ptr=%d feu_chn_cnt=%d feu_chn_ent_cnt=%d\n",
+						        __FUNCTION__, currentFeuId, current_channel_id, cur_chan_1st_smp_ptr, feu_chn_cnt[m][p], feu_chn_ent_cnt[m][p][current_channel_id]);
+					        fflush(mvt_fptr_err_2);
+				        }
+#endif
+              }
+              else if( (feu_chn_ent_val[m][p][current_channel_id][cur_chan_1st_smp_ptr] + feu_chn_ent_val[m][p][current_channel_id][cur_chan_1st_smp_ptr+1] + 1) < l )
+              {
+                cur_chan_1st_smp_ptr += (feu_chn_ent_val[m][p][current_channel_id][cur_chan_1st_smp_ptr+1]+2);
+                feu_chn_ent_ind[m][p][current_channel_id]=cur_chan_1st_smp_ptr;
+                feu_chn_ent_val[m][p][current_channel_id][cur_chan_1st_smp_ptr  ]=l;
+                feu_chn_ent_val[m][p][current_channel_id][cur_chan_1st_smp_ptr+1]=0;
+                feu_chn_ent_cnt[m][p][current_channel_id]++;
+#ifdef DEBUG_FP_MVT					
+				        if( mvt_fptr_err_2 != (FILE *)NULL )
+				        {
+					        fprintf(mvt_fptr_err_2,
+                    "%s: FIRST PASS 0xe118: ZS TPC: Next: currentFeuId=%d current_channel_id=%d cur_chan_1st_smp_ptr=%d feu_chn_cnt=%d feu_chn_ent_cnt=%d\n",
+						        __FUNCTION__, currentFeuId, current_channel_id, cur_chan_1st_smp_ptr, feu_chn_cnt[m][p], feu_chn_ent_cnt[m][p][current_channel_id]);
+					        fflush(mvt_fptr_err_2);
+				        }
+#endif
+              }
+              cur_chan_smp_ptr = feu_chn_ent_ind[m][p][current_channel_id] + feu_chn_ent_val[m][p][current_channel_id][cur_chan_1st_smp_ptr+1] + 2;
+              feu_chn_ent_val[m][p][current_channel_id][cur_chan_smp_ptr] =  datain[ii]&0x00000FFF; // store data
+              feu_chn_ent_val[m][p][current_channel_id][cur_chan_1st_smp_ptr+1]++;
+#ifdef DEBUG_FP_MVT					
+			        if( mvt_fptr_err_2 != (FILE *)NULL )
+			        {
+				        fprintf(mvt_fptr_err_2,
+                  "%s: FIRST PASS 0xe118: ZS TPC: currentFeuId=%d current_channel_id=%d cur_pul=%d cur_pul_1st_smp_ptr=%d cur_pul_smp_ptr=%d cur_pul_smp_cnt=%d\n",
+					        __FUNCTION__, currentFeuId, current_channel_id, feu_chn_ent_cnt[m][p][current_channel_id],
+                  cur_chan_1st_smp_ptr, cur_chan_smp_ptr, feu_chn_ent_val[m][p][current_channel_id][cur_chan_1st_smp_ptr+1]);
+				        fflush(mvt_fptr_err_2);
+			        }
+#endif
+              ii++;
+            } while( (datain[ii]&0x70000000) != 0x70000000 ); // Check for FEU trailer
+          } // else of if( MVT_ZS_MODE != 2 ): trating TPC ZS case
+        }
 				else
 					ii++;
 #ifdef DEBUG6_MVT_1ST_PASS								
@@ -2735,7 +2849,7 @@ FCCA FCAA
       else
       {
 #ifdef DEBUG6_MVT_1ST_PASS
-        printf("MVT other: [%3d] 0x%08x\n",ii,datain[ii]);
+//        printf("MVT other: [%3d] 0x%08x\n",ii,datain[ii]);
 #endif
         ii++;
       }
@@ -5005,19 +5119,37 @@ FCCA FCAA
                     for (i_feu = 0; i_feu < MVT_NBR_OF_FEU[currentBeuId]; i_feu++)
                     {
                         // Treat the FEU if it has fired channels
-                        if( nbchannelsFEU[jj][ibl][iev][0][i_feu] > 0 )
+                        if
+                        (
+                          ((MVT_ZS_MODE != 2) && (nbchannelsFEU[jj][ibl][iev][0][i_feu]>0))
+                          ||
+                          ((MVT_ZS_MODE == 2) && (feu_chn_cnt[iev][i_feu]>0))
+                        )
                         {
                             a_channel_old = -1;
 
+                            // Find pointer to feu data
+                            if( MVT_ZS_MODE != 2 )
+									            ii = iFEU[jj][ibl][iev][0][i_feu];
+                            else
+                            {
+                              for( i_channel=0; i_channel<MAX_FEU_CHN; i_channel++ ) 
+                              {
+                                // Check that the channel has data 
+                                if( feu_chn_ent_cnt[iev][i_feu][i_channel] > 0 )
+                                  break;
+                              }
+                              ii = iFEU[jj][ibl][iev][ feu_chn_ent_val[iev][i_feu][i_channel][0] ][i_feu];
+                            }
+ 
                             // CURRENT SLOT NUMBER built from beu id and feu link id
-                            ii = iFEU[jj][ibl][iev][0][i_feu];
                             currentFeuId = ((( datain[ ii] ) & 0x00007C00 ) >> 10 );		
                             a_slot= ((currentBeuId << 5) + currentFeuId  + 1 )& 0x000000FF ;
 #ifdef DEBUG6_MVT_2ND_PASS								
                             if( mvt_fptr_err_2 != (FILE *)NULL )
                             {
                                 fprintf(mvt_fptr_err_2,"%s: SECOND PASS 0xe118, data[%d]=0x%08x currentFeuId = %d \n",
-                                    __FUNCTION__, ii, datain[ ii], currentFeuId);
+                                    __FUNCTION__, ii, datain[ii], currentFeuId);
                                 fflush(mvt_fptr_err_2);
                             }
 #endif
@@ -5039,11 +5171,12 @@ FCCA FCAA
                             current_timestamp_low  = (((   datain[ ( iSMP[jj][ibl][iev][0] + 2 ) ] )  & 0x7FFF0000) << 1) +
                                                      (((~( datain[ ( iSMP[jj][ibl][iev][0]     ) ] )) & 0x00000800) << 5) ;
                             current_timestamp_high = (((   datain[ ( iSMP[jj][ibl][iev][0] + 1 ) ] )  & 0x7FFF0000) >> 1) + 
-                                                     (((   datain[ ( iSMP[jj][ibl][iev][0] + 1 ) ] )  & 0x00007FFF));		
-                            ii = iFEU[jj][ibl][iev][0][i_feu];
+                                                     (((   datain[ ( iSMP[jj][ibl][iev][0] + 1 ) ] )  & 0x00007FFF));
+                            // Feu Time stamp
                             current_feu_tmstmp   = current_timestamp_low +
                                                    ((( datain[ ii + 2] ) & 0x0FFF0000) >>  13 ) + (( datain[ ii + 2] ) & 0x00000007);
-                            current_feu_tmstmp |= ((MVT_ZS_MODE &0x1)<<15);
+                            if( MVT_ZS_MODE )
+									            current_feu_tmstmp |= (1<<15);
                             a_trigtime[0] = current_timestamp_high;
                             a_trigtime[1] = current_feu_tmstmp;
 #ifdef DEBUG6_MVT_2ND_PASS								
@@ -5054,8 +5187,10 @@ FCCA FCAA
                                 fflush(mvt_fptr_err_2);
                             }
 #endif
-                            if( MVT_CMP_DATA_FMT == 0 ) // Unpacked data format
+                            if( MVT_ZS_MODE != 2 ) // Treat No ZS and Tracket ZS cases
                             {
+                              if( MVT_CMP_DATA_FMT == 0 ) // Unpacked data format
+                              {
                                 MVT_CCOPEN_NOSMPPACK(0xe11b,"c,i,l,N(s,Ns)",banknum);
                                 Nchan[0] = nbchannelsFEU[jj][ibl][iev][0][i_feu];
 #ifdef DEBUG6_MVT_2ND_PASS								
@@ -5097,7 +5232,7 @@ FCCA FCAA
                                             fflush( mvt_fptr_err_2);
                                         }
 #endif
-				                    } /* loop over channels */
+				                            } /* loop over channels */
                                 }	
                                 else
                                 {
@@ -5158,9 +5293,9 @@ FCCA FCAA
 #endif
                                     } //loop over channels
                                 } // else of if( MVT_ZS_MODE )
-                            }
-                            else // of if( MVT_CMP_DATA_FMT == 0 ) -> packed data format
-                            {
+                              }
+                              else // of if( MVT_CMP_DATA_FMT == 0 ) -> packed data format
+                              {
                                 MVT_CCOPEN_PACKSMP(0xe128,"c,i,l,n(s,mc)",banknum);
                                 // set number of channels
                                 b16 = (unsigned short *)( b08 );
@@ -5306,9 +5441,113 @@ FCCA FCAA
 #endif
                                     } // loop over channels
                                 } // else of if( MVT_ZS_MODE )
-                            } // else of if( MVT_CMP_DATA_FMT == 0 )
+                              } // else of if( MVT_CMP_DATA_FMT == 0 )
+                            }
+                            else // Treat TPC ZS mode
+                            {
+                              // packed data format only
+                              MVT_CCOPEN_PACKSMP(0xe129,"c,i,l,n(s,m(c,mc))",banknum);
+                              // set number of channels
+                              b16 = (unsigned short *)( b08 );
+                              *b16++ = ((short)feu_chn_cnt[iev][i_feu]);
+                              b08 += 2;
+#ifdef DEBUG6_MVT_2ND_PASS								
+                              if( mvt_fptr_err_2 != (FILE *)NULL )
+                              {
+                                fprintf(mvt_fptr_err_2,"%s: SECOND PASS 0xe118/0xe129, nbchannelsFEU = %d\n",
+                                  __FUNCTION__, feu_chn_cnt[iev][i_feu]);
+                                fflush(mvt_fptr_err_2);
+                              }
+#endif
+                              /* loop over channels */
+                              for( i_channel=0; i_channel<MAX_FEU_CHN; i_channel++ ) 
+                              {
+                                // Check that the channel has data 
+                                if( feu_chn_ent_cnt[iev][i_feu][i_channel] > 0 )
+                                {
+                                  // OUTPUT CHANNEL NUMBER
+                                  b16 =    (unsigned short *)( b08 );
+                                  *b16++ = (unsigned short  )(i_channel+1);
+                                  b08+= 2;
 
+                                  // Output number of pulses
+                                  *b08 ++ = feu_chn_ent_cnt[iev][i_feu][i_channel];
+#ifdef DEBUG6_MVT_2ND_PASS								
+                                  if( mvt_fptr_err_2 != (FILE *)NULL )
+                                  {
+                                    fprintf(mvt_fptr_err_2,"%s: SECOND PASS 0xe118/0xe129, chan=%d npul=%d\n",
+                                      __FUNCTION__, i_channel, feu_chn_ent_cnt[iev][i_feu][i_channel]);
+                                    fflush(mvt_fptr_err_2);
+                                  }
+#endif
+                                  // loop over pulses
+                                  pul_dat_ptr = &(feu_chn_ent_val[iev][i_feu][i_channel][0]);
+                                  for( i_pul=0; i_pul<feu_chn_ent_cnt[iev][i_feu][i_channel]; i_pul++ )
+                                  {
+#ifdef DEBUG6_MVT_2ND_PASS								
+                                    if( mvt_fptr_err_2 != (FILE *)NULL )
+                                    {
+                                      fprintf(mvt_fptr_err_2,"%s: SECOND PASS 0xe118/0xe129,   pul=%d fsmp=%d",
+                                        __FUNCTION__, i_pul, *pul_dat_ptr);
+                                      fflush(mvt_fptr_err_2);
+                                    }
+#endif
+                                    // Output first sample of the pulse
+                                    *b08 ++ = (unsigned char)(*pul_dat_ptr++);
+                                    // set number of bytes in packed byte stream
+                                    // according to number of samples
+                                    nb_of_smp = (unsigned char)(*pul_dat_ptr++);
+                                    c_number_of_bytes = (((nb_of_smp - 1)/2)*3+1)+1;
+                                    if( (nb_of_smp % 2) == 0 )
+                                      c_number_of_bytes++;
+#ifdef DEBUG6_MVT_2ND_PASS								
+                                    if( mvt_fptr_err_2 != (FILE *)NULL )
+                                    {
+                                      fprintf(mvt_fptr_err_2," nsmp=%d nbytes=%d\n",
+                                        nb_of_smp, c_number_of_bytes);
+                                      fflush(mvt_fptr_err_2);
+                                    }
+#endif
+                                    *b08 ++ = c_number_of_bytes;
+                                    for( i_sample=0; i_sample<nb_of_smp; i_sample++)
+                                    {		
+                                      current_sample = *pul_dat_ptr++;
+                                      if( (i_sample % 2) == 0 )
+                                      {
+                                        *b08++ = ((char)( current_sample    &0xFF)); // 8 LSB-s
+                                        *b08   = ((char)((current_sample>>8)&0x0F)); // 4 MSB-s
+                                      }
+                                      else
+                                      {
+                                        *b08  |= ((char)((current_sample>>4)&0xF0)); // 4 MSB-s
+                                        b08++;
+                                        *b08++ = ((char)( current_sample    &0xFF)); // 8 LSB-s
+                                      }
+                                    } /* loop over samples */
+                                    if( nb_of_smp % 2 )
+                                    {
+                                      *b08 &= 0x0F; // force high nibble to 0
+                                      b08++;
+                                    }
+#ifdef DEBUG6_MVT_2ND_PASS								
+                                    if( mvt_fptr_err_2 != (FILE *)NULL )
+                                    {
+                                      fprintf(mvt_fptr_err_2,"%s: SECOND PASS 0xe118/0xe129, LOOP OVER SAMPLES DONE \n", __FUNCTION__);
+                                      fflush( mvt_fptr_err_2);
+                                    }
+#endif
+                                  } // loop over pulses 
+                                  // Clear channel for posterity
+                                  feu_chn_ent_cnt[iev][i_feu][i_channel]=0;
+                                  feu_chn_ent_ind[iev][i_feu][i_channel]=-1;
+                                  feu_chn_ent_val[iev][i_feu][i_channel][0]=0;
+                                  feu_chn_ent_val[iev][i_feu][i_channel][1]=0;
+                                } // Check that the channel has data
+                              } /* loop over channels */
+                            } // End of TCP ZS mode
                         } // if( nbchannelsFEU[jj][ibl][iev][0][i_feu] > 0 ) do it if the feu has fired channels
+                        // Clear FEU channel count for posterity
+                        feu_chn_cnt[iev][i_feu] = 0;
                     } // for (i_feu = 0; i_feu < MVT_NBR_OF_FEU[currentBeuId]; i_feu++) loop over feus
                 } // for(ibl=0; ibl < MVT_NBR_OF_BEU; ibl++) loop over blocks */
 

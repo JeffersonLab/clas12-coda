@@ -47,6 +47,8 @@ ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
   LIBNAMES += /usr/lib/libmysqlclient.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
     LIBNAMES += /usr/lib/mysql/libmysqlclient.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_i686")

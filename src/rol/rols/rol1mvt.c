@@ -11,14 +11,14 @@ static int nusertrig, ndone;
 
 #undef DMA_TO_BIGBUF /*if want to dma directly to the big buffers*/
 
-#define USE_FADC250
-#define USE_DSC2
-#define USE_V1190
-#define USE_SSP
-#define USE_SSP_RICH
-#define USE_VSCM
-#define USE_DCRB
-#define USE_VETROC
+#undef USE_FADC250
+#undef USE_DSC2
+#undef USE_V1190
+#undef USE_SSP
+#undef USE_SSP_RICH
+#undef USE_VSCM
+#undef USE_DCRB
+#undef USE_VETROC
 //#define USE_FLP
 #define USE_MVT
 
@@ -28,13 +28,12 @@ around that problem temporary patches were applied - until fixed (Sergey) */
 #define SLOTWORKAROUND
 
 #undef DEBUG
-#define DEBUG
+//#define DEBUG
 
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -52,22 +51,6 @@ typedef      long long       hrtime_t;
 #include "epicsutil.h"
 static char ssname[80];
 #endif
-
-#include "daqLib.h"
-#include "moLib.h"
-#include "v851.h"
-#include "sdLib.h"
-#include "vscmLib.h"
-#include "dcrbLib.h"
-#include "sspLib.h"
-#include "sspConfig.h"
-#include "fadcLib.h"
-#include "fadc250Config.h"
-#include "vetrocLib.h"
-#include "tiLib.h"
-#include "tiConfig.h"
-#include "dsc2Lib.h"
-#include "dsc2Config.h"
 
 #include "circbuf.h"
 
@@ -143,6 +126,7 @@ static unsigned int mvtSlotMask = 0; /* bit=slot (starting from 0) */
 static int MVT_SLOT;
 extern int tiMaster;    /* defined in tiLib.c */
 extern int block_level; /* defined in tiLib.c */
+#define MAXEVENT    40  /* max number of events in one block */
 #undef DEBUG_MVT
 #endif
 /********************************************************************
@@ -776,23 +760,41 @@ STATUS for FADC in slot 18 at VME (Local) base address 0x900000 (0xa16b1000)
   /***************************************
    *   SD SETUP
    ***************************************/
+/*
+vmeBusLock();
+  ret = sdInit(1);   // Initialize the SD library //
+  if(ret >= 0)
+  {
+    sdSetActiveVmeSlots(fadcSlotMask); // Use the fadcSlotMask to configure the SD //
+    sdStatus();
+    sdSetTrigoutLogic(0, 2); // Enable SD trigout as OR by default //
+  }
+  else
+  {
+    printf("\n\nsdInit returns %d, probably SD does not installed in that crate ..\n\n\n",ret);
+  }
+*/
+vmeBusUnlock();
+
+  printf("FADC250 Download() ends =========================\n\n");
+#endif
+
+  /***************************************
+   *   SD SETUP
+   ***************************************/
 vmeBusLock();
   ret = sdInit(1);   /* Initialize the SD library */
   if(ret >= 0)
   {
-    sdSetActiveVmeSlots(fadcSlotMask); /* Use the fadcSlotMask to configure the SD */
+//    sdSetActiveVmeSlots(fadcSlotMask); /* Use the fadcSlotMask to configure the SD */
     sdStatus();
-    sdSetTrigoutLogic(0, 2); /* Enable SD trigout as OR by default */
+//    sdSetTrigoutLogic(0, 2); /* Enable SD trigout as OR by default */
   }
   else
   {
     printf("\n\nsdInit returns %d, probably SD does not installed in that crate ..\n\n\n",ret);
   }
 vmeBusUnlock();
-
-  printf("FADC250 Download() ends =========================\n\n");
-#endif
-
 
 
 
@@ -1617,10 +1619,10 @@ vmeBusUnlock();
 			ret = mvtPrestart();
 		vmeBusUnlock();
 
-        printf("Set BUSY from SWB for MVTs\n");
-        vmeBusLock();
-            tiSetBusySource(TI_BUSY_SWB,0);
-        vmeBusUnlock();
+    printf("Set BUSY from SWB for MVTs\n");
+    vmeBusLock();
+      tiSetBusySource(TI_BUSY_SWB,0);
+    vmeBusUnlock();
 
 		if(ret<=0)
 		{
@@ -1646,6 +1648,20 @@ vmeBusUnlock();
 			UDP_user_request(MSGINF, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
 		}
 		block_level = tiGetCurrentBlockLevel();
+    if( (block_level < 0) || (block_level > MAXEVENT) )
+    {
+			sprintf( log_message, "%s: mvtPrestart in %s crate %d: unsupported TI block_level=%d; must be in [1;%d] range",
+				__FUNCTION__, mvtRocId2SysName( rol->pid ), rol->pid, block_level, MAXEVENT );
+			fprintf(stderr, "%s\n", log_message );
+			if( mvt_fptr_err_1 != (FILE *)NULL )
+			{
+				fprintf(mvt_fptr_err_1, "%s\n", log_message );
+				fflush( mvt_fptr_err_1 );
+			}
+			UDP_user_request(MSGERR, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
+			UDP_user_request(MSGERR, "rol1", log_message);
+			UDP_user_request(MSGERR, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
+    }
 		mvtSetCurrentBlockLevel( block_level );
 		if( mvt_fptr_err_1 != (FILE *)NULL )
 		{
@@ -1695,6 +1711,13 @@ vmeBusLock();
   tiSyncReset(1);
 vmeBusUnlock();
   sleep(1);
+
+  /* USER RESET - use it because 'SYNC RESET' produces too short pulse, still need 'SYNC RESET' above because 'USER RESET'
+  does not do everything 'SYNC RESET' does (in paticular does not reset event number) */
+vmeBusLock();
+  tiUserSyncReset(1,1);
+  tiUserSyncReset(0,1);
+vmeBusUnlock();
 
 vmeBusLock();
   ret = tiGetSyncResetRequest();
@@ -2164,7 +2187,7 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
 
   if(syncFlag) printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
 
-  rol->dabufp = NULL;
+  rol->dabufp = (int *) 0;
 
   /*
 usleep(100);
@@ -2255,8 +2278,8 @@ vmeBusUnlock();
 
 
 
-#ifdef DEBUG__
-    printf("rol1mvt: start processing\n");fflush(stdout);
+#ifdef DEBUG
+    printf("fadc1: start fadc processing\n");fflush(stdout);
 #endif
 
 
@@ -2457,9 +2480,6 @@ vmeBusUnlock();
 		{
 			gettimeofday(&mvt_t0, 0);
 			mvt_to_iter = 0;
-
-TIMERL_START;
-
 			do
 			{
 				vmeBusLock();
@@ -2473,9 +2493,6 @@ TIMERL_START;
 				gettimeofday(&mvt_t1, 0);
 				timersub(&mvt_t1,&mvt_t0,&mvt_dt);
 			} while( timercmp(&mvt_dt,&mvt_to,<) );
-
-TIMERL_STOP(100000/block_level,1000+rol->pid);
-
 			if( mvtgbr != mvtSlotMask )
 			{
 				mvt_to_cntr++;
@@ -3408,6 +3425,9 @@ vmeBusUnlock();
 
 
 
+#ifndef VXWORKS
+TIMERL_STOP(100000/block_level,1000+rol->pid);
+#endif
 
 
 
