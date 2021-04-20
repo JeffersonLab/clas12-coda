@@ -1,0 +1,70 @@
+End failed on adcecal3:
+
+tiFillToEndBlock reached
+>>>>>>>>>>>>>>>>>>>>>>> 1 blocks left on the TI
+>>>>>>>>>>>>>>>>>>>>>>> before while ... 1 blocks left on the TI
+>>>>>>>>>>>>>>>>>>>>>>> inside while ... 1 blocks left on the TI
+>>>>>>>>>>>>>>>>>>>>>>> inside while ... 1 blocks left on the TI
+>>>>>>>>>>>>>>>>>>>>>>> inside while ... 1 blocks left on the TI
+>>>>>>>>>>>>>>>>>>>>>>> inside while ... 1 blocks left on the TI
+>>>>>>>>>>>>>>>>>>>>>>> inside while ... 1 blocks left on the TI
+wait: coda request >end< in progress
+>>>>>>>>>>>>>>>>>>>>>>> inside while ... 1 blocks left on the TI
+>>>>>>>>>>>>>>>>>>>>>>> inside while ... 1 blocks left on the TI
+>>>>>>>>>>>>>>>>>>>>>>> inside while ... 1 blocks left on the TI
+>>>>>>>>>>>>>>>>>>>>>>> inside while ... 1 blocks left on the TI
+>>>>>>>>>>>>>>>>>>>>>>> inside while ... 1 blocks left on the TI
+>>>>>>>>>>>>>>>>>>>>>>> after while ... 1 blocks left on the TI
+
+ Block Level = 1 
+ HFBR enabled (0x1f1f15ff)= 
+   1: -    CONNECTED-   -TRIGSRC ENABLED-
+   2: -    CONNECTED-   -TRIGSRC ENABLED-
+   3: -    CONNECTED-   -TRIGSRC ENABLED-
+   4: -    CONNECTED-   -TRIGSRC ENABLED-
+   5: -    CONNECTED-   -TRIGSRC ENABLED-
+   6: -NOT CONNECTED-   -TRIGSRC DISABLED-
+   7: -NOT CONNECTED-   -TRIGSRC DISABLED-
+   8: -NOT CONNECTED-   -TRIGSRC DISABLED-
+
+ TI Slaves Configured on HFBR (0x1f) =  1 2 3 4 5
+ Clock Source (0) = 
+   Internal
+ Trigger input source (ENABLED) =
+   Loopback
+   VME Command
+   Front Panel TS Inputs
+ Front Panel TS Inputs Enabled:  1 2 3 4 5 6
+ Sync source = 
+   Loopback
+ BUSY input source = 
+   Switch Slot B    
+   Loopback         ** BUSY **
+   HFBR #1          
+   HFBR #2          
+   HFBR #3          
+   HFBR #4          
+   HFBR #5          
+ Interrupts DISABLED
+   Level = 0   Vector = 0x00
+ Bus Errors Enabled
+ Blocks ready for readout: 1
+  Fiber 1  :  Blocks ready / need acknowledge: 0 / 0
+  Fiber 2  :  Blocks ready / need acknowledge: 0 / 0
+  Fiber 3  :  Blocks ready / need acknowledge: 0 / 0
+  Fiber 4  :  Blocks ready / need acknowledge: 0 / 0
+  Fiber 5  :  Blocks ready / need acknowledge: 0 / 0
+  Loopback :  Blocks ready / need acknowledge: 1 / 0
+  Trigger rule 1: no more than 1 trigger in 24000ns
+  Trigger rule 2: no more than 2 trigger in 960ns
+  Trigger rule 3: no more than 3 trigger in 1920ns
+  Trigger rule 4: no more than 4 trigger in 3840ns
+ Input counter 4180
+GTPStatusA=0x1fac5fff
+GTPStatusB=0xff1fffdf
+GTPtriggerBufferLength=0xe0000000
+blockStatus[4]= 0x00000000 0x00000000 0x01010000 0x01010101
+----------------------------------------------------------------------
+----------
+
+============================================================================================================================

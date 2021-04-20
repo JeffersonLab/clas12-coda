@@ -1,0 +1,77 @@
+#
+#  Generic bootscript for VME ROC
+#
+
+# boot device          : geisc
+# unit number          : 0 
+# processor number     : 0 
+# host name            : clon00
+# file name            : $CODA/VXWORKS_ppc/bin/vx6100
+# inet on ethernet (e) : 129.57.167.141:fffffc00
+# host inet (h)        : 129.57.167.5
+# user (u)             : boiarino
+# flags (f)            : 0x20 
+# target name (tn)     : tdcecal1
+# startup script (s)   : $CODA/VXWORKS_ppc/bootscripts/boot_vmeroc
+
+
+# adds router
+cd "$CODA/VXWORKS_ppc/bootscripts"
+< routeadd_mot.boot
+
+# initializations for all rocs
+cd "$CODA/VXWORKS_ppc/bootscripts"
+< all.boot
+
+# initializations for vme
+cd "$CODA/VXWORKS_ppc/bootscripts"
+< ppc_vme.boot
+
+##################################################
+# dsc2 - TJNAF VME 16 Channel Discriminator/Scaler
+##################################################
+
+dsc2Init(0x100000,0x80000,20,0)
+dsc2Config("")
+
+### for firmware upgrade:
+### dsc2Init(0x100000,0x80000,16,0xc0000)
+### dsc2UpdateFirmwareAll("/usr/local/clas12/release/0.1/parms/firmwares/vmeDSC_firmware_v1_c.bin")
+
+# end of dsc2
+##############
+
+#tdc1190Init(0x11100000,0x80000,20,0)
+#tdc1190Config("");
+
+
+###
+### FADC firmware upgrade
+###
+### cd "$CLON_PARMS/firmwares"
+### faInit((3<<19),(1<<19),20,0x40005)
+### fadcFirmwareReadMcsFile("CTRL_FPGA_V2_TOP_0x0219.mcs")
+### fadcFirmwareGLoad(1,0)
+### fadcFirmwareReadMcsFile("FADC250_V2_TOP_ver90A.mcs")
+### fadcFirmwareGLoad(0,0)
+###
+
+
+taskDelay(sysClkRateGet()*5)
+
+taskSpawn "TCP_SERVER",250,0,100000,tcpServer
+
+taskDelay(sysClkRateGet()*5)
+
+taskSpawn "ROC",200,0,500000,coda_roc,"-session","clasprod3","-objects","ROC"
+
+#v1495's server
+taskSpawn "V1495SRV",250,0,200000,v1495tcpServer1
+
+###taskDelay(sysClkRateGet()*10)
+#####proconhost
+#####netonhost
+
+
+
+

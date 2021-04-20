@@ -1,0 +1,115 @@
+clasrun@clonpc0:rol> ./Linux_i686/bin/cratemsgclienttest tdcftof2 6102
+argc=3
+use arguments >tdcftof2< as hostname and >6102< as hostport
+CrateMsgClient::CrateMsgClient: calling Connect
+CrateMsgClient::Connect: targetname=>tdcftof2< 
+00
+from parameters list: hostname=>tdcftof2< portnum=6102
+CrateMsgClient::Connect: Connected successfully, sFd=7
+CrateMsgClient::CrateMsgClient: calling InitConnection
+CrateMsgClient::InitConnection reached
+CrateMsgClient::InitConnection: calling SendRaw
+CrateMsgClient::InitConnection: calling RecvRaw
+ReadFromSocket INFO: trying to read...
+
+
+stuck here
+
+
+ReadFromSocket INFO: len=4 length=4
+CrateMsgClient::InitConnection: checking responce
+CrateMsgClient::InitConnection done
+CrateMsgClient::CrateMsgClient: done
+Connected
+111
+ReadFromSocket INFO: trying to read...
+ReadFromSocket INFO: len=8 length=8
+ReadFromSocket INFO: trying to read...
+ReadFromSocket INFO: len=100 length=100
+222: len=23
+slot  0, boardID 0xffffffff
+slot  1, boardID 0xffffffff
+slot  2, boardID 0x00000000
+slot  3, boardID 0xffffffff
+slot  4, boardID 0x00000000
+slot  5, boardID 0x00000000
+slot  6, boardID 0xffffffff
+slot  7, boardID 0x00000000
+slot  8, boardID 0x00000000
+slot  9, boardID 0xffffffff
+slot 10, boardID 0x00000000
+slot 11, boardID 0xffffffff
+slot 12, boardID 0x00000000
+slot 13, boardID 0xffffffff
+slot 14, boardID 0x00000000
+slot 15, boardID 0x00000000
+slot 16, boardID 0xffffffff
+slot 17, boardID 0x00000000
+slot 18, boardID 0x00000000
+slot 19, boardID 0xffffffff
+slot 20, boardID 0x00000000
+slot 21, boardID 0xffffffff
+slot 22, boardID 0xffffffff
+
+
+
+
+
+
+
+[root@tdcftof1 ~]# ps auxw -T | fgrep 6821
+clasrun   6821  6821  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6822  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6823  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6824  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6825  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6826  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6827  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6828  0.0  0.7 2873952 60008 ?       Sl   Oct23   2:35 DiagGuiServer
+clasrun   6821  6829  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6830  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6831  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6832  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6833  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6834  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6835  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6836  0.0  0.7 2873952 60008 ?       Sl   Oct23   1:23 DiagGuiServer
+clasrun   6821  6837  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+clasrun   6821  6839  0.0  0.7 2873952 60008 ?       Sl   Oct23   2:34 DiagGuiServer
+clasrun   6821  6840  1.0  0.7 2873952 60008 ?       Sl   Oct23 147:35 DiagGuiServer
+clasrun   6821  6841  0.0  0.7 2873952 60008 ?       Sl   Oct23   0:00 DiagGuiServer
+root     15333 15333  0.0  0.0   4236   592 pts/1    S+   21:18   0:00 fgrep 6821
+[root@tdcftof1 ~]# strace -p 6841
+Process 6841 attached - interrupt to quit
+accept(11, {sa_family=AF_INET, sin_port=htons(39855), sin_addr=inet_addr("129.57.86.64")}, [16]) = 970
+write(1, "accepted\n", 9)               = 9
+write(1, "pcThreadParm=0x0bb129b8\n", 24) = 24
+mmap2(NULL, 10489856, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = -1 ENOMEM (Cannot allocate memory)
+write(1, "waiting for accept, port >6102<\n", 32) = 32
+accept(11, 
+
+
+
+
+
+
+
+
+
+
+{sa_family=AF_INET, sin_port=htons(39856), sin_addr=inet_addr("129.57.86.64")}, [16]) = 971
+write(1, "accepted\n", 9)               = 9
+write(1, "pcThreadParm=0x0bb1c618\n", 24) = 24
+mmap2(NULL, 10489856, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = -1 ENOMEM (Cannot allocate memory)
+write(1, "waiting for accept, port >6102<\n", 32) = 32
+accept(11, 
+
+
+adcecal1:
+  PID USER      PR  NI  VIRT  RES  SHR S %CPU %MEM    TIME+  COMMAND  
+ 3293 clasrun   15   0  443m  37m  24m S  0.7  0.5   1:52.47 DiagGuiServer                                                                
+
+tdcftof1:
+  PID USER      PR  NI  VIRT  RES  SHR S %CPU %MEM    TIME+  COMMAND  
+ 6821 clasrun   15   0 3000m  58m  23m S  0.7  0.7 170:52.34 DiagGuiServer   
+

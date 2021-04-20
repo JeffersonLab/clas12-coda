@@ -1,0 +1,38 @@
+/****************************************************************************
+ *
+ *  fadc250Config.h  -  configuration library header file for fADC250 board 
+ *
+ *  SP, 07-Nov-2013
+ *
+ */
+
+
+#define FNLEN     128       /* length of config. file name */
+#define STRLEN    250       /* length of str_tmp */
+#define ROCLEN     80       /* length of ROC_name */
+#define NBOARD     21
+#define NCHAN      16
+
+
+/** FADC250 configuration parameters **/
+typedef struct {
+  int  group;
+  int  f_rev;
+  int  b_rev;
+  int  b_ID;
+  char SerNum[80];
+
+  int          mode;
+  unsigned int winOffset;
+  unsigned int winWidth;
+  unsigned int nsb;
+  unsigned int nsa;
+  unsigned int npeak;
+
+  unsigned int chDisMask;
+  unsigned int trigMask;
+  unsigned int thr[NCHAN];
+  unsigned int dac[NCHAN];
+  unsigned int ped[NCHAN];
+
+} FADC250_CONF;

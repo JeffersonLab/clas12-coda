@@ -1,0 +1,11 @@
+import os
+
+env = Environment(NT22RUN = '/home/clasrun/tdc_nonlin/tmp', ENV = {'PATH': os.environ['PATH']})
+env.Append(CPPPATH=['/usr/clas12/release/1.3.2/coda/src/evio-4.3/src.s/', '/apps/root/pro/include'])
+env.Append(LIBPATH = ['/usr/clas12/release/1.3.2/coda/Linux_x86_64/lib'])
+env.Append(LIBS = ['pthread','dl','expat','evio'])
+env.ParseConfig("root-config --glibs --cflags")
+
+Export('env')
+
+env.SConscript('sconscript', variant_dir='$NT22RUN/tmp/src/'+os.path.basename(os.getcwd()), duplicate=0)

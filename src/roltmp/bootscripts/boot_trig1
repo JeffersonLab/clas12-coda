@@ -1,0 +1,27 @@
+#
+#  Bootscript for trig1 (VME crate on PT)
+#
+
+# adds router
+cd "$CODA/VXWORKS_ppc/bootscripts"
+< routeadd_mot.boot
+
+# initializations for all rocs
+cd "$CODA/VXWORKS_ppc/bootscripts"
+< all.boot
+
+# initializations for vme
+cd "$CODA/VXWORKS_ppc/bootscripts"
+< ppc_vme.boot
+
+taskSpawn "ROC",200,0,500000,coda_roc,"-session","clastest1","-objects","trig1 ROC"
+
+taskDelay(sysClkRateGet()*10)
+taskSpawn "TCP_SERVER",250,0,100000,tcpServer
+
+taskDelay(sysClkRateGet()*10)
+proconhost
+netonhost
+
+v851Init(0xd000,0)
+v851ProgPulser(1000,0)
