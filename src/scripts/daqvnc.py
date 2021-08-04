@@ -36,6 +36,9 @@ class DaqVnc():
         ':'+self.cfg['port']]
     subprocess.call(cmd)
 
+  def __str__(self):
+    return json.dumps(self.cfg, sort_keys=True, indent=2, separators=(',',': '))
+
 if __name__=='__main__':
 
   configurations = None
@@ -49,7 +52,7 @@ if __name__=='__main__':
 
   cli=argparse.ArgumentParser(description='Interface to Hall B DAQ VNC Session.')
   cli.add_argument('-config',help='short name or path to configuration file',metavar='PATH',default='daqvnc')
-  cli.add_argument('command',choices=['stop','start','connect','list'])
+  cli.add_argument('command',choices=['stop','start','connect','list','show'])
   args=cli.parse_args(sys.argv[1:])
 
   if args.command == 'list':
@@ -67,7 +70,10 @@ if __name__=='__main__':
 
     dv=DaqVnc(config)
 
-    if args.command=='connect':
+    if args.command=='show':
+      print(dv)
+
+    elif args.command=='connect':
       dv.startClient()
 
     else:
