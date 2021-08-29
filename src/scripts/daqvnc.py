@@ -57,7 +57,7 @@ if __name__=='__main__':
 
   if args.command == 'list':
     print('Available configurations:')
-    print('\n'.join(configurations))
+    print('\n'.join(sorted(configurations)))
 
   else:
 
