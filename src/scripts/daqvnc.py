@@ -9,7 +9,9 @@ class DaqVnc():
     self.pidfile='%s/.vnc/%s:%d.pid'%\
         (os.getenv('HOME'),self.cfg['host'],int(self.cfg['port']))
     self.passwdfile=None
-    if getpass.getuser() == self.cfg['user']:
+    if 'password' in self.cfg:
+      self.passwdfile=self.cfg['password']
+    elif getpass.getuser() == self.cfg['user']:
       self.passwdfile='%s/.vnc/passwd'%os.getenv('HOME')
 
   def startClient(self):
