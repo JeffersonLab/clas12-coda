@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import os,sys,glob,stat,json,socket,tempfile,argparse,subprocess,getpass
 
 class DaqVnc():
@@ -27,14 +27,10 @@ class DaqVnc():
   def startServer(self):
     if os.path.isfile(self.pidfile):
       sys.exit('\nERROR:  vncserver already running: '+self.pidfile+'\n')
-    xx=tempfile.NamedTemporaryFile(mode='wr+b',delete=False)
-    xx.write(self.cfg['xstartup'])
-    xx.close()
-    os.chmod(xx.name,stat.S_IWRITE|stat.S_IREAD|stat.S_IEXEC)
     cmd=['vncserver',\
         '-name',self.cfg['name'],\
         '-geometry',self.cfg['geometry'],\
-        '-xstartup',xx.name,\
+        '-xstartup',self.cfg['xstartup'],\
         ':'+self.cfg['port']]
     subprocess.call(cmd)
 
