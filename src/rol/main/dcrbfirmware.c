@@ -2,7 +2,9 @@
 /* dcrbfirmware.c */
 /*
      cd $CLON_PARMS/firmwares
-     dcrbfirmware fe_dcrb.bin
+     dcrbfirmware fe_dcrb_v1_5.bin
+     ###dcrbfirmware fe_dcrb_v1_7.bin
+     roc_reboot
 */
 
 #include <stdio.h>

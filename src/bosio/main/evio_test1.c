@@ -15,6 +15,8 @@ struct {
 } pawc_;
 
 
+#define TET 10
+
 #define MAXBUF 1000000
 unsigned int buf[MAXBUF];
 
@@ -144,13 +146,13 @@ main(int argc, char **argv)
   int handler, status, ifpga;
   unsigned long long *b64;
   unsigned int *b32;
-  unsigned short *b16;
+  unsigned short *b16, dat16;
   unsigned char *b08;
   int trig,chan,fpga,apv,hybrid;
   int i1;
   float f1,f2;
 
-  int nr,sec,layer,strip,nl,ncol,nrow,i,j,ii,jj,kk,l,l1,l2,ichan,nn,iev,nbytes,ind1;
+  int nr,sec,layer,strip,nl,ncol,nrow,i,j,ii,jj,kk,mm,l,l1,l2,ichan,nn,iev,nbytes,ind1;
   char title[128];
   char *HBOOKfile = "fadc250hist.his";
   int nwpawc,lun,lrec,istat,icycle,idn,nbins,nbins1,igood,offset;
@@ -209,9 +211,9 @@ main(int argc, char **argv)
   }
 
   
-  nbins=4000;
+  nbins=2500;
   x1 = 0.;
-  x2 = 40000.;
+  x2 = 2500.;
   ww = 0.;
   for(ii=1; ii<=21; ii++)
   {
@@ -223,40 +225,6 @@ main(int argc, char **argv)
     }
   }
 
-  nbins=100;
-  x1 = 0.;
-  x2 = 100.;
-  ww = 0.;
-  for(ii=1; ii<=21; ii++)
-  {
-    for(jj=0; jj<=15; jj++)
-    {
-      idn = 30000+ii*100+jj;
-      sprintf(title,"pulse time sl%d ch%d",ii,jj);
-      hbook1_(&idn,title,&nbins,&x1,&x2,&ww,strlen(title));
-    }
-  }
-
-
-  /*
-  nbins=80;
-  nbins1=80;
-  x1 = 0.;
-  x2 = 2000.;
-  y1 = 0.;
-  y2 = 8000.;
-  ww = 0.;
-  for(idn=1001; idn<=1036; idn++)
-  {
-    hbook2_(&idn,"YvxX",&nbins,&x1,&x2,&nbins1,&y1,&y2,&ww,4);
-  }
-  */
-
-
-  nbins=600;
-  x1 = 0./*4000.*/;
-  x2 = 6000./*5000.*/;
-  ww = 0.;
 
 
   status = evOpen(argv[1],"r",&handler);
@@ -282,17 +250,16 @@ main(int argc, char **argv)
     if(iev < 3) continue; /*skip first 2 events*/
 
 	
-
-
-
-    if((ind1 = evNlink(buf, 6, 0xe101, 0, &nbytes)) > 0)
+    if((ind1 = evNlink(buf, 65, 0xe101, 0, &nbytes)) > 0)
     {
       unsigned char *end;
       unsigned long long time;
       int crate,slot,trig,nchan,chan,nsamples,notvalid,edge,data,count,ncol1,nrow1;
       int oldslot = 100;
       int ndata0[22], data0[21][8];
-      int baseline, sum, channel;
+      int baseline, sum, channel, summing_in_progress;
+      int datasaved[1000];
+      
 #ifdef DEBUG
       printf("ind1=%d, nbytes=%d\n",ind1,nbytes);
 #endif
@@ -314,65 +281,85 @@ main(int argc, char **argv)
         printf("slot=%d, trig=%d, time=%lld nchan=%d\n",slot,trig,time,nchan);
 #endif
         for(jj=0; jj<nchan; jj++)
-	    {
+	{
           GET8(chan);
           /*chan++;*/
           GET32(nsamples);
 #ifdef DEBUG
           printf("  chan=%d, nsamples=%d\n",chan,nsamples);
 #endif
+          baseline = sum = summing_in_progress = 0;
           for(kk=0; kk<nsamples; kk++)
-	      {
-            tmpx = kk+0.5;
-	        GET16(ww);
-	        idn = slot*100+chan;
-	        hf1_(&idn,&tmpx,&ww);
+	  {
+	    GET16(dat16);
+            data = dat16;
 
-	        idn = 10000 + slot*100+chan;
-            tmpx = ww;
-            ww = 1.;
-	        hf1_(&idn,&tmpx,&ww);
+            datasaved[kk] = data;
+
+	    /*printf("kk=%d data=%d\n",kk,data);*/
+            if(kk<4) baseline += data;
+
+            if(kk==4)
+	    {
+              baseline = baseline / 4;
+              //printf("slot=%d chan=%d baseline=%d\n",slot,chan,baseline);
+	    }
+
+            if(kk>5 && kk<64)
+            {
+              if(summing_in_progress==0 && data>(baseline+TET))
+	      {
+                //printf("open summing at kk=%d\n",kk);
+                summing_in_progress = 1;
+                /* sum few samples before (aka NSB)*/
+                //sum += (datasaved[kk-3]-baseline);
+                sum += (datasaved[kk-2]-baseline);
+                sum += (datasaved[kk-1]-baseline);
+	      }
+
+              if(summing_in_progress>0 && data<(baseline+TET))
+	      {
+                //printf("close summing at kk=%d, sum=%d\n",kk,sum);
+                summing_in_progress = -1;
+	      }
+
+              if(summing_in_progress>0)
+	      {
+                sum += (datasaved[kk]-baseline);
+                //printf("sum=%d (kk=%d)\n",sum,kk);
 	      }
 	    }
+
+            tmpx = kk+0.5;
+            ww = (float)data;
+	    idn = slot*100+chan;
+	    hf1_(&idn,&tmpx,&ww);
+
+            if(kk<10)
+	    {
+	      idn = 10000 + slot*100+chan;
+              tmpx = (float)data;
+              ww = 1.;
+	      hf1_(&idn,&tmpx,&ww);
+	    }
+
+	  }
+
+	  if(sum>1)
+	  {
+            tmpx = sum;
+            ww = 1.;
+	    idn = 20000+slot*100+chan;
+	    hf1_(&idn,&tmpx,&ww);
+	  }
+
+
+	}
 #ifdef DEBUG
         printf("end loop: b08=0x%08x\n",b08);
 #endif
       }
     }
-
-
-
-
-    if((ind1 = evNlink(buf, 37, 0xe10E, 37, &nbytes)) > 0)
-    {
-      char ch;
-      unsigned char *end;
-      unsigned long long time;
-      int crate,slot,trig,nchan,chan,nsamples,notvalid,edge,data,count,ncol1,nrow1;
-      int oldslot = 100;
-      int ndata0[22], data0[21][8];
-      int baseline, sum, channel;
-/*#ifdef DEBUG*/
-      printf("ind1=%d, nbytes=%d\n",ind1,nbytes);
-/*#endif*/
-      b08 = (unsigned char *) &buf[ind1];
-      end = b08 + nbytes;
-/*#ifdef DEBUG*/
-      printf("ind1=%d, nbytes=%d (from 0x%08x to 0x%08x)\n",ind1,nbytes,b08,end);
-/*#endif*/
-      printf("==========\n");
-      while(b08<end)
-      {
-        GET8(ch);
-        /*printf("'%c'[0x%02x]",ch,ch);*/
-        printf("[0x%02x]",ch);
-      }
-      printf("==========\n");
-
-
-	  exit(0);
-    }
-
 
   }
 

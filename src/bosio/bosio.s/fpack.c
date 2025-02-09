@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "bosio.h"
 
 /* #define COND_DEBUG  */
@@ -652,14 +653,22 @@ return; /* until it is finished */
   *ier = 0;
   return;
 }
- 
-#define NBCS 700000 
-#include "bcs.h"
- 
+
+
+
+
 static int sequnit[MUNITS];	/* current unit for sequential writing */
 static int ustop = 0;       /* from cseqr.inc */
 static int eod = 0;
 
+
+
+
+
+#if 0 /*sergey: bcs.h has common block inside, cost multiple definition of `bcs_', comment out for now*/
+
+#define NBCS 700000 
+#include "bcs.h"
 
 /*
      Arguments:
@@ -733,6 +742,12 @@ fseqr_(char *daname, int *error, int len)
   /*printf("fseqr: file not found !!!\n");*/
   return;
 }
+
+#endif
+
+
+
+
 
 void
 fseqw_(char *daname, int len)

@@ -232,41 +232,42 @@ restartLinux:
 
 next_event:
 
-		if((status = evRead(handle,buf,maxbufbytes)) == EOF)
-		{
+	if((status = evRead(handle,buf,maxbufbytes)) == EOF)
+	{
           /*printf("reopen data file >%s<\n",filename);*/
           status = evClose(handle);
           status = evOpen(filename,"r",&handle);
-		  status=evRead(handle,buf,maxbufbytes);
-		}
+	  status=evRead(handle,buf,maxbufbytes);
+	}
 
-		/*does not work for evRead yet, will be fixed in new evio release - Sergey 5-nov-2013
+	/*does not work for evRead yet, will be fixed in new evio release - Sergey 5-nov-2013
         status = evGetBufferLength(handle,&buflen);
-		*/
-        buflen = buf[0]+1;
+	*/
+        buflen = buf[0]+1; /*does not include 8-word record header !?*/
+	//printf("buf[0]=%d, buf[8]=%d\n",buf[0],buf[8]);
 
         if(status!=0) printf("evGetBufferLength returns %d\n",status);
 
-		/*printf("evGetBufferLength: buffer length = %d bytes\n",buflen*4);*/
+	/*printf("evGetBufferLength: buffer length = %d bytes\n",buflen*4);*/
         if(buflen > event_size/4)
-		{
+	{
           printf("ERROR: event size from the file is %d bytes which is bigger then ET system event size %d bytes\n",buflen*4,event_size);
           printf("       Increase the size of ET system event accordingly (parameter '-s' in 'et_start')\n");
           exit(1);
-		}
+	}
 
 		
-		/*ignore special events */
+	/*ignore special events */
         event_type = (buf[1]>>16)&0xffff; /* actually it is bank tag */
-		/*
+	/*
         for(i=0; i<50; i++) printf("[%2d] 0x%08x\n",i,buf[i]);
-		exit(0);
-		*/
+	exit(0);
+	*/
         if(event_type==17||event_type==18||event_type==20)
-		{
+	{
           printf("Skip control event type %d\n",event_type);
           goto next_event;
-		}
+	}
 
 
 
@@ -275,25 +276,27 @@ next_event:
         if(status!=0) printf("evWrite returns %d\n",status);
 
         evGetBufferLength(handle1,&len);
-		/*printf("len=%d buflen=%d\n",len, buflen);*/
 /*sergey: evGetBufferLength() returns len=32, use buflen instead*/
         len = buflen<<2;
+	//printf("len=%d buflen=%d\n",len, buflen);
 
         status = evClose(handle1);
         if(status!=0) printf("evClose returns %d\n",status);
 		
 
-		/*			
+	/*			
         printf("---> len=%d\n",len);
         printf("2 data(hex): 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
 			   pdata[0],pdata[1],pdata[2],pdata[3],pdata[4],pdata[5],pdata[6],pdata[7],pdata[8],pdata[9]);
         printf("2 data(dec): %10d %10d %10d %10d %10d %10d %10d %10d %10d %10d\n\n",
 			   pdata[0],pdata[1],pdata[2],pdata[3],pdata[4],pdata[5],pdata[6],pdata[7],pdata[8],pdata[9]);
-		*/
+	*/
 
         datacount += (double)len;
-        et_event_setlength(pe[i], len);
-	  }
+
+        //et_event_setlength(pe[i], len);
+        et_event_setlength(pe[i], len+32); /*'len' counts data only, add 8-word header size as well*/
+      }
       evcount += count;
 
 

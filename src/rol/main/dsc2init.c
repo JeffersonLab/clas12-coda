@@ -9,6 +9,7 @@
 #ifdef Linux_vme
 
 #include "jvme.h"
+#include "tiLib.h"
 #include "dsc2Lib.h"
 #include "dsc2Config.h"
 
@@ -49,9 +50,18 @@ main(int argc, char *argv[])
   vmeOpenDefaultWindows();
   printf("\n");
 
+vmeBusLock();
+  tiInit((21<<19),2,0);
+  tiStatus(1);
+vmeBusUnlock();
+
   
+vmeBusLock();
   dsc2Init(0x100000,0x80000,20,0/*1<<19*/);
   dsc2Config ("");
+vmeBusUnlock();
+
+  dsc2UploadAllPrint();
 
   exit(0);
 }

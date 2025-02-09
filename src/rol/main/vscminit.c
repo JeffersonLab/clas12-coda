@@ -48,6 +48,12 @@ main(int argc, char *argv[])
 */
   }
 
+  for(i=0;i<nvscm;i++)
+  {
+    vscmDisableScaler(vscmSlot(i));
+    vscmEnableScaler(vscmSlot(i));
+  }
+
   fssrStatusAll();
 
   exit(0);

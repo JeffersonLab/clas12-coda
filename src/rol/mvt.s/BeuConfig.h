@@ -28,6 +28,7 @@
 // Tables with pointers to the BEU control structures and data fifo-s
 extern volatile struct BEUSSP_A24RegStruct *beu_reg_control[DEF_MAX_NB_OF_BEU];
 extern volatile unsigned int               *beu_fifo[DEF_MAX_NB_OF_BEU];
+
 /* pointer to BEUSSP multi block adress window */
 extern volatile unsigned int               *BEUSSPmblk;
 

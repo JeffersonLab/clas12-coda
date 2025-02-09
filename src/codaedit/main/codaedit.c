@@ -61,6 +61,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
@@ -126,7 +127,7 @@ static String fallback_resources[]={
 
 extern int hide_controls;
 
-Manager manager;          /* x-window layout manager */
+//Manager manager;          /* x-window layout manager */
 XtAppContext app_context;
 Widget toplevel;
 
@@ -176,74 +177,100 @@ main(int argc, char **argv)
   int    ac,ix;
   Pixmap bg_pixmap;
   XImage *image;
-
-  for (ix=1;ix < argc;ix++)
+#ifdef USE_CREG
+  Window parent;
+  Widget w;
+  char cmd[100];
+#endif
+  
+  for(ix=1;ix < argc;ix++)
   {
-    if (argv[ix] &&  (strcmp(argv[ix],"-noedit") == 0))
+    if(argv[ix] &&  (strcmp(argv[ix],"-noedit") == 0))
     {
       hide_controls = 1;
     }
   }
+  
   ac = 0;
   XtSetArg(args[ac], XmNtitle, "net_Editor"); ac++;
   XtSetArg(args[ac], XmNiconName,"net_Editor"); ac++;
   XtSetArg(args[ac], XmNoverrideRedirect,True); ac++;
-  toplevel = XtAppInitialize(&app_context,"NetEditor", NULL, 0, &argc, argv,
-			     fallback_resources, args, ac);
+
+  /*initialize application convenience procedure: initialize the Intrinsics internals, create an application context,
+    open and initialize a display, and create the initial application shell instance
+    Arguments:
+      app_context - returns the application context, if non-NULL. 
+      application_class - specifies the class name of the application. 
+      options - specifies the command line options table. 
+      num_options - specifies the number of entries in options. 
+      argc_in_out - specifies a pointer to the number of command line arguments. 
+      argv_in_out - specifies a pointer to the command line arguments. 
+      fallback_resources - specifies resource values to be used if the application class resource file cannot be opened or read, or NULL. 
+      args - specifies the argument list to override any other resource specifications for the created shell widget. 
+      num_args - specifies the number of entries in the argument list. 
+    Returns: 
+      toplevel - top-level shell widget; display pointer to that widget can be obtained by calling XtDisplay(toplevel)
+*/
+  toplevel = XtAppInitialize(&app_context,"NetEditor", NULL, 0, &argc, argv, fallback_resources, args, ac);
+  printf("codaedit: toplevel=0x%x\n",toplevel);fflush(stdout);
   
   bg_pixmap =  XcodaCreatePixmapFromXpm(toplevel,stone_xpm, 1);
   image = XGetImage(XtDisplay(toplevel), bg_pixmap, 0, 0, 159, 160, AllPlanes, XYPixmap);
   
   XmInstallImage (image, "bg_pixmap1");
   
-  {
-    Window parent;
-    Widget w;
-    char cmd[100];
-    parent = 0;
+
 
 #ifdef USE_CREG
-    for(ix=1; ix<argc; ix++)
+  parent = 0;
+  for(ix=1; ix<argc; ix++)
+  {
+    if(argv[ix] &&  (strcmp(argv[ix],"-embed") == 0))
     {
-      if (argv[ix] &&  (strcmp(argv[ix],"-embed") == 0))
-      {
-		printf("wwwwwwwwwwwwwwwwwwwww CREG wwwwwwwwwwwwwww (-embed)\n");
-        parent = CODAGetAppWindow(XtDisplay(toplevel),"codaedit_WINDOW");
-        printf("parent=0x%08x\n",parent);
-      }
-    }
-
-    if (parent)
-    {
-      ac = 0;
-      XtSetArg(args[ac], XmNx,3000); ac++;
-      XtSetValues (toplevel, args, ac);
-      XtRealizeWidget(toplevel);
-      XWithdrawWindow(XtDisplay(toplevel), XtWindow(toplevel),0);
-
-      sprintf(cmd,"r:0x%08x 0x%08x",XtWindow(toplevel),parent);      
-      printf("cmd >%s<\n",cmd);
-
-      coda_Send(XtDisplay(toplevel),"RUNCONTROL",cmd);
-
-      CodaEditor(toplevel,1);
-      codaSendInit(toplevel,"CEDIT");
-      codaRegisterMsgCallback(messageHandler);
-      XtAddEventHandler(toplevel, StructureNotifyMask, False, Xhandler, NULL);
-    }
-    else
-#else
-	printf("uuuuuuuuuuuuuuu NO CREG uuuuuuuuuuuuuuuuuuu\n");
-#endif
-    {
-      ac = 0;
-      XtSetArg(args[ac], XmNoverrideRedirect,False); ac++;
-      XtSetValues (toplevel, args, ac);
-
-      CodaEditor(toplevel,0);
-      XtRealizeWidget(toplevel);
+      printf("wwwwwwwwwwwwwwwwwwwww CREG wwwwwwwwwwwwwww (-embed)\n");
+      parent = CODAGetAppWindow(XtDisplay(toplevel),"codaedit_WINDOW");
+      printf("parent=0x%08x\n",parent);
     }
   }
 
+  if(parent)
+  {
+    ac = 0;
+    XtSetArg(args[ac], XmNx,3000); ac++;
+    XtSetValues (toplevel, args, ac);
+    XtRealizeWidget(toplevel);
+    XWithdrawWindow(XtDisplay(toplevel), XtWindow(toplevel),0);
+
+    sprintf(cmd,"r:0x%08x 0x%08x",XtWindow(toplevel),parent);      
+    printf("cmd >%s<\n",cmd);fflush(stdout);
+
+
+    /* actually insert rocs into runcontrol's window;
+       second parameter is the same as in parent's call 'codaSendInit(toplevel,"RUNCONTROL")' */
+    coda_Send(XtDisplay(toplevel),"RUNCONTROL",cmd);
+
+    CodaEditor(toplevel,1);
+      
+    codaSendInit(toplevel,"CEDIT");
+    codaRegisterMsgCallback(messageHandler);
+    XtAddEventHandler(toplevel, StructureNotifyMask, False, Xhandler, NULL); /*Xhandler will exit if window was destroyed*/
+      
+  }
+  else
+#else
+    printf("uuuuuuuuuuuuuuu NO CREG uuuuuuuuuuuuuuuuuuu\n");
+#endif
+  {
+    ac = 0;
+    XtSetArg(args[ac], XmNoverrideRedirect,False); ac++;
+    XtSetValues (toplevel, args, ac);
+
+    CodaEditor(toplevel,0);
+    XtRealizeWidget(toplevel);
+  }
+  
+  //printf("9\n");fflush(stdout);
   XtAppMainLoop(app_context);
+  //printf("99\n");fflush(stdout);
+  
 }

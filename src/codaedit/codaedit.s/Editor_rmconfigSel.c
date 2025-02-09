@@ -39,7 +39,7 @@
 #include "Editor_miscinfo.h"
 #include "Editor_xmisc.h"
 
-Widget menu;
+Widget menu1;
 static editorRmConfigSel  rmconfigSel;
 
 static void
@@ -70,11 +70,11 @@ createOptionMenu (Widget parent)
   ac = 0;
   XtSetArg(arg[ac], XmNpacking, XmPACK_COLUMN); ac++;
   XtSetArg(arg[ac], XmNnumColumns, 1); ac++; /*will be changed on-flight based on the number of configs*/
-  menu = XmCreatePulldownMenu (parent, "optionPullDown", arg, ac);
+  menu1 = XmCreatePulldownMenu (parent, "optionPullDown", arg, ac);
 
   t = XmStringCreateSimple ("Run Type ");
   XtSetArg (arg[ac], XmNlabelString, t); ac++;
-  XtSetArg (arg[ac], XmNsubMenuId, menu); ac++;
+  XtSetArg (arg[ac], XmNsubMenuId, menu1); ac++;
   option = XmCreateOptionMenu (parent, "configurationOption", arg, ac);
   ac = 0;
   XmStringFree (t);
@@ -85,7 +85,7 @@ createOptionMenu (Widget parent)
   {
     rmconfigSel.pushb[i] = XtCreateWidget ("optionButton", 
 					 xmPushButtonGadgetClass,
-					 menu, arg, ac);
+					 menu1, arg, ac);
     if (i == 0)
       XtManageChild (rmconfigSel.pushb[i]);
   }
@@ -319,7 +319,7 @@ removeConfigSelPopup (void)
   /*printf("setting ncols in pulldown menu to %d\n",ncols);*/
   ac = 0;
   XtSetArg(arg[ac], XmNnumColumns, ncols); ac++;
-  XtSetValues (menu, arg, ac);
+  XtSetValues (menu1, arg, ac);
 
 
   if (status == 0)

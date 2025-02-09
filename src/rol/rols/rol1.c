@@ -1,4 +1,5 @@
 
+
 /* rol1.c - 'standard' first readout list */
 
 #if defined(VXWORKS) || defined(Linux_vme)
@@ -18,19 +19,23 @@ static int nusertrig, ndone;
 #define USE_SSP_RICH
 #define USE_VSCM
 #define USE_DCRB
-#define USE_VETROC
-//#define USE_FLP
-#define USE_SIS3801
+#undef USE_VETROC
+#undef USE_FLP
+#define USE_VFTDC
+#undef USE_SIS3801
+#define USE_HD
 
 
 //#define USE_ED
+
+
 
 /* if event rate goes higher then 10kHz, with random triggers we have wrong
 slot number reported in GLOBAL HEADER and/or GLOBAL TRAILER words; to work
 around that problem temporary patches were applied - until fixed (Sergey) */
 #define SLOTWORKAROUND
 
-#undef DEBUG
+//#define DEBUG
 
 
 #include <stdio.h>
@@ -265,6 +270,12 @@ getTdcSlotNumbers(int *slotnumbers)
 #endif
 */
 
+#ifdef USE_VFTDC
+#include "vfTDCLib.h"
+static int nvftdc = 0;
+static unsigned int MAXVFTDCWORDS = 0;
+#endif
+
 #ifdef USE_VETROC
 #include "vetrocLib.h"
 extern int nvetroc;                   /* Number of VETROCs in Crate */
@@ -306,6 +317,16 @@ static int SSP_SLOT;
 #ifdef USE_FLP
 #include "flpLib.h"
 static int nflp;
+#endif
+
+#ifdef USE_HD
+#include "hdLib.h"
+static int hd_found = 0;
+#define HELICITY_DECODER_ADDR 0x00980000
+#define HDMAXWORDS 1024
+static uint8_t fiber_input;
+static uint8_t cu_input;
+static uint8_t cu_output;   
 #endif
 
 #ifdef USE_VSCM
@@ -406,22 +427,24 @@ static int mode = 2;
 #endif
 
 
+static unsigned int maxA32Address;
+static unsigned int fadcA32Address = 0x09000000;
+static unsigned int vfTDCA32Address = 0x09000000;
 
 
 static void
 __download()
 {
   int i1, i2, i3;
-  char *ch, tmp[64];
+  char *ch, tmp[256];
   int ret;
+  char *myhost = getenv("HOST");
 
 #ifdef USE_FADC250
   int ii, id, isl, ichan, slot;
   unsigned short iflag;
   int fadc_mode = 1, iFlag = 0;
   int ich, NSA, NSB;
-  unsigned int maxA32Address;
-  unsigned int fadcA32Address = 0x09000000;
 #endif
 #ifdef POLLING_MODE
   rol->poll = 1;
@@ -434,6 +457,14 @@ __download()
   printf("LAST COMPILED: %s %s\n", __DATE__, __TIME__);
 
   printf("USRSTRING >%s<\n\n",rol->usrString);
+
+
+
+  /*TEST*/
+  //UDP_user_request(MSGERR, myhost, "MY_ERROR_MESSAGE");
+  /*TEST*/
+
+
 
   /* if slave, get fiber port number from user string */
 #ifdef TI_SLAVE
@@ -465,6 +496,7 @@ __download()
 #else
   CDOINIT(TIPRIMARY,TIR_SOURCE);
 #endif
+
 
 
   /************/
@@ -563,7 +595,8 @@ vmeBusUnlock();
   {
     DSC2_READ_CONF_FILE;
     maxA32Address = dsc2GetA32MaxAddress();
-    fadcA32Address = maxA32Address + FA_MAX_A32_MEM;
+    fadcA32Address = maxA32Address + DSC_MAX_A32_MEM;
+    vfTDCA32Address = maxA32Address + DSC_MAX_A32_MEM;
     ndsc2_daq = dsc2GetNdsc_daq();
   }
   else
@@ -712,6 +745,14 @@ vmeBusUnlock();
       fadcSlotMask |= (1<<FA_SLOT); /* Add it to the mask */
       printf("=======================> fadcSlotMask=0x%08x",fadcSlotMask);
 
+      /*
+      if(rol->pid==7)
+      {
+        fadcSlotMask = 0x0017e7f8;
+        printf("=======================> new fadcSlotMask=0x%08x",fadcSlotMask);
+      }
+*/
+
 	  {
         unsigned int PL, PTW, NSB, NSA, NP;
 vmeBusLock();
@@ -844,7 +885,7 @@ vmeBusUnlock();
 vmeBusLock();
     slot = tdc1190GetGeoAddress(ii);
 vmeBusUnlock();
-	slotnums[ii] = slot;
+    slotnums[ii] = slot;
     printf("[%d] slot %d\n",ii,slotnums[ii]);
   }
 #endif
@@ -1051,6 +1092,21 @@ vmeBusUnlock();
 #endif
 
 
+#ifdef USE_HD
+
+  /* Initialize the library and module with its internal clock*/
+  ret = hdInit(HELICITY_DECODER_ADDR, HD_INIT_VXS, HD_INIT_EXTERNAL_FIBER, 0);
+  if(ret==1) hd_found = 1;
+  else       hd_found = 0;
+
+  if(hd_found)
+  {
+    hdSetA32(0x10000000);
+    hdStatus(1);
+  }
+
+#endif
+
 
   sprintf(rcname,"RC%02d",rol->pid);
   printf("rcname >%4.4s<\n",rcname);
@@ -1063,6 +1119,7 @@ vmeBusUnlock();
 
   logMsg("INFO: User Download Executed\n",1,2,3,4,5,6);
 }
+
 
 
 
@@ -1081,10 +1138,17 @@ __prestart()
   unsigned short bb;
   unsigned short thr = 400;
 #endif
+#ifdef USE_HD
+  uint8_t hd_clock, hd_clock_ret;
+#endif
 
   /* Clear some global variables etc for a clean start */
   *(rol->nevents) = 0;
   event_number = 0;
+
+  /*TEST*/
+  //UDP_cancel_errors();
+  /*TEST*/
 
   tiEnableVXSSignals();
 
@@ -1151,9 +1215,48 @@ vmeBusUnlock();
 */
   }
 
+
   printf("VSCM Prestart() ends =========================\n\n");
 #endif
 
+
+#ifdef USE_VFTDC
+  printf("VFTDC Prestart() starts =========================\n");
+
+  /*
+  printf("\nUse vfTDCA32Address=0x%08x\n",vfTDCA32Address);
+  vfTDCSetA32BaseAddress(vfTDCA32Address);
+  */
+
+vmeBusLock();
+  nvftdc = vfTDCInit(3<<19, 1<<19, 20,
+  //nvftdc = vfTDCInit(20<<19, 1<<19, 1,
+                     VFTDC_INIT_VXS_SYNCRESET |
+                     VFTDC_INIT_VXS_TRIG      |
+                     VFTDC_INIT_VXS_CLKSRC/*VFTDC_INIT_INT_CLKSRC*/);
+vmeBusUnlock();
+
+
+
+  printf("nvftdc=%d\n",nvftdc);
+  if(nvftdc>0)
+  {
+    int window_width   = 255/*255*/; /* 200*4ns = 800ns, maximum 255 */
+    int window_latency = 2027 /*2047*/; /* 2175*4ns = 8700ns, maximum 2047 */ /* changed from 2027 to 2011 Rafo*/
+
+	for(ii=0; ii<nvftdc; ii++)
+	{
+      slot = vfTDCSlot(ii);
+vmeBusLock();
+      vfTDCSetWindowParameters(slot, window_latency, window_width);
+      vfTDCStatus(slot,1);
+vmeBusUnlock();
+	}
+  }
+
+
+  printf("VFTDC Prestart() ends =========================\n\n");
+#endif
 
 
 #ifdef USE_VETROC
@@ -1201,7 +1304,6 @@ vmeBusUnlock();
 
   printf("VETROC Prestart() ends =========================\n\n");
 #endif
-
 
 
 
@@ -1276,12 +1378,13 @@ vmeBusUnlock();
     else printf("Link at slot %d is DOWN\n",DCRB_SLOT);
   }
 
-  /* SD Trigout when DCRB multiplicity >= 1 */
+
+  /* SD Trigout when DCRB multiplicity >= 1
   if(sd_found)
   {
     sdSetTrigoutLogic(0, 1);
   }
-
+*/
 
   printf("DCRB Prestart() ends =========================\n\n");
 #endif
@@ -1355,6 +1458,23 @@ vmeBusUnlock();
 #ifdef USE_SSP
   printf("SSP Prestart() starts =========================\n");
 
+
+//////////////////////////////////////
+//////// RICH LV cycle test //////////
+#if 0
+  if(rol->pid==84)
+  {
+    printf("*** Power cycling RICH2 LV ***\n");
+    system("caput B_DET_RICH2_LV:OFF 1");
+    usleep(1000000);
+    system("caput B_DET_RICH2_LV:ON 1");
+    usleep(3000000);
+    printf("*** Done ***\n");
+  }
+#endif
+//////////////////////////////////////
+
+
   memset(ssp_not_ready_errors, 0, sizeof(ssp_not_ready_errors));
 
  /*****************
@@ -1363,6 +1483,7 @@ vmeBusUnlock();
   iFlag  = SSP_INIT_MODE_DISABLED; /* Disabled, initially */
   iFlag |= SSP_INIT_SKIP_FIRMWARE_CHECK;
   iFlag |= SSP_INIT_MODE_VXS;
+  iFlag |= SSP_INIT_REBOOT_FPGA;
 //  iFlag |= SSP_INIT_FIBER0_ENABLE;         /* Enable hps1gtp fiber ports */
 //  iFlag |= SSP_INIT_FIBER1_ENABLE;         /* Enable hps1gtp fiber ports */
 //  iFlag |= SSP_INIT_GTP_FIBER_ENABLE_MASK; /* Enable all fiber port data to GTP */
@@ -1373,19 +1494,40 @@ vmeBusLock();
 vmeBusUnlock();
   printf("rol1: found %d SSPs (using iFlag=0x%08x)\n",nssp,iFlag);
 
-
   if(nssp>0)
   {
+    int rich_firmware = 0;
+    int firmware_type;
+
     SSP_READ_CONF_FILE;
     sspSlotMask=0;
     for(id=0; id<nssp; id++)
     {
       SSP_SLOT = sspSlot(id);      /* Grab the current module's slot number */
 
+      firmware_type = sspGetFirmwareType_Shadow(SSP_SLOT);
+      if(firmware_type == SSP_CFG_SSPTYPE_HALLBRICH)
+      {
+        rich_firmware = 1;
+      }
+
       sspSlotMask |= (1<<SSP_SLOT); /* Add it to the mask */
       printf("=======================> sspSlotMask=0x%08x\n",sspSlotMask);
 
       printf("Setting SSP %d, slot %d\n",id,sspSlot(id));
+    }
+
+    if(rich_firmware==1)
+    {
+      printf("\nWE ARE IN RICH CRATE\n\n");
+vmeBusLock();
+      tiSetBusySource(TI_BUSY_SWB,0);
+      sdSetActiveVmeSlots(sspSlotMask);
+vmeBusUnlock();
+    }
+    else
+    {
+      printf("\nWE ARE NOT IN RICH CRATE\n\n");
     }
   }
 
@@ -1412,11 +1554,27 @@ vmeBusUnlock();
   /* master and standalone crates, NOT slave */
 #ifndef TI_SLAVE
 
+vmeBusLock();
+printf("CLOCK251?\n");
+vfTDCGetClockSource(19);
+vfTDCGetClockSource(20);
+printf("CLOCK251!\n");
+vmeBusUnlock();
+
   sleep(1);
 vmeBusLock();
   tiSyncReset(1);
 vmeBusUnlock();
   sleep(1);
+
+vmeBusLock();
+printf("CLOCK252?\n");
+vfTDCGetClockSource(19);
+vfTDCGetClockSource(20);
+printf("CLOCK252!\n");
+vmeBusUnlock();
+
+
 vmeBusLock();
   tiSyncReset(1);
 vmeBusUnlock();
@@ -1446,6 +1604,7 @@ vmeBusLock();
 vmeBusUnlock();
     sleep(1);
   }
+
 
 vmeBusLock();
   ret = tiGetSyncResetRequest();
@@ -1583,6 +1742,24 @@ vmeBusUnlock();
   }
 #endif
 
+
+#ifdef USE_VFTDC
+  if(nvftdc>0)
+  {
+    /* change block level is all modules */
+	for(ii=0; ii<nvftdc; ii++)
+	{
+      slot = vfTDCSlot(ii);
+vmeBusLock();
+      vfTDCSetBlockLevel(slot, block_level);
+vmeBusUnlock();
+	}
+    MAXVFTDCWORDS = nvftdc * block_level * 128*16 + 2*32; /*MUST DO IT RIGHT !!!*/
+  }
+#endif
+
+
+
 #ifdef USE_VETROC
   for(id=0; id<nvetroc; id++)
   {
@@ -1631,6 +1808,53 @@ vmeBusUnlock();
 #endif
 
 
+
+#ifdef USE_HD
+
+  if(hd_found)
+  {
+    /* Setting data input (0x100 = 2048 ns) and
+       trigger latency (1000*8ns = 8000 ns) processing delays */
+    hdSetProcDelay(0x100, 1000);
+
+    /* Enable the module decoder, well before triggers are enabled */
+    hdEnableDecoder();
+
+    /*set i/o signals inversion if needed; 3 parameters have following meaning: fiber_input, cu_input, cu_output
+     (0 means no inversion, 1 means inversion)*/
+
+    //ret = hdSetHelicityInversion(0, 0, 0); /*reproduces old (v7) firmware (before Jan 31, 2024)*/
+
+    /* signals on fiber inputs are reversed because of polarity-flipping
+       optical fanout in counting room, so we do (1,0,1); if optical fanout
+       replaced with non-flipping one, will change it to (0,0,1)*/
+    ret = hdSetHelicityInversion(1, 0, 1);
+
+    ret = hdGetHelicityInversion(&fiber_input, &cu_input, &cu_output);
+    printf("\nHelicity Decoder inversion settings: fiber_input=%d, cu_input=%d, cu_output=%d (0-no flip, 1-flip)\n\n",
+           fiber_input,cu_input,cu_output);
+
+    /* set tsettle filtering:
+     *     0   Disabled
+     *     1   4 clock cycles
+     *     2   8 clock cycles
+     *     3   16 clock cycles
+     *     4   24 clock cycles
+     *     5   32 clock cycles
+     *     6   64 clock cycles
+     *     7   128 clock cycles */
+    hd_clock = 3;
+    ret = hdSetTSettleFilter(hd_clock); 
+    ret = hdGetTSettleFilter(&hd_clock_ret);
+    printf("\nHD T-settle filtering: set %d, read back %d\n\n",hd_clock,hd_clock_ret);
+
+    hdStatus(0);
+  }
+
+#endif
+
+
+
 vmeBusLock();
   tiStatus(1);
 vmeBusUnlock();
@@ -1648,7 +1872,7 @@ __end()
 {
   int iwait=0;
   int blocksLeft=0;
-  int id;
+  int id, slot;
 
   printf("\n\nINFO: End1 Reached\n");fflush(stdout);
 
@@ -1679,15 +1903,15 @@ vmeBusUnlock();
   {
     printf(">>>>>>>>>>>>>>>>>>>>>>> before while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
     while(iwait < 10)
-	{
+    {
       taskDelay(10);
-	  if(blocksLeft <= 0) break;
+      if(blocksLeft <= 0) break;
 vmeBusLock();
-	  blocksLeft = tiBReady();
+      blocksLeft = tiBReady();
       printf(">>>>>>>>>>>>>>>>>>>>>>> inside while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
 vmeBusUnlock();
-	  iwait++;
-	}
+      iwait++;
+    }
     printf(">>>>>>>>>>>>>>>>>>>>>>> after while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
   }
 
@@ -1707,6 +1931,29 @@ vmeBusLock();
   sdStatus();
 vmeBusUnlock();
 #endif
+
+
+#ifdef USE_VFTDC
+  for(id=0; id<nvftdc; id++)
+  {
+    slot = vfTDCSlot(id);
+vmeBusLock();
+    vfTDCStatus(slot,1);
+vmeBusUnlock();
+  }
+#endif
+
+
+#ifdef USE_HD
+
+  if(hd_found)
+  {
+    hdDisable();
+    hdStatus(0);
+  }
+
+#endif
+
 
 vmeBusLock();
   tiStatus(1);
@@ -1910,6 +2157,21 @@ vmeBusUnlock();
 
 #endif
 
+
+#ifdef USE_HD
+
+  if(hd_found)
+  {
+    /* Enable/Set Block Level on modules, if needed, here */
+    hdSetBlocklevel(block_level);
+
+    hdEnable();
+    hdStatus(0);
+  }
+
+#endif
+
+
   /* always clear exceptions */
   jlabgefClearException(1);
 
@@ -1926,11 +2188,11 @@ vmeBusUnlock();
 void
 usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
 {
-  int *jw, ind, ind2, i, ii, jj, kk, jjj, blen, len, rlen, itdcbuf, nbytes;
+  int *jw, ind, ind2, i, ii, jj, kk, jjj, blen, len, lentot, rlen, itdcbuf, nbytes, nblocks;
   unsigned int *tdcbuf_save, *tdc, utmp;
   unsigned int *dabufp1, *dabufp2;
   int njjloops, slot, type;
-  int dready = 0, sistimeout = 0, siswasread = 0;
+  int dready = 0, tdctimeout = 0, sistimeout = 0, siswasread = 0;
   int nwords;
 #ifndef VXWORKS
   TIMERL_VAR;
@@ -1957,7 +2219,7 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
   char *chptr, *chptr0;
 
 #ifdef DEBUG
-  printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
+  printf("\n\n\nEVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
 #endif
 
   if(syncFlag) printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
@@ -2032,38 +2294,124 @@ vmeBusUnlock();
     /* for EVIO format, will dump raw data */
     tdcbuf_save = tdcbuf;
 
+
+
+
     /*************/
-	/* TI stuff */
+    /* TI stuff */
 
     /* Set high, the first output port 
     tiSetOutputPort(1,0,0,0);
     */
 
-/*printf("1\n");fflush(stdout);*/
+
+#if 0
+    /* nblocks always '1' in following */
+vmeBusLock();
+    nblocks = tiGetNumberOfBlocksInBuffer();
+vmeBusUnlock();
+    printf("TI nblocks(1) = %d\n",nblocks);fflush(stdout);
+
+    printf("start sleeping 1 ..\n");fflush(stdout);
+    sleep(1);
+    printf(".. end sleeping 1\n");fflush(stdout);
+
+
+vmeBusLock();
+    nblocks = tiGetNumberOfBlocksInBuffer();
+vmeBusUnlock();
+    printf("TI nblocks(11) = %d\n",nblocks);fflush(stdout);
+#endif
+
+
+    /*
+adcecal3_ts - works perfect
+     */
+
+
+
+#if 1
     /* Grab the data from the TI */
     tdcbuf = tdcbuf_save;
+    len = 0;
 vmeBusLock();
     len = tiReadBlock(tdcbuf,2048,1);
 vmeBusUnlock();
-/*printf("2 len=%d tdcbuf=0x%lx\n",len,tdcbuf);fflush(stdout);*/
-    if(len<=0)
+    //printf("TI nwords(1) = %d\n\n",len);fflush(stdout);
+    //for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
+    lentot=len;
+
+vmeBusLock();
+    nblocks = tiGetNumberOfBlocksInBuffer();
+vmeBusUnlock();
+    //if(nblocks!=0) printf("TI nblocks(2) = %d\n",nblocks);fflush(stdout);
+    if(nblocks>7/*buffer_level*/) printf("TI nblocks(2) = %d\n",nblocks);fflush(stdout);
+#endif
+
+
+
+
+#if 0
+    tdcbuf = tdcbuf_save;
+    lentot = 0;
+    while(nblocks>0)
     {
-      printf("ERROR in tiReadBlock : No data or error, len = %d\n",len);
+      len = 0;
+vmeBusLock();
+      len = tiReadBlock(tdcbuf,2048,1);
+vmeBusUnlock();
+      printf("TI nwords(2) = %d\n\n",len);fflush(stdout);
+      for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
+
+vmeBusLock();
+      nblocks = tiGetNumberOfBlocksInBuffer();
+vmeBusUnlock();
+      printf("TI nblocks(22) = %d\n",nblocks);fflush(stdout);
+
+      tdcbuf += len;
+      lentot += len;
+    }
+
+    printf("start sleeping 2 ..\n");fflush(stdout);
+    sleep(1);
+    printf(".. end sleeping 2\n");fflush(stdout);
+
+
+vmeBusLock();
+    nblocks = tiGetNumberOfBlocksInBuffer();
+vmeBusUnlock();
+    printf("TI nblocks(3) = %d\n",nblocks);fflush(stdout);
+
+
+    printf("\n\n");fflush(stdout);
+#endif
+
+
+
+
+
+
+
+
+    if(lentot!=block_level*4+4) printf("ERROR: TI nwords = %d\n",lentot);fflush(stdout);
+    if(lentot<=0)
+    {
+      printf("ERROR in tiReadBlock : No data or error, len = %d\n",lentot);
       sleep(1);
     }
     else
     {
 	  
 #ifdef DEBUG
-	  //if((len != 163) && (len != 164))
-	  {
-        //printf("ERROR ROL1 TI: len=%d\n",len);
-        for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
-	  }
+      //if((len != 163) && (len != 164))
+      {
+        //printf("ERROR ROL1 TI: len=%d\n",lentot);
+        for(jj=0; jj<lentot; jj++) printf("ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
+      }
 #endif
 
       BANKOPEN(0xe10A,1,rol->pid);
-      for(jj=0; jj<len; jj++) *rol->dabufp++ = tdcbuf[jj];
+      for(jj=0; jj<lentot; jj++) *rol->dabufp++ = tdcbuf_save[jj];
       BANKCLOSE;
 	  
     }
@@ -2093,8 +2441,24 @@ TIMERL_START;
 #ifdef USE_V1190
 
     tdcbuf = tdcbuf_save;
-	if(ntdcs>0)
+    if(ntdcs>0)
+    {
+
+
+      /*check if we have 'block_level' events in every board*/
+      for(jj=0; jj<ntdcs; jj++)
+      {
+vmeBusLock();
+        nev = tdc1190Dready(jj);
+vmeBusUnlock();
+        if(nev < block_level)
 	{
+          printf("WARN: v1190/v1290[%2d] has %d events - wait\n",jj,nev);fflush(stdout);
+	}
+      }
+
+
+
 vmeBusLock();
       tdc1190ReadStart(tdcbuf, rlenbuf);
 vmeBusUnlock();
@@ -2103,23 +2467,23 @@ vmeBusUnlock();
 /*#if 0*/
 
 
-	  /*
-	  rlenbuf[0] = tdc1190ReadBoard(0, tdcbuf);
-	  rlenbuf[1] = tdc1190ReadBoard(1, &tdcbuf[rlenbuf[0]]);
-	  */
+      /*
+      rlenbuf[0] = tdc1190ReadBoard(0, tdcbuf);
+      rlenbuf[1] = tdc1190ReadBoard(1, &tdcbuf[rlenbuf[0]]);
+      */
 
       /*check if anything left in event buffer; if yes, print warning message and clear event buffer
       for(jj=0; jj<ntdcs; jj++)
       {
         nev = tdc1190Dready(jj);
         if(nev > 0)
-		{
+	{
           printf("WARN: v1290[%2d] has %d events - clear it\n",jj,nev);
           tdc1190Clear(jj);
-		}
-	  }
+	}
+      }
       for(ii=0; ii<rlenbuf[0]; ii++) tdcbuf[ii] = LSWAP(tdcbuf[ii]);
-	  */
+      */
 
       itdcbuf = 0;
       njjloops = ntdcs;
@@ -2129,17 +2493,17 @@ vmeBusUnlock();
       for(ii=0; ii<njjloops; ii++)
       {
         rlen = rlenbuf[ii];
-		/*
+	/*
         printf("rol1(TDCs): ii=%d, rlen=%d\n",ii,rlen);
-		*/
+	*/
 
-	  /*	  
+	/*	  
 #ifdef DEBUG
         level = tdc1190GetAlmostFullLevel(ii);
         iii = tdc1190StatusAlmostFull(ii);
         logMsg("ii=%d, rlen=%d, almostfull=%d level=%d\n",ii,rlen,iii,level,5,6);
 #endif
-	  */	  
+	*/	  
 
         if(rlen <= 0) continue;
 
@@ -2148,33 +2512,33 @@ vmeBusUnlock();
 
 
 #ifdef SLOTWORKAROUND
-		/* go through current board and fix slot number */
+	/* go through current board and fix slot number */
         for(jj=0; jj<rlen; jj++)
-		{
+	{
           utmp = LSWAP(tdc[jj]);
 
           if( ((utmp>>27)&0x1F) == 8 ) /* GLOBAL HEADER */
-		  {
+	  {
             slot = utmp&0x1f;
             if( slot != slotnums[ii] )
-			{
+	    {
               /*printf("ERROR: old=0x%08x: WRONG slot=%d IN GLOBAL HEADER, must be %d - fixed\n",utmp,slot,slotnums[ii]);*/
               utmp = (utmp & 0xFFFFFFE0) | slotnums[ii];
               /*printf("new=0x%08x\n",utmp);*/
               tdc[jj] = LSWAP(utmp);
             }
-		  }
+	  }
           else if( ((utmp>>27)&0x1F) == 0x10 ) /* GLOBAL TRAILER */
-		  {
+	  {
             slot = utmp&0x1f;
             if( slot != slotnums[ii] )
-			{
+	    {
               /*printf("ERROR: old=0x%08x: WRONG slot=%d IN GLOBAL TRAILER, must be %d - fixed\n",utmp,slot,slotnums[ii]);*/
               utmp = (utmp & 0xFFFFFFE0) | slotnums[ii];
               /*printf("new=0x%08x\n",utmp);*/
               tdc[jj] = LSWAP(utmp);
             }
-		  }
+	  }
         }
 #endif
 
@@ -2185,12 +2549,10 @@ vmeBusUnlock();
       BANKCLOSE;
 
 
-
 /*#endif*/ /*if 0*/
 
 
-
-	} /*if(ntdcs>0)*/
+    } /*if(ntdcs>0)*/
 
 
 #endif /* USE_V1190 */
@@ -2530,7 +2892,7 @@ vmeBusUnlock();
           if(fadcBlockError)
 		  {
             printf("fadc1 ERROR: Finished DMA, fadcBlockError=%d\n",fadcBlockError);fflush(stdout);
-            printf("dmaMemSize can be too small\n");fflush(stdout);
+            printf("MAXFADCWORDS=%d can be too small\n",MAXFADCWORDS);fflush(stdout);
 		  }
 #ifdef DEBUG
           printf("fadc1: Finished DMA, dCnt*4=%d bytes, fadcBlockError=%d\n",dCnt*4,fadcBlockError);fflush(stdout);
@@ -2548,7 +2910,6 @@ vmeBusUnlock();
           }
 		  
 #endif
-
 
 
         }
@@ -2970,7 +3331,9 @@ vmeBusUnlock();
             dCnt += len;
 
             usrRestoreVmeDmaMemory();
+
 #else
+
 vmeBusLock();
             len = dcReadBlock(DC_SLOT, &tdcbuf[dCnt], MAXDCWORDS, DC_ROFLAG);
 vmeBusUnlock();
@@ -3057,7 +3420,7 @@ vmeBusUnlock();
 
 
       if(stat>0)
-	  {
+      {
         BANKOPEN(0xe105,1,rol->pid);
 
         DCRB_SLOT = dcrbSlot(0);
@@ -3083,9 +3446,9 @@ vmeBusUnlock();
 #endif
         }
         else
-		{
+	{
           for(jj=0; jj<ndcrb; jj++)
-	      {
+	  {
             DCRB_SLOT = dcrbSlot(jj);
 #ifdef DMA_TO_BIGBUF
             uMemBase = dabufp_usermembase;
@@ -3096,6 +3459,7 @@ vmeBusUnlock();
 vmeBusLock();
             len = dcrbReadBlock(DCRB_SLOT, rol->dabufp, MAXDCRBWORDS, DCRB_ROFLAG);
 vmeBusUnlock();
+
 #ifdef DEBUG
             printf("DCRB: slot=%d, nw=%d, data-> 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
 			  DCRB_SLOT,len,LSWAP(rol->dabufp[0]),LSWAP(rol->dabufp[1]),LSWAP(rol->dabufp[2]),
@@ -3105,36 +3469,40 @@ vmeBusUnlock();
             dCnt += len;
 
             usrRestoreVmeDmaMemory();
+
 #else
+
 vmeBusLock();
             len = dcrbReadBlock(DCRB_SLOT, &tdcbuf[dCnt], MAXDCRBWORDS, DCRB_ROFLAG);
 vmeBusUnlock();
 #ifdef DEBUG
-            printf("DC: slot=%d, nw=%d, data-> 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
-			  DCRB_SLOT,len,LSWAP(tdcbuf[dCnt+0]),LSWAP(tdcbuf[dCnt+1]),LSWAP(tdcbuf[dCnt+2]),
-              LSWAP(tdcbuf[dCnt+3]),LSWAP(tdcbuf[dCnt+4]),LSWAP(tdcbuf[dCnt+5]),LSWAP(tdcbuf[dCnt+6]));
+            printf("DC: slot=%d, len=%d\n",DCRB_SLOT,len);
+            for(i=0; i<len; i++)
+            {
+              printf("  [%3d] 0x%08x\n",i,LSWAP(tdcbuf[dCnt+i]));
+            }
 #endif
             dCnt += len;
 #endif
-	      }
-		}
+	  }
+	}
 
-	    if(dCnt<=0)
-	    {
-	      printf("DCRB: No data or error.  dCnt = %d\n",dCnt);
+	if(dCnt<=0)
+	{
+	  printf("DCRB: No data or error.  dCnt = %d\n",dCnt);
           dCnt=0;
-	    }
+	}
         else
-	    {
+	{
 #ifndef DMA_TO_BIGBUF
           for(jj=0; jj<dCnt; jj++) *rol->dabufp++ = tdcbuf[jj];
 #endif
-	    }
+	}
 
         BANKCLOSE;
-	  }
-	  else
-	  {
+      }
+      else
+      {
 	    printf ("DCRBs: no events   stat=%d  intcount = %d   gbready = 0x%08x  dcrbSlotMask = 0x%08x\n",
 		  stat,tiGetIntCount(),gbready,dcrbSlotMask);
         printf("Missing slots:");
@@ -3151,6 +3519,7 @@ vmeBusUnlock();
 		}
 	  }
 
+
       /* Reset the Token */
       if(DCRB_ROFLAG==2)
 	  {
@@ -3166,6 +3535,135 @@ vmeBusUnlock();
     }
 
 #endif /*USE_DCRB*/
+
+
+
+
+#ifdef USE_VFTDC
+
+  tdcbuf = tdcbuf_save;
+  dCnt = 0;
+  for(jj=0; jj<MAXVFTDCWORDS+10; jj++) tdcbuf[jj] = 0;
+  for(ii=0; ii<nvftdc; ii++)
+  {
+    slot = vfTDCSlot(ii);
+
+vmeBusLock();
+    gbready = vfTDCBReady(slot);
+vmeBusUnlock();
+    tdctimeout = 0;
+    while(gbready==0 && tdctimeout<100)
+    {
+vmeBusLock();
+      gbready = vfTDCBReady(slot);
+vmeBusUnlock();
+      tdctimeout++; 
+    }
+    if(tdctimeout>=100)
+    {
+      printf("%s: Data not ready in vfTDC, tdctimeout=%d\n",__FUNCTION__,tdctimeout);
+vmeBusLock();
+      vfTDCStatus(slot,1);
+vmeBusUnlock();
+    }
+	else
+	{
+      //printf("%s: Data ready in vfTDC, tdctimeout=%d\n",__FUNCTION__,tdctimeout);
+
+vmeBusLock();
+      len = vfTDCReadBlock(slot, &tdcbuf[dCnt], MAXVFTDCWORDS, 1);
+vmeBusUnlock();
+      if(len<=0)
+      {
+        printf("%s: No vfTDC data or error in slot %d.  len = %d\n",__FUNCTION__,slot,len);
+        vfTDCStatus(slot,1);
+      }
+	  else
+	  {
+        //printf("--> slot=%d, dCnt=%d, len=%d, data 0x%08x 0x%08x 0x%08x ...\n",slot,dCnt,len,tdcbuf[dCnt],tdcbuf[dCnt+1],tdcbuf[dCnt+2]);
+        dCnt += len;
+	  }
+
+	} /* no timeout - should have data */
+
+  } /* loop over slots */
+
+  if(dCnt>0)
+  {
+    BANKOPEN(0xe131,1,rol->pid);
+    //printf("dCnt=%d\n",dCnt);
+    for(jj=0; jj<dCnt; jj++)
+	{
+      //printf("data[%5d]=0x%08x (0x%08x)\n",jj,tdcbuf[jj],LSWAP(tdcbuf[jj]));
+      *rol->dabufp++ = tdcbuf[jj];
+	}
+	//exit(0);
+    BANKCLOSE;
+  }
+
+#endif
+
+
+
+
+#ifdef USE_HD
+
+  if(hd_found)
+  {
+    timeout = 0;
+    tdcbuf = tdcbuf_save;
+    dCnt=0;
+vmeBusLock();
+    gbready = hdBReady(0);
+vmeBusUnlock();
+    while((gbready!=1) && (timeout<1000))
+    {
+      timeout++;
+vmeBusLock();
+      gbready = hdBReady(0);
+vmeBusUnlock();
+    }
+
+    if(timeout>=1000)
+    {
+      printf("ROL1 ERROR: TIMEOUT waiting for Helicity Decoder Block Ready\n");fflush(stdout);
+    }
+    else
+    {
+      /*printf("ROL1 INFO: Helicity Decoder Block Ready\n");fflush(stdout);*/
+
+vmeBusLock();
+      len = hdReadBlock(&tdcbuf[dCnt], HDMAXWORDS, 1);
+vmeBusUnlock();
+
+      if(len<=0)
+      {
+	printf("ROL1 ERROR or NO data from hdReadBlock(...) = %d\n",len);fflush(stdout);
+      }
+      else if(len>HDMAXWORDS)
+      {
+        printf("ROL1 ERROR in hdReadBlock(...): returned %d(0x%08x) which is bigger then HDMAXWORDS=%d\n",
+	       len,len,HDMAXWORDS);fflush(stdout);
+      }
+      else
+      {
+        /*printf("ROL1 INFO: hdReadBlock(...) returned %d\n",len);fflush(stdout);*/
+	dCnt += len;
+      }
+    }
+
+    if(dCnt>0)
+    {
+      /*for(jj=0; jj<dCnt; jj++) printf(" data[%3d] = 0x%08x\n",jj,tdcbuf[jj]);*/
+      BANKOPEN(0xe133,1,rol->pid);
+      for(jj=0; jj<dCnt; jj++) *rol->dabufp++ = tdcbuf[jj];
+      BANKCLOSE;
+    }
+	
+  }
+
+#endif
+
 
 
 
@@ -3494,6 +3992,7 @@ vmeBusUnlock();
 	  }
 #endif
 
+
       /* 'nbytes' does not includes end_of_string ! */
       chptr[0] = '\n';
       chptr[1] = '\n';
@@ -3614,16 +4113,16 @@ vmeBusUnlock();
 
 
 
-
   }
 
   /* close event */
   CECLOSE;
 
-  /*
+  
   nusertrig ++;
-  printf("usrtrig called %d times\n",nusertrig);fflush(stdout);
-  */
+  
+  //printf("usrtrig called %d times\n",nusertrig);fflush(stdout);
+  
   return;
 }
 
@@ -3636,10 +4135,10 @@ usrtrig_done()
 void
 __done()
 {
-  /*
+  
   ndone ++;
-  printf("_done called %d times\n",ndone);fflush(stdout);
-  */
+  //printf("_done called %d times\n",ndone);fflush(stdout);
+  
   /* from parser */
   poolEmpty = 0; /* global Done, Buffers have been freed */
 

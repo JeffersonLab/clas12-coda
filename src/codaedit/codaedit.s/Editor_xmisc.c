@@ -1362,9 +1362,9 @@ printf("comp->comp.type = %d\n",comp->comp.type);
         XmTextFieldSetString(atw.code_widget[2], rols[2]);
 	  }
 #endif
-	printf("8\n");fflush(stdout);
+      //printf("8\n");fflush(stdout);
       for(i=0; i<3; i++) free(rols[i]);
-	printf("9\n");fflush(stdout);
+      //printf("9\n");fflush(stdout);
 	}
 
   }
@@ -1435,6 +1435,7 @@ printf("comp->comp.type = %d\n",comp->comp.type);
     XtUnmanageChild(label_w6);
     XtUnmanageChild(text_w6);
   }
+
   else if (comp->comp.type == CODA_ETT)
   {
     if(comp->comp.boot_string != NULL)
@@ -1442,6 +1443,107 @@ printf("comp->comp.type = %d\n",comp->comp.type);
     else
       XmTextFieldSetString(text_w3, "coda_ett");
   }
+
+  else if (comp->comp.type == CODA_SRO)
+  {
+    if(comp->comp.boot_string != NULL)
+      XmTextFieldSetString(text_w3, comp->comp.boot_string);
+    else
+      XmTextFieldSetString(text_w3, "coda_sro");
+
+    /* replace label 'Readout List 1' by desired one */
+    t = XmStringCreateSimple("Input hosts:");
+    ac = 0;
+    XtSetArg(args[ac], XmNlabelString, t); ac++;
+    XtSetValues (label_w4, args, ac);
+    XmStringFree(t);
+    if(comp->comp.code[0] != NULL)
+      XmTextFieldSetString(text_w4, comp->comp.code[0]);
+    else
+      XmTextFieldSetString(text_w4, "none");
+
+    /* replace label 'Readout List 2' by desired one */
+    t = XmStringCreateSimple("Output file(s) directory:");
+    ac = 0;
+    XtSetArg(args[ac], XmNlabelString, t); ac++;
+    XtSetValues (label_w5, args, ac);
+    XmStringFree(t);
+    if(comp->comp.code[1] != NULL)
+      XmTextFieldSetString(text_w5, comp->comp.code[1]);
+    else
+      XmTextFieldSetString(text_w5, "none");
+
+    /* replace label 'Readout List 3' by desired one */
+    t = XmStringCreateSimple("Type (SRO/TRIDAS/etc):");
+    ac = 0;
+    XtSetArg(args[ac], XmNlabelString, t); ac++;
+    XtSetValues (label_w6, args, ac);
+    XmStringFree(t);
+    if(comp->comp.code[2] != NULL)
+      XmTextFieldSetString(text_w6, comp->comp.code[2]);
+    else
+      XmTextFieldSetString(text_w6, "none");
+
+
+
+    /* disable label 'Readout List 3'
+    XtUnmanageChild(label_w6);
+    XtUnmanageChild(text_w6);
+*/
+
+
+  }
+
+  else if (comp->comp.type == CODA_SPR)
+  {
+    if(comp->comp.boot_string != NULL)
+      XmTextFieldSetString(text_w3, comp->comp.boot_string);
+    else
+      XmTextFieldSetString(text_w3, "coda_spr");
+
+    /* replace label 'Readout List 1' by desired one */
+    t = XmStringCreateSimple("Input hosts:");
+    ac = 0;
+    XtSetArg(args[ac], XmNlabelString, t); ac++;
+    XtSetValues (label_w4, args, ac);
+    XmStringFree(t);
+    if(comp->comp.code[0] != NULL)
+      XmTextFieldSetString(text_w4, comp->comp.code[0]);
+    else
+      XmTextFieldSetString(text_w4, "none");
+
+    /* replace label 'Readout List 2' by desired one */
+    t = XmStringCreateSimple("Output file(s) directory:");
+    ac = 0;
+    XtSetArg(args[ac], XmNlabelString, t); ac++;
+    XtSetValues (label_w5, args, ac);
+    XmStringFree(t);
+    if(comp->comp.code[1] != NULL)
+      XmTextFieldSetString(text_w5, comp->comp.code[1]);
+    else
+      XmTextFieldSetString(text_w5, "none");
+
+    /* replace label 'Readout List 3' by desired one */
+    t = XmStringCreateSimple("Type (SPR/etc):");
+    ac = 0;
+    XtSetArg(args[ac], XmNlabelString, t); ac++;
+    XtSetValues (label_w6, args, ac);
+    XmStringFree(t);
+    if(comp->comp.code[2] != NULL)
+      XmTextFieldSetString(text_w6, comp->comp.code[2]);
+    else
+      XmTextFieldSetString(text_w6, "none");
+
+
+
+    /* disable label 'Readout List 3'
+    XtUnmanageChild(label_w6);
+    XtUnmanageChild(text_w6);
+*/
+
+
+  }
+
   else if (comp->comp.type == CODA_L3)
   {
     if(comp->comp.boot_string != NULL)

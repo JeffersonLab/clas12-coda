@@ -722,11 +722,20 @@ void setConfigInfoName (cinfo, name)
 void
 codeParser(char *rols[3], char *code)
 {
-  char c0[128], c1[128], c2[128];
+  char c0[1024], c1[1024], c2[1024];
   char *p = code;
   char *p0 = c0;
   char *p1 = c1;
-  char* p2 = c2;
+  char *p2 = c2;
+  int len;
+
+  len = strlen(code);
+  if(len>1024)
+  {
+    printf("codeParser: array overflow is possible - exit\n");
+    exit(0); 
+  }
+  printf("codeParser: code >%s<, len=%d\n",code,len);
 
   /* initialize the code pointers */
   rols[0] = 0;
@@ -1093,14 +1102,18 @@ setRcNetComp (rcNetComp* comp,
     comp->daq.type = CODA_ET;
   else if(strcasecmp(comp_type, "ETT") == 0)
     comp->daq.type = CODA_ETT;
+  else if(strcasecmp(comp_type, "SRO") == 0)
+    comp->daq.type = CODA_SRO;
+  else if(strcasecmp(comp_type, "SPR") == 0)
+    comp->daq.type = CODA_SPR;
   else if(strcasecmp(comp_type, "TS") == 0)
     comp->daq.type = CODA_TRIG;    
-  else if(strcasecmp(comp_type, "RCS") == 0)
-    comp->daq.type = CODA_RCS;
+  /*else if(strcasecmp(comp_type, "RCS") == 0)
+    comp->daq.type = CODA_RCS;*/
   else if(strcasecmp(comp_type,"ER") == 0)
     comp->daq.type = CODA_ER;
-  else if(strcasecmp(comp_type,"UC") == 0)
-    comp->daq.type = CODA_UC;
+  /*else if(strcasecmp(comp_type,"UC") == 0)
+    comp->daq.type = CODA_UC;*/
   else if(strcasecmp(comp_type,"L3") == 0)
     comp->daq.type = CODA_L3;
   else if(strcasecmp(comp_type,"LOG") == 0)

@@ -148,7 +148,7 @@
 
 int root_height;
 XtAppContext app_context;
-Widget toplevel;
+static Widget toplevel; //sergey: add 'static'
 
 char *userPath = (char *)"";
 /*extern "C" void HTMLhelp(Widget w,char *src);*/
@@ -607,30 +607,30 @@ main (int argc, char** argv)
     menW = window->window_;
     
     if (option->autostart_)
-	{
-	  menW->bootall_ = 1;
+    {
+      menW->bootall_ = 1;
     }
 
 
-	/*sergey : !!!!!!!!!!!??????????????
+    /*sergey : !!!!!!!!!!!??????????????
     toplevel = XtParent(XtParent(XtParent(menW->rform_)));
     */
     toplevel = XtParent(menW->rform_);
 
 
-	printf("\nruncontrol: TOPLEVELS: 0x%08x 0x%08x 0x%08x 0x%08x\n\n",
-      XtParent(menW->rform_),
-      XtParent(XtParent(menW->rform_)),
-      XtParent(XtParent(XtParent(menW->rform_))),
-      XtParent(XtParent(XtParent(XtParent(menW->rform_)))) );
+    printf("\nruncontrol: TOPLEVELS: 0x%08x 0x%08x 0x%08x 0x%08x\n\n",
+    XtParent(menW->rform_),
+    XtParent(XtParent(menW->rform_)),
+    XtParent(XtParent(XtParent(menW->rform_))),
+    XtParent(XtParent(XtParent(XtParent(menW->rform_)))) );
 
 
     ac = 0;
-	/*sergey
+    /*sergey
     XtSetArg(arg[0], XmNpopdownDelay, 6000);
     XtSetArg(arg[1], XmNpopupDelay,   3000);
     helpBalloon = XmCreateBalloon(toplevel, "balloonHelp2", arg, 2);
-	*/
+    */
 
 /*
 #ifdef USE_CREG    
@@ -694,19 +694,20 @@ main (int argc, char** argv)
 
     ac = 0;
     XtSetArg (arg[ac], XmNresizePolicy, XmRESIZE_ANY); ac++;
+    //XtSetArg (arg[ac], XmNresizePolicy, XmNONE); ac++;
 
 #ifdef USE_CREG_hide
     //codaSendInit(toplevel,"RUNCONTROL");  
     codaRegisterMsgCallback((void *)messageHandler);
 #endif    
 
-	if (!option->startWide_)
+    if (!option->startWide_)
     {
       XResizeWindow(
-              XtDisplay(XtParent(menW->rform_)),
-              XtWindow(toplevel),
-		      1727/*1000_without_rocs*/, /*490*/ /*sergey: initial gui width*/
-              1080 /*HeightOfScreen(XtScreen(menW->rform_))*/ /*sergey: initial gui height*/
+      XtDisplay(XtParent(menW->rform_)),
+      XtWindow(toplevel),
+      1727, /*1000_without_rocs*/ /*490*/ /*sergey: initial gui width*/
+      1080 /*HeightOfScreen(XtScreen(menW->rform_))*/ /*sergey: initial gui height*/
       );
     }
 
@@ -714,48 +715,53 @@ main (int argc, char** argv)
     {
       char temp2[256],temp3[256];
 
+
+
+      
+#if 1  
       if (1/*always start codaedit*//*option->startCedit_*/)
       {
         if (option->noEdit_)
         {
-          sprintf(temp2,
-            "(echo \"start codaedit\"; sleep 3; %s/codaedit -embed -noedit )&",getenv("CODA_BIN"));
+          sprintf(temp2, "(echo \"start codaedit\"; sleep 1; %s/codaedit -embed -noedit )&",getenv("CODA_BIN"));
         }
         else
         {
-
-          sprintf(temp2,
-            "(%s/codaedit -embed )&",getenv("CODA_BIN"));
-		  /*            "(echo \"start codaedit\"; sleep 3; %s/codaedit -embed )&",getenv("CODA_BIN"));*/
-		  
-		  /*		  
-          sprintf(temp2,
-				  "(echo \"start codaedit\"; sleep 3;  %s/src/codaedit/%s/bin/codaedit -embed )&",getenv("CODA"),getenv("OSTYPE_MACHINE"));
-		  */
+	  sprintf(temp2,"(echo \"start codaedit\"; sleep 1; %s/codaedit -embed )&",getenv("CODA_BIN"));
+	  //sprintf(temp2,"(echo \"start codaedit\"; sleep 1;  %s/src/codaedit/%s/bin/codaedit -embed )&",getenv("CODA"),getenv("OSTYPE_MACHINE"));
        }
 
         printf("Executing >%s<\n",temp2);
         system(temp2);
       }
+#endif
 
+      
+#if 1
       if (option->startDbedit_)
       {
-        sprintf (temp2,"(echo \"start dbedit\";sleep 4; %s/common/scripts/dbedit -embed )&",getenv("CODA"));
+        sprintf (temp2,"(echo \"start dbedit\";sleep 1; %s/common/scripts/dbedit -embed )&",getenv("CODA"));
         printf("Executing >%s<\n",temp2);
         system(temp2);
       }
 
+#endif
 
-	  if(option->startRocs_)
-	  {
+
+      
+#if 1
+      if(option->startRocs_)
+      {
         if(option->logRocs_)
-          sprintf (temp2,"(echo \"start rocs\";sleep 3; %s/rocs -embed -log &>> /data/log/rocs.log)&",getenv("CODA_BIN"));
+          sprintf (temp2,"(echo \"start rocs\";sleep 1; %s/rocs -embed -log &>> /data/log/rocs.log)&",getenv("CODA_BIN"));
         else
-          sprintf (temp2,"(echo \"start rocs\";sleep 3; %s/rocs -embed )&",getenv("CODA_BIN"));
+          sprintf (temp2,"(echo \"start rocs\";sleep 1; %s/rocs -embed )&",getenv("CODA_BIN"));
 
         system(temp2);
-	  }
-	  
+      }
+#endif
+
+      
     }
 
   }
@@ -763,11 +769,11 @@ main (int argc, char** argv)
   
   while (1)
   {
-	printf("executing main 1\n");fflush(stdout);
+    printf("executing main 1\n");fflush(stdout);
     if (theApplication != NULL) app->execute();
-	printf("executing main 2\n");fflush(stdout);
+    printf("executing main 2\n");fflush(stdout);
     if (theApplication == NULL) return(0);
-	printf("executing main 3\n");fflush(stdout);
+    printf("executing main 3\n");fflush(stdout);
   }
   
 

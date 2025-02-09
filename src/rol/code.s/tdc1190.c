@@ -2763,9 +2763,9 @@ tdc1190ReadBoard(int itdc, UINT32 *tdata)
     nev = tdc1190Dready(itdc);
     if(nev > blt_Events) nev = blt_Events;
     for(ii=0; ii<nev; ii++)
-	{
+    {
       fifodata = (vmeRead32(&(c1190p[itdc]->fifo))&0xffff);
-	}
+    }
   }
 
   do
@@ -2796,10 +2796,10 @@ tdc1190ReadBoardDmaStart(int ib, UINT32 *tdata)
     if(nev > blt_Events) nev = blt_Events;
     ndata_save = 0;
     for(ii=0; ii<nev; ii++)
-	{
+    {
       fifodata = (vmeRead32(&(c1190p[ib]->fifo))&0xffff);
       ndata_save += fifodata&0xffff;
-	}
+    }
     /*
     logMsg("tdc1190ReadBoardDmaStart: INFO: event fifo reports %d words\n",
            ndata_save,0,0,0,0,0);
@@ -2934,7 +2934,7 @@ tdc1190ReadStart(INT32 *tdcbuf, INT32 *rlenbuf)
     nn[jj] = nev = tdc1190Dready(jj);
 
     /* if trigger matching window 'straddling' trigger, tdc1190Dready returns 0
-      (V1190_STATUS_DATA_READY bit is zero),but next call returns 1 - do not know why ..*/
+      (V1190_STATUS_DATA_READY bit is zero), but next call returns 1 - do not know why ..*/
     if(nev == 0) nn[jj] = nev = tdc1190Dready(jj);
 
     if(nev == 0)
@@ -3098,21 +3098,21 @@ TIMER_VAR;
       if(nev > blt_Events) nev = blt_Events;
       ndata_save = 0;
       for(ii=0; ii<nev; ii++)
-	  {
+      {
         fifodata = (vmeRead32(&(c1190p[jj]->fifo))&0xffff);
         ndata_save += (fifodata & 0xffff);
-	  }
+      }
 
       if(sngl_blt_mblt >= 0x04) /* 128 bit alignment */
-	  {
+      {
         extra_save = (4-(ndata_save%4));
         if(extra_save==4) extra_save=0;
-	  }
+      }
 	  else /* 64 bit alignment */
-	  {
+      {
         if( (ndata_save%2) != 0 ) extra_save = 1;
         else                      extra_save = 0;
-	  }
+      }
 
       nbytes_save[jj] = (ndata_save+extra_save)<<2;
       rlenbuf[jj] = ndata_save+extra_save;
@@ -3222,65 +3222,69 @@ tdc1190ReadEvent(int id, UINT32 *tdata)
   LOCK_1190;
   /* Check if there is a valid event */
   if(vmeRead16(&(c1190p[id]->evStored))==0) 
-    {
-      logMsg("tdc1190ReadEvent: Data Buffer is EMPTY!\n",0,0,0,0,0,0);
-      UNLOCK_1190;
-      return(0);
-    }
+  {
+    logMsg("tdc1190ReadEvent: Data Buffer is EMPTY!\n",0,0,0,0,0,0);
+    UNLOCK_1190;
+    return(0);
+  }
 
   statReg = vmeRead16(&(c1190p[id]->status));
   contReg = vmeRead16(&(c1190p[id]->control));
   if(statReg & V1190_STATUS_DATA_READY) 
-    {
-      dCnt = 0;
+  {
+    dCnt = 0;
 
     /* Check to see if the Event FIFO is enabled, 
 	 if so, read its register */
     if(contReg & V1190_EVENT_FIFO_ENABLE)
-	{
+    {
       nev = tdc1190Dready(id);
       if(nev > blt_Events) nev = blt_Events;
       for(ii=0; ii<nev; ii++)
-	  {
-	    fifodata = vmeRead32(&(c1190p[id]->fifo));
-	  }
-	}
-
-	/* Read Header  */
-	header = vmeRead32(&(c1190p[id]->data[dCnt]));
-      if((header&V1190_DATA_TYPE_MASK) != V1190_TDC_HEADER_DATA) 
-	{
-	  logMsg("tdc1190ReadEvent: ERROR: Invalid Header Word 0x%08x\n",header,0,0,0,0,0);
-	  UNLOCK_1190;
-	  return(-1);
-	}
-      else
-	{
-	  tdata[dCnt] = header;
-	  dCnt++;
-	  tmpData = vmeRead32(&(c1190p[id]->data[0]));
-	  while((tmpData&V1190_DATA_TYPE_MASK) != V1190_TDC_EOB_DATA )
-	    {
-	      tdata[dCnt] = tmpData;
-	      dCnt++;
-	      tmpData = vmeRead32(&(c1190p[id]->data[0]));
-	    }
-	}
-
-      /* reached EOB for TDC */
-      trailer = tmpData;
-      if((trailer&V1190_DATA_TYPE_MASK) != V1190_TDC_EOB_DATA) {
-	logMsg("tdc1190ReadEvent: ERROR: Invalid Trailer Word 0x%08x\n",trailer,0,0,0,0,0);
-	UNLOCK_1190;
-	return(-1);
-      }else{
-	tdata[dCnt] = trailer;
-	dCnt++;
+      {
+	fifodata = vmeRead32(&(c1190p[id]->fifo));
       }
+    }
+
+    /* Read Header  */
+    header = vmeRead32(&(c1190p[id]->data[dCnt]));
+    if((header&V1190_DATA_TYPE_MASK) != V1190_TDC_HEADER_DATA) 
+    {
+      logMsg("tdc1190ReadEvent: ERROR: Invalid Header Word 0x%08x\n",header,0,0,0,0,0);
       UNLOCK_1190;
-      return (dCnt);
+      return(-1);
+    }
+    else
+    {
+      tdata[dCnt] = header;
+      dCnt++;
+      tmpData = vmeRead32(&(c1190p[id]->data[0]));
+      while((tmpData&V1190_DATA_TYPE_MASK) != V1190_TDC_EOB_DATA )
+      {
+	tdata[dCnt] = tmpData;
+	dCnt++;
+	tmpData = vmeRead32(&(c1190p[id]->data[0]));
+      }
+    }
+
+    /* reached EOB for TDC */
+    trailer = tmpData;
+    if((trailer&V1190_DATA_TYPE_MASK) != V1190_TDC_EOB_DATA) {
+      logMsg("tdc1190ReadEvent: ERROR: Invalid Trailer Word 0x%08x\n",trailer,0,0,0,0,0);
+      UNLOCK_1190;
+      return(-1);
+    }
+    else
+    {
+      tdata[dCnt] = trailer;
+      dCnt++;
+    }
+    UNLOCK_1190;
+    return (dCnt);
       
-    }else{
+  }
+  else
+  {
     logMsg("tdc1190ReadEvent: Data Not ready for readout!\n",0,0,0,0,0,0);
     UNLOCK_1190;
     return(0);
@@ -3766,7 +3770,7 @@ tdc1190ReadEdgeDetectionConfig(int id)
   tdc1190ReadMicro(id,&tdata,1);
 
   tdata &= 0x3;
-  if(tdata<3)
+  if(tdata<=3)
     {
       printf(" %s(%d): Mode =",__FUNCTION__,id);
       if(tdata==0)

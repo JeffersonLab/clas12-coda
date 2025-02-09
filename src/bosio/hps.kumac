@@ -1,44 +1,36 @@
-hi/file 66 ftofsectorhist.his
+hi/file 66 hpssvthist.his
 *
-opt stat
+opt nsta
 *opt fit 1111111
 *
 ***set stat 1111111
 meta 10 -111
 *
 ***opt logy
-zone 4 4
 *
-DO ID1 = 2,2
-DO ID2 = 12,15
-  IDN = 1050 + [ID1]*100 + [ID2]
-  hi/pl [IDN]
+*
+*for fpga=3
+zone 2 3
+* 3 hybrids
+DO ID1 = 0,2
+* 6 samples
+DO ID2 = 0,5
+idn = 100300+[ID1]*10+[ID2]
+hi/pl [idn]
 ENDDO
 wait
 ENDDO
 *
-DO ID1 = 2,2
-DO ID2 = 12,15
-  IDN = 530 + [ID1]*50 + [ID2]
-  hi/pl [IDN]
-ENDDO
-wait
-ENDDO
-*
-DO ID1 = 2,2
-DO ID2 = 12,15
-  IDN = 1000 + [ID1]*100 + [ID2]
-  hi/pl [IDN](10.:8000.)
-ENDDO
-wait
-ENDDO
+*zone 4 4
+*DO ID1 = 2,2
+*DO ID2 = 12,15
+*  IDN = 1000 + [ID1]*100 + [ID2]
+*  hi/pl [IDN](10.:8000.)
+*ENDDO
+*wait
+*ENDDO
 *
 *
-hi/pl 16217(250.:6000.)
-hi/pl 16218(250.:6000.)
-hi/pl 16219(250.:6000.)
-hi/pl 16220(250.:6000.)
-wait
 *
-close 66
-exit
+*close 66
+*exit

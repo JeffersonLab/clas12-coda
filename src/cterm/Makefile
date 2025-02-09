@@ -49,7 +49,7 @@ CLON_FLAGS += -DDO_CREG
 ##CLON_FLAGS += -DOPT_TOOLBAR
 ##CLON_FLAGS += -DDO_LABEL
 
-LIBNAMES += $(globallib)/libcreg.a
+LIBNAMES += $(CODA)/src/creg/$(OSTYPE_MACHINE)/lib/libcreg.a
 
 LIBNAMES += $(TERMCAPLIBS)
 

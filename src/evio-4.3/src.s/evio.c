@@ -3186,15 +3186,18 @@ int evRead(int handle, uint32_t *buffer, uint32_t buflen)
     EVFILE   *a;
     int       error, status,  swap;
     uint32_t  nleft, ncopy;
-    uint32_t *temp_buffer, *temp_ptr=NULL;
+    uint32_t *temp_buffer, *temp_ptr=NULL, *buf=buffer;
 
-
-    if (handle < 1 || handle > handleCount) {
-        return(S_EVFILE_BADHANDLE);
+    //printf("evRead: on entry, buffer=0x%llx\n",buffer);
+    
+    if (handle < 1 || handle > handleCount)
+    {
+      return(S_EVFILE_BADHANDLE);
     }
     
-    if (buffer == NULL || buflen < 3) {
-        return(S_EVFILE_BADARG);
+    if (buffer == NULL || buflen < 3)
+    {
+      return(S_EVFILE_BADARG);
     }
 
     /* Don't allow simultaneous calls to evClose(), but do allow reads & writes. */
@@ -3204,9 +3207,10 @@ int evRead(int handle, uint32_t *buffer, uint32_t buflen)
     a = handleList[handle-1];
 
     /* Check args */
-    if (a == NULL) {
-        handleReadUnlock(handle);
-        return(S_EVFILE_BADHANDLE);
+    if (a == NULL)
+    {
+      handleReadUnlock(handle);
+      return(S_EVFILE_BADHANDLE);
     }
 
     /* Need to be reading not writing */
@@ -3235,59 +3239,67 @@ int evRead(int handle, uint32_t *buffer, uint32_t buflen)
     }
 
     /* Find number of words to read in next event (including header) */
-    if (a->byte_swapped) {
-        /* Create temp buffer for swapping */
-        temp_ptr = temp_buffer = (uint32_t *) malloc(buflen*sizeof(uint32_t));
-        if (temp_ptr == NULL) return(S_EVFILE_ALLOCFAIL);
-        /* Value at pointer to next event (bank) header = length of bank - 1 */
-        nleft = EVIO_SWAP32(*(a->next)) + 1;
+    if (a->byte_swapped)
+    {
+      /* Create temp buffer for swapping */
+      temp_ptr = temp_buffer = (uint32_t *) malloc(buflen*sizeof(uint32_t));
+      if (temp_ptr == NULL) return(S_EVFILE_ALLOCFAIL);
+      /* Value at pointer to next event (bank) header = length of bank - 1 */
+      nleft = EVIO_SWAP32(*(a->next)) + 1;
     }
-    else {
-        /* Length of next bank, including header, in 32 bit words */
-        nleft = *(a->next) + 1;
+    else
+    {
+      /* Length of next bank, including header, in 32 bit words */
+      nleft = *(a->next) + 1;
     }
 
     /* Is there NOT enough room in buffer to store whole event? */
-    if (nleft > buflen) {
-        /* Buffer too small, just return error.
-         * Previous evio lib tried to swap truncated event!? */
-        if (temp_ptr != NULL) free(temp_ptr);
-        mutexUnlock(a);
-        handleReadUnlock(handle);
-        return(S_EVFILE_TRUNC);
+    if (nleft > buflen)
+    {
+      /* Buffer too small, just return error.
+       * Previous evio lib tried to swap truncated event!? */
+      if (temp_ptr != NULL) free(temp_ptr);
+      mutexUnlock(a);
+      handleReadUnlock(handle);
+      printf("evRead: Buffer too small: nleft=%d > buflen=%d\n",nleft,buflen);
+      return(S_EVFILE_TRUNC);
     }
 
     /* While there is more event data left to read ... */
-    while (nleft > 0) {
-
-        /* If no more data left to read from current block, get a new block */
-        if (a->left < 1) {
-            status = evGetNewBuffer(a);
-            if (status != S_SUCCESS) {
-                if (temp_ptr != NULL) free(temp_ptr);
-                mutexUnlock(a);
-                handleReadUnlock(handle);
-                return(status);
-            }
+    while (nleft > 0)
+    {
+      /* If no more data left to read from current block, get a new block */
+      if (a->left < 1)
+      {
+        status = evGetNewBuffer(a);
+        if (status != S_SUCCESS)
+	{
+          if (temp_ptr != NULL) free(temp_ptr);
+            mutexUnlock(a);
+            handleReadUnlock(handle);
+            return(status);
         }
+      }
 
-        /* If # words left to read in event <= # words left in block,
-         * copy # words left to read in event to buffer, else
-         * copy # left in block to buffer.*/
-        ncopy = (nleft <= a->left) ? nleft : a->left;
+      /* If # words left to read in event <= # words left in block,
+       * copy # words left to read in event to buffer, else
+       * copy # left in block to buffer.*/
+      ncopy = (nleft <= a->left) ? nleft : a->left;
 
-        if (a->byte_swapped) {
-            memcpy(temp_buffer, a->next, ncopy*4);
-            temp_buffer += ncopy;
-        }
-        else{
-            memcpy(buffer, a->next, ncopy*4);
-            buffer += ncopy;
-        }
+      if (a->byte_swapped)
+      {
+        memcpy(temp_buffer, a->next, ncopy*4);
+        temp_buffer += ncopy;
+      }
+      else
+      {
+        memcpy(buffer, a->next, ncopy*4);
+        buffer += ncopy; //sergey: pointer 'buffer' changed here, from now on use 'buf' to get to original one !!!
+      }
         
-        nleft   -= ncopy;
-        a->next += ncopy;
-        a->left -= ncopy;
+      nleft   -= ncopy;
+      a->next += ncopy;
+      a->left -= ncopy;
     }
 
     /* Store value locally so we can release lock before swapping. */
@@ -3298,10 +3310,20 @@ int evRead(int handle, uint32_t *buffer, uint32_t buflen)
     handleReadUnlock(handle);
 
     /* Swap event if necessary */
-    if (swap) {
-        evioswap((uint32_t*)temp_ptr, 1, (uint32_t*)buffer);
-        free(temp_ptr);
+    if (swap)
+    {
+      printf("SWAP\n");
+      evioswap((uint32_t*)temp_ptr, 1, (uint32_t*)buffer);
+      free(temp_ptr);
     }
+
+    /*sergey*/
+    if(buf[0]==0)
+    {
+      printf("evRead: returned buffer length = 0x%08x\n",buf[0]);
+      return(S_EVFILE_BADLEN);
+    }
+    /*sergey*/
     
     return(S_SUCCESS);
 }
@@ -5809,6 +5831,10 @@ char *evPerror(int error) {
 
         case S_EVFILE_BADMODE:
             sprintf(temp, "S_EVFILE_BADMODE:  invalid operation for current evOpen() mode\n");
+            break;
+
+        case S_EVFILE_BADLEN:
+            sprintf(temp, "S_EVFILE_BADLEN:  evRead() returned zero length buffer\n");
             break;
 
         default:

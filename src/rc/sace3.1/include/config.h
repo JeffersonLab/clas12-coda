@@ -124,7 +124,7 @@
 #define ACE_HAS_SYS_FILIO_H
 
 // Compiler/platform supports sys_siglist array.
-#define ACE_HAS_SYS_SIGLIST
+//sergey #define ACE_HAS_SYS_SIGLIST
 
 /* Turn off the following four defines if you want to disable threading. */
 // Compile using multi-thread libraries.
@@ -213,7 +213,10 @@
 #define ACE_HAS_SIG_ATOMIC_T
 
 // Compiler/platform supports sys_siglist array.
+//sergey
+#ifndef Linux_x86_64_RHEL9
 #define ACE_HAS_SYS_SIGLIST
+#endif
 
 // Compiler/platform defines a union semun for SysV shared memory.
 #define ACE_HAS_SEMUN

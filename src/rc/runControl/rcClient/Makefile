@@ -37,10 +37,14 @@ LIBNAMES += ../Common/$(OSTYPE_MACHINE)/lib/libCommon.a
 
 LIBNAMES += ../../sace3.1/$(OSTYPE_MACHINE)/lib/libsace3.1.a
 
-LIBNAMES += $(globallib)/libcodautil.a
+LIBNAMES += $(CODA)/src/codautil/$(OSTYPE_MACHINE)/lib/libcodautil.a
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+endif
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+#  LIBNAMES += /usr/lib64/libmariadb.so
 endif
 ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
@@ -54,7 +58,7 @@ endif
 
 
 CLON_FLAGS += -DUSE_CREG
-LIBNAMES += $(globallib)/libcreg.a
+LIBNAMES += $(CODA)/src/creg/$(OSTYPE_MACHINE)/lib/libcreg.a
 
 
 LIBNAMES += $(X11LIBS)

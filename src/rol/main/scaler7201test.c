@@ -136,10 +136,10 @@ printf("use addr 0x%08x\n",addr);
 
 #else /* no UNIX version */
 
-void
-scaler7201_dummy()
+int
+main()
 {
-  return;
+  exit(0);
 }
 
 #endif

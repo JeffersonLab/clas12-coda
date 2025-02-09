@@ -41,16 +41,18 @@
 
 /* sergey: to add new conponent type, add new CODA_xxx below
 and modify following files (search for CODA_EB, ADD_EB_ACTION, eb_btn
-Editor_converter.c +
-Editor_graph.h +
-Editor_graph.c +
-Editor_xmisc.c +
-
+Editor_graph.h
 Editor_drawing.c
+Editor_database.c
+Editor_pixmap.c - assign pixmap file
+
+
+
+Editor_converter.c
+Editor_graph.c
+Editor_xmisc.c
 Editor_icon_box.c
 Editor_syntax_checker.c
-
-Editor_pixmap.c - assign pixmap file
 */
 
 #define CODA_TRIG      0
@@ -62,8 +64,8 @@ Editor_pixmap.c - assign pixmap file
 #define CODA_ER        6
 #define CODA_LOG       7
 #define CODA_SC        8
-#define CODA_UC        9
-#define CODA_RCS       10
+#define CODA_SPR       9 /*was CODA_UC*/
+#define CODA_SRO       10
 #define CODA_FILE      11
 #define CODA_CODAFILE  12
 #define CODA_DEBUG     13
@@ -71,7 +73,8 @@ Editor_pixmap.c - assign pixmap file
 #define CODA_MON       15
 #define CODA_NONE      16
 
-#define CODA_EBANA     17 /*was 4 - temporary to resolve references */
+#define CODA_EBANA     17 /* was 4 - temporary to resolve references */
+#define CODA_RCS       18 /* was 10 - temporary to resolve references */
 
 #define MAX_NUM_PORTS  5
 #define MAX_NUM_IOS    130 /* was 40 */

@@ -45,8 +45,8 @@ else ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   LIBNAMES += /usr/lib/mysql/libmysqlclient.so
 endif
 
-LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libet.a
-LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libevio.a
+LIBNAMES += $(CODA)/src/et-14.0/$(OSTYPE_MACHINE)/lib/libet.a
+LIBNAMES += $(CODA)/src/evio-4.3/$(OSTYPE_MACHINE)/lib/libevio.a
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
 

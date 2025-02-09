@@ -120,6 +120,7 @@ daqScriptComp::scriptThread (void* arg)
     close (1); dup (tty);
     close (2); dup (tty);
     close (tty);
+    printf("daqScriptComp::scriptThread 1\n");
     execlp ("csh", "csh", "-c", realscript, (char *)0);
     exit (127);
   }
@@ -689,6 +690,7 @@ daqScriptComp::doScript (daqSystem& system, char *script, daqScriptComp* comp)
     close (1); dup (tty);
     close (2); dup (tty);
     close (tty);
+    printf("daqScriptComp::doScript 1\n");
     execlp ("csh", "csh", "-c", realscript, (char *)0);
     exit (127);
   }
@@ -710,7 +712,14 @@ daqScriptComp::doScript (daqSystem& system, char *script, daqScriptComp* comp)
   printf("Script terminated with status %x estatus = %d\n",status,estatus);
 
   if ((w == -1) || (estatus == -2))
+  {
     st = CODA_ERROR;
+  }
+  else if(estatus==1) /*sergey: returning error from run_dispatch (29-sep-2022) */
+  {
+    printf("sergey: return CODA_ERROR\n");
+    st = CODA_ERROR;
+  }
 
 #ifndef __ultrix
   ::signal (SIGINT, istat);

@@ -388,7 +388,7 @@ Server dropped an incorrect or too large packet. If mysqld gets a packet that is
       dbaseSock_ = ::dbConnect ("localhost", getenv("EXPID"));
     }
 
-    if (dbaseSock_ < 0)
+    if (dbaseSock_ == NULL) //sergey: was 'if(dbaseSock_<0)'
     {
       fprintf (stderr, "Can't talk to mysql server on %s : %s\n", 
 	       run_.msqlhost(), mysql_error(dbaseSock_));
@@ -1991,12 +1991,75 @@ dbaseReader::parseOptions (char* runtype)
 
 
 
+    /*
+
+
+>>> Will use expid(dbasename) >clasrun<, session name >clasprod<
+
+ConfigSelOk: currconfig >rich4_noer<
+>>> iconfigSel.numConfigs_=0
+
+
+
+
+createRcNetCompsFromDbase: selected 296 components from 'process' table
+retrieveConfigInfoFromDbase: ncol=8
+config info rich4 {rol1_master.so usr} {rol2.so usr}   EB_RICH4:rich4
+config info EB_RICH4 {CODA} {CODA}  rich4:rich4 ET_RICH4:rich4
+config info ET_RICH4 {100} {500000}  EB_RICH4:rich4 
+----- config table: first name >rich4<
++++++ process table: name >rich4<, type >0<
+setCompInuseField: query >update process set inuse = '0' where name = 'rich4'<
+dbaseReader::parseOptions: Insert global Prestart transition script $CODA/common/rcscripts/run_dispatch download end main 
+
+setCompInuseField: setting rich4 component as inused in process table
++++++ process table: name >EB_RICH4<, type >2<
+setCompInuseField: query >update process set inuse = '0' where name = 'EB_RICH4'<
+
+
+
+
+createRcNetCompsFromDbase: selected 296 components from 'process' table
+retrieveConfigInfoFromDbase: ncol=8
+config info rich4 {rol1_master.so usr} {rol2.so usr}   EB_RICH4:rich4
+config info EB_RICH4 {CODA} {CODA}  rich4:rich4 ET_RICH4:rich4
+config info ET_RICH4 {100} {500000}  EB_RICH4:rich4 
+----- config table: first name >rich4<
++++++ process table: name >rich4<, type >0<
+setCompInuseField: query >update process set inuse = '0' where name = 'rich4'<
+dbaseReader::parseOptions: Insert global Download transition script $CODA/common/rcscripts/run_dispatch download end main 
+
+setCompInuseField: setting EB_RICH4 component as inused in process table
++++++ process table: name >ET_RICH4<, type >3<
+setCompInuseField: setting rich4 component as inused in process table
++++++ process table: name >EB_RICH4<, type >2<
+setCompInuseField: query >update process set inuse = '0' where name = 'ET_RICH4'<
+setCompInuseField: query >update process set inuse = '0' where name = 'EB_RICH4'<
+
+
+
+
+
+!!!!!!!!!! transitioner::execute 1
+!!!!!!!!!! transitioner::execute 2
+!!!!!!!!!! transitioner::execute 3
+!!!!!!!!!! transitioner::execute 4
+!!!!!!!!!! transitioner::execute 5
+!!!!!!!!!! transitioner::execute 6
+netComponent::configure reached for EB_RICH4
+
+
+     */
+
+
+
 
     else if ((action = codaDaqActions->action (row[0])) != CODA_ERROR)
     {
       //printf(DBASE_DBG," Action = %d Script = %s\n",action,row[1]);
       reporter->cmsglog (CMSGLOG_INFO,"Insert global %s transition script %s \n",
 			 row[0], row[1]);
+      printf("dbaseReader::parseOptions: Insert global %s transition script %s \n",row[0], row[1]);fflush(stdout);
       ssys.addScript (action, row[1]);
     }
 

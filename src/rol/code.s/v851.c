@@ -744,34 +744,41 @@ v851_start2(int rate)
   v851Enable(0);             /* rearm */
 }
 
+
+
+
 void
-v851_start(int rate)
+v851_start(int rate, int id)
 {
   if((rate<=0)||(rate>2500000))
   {
-    printf("ERROR: Specify rate (1 - %dHz)\n", 2500000);
+    printf("ERROR(board id=%d): Specify rate (1 - %dHz)\n",id,2500000);
     return;
   }
 
-  v851SetMode(2,rate,0);     /* set rate and use of Internal Trigger */
-  /*  v851SetVout(-1500,0,0);    set voltage output levels to NIM Complement */
-  v851SetVout(0,800,0);    /* set voltage output levels to NIM Complement */
-  v851SetTrigLevel(-300,0);  /* set Trigger Input level to trigger on NIM */
-  v851SetWaveformLogic(2,0); /* set waveform mode to 0: width=delay_ch-EOD */
-  v851SetDelay(1,10,0,0);    /* program Delays for each all 6 channels */
-  v851SetDelay(2,50,0,0);
-  v851SetDelay(3,30,0,0);
-  v851SetDelay(4,60,0,0);
-  v851SetDelay(5,30,0,0);
-  v851SetDelay(6,90,0,0);
-  v851UpdateDelay(0);        /* intiate module Delays programming */
-  v851Enable(0);             /* rearm */
+  v851SetMode(2,rate,id);     /* set rate and use of Internal Trigger */
+  /*  v851SetVout(-1500,0,id);    set voltage output levels to NIM Complement */
+
+  v851SetVout(0,800,id);      /* set voltage output levels to NIM Complement */
+  v851SetTrigLevel(-300,id);  /* set Trigger Input level to trigger on NIM */
+
+  v851SetWaveformLogic(2,id); /* set waveform mode to 0: width=delay_ch-EOD */
+  v851SetDelay(1,10,0,id);    /* program Delays for each all 6 channels */
+  v851SetDelay(2,50,0,id);
+  v851SetDelay(3,30,0,id);
+  v851SetDelay(4,60,0,id);
+  v851SetDelay(5,30,0,id);
+  v851SetDelay(6,90,0,id);
+  v851UpdateDelay(id);        /* intiate module Delays programming */
+
+  v851Enable(id);             /* rearm */
 }
 
+
 void
-v851_stop()
+v851_stop(int id)
 {
-  v851Disable(0);
+  v851Disable(id);
 }
 
 void

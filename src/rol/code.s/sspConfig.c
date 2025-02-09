@@ -190,7 +190,7 @@
 #include "xxxConfig.h"
 
 #undef DEBUG
-#define DEBUG
+//#define DEBUG
 
 static int active;
 
@@ -1942,7 +1942,6 @@ sspReadConfigFile(char *filename_in)
   return(0);
 }
 
-
 /* download setting into all found SSPs */
 int
 sspDownloadAll()
@@ -2175,50 +2174,6 @@ sspDownloadAll()
         {
           for(asic=0; asic<3; asic++)
           {
-/*
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSU,            0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.cmd_fsu);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_SS,             0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.cmd_ss);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSB,            0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.cmd_fsb);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_250F,       0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.swb_buf_250f);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_500F,       0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.swb_buf_500f);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_1P,         0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.swb_buf_1p);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SWB_BUF_2P,         0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.swb_buf_2p);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_SS,           0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.ONOFF_ss);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS_300F,         0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_ss_300f);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS_600F,         0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_ss_600f);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_SS1200F,         0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_ss_1200f);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_EN_ADC,             0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.EN_ADC);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_H1H2_CHOICE,        0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.H1H2_choice);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_20F,         0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsu_20f);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_40F,         0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsu_40f);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_25K,         0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsu_25k);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_50K,         0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsu_50k);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSU_100K,        0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsu_100k);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_50K,        0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsb1_50k);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_100K,       0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsb1_100k);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_100F,       0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsb1_100f);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB1_50F,        0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsb1_50f);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_FSB_FSU,        0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.cmd_fsb_fsu);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_VALID_DC_FS,        0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.valid_dc_fs);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_50K,        0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsb2_50k);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_100K,       0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsb2_100k);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_100F,       0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsb2_100f);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SW_FSB2_50F,        0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.sw_fsb2_50f);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_VALID_DC_FSB2,      0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.valid_dc_fsb2);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ENB_TRISTATE,       0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.ENb_tristate);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_POLAR_DISCRI,       0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.polar_discri);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_INV_DISCRIADC,      0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.bits.inv_discriADC);
-            
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_D1_D2,              0, ssp[slot].rich.fiber[fiber].chip[asic].Global1.bits.d1_d2);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_CMD_CK_MUX,         0, ssp[slot].rich.fiber[fiber].chip[asic].Global1.bits.cmd_CK_mux);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_OTABG,        0, ssp[slot].rich.fiber[fiber].chip[asic].Global1.bits.ONOFF_otabg);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ONOFF_DAC,          0, ssp[slot].rich.fiber[fiber].chip[asic].Global1.bits.ONOFF_dac);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_SMALL_DAC,          0, ssp[slot].rich.fiber[fiber].chip[asic].Global1.bits.small_dac);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_ENB_OUTADC,         0, ssp[slot].rich.fiber[fiber].chip[asic].Global1.bits.enb_outADC);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_INV_STARTCMPTGRAY,  0, ssp[slot].rich.fiber[fiber].chip[asic].Global1.bits.inv_startCmptGray);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_RAMP_8BIT,          0, ssp[slot].rich.fiber[fiber].chip[asic].Global1.bits.ramp_8bit);
-            sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_RAMP_10BIT,         0, ssp[slot].rich.fiber[fiber].chip[asic].Global1.bits.ramp_10bit);
-*/
             sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_GLOBAL0,            0, ssp[slot].rich.fiber[fiber].chip[asic].Global0.val);
             sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_GLOBAL1,            0, ssp[slot].rich.fiber[fiber].chip[asic].Global1.val);
 
@@ -2250,9 +2205,15 @@ sspDownloadAll()
               sspRich_SetMarocReg(slot, fiber, asic, RICH_MAROC_REG_MASKOR,          ch, maskor);
             }
           }
+        }
+      }
         
-          sspRich_UpdateMarocRegs(slot, fiber);
+      sspRich_UpdateMarocRegsAllFibers(slot);
           
+      for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+      {
+        if(connectedfibers & (1<<fiber))
+        {
           sspRich_SetCTestAmplitude(slot, fiber, ssp[slot].rich.fiber[fiber].ctest_dac);
           
           if(ssp[slot].rich.fiber[fiber].ctest_enable)

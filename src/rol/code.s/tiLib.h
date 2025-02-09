@@ -807,6 +807,7 @@ int tiGetConnectedFiberMask();
 /*
 unsigned int tiGetSyncDelay();
 */
+
 /*sergey*/
 
 

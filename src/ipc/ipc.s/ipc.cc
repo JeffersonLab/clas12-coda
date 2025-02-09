@@ -106,6 +106,7 @@ epics_json_msg_send(const char *caname, const char *catype, int nelem, void *dat
   float    *farray;
   double   *darray;
   uint8_t  *carray;
+  
 
   /* params check */
 
@@ -140,7 +141,7 @@ epics_json_msg_send(const char *caname, const char *catype, int nelem, void *dat
     for(ii=0; ii<nelem; ii++)
     {
       message << (int32_t)((int32_t *)data)[ii];
-	  if(ii<nelem-1) message << ",";
+      if(ii<nelem-1) message << ",";
     }
   }
   else if( !strcmp(catype,"uint"))
@@ -148,7 +149,7 @@ epics_json_msg_send(const char *caname, const char *catype, int nelem, void *dat
     for(ii=0; ii<nelem; ii++)
     {
       message << (uint32_t)((uint32_t *)data)[ii];
-	  if(ii<nelem-1) message << ",";
+      if(ii<nelem-1) message << ",";
     }
   }
   else if( !strcmp(catype,"float"))
@@ -156,7 +157,7 @@ epics_json_msg_send(const char *caname, const char *catype, int nelem, void *dat
     for(ii=0; ii<nelem; ii++)
     {
       message << std::fixed << std::setprecision(5) << (float)((float *)data)[ii];
-	  if(ii<nelem-1) message << ",";
+      if(ii<nelem-1) message << ",";
     }
   }
   else if( !strcmp(catype,"double"))
@@ -164,7 +165,7 @@ epics_json_msg_send(const char *caname, const char *catype, int nelem, void *dat
     for(ii=0; ii<nelem; ii++)
     {
       message  << std::fixed << std::setprecision(5) << (double)((double *)data)[ii];
-	  if(ii<nelem-1) message << ",";
+      if(ii<nelem-1) message << ",";
     }
   }
   else if( !strcmp(catype,"uchar"))
@@ -172,7 +173,18 @@ epics_json_msg_send(const char *caname, const char *catype, int nelem, void *dat
     for(ii=0; ii<nelem; ii++)
     {
       message << (uint8_t)((uint8_t *)data)[ii];
-	  if(ii<nelem-1) message << ",";
+      if(ii<nelem-1) message << ",";
+    }
+  }
+  else if( !strcmp(catype,"string"))
+  {
+    /* array of strings have to be defined as 'char *sdata[1] = {"bit0_short"};',
+    'char *sdata[2] = {"blabla1","blabla2"};', etc */
+    for(ii=0; ii<nelem; ii++)
+    {
+      //printf("str >%s<\n", (char *)((char **)data)[ii] );
+      message  << std::fixed << std::setprecision(5) << (char *)((char **)data)[ii];
+      if(ii<nelem-1) message << ",";
     }
   }
   else

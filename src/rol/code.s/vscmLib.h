@@ -134,7 +134,9 @@ typedef struct
 {
 /* 0x0000 */ volatile uint32_t Ctrl;
 /* 0x0004 */ volatile uint32_t Status;
-/* 0x0008 */ BLANKVSCM[(0x100-0x8)/4];
+/* 0x0008 */ volatile uint32_t DrpCtrl;
+/* 0x000C */ volatile uint32_t DrpStatus;
+/* 0x0010 */ BLANKVSCM[(0x100-0x10)/4];
 } VSCM_CLKRST_REGS;
 
 #define VSCM_SCALER_SYSCLK50      0
@@ -215,7 +217,8 @@ typedef struct
 /* 0x0000 */ volatile uint32_t Ctrl;
 /* 0x0004 */ volatile uint32_t HistCtrl;
 /* 0x0008 */ volatile uint32_t HistCnt;
-/* 0x000C */ BLANKVSCM[(0x40-0x0C)/4];
+/* 0x000C */ volatile uint32_t Eye[7];
+/* 0x0028 */ BLANKVSCM[(0x40-0x28)/4];
 /* 0x0040 */ volatile uint32_t LastDataWord;
 /* 0x0044 */ volatile uint32_t LastStatusWord;
 /* 0x0048 */ volatile uint32_t ScalerStatusWord;
@@ -435,6 +438,14 @@ void fssrGainScan(int id, char *filename,
 
 int fssrParseControl(int id, int chip, char *s);
 uint32_t fssrGetChipID(int id, int chip);
+
+// FSSR2 Mclk phase control interface
+void fssrEyeStatus(int id, int chip);
+void fssrEyeSetup(int id, int chip);
+void vscmMclkReset(int id, int rst);
+int vscmMclkLocked(int id);
+void vscmMclkDrpWrite(int id, int addr, int val);
+int vscmMclkDrpRead(int id, int addr);
 
 #endif
 

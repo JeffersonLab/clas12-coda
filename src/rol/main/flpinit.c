@@ -34,7 +34,7 @@ main(int argc, char *argv[])
   /* Open the default VME windows */
   vmeOpenDefaultWindows();
  
-  vmeBusLock();
+vmeBusLock();
 
   flpInit(0x900000,20); /* 0x900000 - FLP in slot 18 */
   nflp = flpGetNflp();
@@ -104,7 +104,7 @@ main(int argc, char *argv[])
   flpStatus(0);
 #endif
 
-  vmeBusUnlock();
+vmeBusUnlock();
 
   exit(0);
 }

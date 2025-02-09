@@ -182,6 +182,7 @@ static void *et_listen_thread(void *arg)
 #endif
 
   /* setup socket for receiving udp packets */
+  printf("et_server: calling etNetUdpReceive: config->port=%d, listenaddr=%s\n",(unsigned short)config->port,listenaddr);
   err = etNetUdpReceive((unsigned short)config->port, listenaddr, cast == ET_MULTICAST, &sockfd);
   if (err != ET_OK || sockfd < 0) {
     if (etid->debug >= ET_DEBUG_SEVERE) {
@@ -191,6 +192,14 @@ static void *et_listen_thread(void *arg)
     if (strcmp("255.255.255.255", listenaddr) == 0) {
       pthread_exit(NULL);
     }
+
+    /*sergey: testing ..*/
+    if (strcmp("239.200.0.0", listenaddr) == 0) {
+      pthread_exit(NULL);
+    }
+    /*sergey: testing ..*/
+
+
     exit(1);
   }
 /*printf("Listening on port %d, address %s\n", config->port, addr);*/

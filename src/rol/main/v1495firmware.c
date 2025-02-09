@@ -14,6 +14,13 @@ v1495firmware 0x11A00000 CTOFTrigger.rbf
 BAND (adcband1):
 v1495firmware 0x11100000 BANDTrigger.rbf
 
+URWELL (test0):
+v1495firmware 0x11A00000 URWELLTrigger.rbf
+
+URWELL (tdcftof6):
+v1495firmware 0x11980000 URWELLTrigger.rbf
+
+
 
 cd "/usr/local/clas12/release/0.1/parms/firmwares"
 mv6100:

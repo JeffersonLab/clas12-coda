@@ -58,9 +58,8 @@ rcComdOption::option (void)
   assert (rcComdOption::option_);
   return rcComdOption::option_;
 }
-    
 
-#if defined (_CODA_2_0_T) || defined (_CODA_2_0)
+
 rcComdOption::rcComdOption (int argc, char **argv)
 :animation_ (0), rcServerHost_ (0), msqld_ (0), dbasename_ (0),
  codadb_ (0), session_ (0), audio_ (0), reportMsg_ (0), 
@@ -337,59 +336,6 @@ rcComdOption::usage (char* progname)
 	   "-n, -noedit                   : disable editing in codaedit           \n"
 	   );
 }
-
-#else
-rcComdOption::rcComdOption (int argc, char **argv)
-:animation_ (0), reportMsg_ (0), argv_ (argv), argc_ (argc)
-{
-#ifdef _TRACE_OBJECTS
-  printf ("Create rcComdOption Class Object\n");
-#endif
-}
-
-rcComdOption::~rcComdOption (void)
-{
-#ifdef _TRACE_OBJECTS
-  printf ("Delete rcComdOption Class Object\n");
-#endif
-}
-
-void
-rcComdOption::parseOptions (void)
-{
-  int i = 1;
-
-  while (i < argc_) {
-    if (argv_[i][0] == '-') {
-      if (::strcmp (argv_[i], "-a") == 0 || 
-	  ::strcmp (argv_[i], "-animate") == 0)
-	animation_ = 1;
-      else if (::strcmp (argv_[i], "-o") == 0 ||
-	       ::strcmp (argv_[i], "-output") == 0)
-	reportMsg_ = 1;
-      else if (::strcmp (argv_[i], "-h") == 0 ||
-	       ::strcmp (argv_[i], "-help") == 0) {
-	usage (argv_[0]);
-	exit (0);
-      }
-      else {
-	usage (argv_[0]);
-      }
-    }
-    else {
-      usage (argv_[0]);
-    }
-    i++;
-  }
-}
-
-void
-rcComdOption::usage (char* progname)
-{
-  fprintf (stderr, "Usage: %s [-a(nimate)] [-h(elp)] [-o(utputMessage)]\n",
-	   progname);
-}
-#endif
 
 
 

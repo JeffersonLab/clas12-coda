@@ -777,6 +777,7 @@ typedef struct
 #define SSP_INIT_MODE_FP               2
 #define SSP_INIT_MODE_VXS              3
 #define SSP_INIT_MODE_MASK             0x3
+#define SSP_INIT_REBOOT_FPGA           (1<<11)
 #define SSP_INIT_SKIP_SOURCE_SETUP     (1<<12)
 #define SSP_INIT_SKIP_FIRMWARE_CHECK   (1<<13)
 #define SSP_INIT_NO_INIT               (1<<14)
@@ -1026,6 +1027,8 @@ int  sspGFirmwareUpdateVerify(const char *filename);
 
 
 /* Firmware update utility routines */
+int sspI2CRead(int id, int slaveAddr, int regAddr);
+int sspI2CWrite(int id, int slaveAddr, int regAddr, int val);
 int  sspGetSerialNumber(int id, char *mfg, int *sn);
 unsigned int sspGetFirmwareVersion(int id);
 

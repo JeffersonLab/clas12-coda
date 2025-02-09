@@ -320,7 +320,7 @@ vscmConfigDownload(int id, char *fname)
   fclose(fd);
 
   for (ii = 0; ii < 8; ii++) {
-    fssrSetActiveLines(id, ii, FSSR_ALINES_6);
+    fssrSetActiveLines(id, ii, FSSR_ALINES_6); // for production
     fssrRejectHits(id, ii, 0);
     fssrSCR(id, ii);
     fssrSendData(id, ii, 1);
@@ -917,6 +917,16 @@ fssrSetActiveLines_Fpga(int id, int chip, unsigned int lines)
 
   vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, mode | 0x10000);
   vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, mode);
+
+  // find eye center
+  fssrEyeSetup(id, chip);
+
+  // Allow time for state machines to reset
+  taskDelay(1);
+
+  // Freeze deserializer
+  val = vmeRead32(&VSCMpr[id]->Fssr[chip].Ctrl);
+  vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, val | 0x4);
 }
 
 void
@@ -948,8 +958,15 @@ fssrSetActiveLines(int id, int chip, unsigned int lines)
   vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, mode | 0x10000);
   vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, mode);
 
+  // find eye center
+  fssrEyeSetup(id, chip);
+
   // Allow time for state machines to reset
   taskDelay(1);
+
+  // Freeze deserializer
+  val = vmeRead32(&VSCMpr[id]->Fssr[chip].Ctrl);
+  vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, val | 0x4);
 }
 
 /*
@@ -1044,6 +1061,137 @@ readNormalizedScaler(char *buf, char *prefix, \
 }
 
 void
+fssrEyeSetup(int id, int chip)
+{
+  uint32_t val, i, j, phase;
+  uint32_t eye[7], eye_or = 0;
+
+  if (vscmIsNotInit(&id, __func__))
+    return;
+
+  if (chip <0 || chip > 7) {
+    logMsg("ERROR: %s: Chip must be in range 0-7\n", __func__);
+    return;
+  }
+
+  usleep(10000);
+
+  // Reset eye
+  val = vmeRead32(&VSCMpr[id]->Fssr[chip].Ctrl);
+  vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, val | 0x8);
+  vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, val);
+
+  usleep(30000);
+
+  for(i=0;i<7;i++)
+  {
+    eye[i] = vmeRead32(&VSCMpr[id]->Fssr[chip].Eye[i]);
+    eye_or|= eye[i];
+    printf("FSSR Eye %d: ", i);
+    for(j=0;j<32;j++)
+    {
+      if(eye[i] & (1<<(31-j)))
+        printf("1");
+      else
+        printf("0");
+    }
+    printf("\n");
+  }
+
+  printf("FSSR EyeOr: ");
+  for(j=0;j<32;j++)
+  {
+    if(eye_or & (1<<(31-j)))
+      printf("1");
+    else
+      printf("0");
+  }
+  printf("\n");
+
+  int eye_left_pos = 0;
+  int eye_right_pos = 32;
+  // look for 1->0 transition
+  for(j=24;j>=16;j--)
+  {
+//    if( (eye_or & (1<<(j+0))) && !(eye_or & (1<<(j-1))) )
+    if( (eye[1] & (1<<(j+0))) && !(eye[1] & (1<<(j-1))) )
+    {
+      eye_left_pos = j;
+      break;
+    }
+  }
+
+  // look for 0->1 transition
+  for(j;j>0;j--)
+  {
+//    if(eye_or & (1<<(j-1)))
+    if(eye[1] & (1<<(j-1)))
+    {
+      eye_right_pos = j;
+      break;
+    }
+  }
+
+  printf("left=%d, right=%d\n", eye_left_pos, eye_right_pos);
+
+  if(eye_left_pos - eye_right_pos < 4)
+    printf("WARNING: small eye may result in FSSR2 data capture failure\n");
+
+  phase = ((eye_left_pos+eye_right_pos)/2) & 0x3F;
+  printf("Choosing sampling point/phase: %d\n", phase);
+
+  val = vmeRead32(&VSCMpr[id]->Fssr[chip].Ctrl) & 0xFFFFE0FF;
+  val|= phase<<8;
+  vmeWrite32(&VSCMpr[id]->Fssr[chip].Ctrl, val);
+}
+
+
+
+void
+fssrEyeStatus(int id, int chip)
+{
+  uint32_t val, i, j, phase;
+
+  if (vscmIsNotInit(&id, __func__))
+    return;
+
+  if (chip <0 || chip > 7) {
+    logMsg("ERROR: %s: Chip must be in range 0-7\n", __func__);
+    return;
+  }
+
+
+  // Reset eye
+  phase = (vmeRead32(&VSCMpr[id]->Fssr[chip].Ctrl)>>8) & 0x1F;
+
+  printf("Sampling %2d:", phase);
+  for(j=0;j<32;j++)
+  {
+    if((31-j)==phase)
+      printf("|");
+    else
+      printf(" ");
+  }
+  printf("\n");
+
+  for(i=0;i<7;i++)
+  {
+    val = vmeRead32(&VSCMpr[id]->Fssr[chip].Eye[i]);
+    printf("FSSR Eye%d:  ", i);
+    for(j=0;j<32;j++)
+    {
+      if(val & (1<<(31-j)))
+        printf("1");
+      else
+        printf("0");
+    }
+    printf("\n");
+  }
+
+  printf("\n"); 
+}
+
+void
 fssrStatusAll()
 {
   int i, j;
@@ -1060,8 +1208,9 @@ fssrStatusAll()
 void 
 fssrStatus(int id, int chip)
 {
-  uint32_t ref;
+  uint32_t ref, i, j;
   uint32_t mask[4];
+  uint32_t readoutmode[4] = {6,4,2,1};
   char buf[80];
 
   if (vscmIsNotInit(&id, __func__))
@@ -1116,6 +1265,10 @@ fssrStatus(int id, int chip)
   printf("----------- Config ------------\n");  
   printf("FSSR BCO Clock Period: %uns\n", \
           vmeRead32(&VSCMpr[id]->FssrCtrl.ClkCtrl) * 8);
+
+  printf("FSSR Readout lines: %u\n",
+          readoutmode[vmeRead32(&VSCMpr[id]->Fssr[chip].Ctrl)&0x3]);
+
   printf("FSSR Control: 0x%02X\n", fssrGetControl(id, chip));
   printf("FSSR Thresholds: %u %u %u %u %u %u %u %u\n", \
           fssrGetThreshold(id, chip, 0), fssrGetThreshold(id, chip, 1), \
@@ -1133,7 +1286,8 @@ fssrStatus(int id, int chip)
           fssrGetBCONumOffset(id, chip, FSSR_SCR_BCONUM_START), \
           fssrGetBCONumOffset(id, chip, FSSR_SCR_BCONUM_START-128), \
           fssrGetBCONumOffset(id, chip, FSSR_SCR_BCONUM_START-1));
-  printf("\n"); 
+
+  fssrEyeStatus(id, chip);
 }
 
 
@@ -2173,7 +2327,73 @@ vscmSetBlockLevel(int id, int block_level)
   vmeWrite32(&VSCMpr[id]->Eb.BlockCfg, block_level);
 }
 
+void
+vscmMclkReset(int id, int rst)
+{
+  if (vscmIsNotInit(&id, __func__))
+    return;
+  
+  if(rst)
+    vmeWrite32(&VSCMpr[id]->Clk.DrpCtrl, 0x00010000);
+  else
+    vmeWrite32(&VSCMpr[id]->Clk.DrpCtrl, 0x00000000);
+}
 
+int
+vscmMclkLocked(int id)
+{
+  if (vscmIsNotInit(&id, __func__))
+    return -1;
+  
+  if(vmeRead32(&VSCMpr[id]->Clk.DrpStatus) & 0x10000)
+    return 1;
+
+  return 0;
+}
+
+void
+vscmMclkDrpWrite(int id, int addr, int val)
+{
+  int v;
+  if (vscmIsNotInit(&id, __func__))
+    return;
+
+  v = vmeRead32(&VSCMpr[id]->Clk.DrpCtrl) & 0x10000;
+
+  v|= (val & 0xFFFF)<<0;    // data
+  v|= (addr & 0x001F)<<19;  // address
+  v|= 1<<18;                // write enable
+  v|= 1<<17;                // enable
+  vmeWrite32(&VSCMpr[id]->Clk.DrpCtrl, v);
+}
+
+int
+vscmMclkDrpRead(int id, int addr)
+{
+  int v, i;
+  if (vscmIsNotInit(&id, __func__))
+    return -1;
+
+  v = vmeRead32(&VSCMpr[id]->Clk.DrpCtrl) & 0x10000;
+  v|= (addr & 0x001F)<<19; // address
+  v|= 1<<17;              // enable
+  vmeWrite32(&VSCMpr[id]->Clk.DrpCtrl, v);
+
+  for(i=0;i<10;i++)
+  {
+    v = vmeRead32(&VSCMpr[id]->Clk.DrpStatus);
+//printf("%s(%d,%d) = %08X\n", __func__, id, addr, v);
+    if(v & 0x20000)
+      break;
+    else if(i==10)
+    {
+      printf("%s: DRP read timeout\n", __func__);
+      break;
+    }
+    usleep(1);
+  }
+  return v & 0xFFFF;
+}
 
 void
 vscmRebootFpga(int id)
@@ -2714,6 +2934,7 @@ typedef struct
   int fssr_addr_reg_dcr[8];
   int fssr_addr_reg_kill_mask[8][4];
   int fssr_addr_reg_inject_mask[8][4];
+  int fssr_readout_lines[8];
 
   int fssr_gothit_en_mask;
   int fssr_gothit_trig_width;
@@ -2763,6 +2984,8 @@ vscmInitGlobals()
     for(ii=0;ii<8;ii++) for(jj=0;jj<8;jj++) conf[slot].fssr_addr_reg_disc_threshold[ii][jj] = 140;
 
     for(ii=0;ii<8;ii++) conf[slot].fssr_addr_reg_dcr[ii] = 0x18;
+  
+    for(ii=0;ii<8;ii++) conf[slot].fssr_readout_lines[ii] = 6;
 
     for(ii=0;ii<8;ii++)
   {
@@ -2945,7 +3168,15 @@ vscmReadConfigFile(char *filename_in)
           for(slot=slot1; slot<slot2; slot++) conf[slot].clock_int_ext = 1;
         }
 
-        else if(!strcmp(keyword,"VSCM_BCO_FREQ"))
+        else if(active && (!strcmp(keyword,"FSSR_READOUT_LINES")))
+        {
+          sscanf(str_tmp,"%*s %1s %1s",charval[0], charval[1]);
+          nval = 2;        
+          VAL_DECODER;
+          for(slot=slot1; slot<slot2; slot++) conf[slot].fssr_readout_lines[val[0]] = val[1];
+        }
+
+        else if(active && (!strcmp(keyword,"VSCM_BCO_FREQ")))
         {
           sscanf(str_tmp,"%*s %3s",charval[0]);
           nval = 1;        
@@ -3103,7 +3334,25 @@ vscmDownloadAll()
 
     for(ii=0; ii<8; ii++)
     {
-      fssrSetActiveLines(slot, ii, FSSR_ALINES_6);
+      switch(conf[slot].fssr_readout_lines[ii])
+      {
+        case 1:
+          fssrSetActiveLines(slot, ii, FSSR_ALINES_1);
+          break;
+        case 2:
+          fssrSetActiveLines(slot, ii, FSSR_ALINES_2);
+          break;
+        case 4:
+          fssrSetActiveLines(slot, ii, FSSR_ALINES_4);
+          break;
+        case 6:
+          fssrSetActiveLines(slot, ii, FSSR_ALINES_6);
+          break;
+        default:
+          fssrSetActiveLines(slot, ii, FSSR_ALINES_6);
+          break;
+      }
+
       fssrRejectHits(slot, ii, 0);
       fssrSCR(slot, ii);
       fssrSendData(slot, ii, 1);
@@ -3209,6 +3458,11 @@ vscmUploadAll(char *string, int length)
       sprintf(sss,"VSCM_TRIG_WINDOW %d %d %d\n",conf[slot].window_width,conf[slot].window_offset,conf[slot].window_bco); ADD_TO_STRING;
 
       sprintf(sss,"VCSM_FSSR_GOTHIT_CFG 0x%02X %d\n",conf[slot].fssr_gothit_en_mask,conf[slot].fssr_gothit_trig_width); ADD_TO_STRING;
+
+      for(ii=0;ii<8;ii++)
+      {
+        sprintf(sss,"FSSR_READOUT_LINES %d %d\n", ii, conf[slot].fssr_readout_lines[ii]); ADD_TO_STRING;
+      }
 
       for(jj=0;jj<8;jj++)
     {

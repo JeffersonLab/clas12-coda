@@ -10,8 +10,12 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-#include "helicity.h"
+#include "ipc.h"
 
+#include "evio.h"
+#include "evioBankUtil.h"
+
+#include "helicity.h"
 
 /******************************************************************
 
@@ -133,6 +137,8 @@ loadHelicity(int input_helicity, unsigned int *iseed, unsigned int *iseed_earlie
  
 
 #define NEWRANBIT
+
+#define ASYMMETRY
 
 #ifndef NEWRANBIT
 /*************************************************************
@@ -336,16 +342,13 @@ getSeed()
 
 
 
-#include "evio.h"
-#include "evioBankUtil.h"
-
 #define NPREV 3
 #define NFLIP 5
 #define NSCAL 4
 #define MIN(a,b)  ( (a) < (b) ? (a) : (b) )
 
-/*#define DELTATIME 8457488LL*/ /* 30Hz */
-#define DELTATIME 2083336LL /* 120Hz */
+#define DELTATIME 8457488LL /* 30Hz */
+//#define DELTATIME 2083336LL /* 120Hz */
 
 /********************************************************************************/
 /*                           HALLB SECTION                                      */
@@ -354,7 +357,7 @@ getSeed()
 int
 helicity(unsigned int *bufptr, int type)
 {
-  int i, j, ii, ind10, ind12, ind13, ncol, nrow;
+  int i, j, ii, jj, ind10, ind12, ind13, ncol, nrow;
   static unsigned int hel, count1, qd, strob, helicity, quad, strob1, helicity1, quad1;
   static unsigned int offset, quadextr[4];
   static int present_reading;
@@ -389,7 +392,10 @@ helicity(unsigned int *bufptr, int type)
   static int Navg = 1;
   float missed_strobs;
   static uint64_t timestamp_old, tstime_old;
-  uint32_t tstime1, tstime2;
+  uint32_t tstime1, tstime2, gtp_trigbits, fp_trigbits, faraday_bit;
+  static uint32_t data2send[66];
+  static time_t time_to_send = -1, send_time_interval = 60;
+  char name[100];
   unsigned int dat32;
   unsigned short dat16, *place_for_processed, *place_for_helicity;
   int datasaved[1000];
@@ -403,6 +409,9 @@ helicity(unsigned int *bufptr, int type)
   /* do it in the begining of the run */
   if(type==17||type==18)
   {
+#ifdef ASYMMETRY
+    time_to_send == -1;
+#endif
     FORCE_RECOVERY;
     nevent = 0;
 	missed_helicity_triggers = 0;
@@ -437,7 +446,9 @@ helicity(unsigned int *bufptr, int type)
 
   if(ind<=0)
   {
+#ifdef DEBUG0
     printf("ERROR: cannot find HEAD bank (fragtag=%d tag=%d)\n",fragtag,banktag);
+#endif
     ievent = 0;
     /*return(0);*/
   }
@@ -448,16 +459,16 @@ helicity(unsigned int *bufptr, int type)
     GET32(ievent);
 
     GET32(tstime1);
-    GET32(tstime2);
+    GET32(tstime2); tstime2 = tstime2 & 0xFFFF; /* bits [31:16] is something else, mask it off */
 
     tstime = ((uint64_t)tstime2<<32) | (uint64_t)tstime1;
     /*printf("tstime2=0x%06x tstime1=0x%06x -> tstime=0x%llx\n",tstime2,tstime1,tstime);*/
 
     tstime += 4LL; /* FADC timestamp 4 ticks bigger, we will compare them */
 
-    GET32(itmp);
-    GET32(itmp);
-    if(itmp==0x1000)
+    GET32(gtp_trigbits);
+    GET32(fp_trigbits);
+    if(/*fp_trigbits==0x1000*/ (fp_trigbits&0x1000)>0 )
 	{
       missed_helicity_triggers = 0;
       dtstime = tstime - tstime_old;
@@ -498,7 +509,9 @@ helicity(unsigned int *bufptr, int type)
 
   if(ind12<=0)
   {
+#ifdef DEBUG0
     printf("ERROR: cannot find FADC bank (fragtag=%d banktag=%d)\n",fragtag,banktag);
+#endif
     return(0);
   }
   else
@@ -694,7 +707,9 @@ missed_strobs = 0.980884
 
     if(dtime_avg > 0.0) missed_strobs = (float)dtime/(float)dtime_avg;
     else                missed_strobs = 0LL;
+#ifdef DEBUG0
     printf("missed_strobs = %f\n",missed_strobs);
+#endif
     if( missed_strobs > 1.5 )
 	{
       printf("IT SEEMS WE MISSED ABOUT %f HELICITY STROB(S)\n",missed_strobs);
@@ -1030,6 +1045,53 @@ missed_strobs = 0.980884
 
 #endif
 
+
+/* report beam asymmetry */
+#ifdef ASYMMETRY
+
+      faraday_bit = (fp_trigbits>>7) & 0x1;
+      //printf("gtp_trigbits=0x%08x, fp_trigbits=0x%08x, faraday_bit=%1d, final_helicity=%1d\n",
+	  //	 gtp_trigbits, fp_trigbits, faraday_bit, final_helicity);
+	  /*
+        0+ 1+ 2+ 3+ ... 31+ FCUP+ 0- 1- 2- 3- ... 31- FCUP-
+	  */
+
+      if(time_to_send == -1) /*for the first entry or 'Go' event, cleanup arrays and get current time*/
+      {
+        for(jj=0; jj<66; jj++) data2send[jj] = 0;
+        time_to_send = time(NULL);
+      }
+
+      if(final_helicity)
+      {
+        for(jj=0; jj<32; jj++)
+	{
+          if( ((gtp_trigbits>>jj)&0x1)==1 ) data2send[jj] ++;
+	}
+        data2send[32] += faraday_bit;
+      }
+      else
+      {
+        for(jj=0; jj<32; jj++)
+	{
+          if( ((gtp_trigbits>>jj)&0x1)==1 ) data2send[jj+33] ++;
+	}        
+        data2send[65] += faraday_bit;
+      }
+
+	  //sleep(1);
+      if( (time(NULL) - time_to_send) > 60 )
+      {
+        time_to_send = time(NULL);
+
+        sprintf(name, "L3_HELICITY_SCALERS");
+        printf("sending %s message (time=%lld): .. FCs= %d %d ..\n",name,time_to_send,data2send[32],data2send[65]);fflush(stdout);
+        epics_json_msg_send(name, "int", 66, data2send);
+        printf("sent !\n");fflush(stdout);
+        for(jj=0; jj<66; jj++) data2send[jj] = 0;
+      }
+
+#endif /*ASYMMETRY*/
 
 
 
@@ -1912,9 +1974,6 @@ missed_strobs = 0.980884
       }
 
 #endif
-
-
-
 
 	}
 

@@ -505,6 +505,113 @@ etStart()
 
   et_system_setdebug(etp->id, etp->et_verbose);
 
+
+
+  /******************************/
+  /* create 'standard' stations */
+
+  et_statconfig sconfig;
+  et_stat_id    statid;
+
+  /* always create L3 station (need it for L3 component) */  
+  et_station_config_init(&sconfig);
+  et_station_config_setselect(sconfig,  ET_STATION_SELECT_ALL);
+  et_station_config_setblock(sconfig,   ET_STATION_BLOCKING);
+  et_station_config_setuser(sconfig,    ET_STATION_USER_MULTI);
+  et_station_config_setrestore(sconfig, ET_STATION_RESTORE_OUT);
+  et_station_config_setprescale(sconfig,1);
+
+  if((status = et_station_create(etp->id, &statid, "L3", sconfig)) < 0)
+  {
+    if (status == ET_ERROR_EXISTS)
+    {
+      printf("et_start: \"L3\" station exists\n");
+    }
+    else
+    {
+      printf("et_start: cannot create \"L3\" station, error=%d\n",status);
+      exit(1);
+    }
+  }
+  et_station_config_destroy(sconfig);
+
+
+  /* always create TAPE station (need it for Event Recorder) */
+  et_station_config_init(&sconfig);
+  et_station_config_setselect(sconfig,   ET_STATION_SELECT_ALL);
+  et_station_config_setblock(sconfig,    ET_STATION_BLOCKING);
+  et_station_config_setuser(sconfig,     ET_STATION_USER_MULTI);
+  et_station_config_setrestore(sconfig,  ET_STATION_RESTORE_OUT);
+  et_station_config_setprescale(sconfig, 1);
+  if((status = et_station_create(etp->id, &statid, "TAPE", sconfig)) < 0)
+  {
+    if(status == ET_ERROR_EXISTS)
+    {
+      printf("et_start: \"TAPE\" station exists\n");
+    }
+    else
+    {
+      printf("et_start: cannot create \"TAPE\" station, error=%d\n",status);
+      exit(1);
+    }
+  }
+  et_station_config_destroy(sconfig);
+
+
+#if 1
+  /* always create ETT station (need it for default Event Transfer) */
+  et_station_config_init(&sconfig);
+  et_station_config_setselect(sconfig,   ET_STATION_SELECT_ALL);
+  et_station_config_setblock(sconfig,    ET_STATION_BLOCKING);
+  et_station_config_setuser(sconfig,     ET_STATION_USER_MULTI);
+  et_station_config_setrestore(sconfig,  ET_STATION_RESTORE_OUT);
+  et_station_config_setprescale(sconfig, 1);
+  et_station_config_setcue(sconfig, 100);
+  if((status = et_station_create(etp->id, &statid, "ETT", sconfig)) < 0)
+  {
+    if(status == ET_ERROR_EXISTS)
+    {
+      printf("et_start: \"TAPE\" station exists\n");
+    }
+    else
+    {
+      printf("et_start: cannot create \"TAPE\" station, error=%d\n",status);
+      exit(1);
+    }
+  }
+  et_station_config_destroy(sconfig);
+#endif
+
+
+  /* create 'reader_station' station (need it for mon12) */
+  et_station_config_init(&sconfig);
+  et_station_config_setselect(sconfig,   ET_STATION_SELECT_ALL);
+  et_station_config_setblock(sconfig,    ET_STATION_NONBLOCKING);
+  et_station_config_setuser(sconfig,     ET_STATION_USER_MULTI);
+  et_station_config_setrestore(sconfig,  ET_STATION_RESTORE_OUT);
+  et_station_config_setprescale(sconfig, 1);
+  if((status = et_station_create(etp->id, &statid, "reader_station", sconfig)) < 0)
+  {
+    if(status == ET_ERROR_EXISTS)
+    {
+      printf("et_start: \"reader_station\" station exists\n");
+    }
+    else
+    {
+      printf("et_start: cannot create \"reader_station\" station, error=%d\n",status);
+      exit(1);
+    }
+  }
+  et_station_config_destroy(sconfig);
+
+
+  /******************************/
+  /******************************/
+
+
+
+
+
   /* turn this thread into a signal handler */
   sigwait(&etp->sigwaitset, &etp->sig_num);
   

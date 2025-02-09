@@ -318,6 +318,12 @@ XcodaEditorDrawingArea (Widget parent)
   XtSetArg(args[ac], XmNorientation, XmHORIZONTAL); ac++;
   XtSetArg(args[ac], XmNprocessingDirection, XmMAX_ON_RIGHT); ac++;
   XtSetArg(args[ac], XmNshowArrows, TRUE); ac++;
+  //sergey
+  //XtSetArg(args[ac], XmNsliderSize, 1); ac++;
+  //XtSetArg(args[ac], XmNminimum, 10); ac++;
+  //XtSetArg(args[ac], XmNmaximum, 20); ac++;
+  //XtSetArg(args[ac], XmNincrement, 1); ac++;
+  //sergey
   h_sc = XmCreateScrollBar(sw,"editor_hsc",args, ac);
   XtManageChild(h_sc);
   ac = 0;
@@ -325,7 +331,7 @@ XcodaEditorDrawingArea (Widget parent)
   XtSetArg(args[ac], XmNorientation, XmVERTICAL); ac++;
   XtSetArg(args[ac], XmNprocessingDirection, XmMAX_ON_BOTTOM); ac++;
   XtSetArg(args[ac], XmNshowArrows, TRUE); ac++;
-  v_sc = XmCreateScrollBar(sw,"editor_hsc",args, ac);
+  v_sc = XmCreateScrollBar(sw,"editor_vsc",args, ac);
   XtManageChild(v_sc);
   ac = 0;
 
@@ -418,6 +424,7 @@ XcodaEditorDrawingArea (Widget parent)
   XtManageChild(form);
 
   XcodaEditorInitSwGeometry(h_sc, v_sc, drawing_area,top_ruler, left_ruler);
+
   XcodaEditorBgPixmap(drawing_area);
   XcodaEditorInitGraph(drawing_area);
 
@@ -437,7 +444,9 @@ XcodaEditorDrawingArea (Widget parent)
 
   XtAddCallback(h_sc, XmNvalueChangedCallback, scrolled,
 		(XtPointer)XmHORIZONTAL);
+
   XtAddCallback(h_sc, XmNdragCallback, scrolled,(XtPointer)XmHORIZONTAL);
+
   XtAddCallback(v_sc, XmNvalueChangedCallback, scrolled,
 		(XtPointer)XmVERTICAL);
   XtAddCallback(v_sc, XmNdragCallback, scrolled,(XtPointer)XmVERTICAL);
@@ -462,6 +471,12 @@ XcodaEditorDrawingArea (Widget parent)
   
   /*sergey*/
   XtAddEventHandler(manager.ett_btn, EnterWindowMask, False, XcodaEditorActivateAdd, (XtPointer)ADD_ETT_ACTION);
+  
+  /*sergey*/
+  XtAddEventHandler(manager.sro_btn, EnterWindowMask, False, XcodaEditorActivateAdd, (XtPointer)ADD_SRO_ACTION);
+
+  /*sergey*/
+  XtAddEventHandler(manager.spr_btn, EnterWindowMask, False, XcodaEditorActivateAdd, (XtPointer)ADD_SPR_ACTION);
   
   /*sergey*/
   XtAddEventHandler(manager.l3_btn, EnterWindowMask, False, XcodaEditorActivateAdd, (XtPointer)ADD_L3_ACTION);
@@ -538,6 +553,7 @@ XcodaEditorDrawingArea (Widget parent)
 
   XtAddCallback(manager.color_menu, XmNactivateCallback, popup_color_selector,
 		(XtPointer)NULL);
+  
   XtAddCallback(manager.rmvcomp_menu, XmNactivateCallback, XcodaEditorCleanDbase,
 		(XtPointer)NULL);
 
@@ -603,7 +619,7 @@ static void XcodaEditorInitSwGeometry(h_sc, v_sc, draw, top_ruler, left_ruler)
   XtSetArg(args[ac], XmNincrement, 1); ac++;
   XtSetValues(h_sc, args, ac); 
   ac = 0;
-  
+
   XtSetArg(args[ac], XmNmaximum, (int)sw_geometry.max_row); ac++;
   XtSetArg(args[ac], XmNminimum, (int)sw_geometry.min_row); ac++;
   XtSetArg(args[ac], XmNpageIncrement, (int)sw_geometry.pageinc_v); ac++;
@@ -1070,6 +1086,8 @@ XcodaEditorEnterWindowAction(Widget w,
   case ADD_EB_ACTION:
   case ADD_ET_ACTION:
   case ADD_ETT_ACTION:
+  case ADD_SRO_ACTION:
+  case ADD_SPR_ACTION:
   case ADD_L3_ACTION:
   case ADD_ER_ACTION:
   case ADD_FI_ACTION:
@@ -2511,9 +2529,9 @@ static int insideExposedRegion(p, event)
 			     regx, regy, regx + regw, regy + regh);
   clipCode[4] = clipCode[0];
 
-  for (i = 0; i < 5; i++)
+  for (i = 0; i < 4/*sergey: was 5*/; i++)
   {
-    if ( clipCode[i] == 0x0000 && clipCode[i+1] == 0x0000) /*sergey: ERROR: clipCode[i+1] on last iteration becomes [5] */
+    if ( clipCode[i] == 0x0000 && clipCode[i+1] == 0x0000) /*sergey: ERROR if <5 in for loop: clipCode[i+1] on last iteration becomes [5] */
       clippedLine++;
     else if((clipCode[i] & clipCode[i+1]) == 0)
       clippedLine++;      
@@ -3302,6 +3320,12 @@ static drawComp* createDrawComp (graph, type)
     break;
   case ADD_ETT_ACTION:
     q->comp.type = CODA_ETT;
+    break;
+  case ADD_SRO_ACTION:
+    q->comp.type = CODA_SRO;
+    break;
+  case ADD_SPR_ACTION:
+    q->comp.type = CODA_SPR;
     break;
   case ADD_L3_ACTION:
     q->comp.type = CODA_L3;

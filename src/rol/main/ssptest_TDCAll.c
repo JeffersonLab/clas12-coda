@@ -7,6 +7,7 @@
 #include <unistd.h> // sleep, usleep
 
 #include "sspLib.h"
+#include "sspLib_rich.h"
 #include "jvme.h"
 #include "sspConfig.h"
 #include "tiLib.h"
@@ -32,7 +33,7 @@ int sspRich_GetNmarocAll();
 
 
 // gloabls
-int gmap[8][32][3][64];// slot, fiber, asic, channel
+int gmap[MAX_VME_SLOTS+1][RICH_FIBER_NUM][3][64];// slot, fiber, asic, channel
 unsigned int dabuf[BUFSIZE];
 
 //----------------------------------------
@@ -635,8 +636,8 @@ int ResetGains(){
 
  int slot, fiber, asic, channel;
  int gain_default=64;
- for(slot=3;slot<=7;slot++)
-   for(fiber=0;fiber<=31;fiber++)
+ for(slot=0;slot<MAX_VME_SLOTS+1;slot++)
+   for(fiber=0;fiber<RICH_FIBER_NUM;fiber++)
      for(asic=0;asic<=2;asic++)
        for(channel=0;channel<=63;channel++)
          gmap[slot][fiber][asic][channel]= gain_default;

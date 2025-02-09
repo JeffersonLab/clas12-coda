@@ -82,13 +82,18 @@ other delay scans:
 #include <stddef.h> 
 #include "jvme.h" 
 #endif 
+
 #include <pthread.h> 
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <string.h> 
+#include <stdint.h>
+#include <time.h>
+#include <ctype.h>
 
 #include "sspLib.h"
 #include "xxxConfig.h"
+#include "codautil.h"
 
 #include "ipc.h"
 
@@ -213,6 +218,8 @@ sspIsNotInit(int *id, const char *func, int reqFirmwareType)
  *               clk src = VXS SWB (SD) 
  *               sync src = VXS SWB (SD) 
  *               trig src = VXS SWB (SD) 
+ *
+ *        bit 11 - Reboot FPGAs on remote fibers (for RICH)
  * 
  *        bit 12 - Skip initialization the clock/syncReset/trigger source 
  *                 Setup (keeping the current values the same) 
@@ -522,9 +529,11 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
 
   /* Setup initial configuration */ 
   if(noBoardInit==0) 
-  { 
+  {
+    // Release reset of RICH transceivers together early to speed up initialization
+    res = 0;
     for(issp=0; issp<nSSP; issp++) 
-    { 
+    {
       printf("%s: slot %d - type = %d\n", __func__, sspSlot(issp), sspFirmwareType[sspSlot(issp)]);fflush(stdout);
       result = sspSetMode(sspSlot(issp),iFlag,0);
       if(result != OK)
@@ -532,6 +541,33 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
         return ERROR;
       }
 
+      if(sspFirmwareType[sspSlot(issp)] == SSP_CFG_SSPTYPE_HALLBRICH)
+      {
+        res = 1;
+        SSPLOCK();
+        for(ii=0; ii<RICH_FIBER_NUM; ii++)
+        {
+          sspWriteReg(&pSSP[sspSlot(issp)]->rich.fiber[ii].GtxCtrl, 0x7);
+          usleep(5000);
+          sspWriteReg(&pSSP[sspSlot(issp)]->rich.fiber[ii].GtxCtrl, 0x0);
+        }
+        SSPUNLOCK();
+      }
+    }
+    if(res)
+      usleep(1000000);
+
+    // SSP_CFG_SSPTYPE_HALLBRICH - call global function to configure in parallel
+    if(iFlag & SSP_INIT_REBOOT_FPGA)
+    {
+      sspRich_GScanFibers();
+      sspRich_GReboot(1); // 0-primary image, 1-secondary (run) image
+    }
+    sspRich_GInit();
+
+ 
+    for(issp=0; issp<nSSP; issp++) 
+    { 
       sspDisableBusError(sspSlot(issp));
       if(sspFirmwareType[sspSlot(issp)] == SSP_CFG_SSPTYPE_HALLBGT)
       {
@@ -552,25 +588,31 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
       else if(sspFirmwareType[sspSlot(issp)] == SSP_CFG_SSPTYPE_HALLBRICH)
       {
         printf("SSP_CFG_SSPTYPE_HALLBRICH\n");
+//        Use global init function above to configure slots in parallel
+//        if(iFlag & SSP_INIT_REBOOT_FPGA)
+//        {
+//          sspRich_ScanFibers(sspSlot(issp));
+//          sspRich_RebootSlot(sspSlot(issp), 1); // 0-primary image, 1-secondary (run) image
+//        }
+
         sspEnableBusError(sspSlot(issp));
-        sspRich_Init(sspSlot(issp));
+//        sspRich_Init(sspSlot(issp));
       }
       else
         printf("SSP_CFG_SSPTYPE_UNKNOWN\n");
       
       /* soft reset (resets EB and fifo) */
       vmeWrite32(&pSSP[sspSlot(issp)]->Cfg.Reset, 1);
-      taskDelay(2);
+      usleep(1000);
       vmeWrite32(&pSSP[sspSlot(issp)]->Cfg.Reset, 0);
-      taskDelay(2);
+      usleep(1000);
     }	 
   } 
 
   printf("sspInit: found %d SSPs\n",nSSP);
 
   return(nSSP);
-} 
- 
+}
 
 
 void 
@@ -1309,7 +1351,7 @@ sspPulserSetup(int id, float freq, float duty, unsigned int npulses)
   sspWriteReg(&pSSP[id]->Sd.PulserPeriod, 0);
   sspWriteReg(&pSSP[id]->Sd.PulserNPulses, npulses);
   /* Hack to let npulses saturate in case burst mode is needed with no glitches */
-  taskDelay(60);
+//  taskDelay(60);
   
   // Setup period register...
   //
@@ -1319,7 +1361,7 @@ sspPulserSetup(int id, float freq, float duty, unsigned int npulses)
     per = (int)( ((float)GCLK_FREQ) / freq );
 
   if(!per) per = 1;
-  printf("%s: per = GCLK_FREQ=%f / freq=%f = %d\n",__FUNCTION__,(float)GCLK_FREQ,freq,per);
+//  printf("%s: per = GCLK_FREQ=%f / freq=%f = %d\n",__FUNCTION__,(float)GCLK_FREQ,freq,per);
   sspWriteReg(&pSSP[id]->Sd.PulserPeriod, per);
 	 
   // Setup duty cycle register...	 
@@ -1327,7 +1369,7 @@ sspPulserSetup(int id, float freq, float duty, unsigned int npulses)
   if(!low) low = 1; 
   sspWriteReg(&pSSP[id]->Sd.PulserLowCycles, low); 
 
-  printf("%s: Actual frequency = %f, duty = %f\n",__FUNCTION__,(float)GCLK_FREQ/(float)per, (float)low/(float)per); 
+//  printf("%s: Actual frequency = %f, duty = %f\n",__FUNCTION__,(float)GCLK_FREQ/(float)per, (float)low/(float)per); 
   SSPUNLOCK(); 
 
   sspPulserStart(id);
@@ -1560,24 +1602,173 @@ sspSerdesPrintStatus(int id)
   sspPortPrintStatus(id); 
 } 
 
+
+
 /************************************************************ 
  * SSP SD.SCALERS Functions 
  ************************************************************/ 
+#include "libdb.h"
+
+#define MAX_ROCS 256
+static int run_is_active;
+static uint8_t roc_is_active[MAX_ROCS];
+static char roc_names[MAX_ROCS][40];
+static time_t timeout;
 
 int
 sspGSendScalers()
 {
-  int r = OK;
+  int ii, r = OK;
   int issp, id;
+  FILE *fd;
+  char filename_in[256];
+  char *mysql_host = getenv("MYSQL_HOST");
+  char *clonparms      = getenv("CLON_PARMS");
+  char *mysql_database = getenv("EXPID");
+  char *session        = (char *)"clasprod"; //getenv("SESSION");
+  char str_tmp[256], rocname[MAX_ROCS], rocid[MAX_ROCS];
+  int ch, roc_id;
+  static int read_daq_config = 1;
+
+  MYSQL *connNum;
+  MYSQL_RES *result;
+  MYSQL_ROW row_out;
+  int numRows;
+  static char runconfig[1000], configname[1000], query[1000];
+
+  /*re-read daq config every ... seconds*/
+  if(time(NULL) > (timeout+10)) read_daq_config = 1;
+
+  for(ii=0; ii<MAX_ROCS; ii++) roc_is_active[ii] = 0;
+
+  if(read_daq_config)
+  {
+    //printf("mysql_database=>%s< session=>%s<\n",mysql_database, session);fflush(stdout);
+    // connect to mysql database
+    connNum = dbConnect(mysql_host, mysql_database);
+
+
+    /*************************************************/
+    /* get run status (download/prestart/active/etc) */
+
+    strcpy(runconfig,"unknown");
+    // form mysql query, execute, then close mysql connection
+    sprintf(query,"SELECT log_name FROM sessions WHERE name='%s'",session);
+    mysql_query(connNum,query);
+    result = mysql_store_result(connNum);
+    if(result)
+    {
+      numRows = mysql_num_rows(result);
+      if(numRows == 1)
+      {
+        row_out = mysql_fetch_row(result);
+        // get run status 
+        if(row_out[0] == NULL)
+        {
+          mysql_free_result(result);
+        }
+        else
+        {
+          strcpy(runconfig,row_out[0]);
+          mysql_free_result(result);
+        }
+      }
+    }
+    //printf("run_status is >%s<\n",runconfig);fflush(stdout);
+
+
+    if(!strcmp(runconfig,"active")) run_is_active = 1;
+    else                            run_is_active = 0;
+
+
+    /************************************/
+    /* get CODA configname (PROD66 etc) */
+
+    sprintf(query,"SELECT config FROM sessions WHERE name='%s'",session);
+    if(mysql_query(connNum, query) != 0)
+    {
+      printf("get_run_config: ERROR in mysql_query 1\n");fflush(stdout);
+      dbDisconnect(connNum);
+      return(-1);
+    }
+    if(!(result = mysql_store_result(connNum) ))
+    {
+      printf("get_run_config: ERROR in mysql_store_result 1\n");fflush(stdout);
+      dbDisconnect(connNum);
+      return(-1);
+    }
+    /* get 'row_out' and check it for null */
+    row_out = mysql_fetch_row(result);
+    if(row_out==NULL)
+    {
+      mysql_free_result(result);
+      printf("error in mysql_fetch_row\n");fflush(stdout);
+      dbDisconnect(connNum);
+      return(-1);
+    }
+    strcpy(configname,row_out[0]);
+    mysql_free_result(result);
+    //printf("config name is >%s<\n",configname);fflush(stdout);
+
+
+    /****************************/
+    /* get 'inuse' ROCs from DB */
+
+    /* get all rows from config table */
+    sprintf(query,"SELECT name,inuse FROM %s",configname);
+    if(mysql_query(connNum, query) != 0)
+    {
+      printf("ERROR: cannot select\n");fflush(stdout);
+      dbDisconnect(connNum);
+      return(-1);
+    }
+    /* gets results from previous query */
+    if( !(result = mysql_store_result(connNum)) )
+    {
+      printf("ERROR in mysql_store_result()\n");fflush(stdout);
+      dbDisconnect(connNum);
+      return(-1);
+    }
+
+    numRows = mysql_num_rows(result);
+    //printf("nrow=%d\n",numRows);fflush(stdout);
+    for(ii=0; ii<numRows; ii++)
+    {
+      row_out = mysql_fetch_row(result);
+      //printf("[%1d] received from DB >%s< >%s<\n",ii,row_out[0],row_out[1]);fflush(stdout);
+
+      //if( strncmp(row_out[1],"no",2) != 0 ) /* 'inuse' != 'no' */
+      if(isdigit(row_out[1][0]))
+      {
+        //printf("  digit >%s<\n",row_out[1]);fflush(stdout);
+        roc_id = atoi(row_out[1]);
+        if((roc_id>=0) && (roc_id<MAX_ROCS))
+        {
+          roc_is_active[roc_id] = 1;
+          strncpy(roc_names[roc_id],row_out[0],39);
+          //printf("roc: id=%3d, name >%s<\n",roc_id,roc_names[roc_id]);fflush(stdout);
+        }
+      }
+    }
+    mysql_free_result(result);
+
+
+    dbDisconnect(connNum);
+
+    timeout = time(NULL);
+    read_daq_config = 0;
+  }
+
 
   for(issp=0; issp<nSSP; issp++)
   {
     id = sspSlot(issp);
     r = sspSendScalers(id);
-    if(r != OK)
-      break;
+    if(r != OK) break;
   }
-  return r;
+
+
+  return(r);
 }
 
 int
@@ -1590,11 +1781,11 @@ sspSendScalers(int id)
   switch(sspFirmwareType[id])
   {
     case SSP_CFG_SSPTYPE_HALLBGT:
-      sspGtSendErrors(id);
+      if(run_is_active) sspGtSendErrors(id);
       r = sspGtSendScalers(id);
       break;
     case SSP_CFG_SSPTYPE_HALLBGTC:
-      sspGtcSendErrors(id);
+      if(run_is_active) sspGtcSendErrors(id);
       r = sspGtcSendScalers(id);
       break;
   }
@@ -2059,6 +2250,222 @@ sspGetFirmwareVersion(int id)
  
   return rval; 
 } 
+/*
+int sspI2CStart(int id)
+{
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
+    return ERROR;
+
+  SSPLOCK(); 
+  for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x108); // SDA clear
+  for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x102); // SCL clear
+  SSPUNLOCK();
+ 
+  return OK;
+}
+
+int sspI2CStop(int id)
+{
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
+    return ERROR;
+
+  SSPLOCK(); 
+  for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x108); // SDA clear
+  for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x101); // SCL set
+  for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x104); // SDA set
+  SSPUNLOCK();
+
+  return OK;
+}
+
+int sspI2C_ByteWrite(int id, int val)
+{
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
+    return ERROR;
+
+  SSPLOCK(); 
+  for(int i=0;i<8;i++)
+  {
+    if(val & (1<<(7-i)))
+      for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x104); // SDA set
+    else
+      for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x108); // SDA clear
+    for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x101); // SCL set
+    for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x102); // SCL clear
+  }
+  for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x104); // SDA set
+  for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x101); // SCL set
+  val = sspReadReg(&pSSP[id]->hps.FiberTop.Reserved0[0]);
+  for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x102); // SCL clear
+  printf("%s: ACK=%d\n", __func__, (val & 0x2)>>1);
+  SSPUNLOCK();
+
+  return OK;
+}
+
+int sspI2C_ByteRead(int id)
+{
+  int result = 0, val;
+
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
+    return ERROR;
+
+  SSPLOCK(); 
+  for(int i=0;i<8;i++)
+  {
+    for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x104); // SDA set
+    for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x101); // SCL set
+    val = sspReadReg(&pSSP[id]->hps.FiberTop.Reserved0[0]);
+    for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x102); // SCL clear
+    if(val & 0x2)
+      result |= 1<<(7-i);
+  }
+  for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x104); // SDA set
+  for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x101); // SCL set
+  for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x102); // SCL clear
+  SSPUNLOCK();
+
+  return result;
+}
+
+int 
+sspI2CRead(int id, int slaveAddr, int regAddr)
+{ 
+  unsigned int rval=0; 
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
+    return ERROR;
+ 
+  sspI2CStart(id);
+  sspI2C_ByteWrite(id, slaveAddr<<1);
+  sspI2C_ByteWrite(id, regAddr);
+
+  SSPLOCK(); 
+  for(int j=0;j<10;j++) sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0x101); // SCL set
+  SSPUNLOCK();
+
+  sspI2CStart(id);
+  sspI2C_ByteWrite(id, (slaveAddr<<1) | 0x1);
+  rval = sspI2C_ByteRead(id);
+  sspI2CStop(id);
+ 
+  return rval; 
+} 
+
+int 
+sspI2CWrite(int id, int slaveAddr, int regAddr, int val)
+{ 
+  unsigned int rval=0; 
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
+    return ERROR;
+ 
+  sspI2CStart(id);
+  sspI2C_ByteWrite(id, slaveAddr<<1);
+  sspI2C_ByteWrite(id, regAddr);
+  sspI2C_ByteWrite(id, val);
+  sspI2CStop(id);
+ 
+  return rval; 
+} 
+
+int
+sspI2CSetup(int id)
+{
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
+    return ERROR;
+}
+*/
+int sspQSFPReset(int id, int fiber, int reset)
+{
+  unsigned int val=0; 
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
+    return ERROR;
+
+  SSPLOCK();
+  val = sspReadReg(&pSSP[id]->hps.FiberTop.HistCtrl);
+  if(!reset) val = (val |  (1<<fiber)) & 0xFF;
+  else       val = (val | ~(1<<fiber)) & 0xFF;
+  sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, 0xBF0000 | val);
+  SSPUNLOCK();
+ 
+  return OK;
+}
+
+int sspReadI2C(int id, int slv_addr, int reg_addr)
+{
+  unsigned int val; 
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
+    return ERROR;
+
+  SSPLOCK();
+  val = (reg_addr<<8) | ((slv_addr<<1) | 0x1);
+  sspWriteReg(&pSSP[id]->hps.FiberTop.Reserved0[1], val);
+  usleep(1000000);
+  val = sspReadReg(&pSSP[id]->hps.FiberTop.Reserved0[2]) & 0xFF;
+  SSPUNLOCK();
+
+//  printf("%s(%02X, %02X, %02X)\n", __func__, slv_addr, reg_addr, val);
+  return val;
+}
+
+int sspWriteI2C(int id, int slv_addr, int reg_addr, int data)
+{
+  unsigned int val;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
+    return ERROR;
+
+  SSPLOCK();
+  val = (reg_addr<<8) | (slv_addr<<1);
+  sspWriteReg(&pSSP[id]->hps.FiberTop.Reserved0[1], val);
+  usleep(1000000);
+  val = sspReadReg(&pSSP[id]->hps.FiberTop.Reserved0[2]) & 0xFF;
+  SSPUNLOCK();
+
+  printf("%s(%02X, %02X, %02X)\n", __func__, slv_addr, reg_addr, val);
+  return val;
+}
+
+int sspQSFPStatus(int id)
+{
+  unsigned int ctrl, status, val, slv_addr, reg_addr, i, j;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_COMMON))
+    return ERROR;
+
+  SSPLOCK();
+  ctrl = sspReadReg(&pSSP[id]->hps.FiberTop.HistCtrl);
+  status = sspReadReg(&pSSP[id]->hps.FiberTop.Reserved0[0]);
+  SSPUNLOCK();
+
+  printf("Ctrl=%08X, Status=%08X\n", ctrl, status);
+
+  printf("IP:\n");
+  for(i=0;i<5;i++)
+    sspReadI2C(id, 0x20, i);
+
+  printf("OP:\n");
+  for(i=0;i<5;i++)
+    sspReadI2C(id, 0x20, i+0x8);
+
+  printf("IOC:\n");
+  for(i=0;i<5;i++)
+    sspReadI2C(id, 0x20, i+0x18);
+
+
+  for(i=0;i<128;i++)
+  {
+    printf("%3d: ", i);
+    for(j=0;j<8;j++)
+    {
+      ctrl = sspReadReg(&pSSP[id]->hps.FiberTop.HistCtrl) | 0xFF0000;
+      ctrl&= ~((1<<j)<<16);
+      sspWriteReg(&pSSP[id]->hps.FiberTop.HistCtrl, ctrl);
+      printf("%02X ", sspReadI2C(id,0x50, i));
+    }
+    printf("\n");
+  }
+
+  return OK;
+}
+
 
 /***************************************
      GT Routines
@@ -2067,9 +2474,26 @@ int
 sspGtSendErrors(int id)
 {
   char host[100];
-  char name[100];
+  char name[100], msg[100];
+  char *mmm[1];
   unsigned int val;
-  int i, data = 0;
+  int i, ii, data = 0;
+  static int first = 1;
+  static int adcecal1vtp_id, adcpcal1vtp_id, adcftof1vtp_id, dc13vtp_id;
+
+  if(first)
+  {
+    for(ii=0; ii<256; ii++)
+    {
+      if(!strcmp(roc_names[ii],"adcecal1vtp")) adcecal1vtp_id = ii;
+      if(!strcmp(roc_names[ii],"adcpcal1vtp")) adcpcal1vtp_id = ii;
+      if(!strcmp(roc_names[ii],"adcftof1vtp")) adcftof1vtp_id = ii;
+      if(!strcmp(roc_names[ii],"dc13vtp"))     dc13vtp_id = ii;
+    }
+
+    first = 0;
+  }
+
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
     return ERROR;
 
@@ -2096,30 +2520,55 @@ sspGtSendErrors(int id)
   if(id>=3 && id<=8) // Slot 3-8: SSP Sector
   {
     int sector = id-2;
+
+    //printf("id1=%d\n",adcecal1vtp_id-id-3);
+    if(roc_is_active[adcecal1vtp_id-id-3])
     if(!(val & 0x1))  // Fiber 0 = adcecalXvtp
     {
-      sprintf(name, "err: crate=%s,SSP_SLOT%d link to adcecal%dvtp down", host, id, sector);
-      epics_json_msg_send(name, "int", 1, &data);
+      sprintf(name,"err:%s",host);
+      sprintf(msg,"\"SSP_SLOT%d link to adcecal%dvtp down\"",id,sector);
+      mmm[0] = msg;
+      epics_json_msg_send(name, "string", 1, (char **)mmm);
     }
+
+    //printf("id2=%d\n",adcpcal1vtp_id-id-3);
+    if(roc_is_active[adcpcal1vtp_id-id-3])
     if(!(val & 0x2))  // Fiber 1 = adcpcalXvtp
     {
-      sprintf(name, "err: crate=%s,SSP_SLOT%d link to adcpcal%dvtp down", host, id, sector);
-      epics_json_msg_send(name, "int", 1, &data);
+      sprintf(name,"err:%s",host);
+      sprintf(msg,"\"SSP_SLOT%d link to adcpcal%dvtp down\"",id,sector);
+      mmm[0] = msg;
+      epics_json_msg_send(name, "string", 1, (char **)mmm);
     }
+
+    //printf("id3=%d\n",adcftof1vtp_id-id-3);
+    if(roc_is_active[adcftof1vtp_id-id-3])
     if(!(val & 0x4))  // Fiber 2 = adcftofXvtp
     {
-      sprintf(name, "err: crate=%s,SSP_SLOT%d link to adcftof%dvtp down", host, id, sector);
-      epics_json_msg_send(name, "int", 1, &data);
+      sprintf(name,"err:%s",host);
+      sprintf(msg,"\"SSP_SLOT%d link to adcftof%dvtp down\"",id,sector);
+      mmm[0] = msg;
+      epics_json_msg_send(name, "string", 1, (char **)mmm);
     }
+
+#if 0 /*there is no slot10 any more*/
     if(!(val & 0x8))  // Fiber 3 = trig2,SSP_SLOT10
     {
-      sprintf(name, "err: crate=%s,SSP_SLOT%d link to SSP_SLOT10 down", host, id);
-      epics_json_msg_send(name, "int", 1, &data);
+      sprintf(name,"err:%s",host);
+      sprintf(msg,"\"SSP_SLOT%d link to SSP_SLOT10 down\"",id);
+      mmm[0] = msg;
+      epics_json_msg_send(name, "string", 1, (char **)mmm);
     }
+#endif
+
+    //printf("id4=%d\n",dc13vtp_id-id-3);
+    if(roc_is_active[dc13vtp_id-id-3])
     if(!(val & 0x80))  // Fiber 7 = dcX3vtp
     {
-      sprintf(name, "err: crate=%s,SSP_SLOT%d link to dc%d3vtp down", host, id, sector);
-      epics_json_msg_send(name, "int", 1, &data);
+      sprintf(name,"err:%s",host);
+      sprintf(msg,"\"SSP_SLOT%d link to dc%d3vtp down\"",id,sector);
+      mmm[0] = msg;
+      epics_json_msg_send(name, "string", 1, (char **)mmm);
     }
   }
   
@@ -4067,9 +4516,26 @@ int
 sspGtcSendErrors(int id)
 {
   char host[100];
-  char name[100];
+  char name[100], msg[100];
+  char *mmm[1];
   unsigned int val;
-  int i, data = 0;
+  int i, ii, data = 0;
+  static int first = 1;
+  static int adcft1vtp_id, adcft2vtp_id, adcctof1vtp_id, adccnd1vtp_id;
+
+  if(first)
+  {
+    for(ii=0; ii<256; ii++)
+    {
+      if(!strcmp(roc_names[ii],"adcft1vtp"))   adcft1vtp_id = ii;
+      if(!strcmp(roc_names[ii],"adcft2vtp"))   adcft2vtp_id = ii;
+      if(!strcmp(roc_names[ii],"adcctof1vtp")) adcctof1vtp_id = ii;
+      if(!strcmp(roc_names[ii],"adccnd1vtp"))  adccnd1vtp_id = ii;
+    }
+
+    first = 0;
+  }
+
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGTC))
     return ERROR;
 
@@ -4095,15 +4561,40 @@ sspGtcSendErrors(int id)
 
   if(id == 9) // Slot 9: SSP Central - FT
   {
+    if(roc_is_active[adcft1vtp_id])
     if(!(val & 0x1))  // Fiber 0 = adcft1vtp
     {
-      sprintf(name, "err: crate=%s,SSP_SLOT%d link to adcft1vtp down", host, id);
-      epics_json_msg_send(name, "int", 1, &data);
+      sprintf(name,"err:%s",host);
+      sprintf(msg,"\"SSP_SLOT%d link to adcft1vtp down\"",id);
+      mmm[0] = msg;
+      epics_json_msg_send(name, "string", 1, (char **)mmm);
     }
+
+    if(roc_is_active[adcft2vtp_id])
     if(!(val & 0x2))  // Fiber 1 = adcft2vtp
     {
-      sprintf(name, "err: crate=%s,SSP_SLOT%d link to adcft2vtp down", host, id);
-      epics_json_msg_send(name, "int", 1, &data);
+      sprintf(name,"err:%s",host);
+      sprintf(msg,"\"SSP_SLOT%d link to adcft2vtp down\"",id);
+      mmm[0] = msg;
+      epics_json_msg_send(name, "string", 1, (char **)mmm);
+    }
+
+    if(roc_is_active[adcctof1vtp_id])
+    if(!(val & 0x4))  // Fiber 2 = adcctof1vtp (CTOF output on port 2nd fiber)
+    {
+      sprintf(name,"err:%s",host);
+      sprintf(msg,"\"SSP_SLOT%d link to adcctof1vtp(2nd port) down\"",id);
+      mmm[0] = msg;
+      epics_json_msg_send(name, "string", 1, (char **)mmm);
+    }
+
+    if(roc_is_active[adccnd1vtp_id])
+    if(!(val & 0x8))  // Fiber 3 = adccnd1vtp
+    {
+      sprintf(name,"err:%s",host);
+      sprintf(msg,"\"SSP_SLOT%d link to adccnd1vtp down\"",id);
+      mmm[0] = msg;
+      epics_json_msg_send(name, "string", 1, (char **)mmm);
     }
   }
   

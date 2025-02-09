@@ -28,8 +28,10 @@ vmeBusLock();
   tiStatus(1);
 vmeBusUnlock();
 
+vmeBusLock();
   ntdc = tdc1190Init(0x11100000,0x80000,20,0);
   if(ntdc) tdc1190Config("");
+vmeBusUnlock();
 
   exit(0);
 }

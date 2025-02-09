@@ -26,7 +26,7 @@ class MessageActionDAQ2EPICS : public MessageAction {
     int32_t d_uint[MAX_ELEM/4];
     float   d_float[MAX_ELEM/4];
     double  d_double[MAX_ELEM/8];
-    //std::string d_string[MAX_ELEM];
+    std::string d_string[MAX_ELEM];
 
     int debug = 0;
 
@@ -100,7 +100,7 @@ class MessageActionDAQ2EPICS : public MessageAction {
       else if( !strcmp(catype.c_str(),"uint"))   for(ii=0; ii<nelem; ii++) {msg >> d_uint[ii]; /*printf(" %d",d_uint[ii]);*/}
       else if( !strcmp(catype.c_str(),"float"))  for(ii=0; ii<nelem; ii++) {msg >> d_float[ii]; /*printf(" %f",d_float[ii]);*/}
       else if( !strcmp(catype.c_str(),"double")) for(ii=0; ii<nelem; ii++) {msg >> d_double[ii]; /*printf(" %f",d_double[ii]);*/}
-      //else if( !strcmp(catype.c_str(),"string")) for(ii=0; ii<nelem; ii++) {msg >> d_string[ii]; /*printf(" %s",d_string[ii]);*/}
+      else if( !strcmp(catype.c_str(),"string")) for(ii=0; ii<nelem; ii++) {msg >> d_string[ii]; /*printf(" %s",d_string[ii]);*/}
       else
       {
         printf("epics_msg_callback: ERROR: unknown catype >%s<\n",catype.c_str());

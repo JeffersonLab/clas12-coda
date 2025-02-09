@@ -244,6 +244,7 @@ int main(int argc,char **argv)
             if (etdead) {
                 printf("ET SYSTEM is DEAD!\n");
                 printf("*****************************************\n\n");
+		exit(1); /*sergey: always exit if system is dead, do not hold et file !!!*/
             }
         }
         /*  wait for "period" before looking at another round of data */
@@ -257,7 +258,7 @@ int main(int argc,char **argv)
         et_unlook(sys_id);
     }
   
-    return 0;
+    exit(0);
 }
 
 

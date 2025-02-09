@@ -27,7 +27,9 @@ int main(int argc, char* argv[])
 	}
 
 	DiagGUI *pDiagGUI = new DiagGUI(gClient->GetRoot(), 800, 600, argv[1]);
+printf("11\n");fflush(stdout);
 	App.Run();
+printf("12\n");fflush(stdout);
 
 	delete pDiagGUI;
 	return 0;

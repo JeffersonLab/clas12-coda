@@ -308,6 +308,7 @@ transitioner::confirmFailure (int type)
 void
 transitioner::confirmTransition (void)
 {
+
 #ifdef _TRACE_OBJECTS
   printf("transitioner::confirmTransition reached\n");
 #endif
@@ -339,45 +340,62 @@ transitioner::confirmTransition (void)
   /* if success, call 'setupSuccess' which will call 'successState' from corresponding class */
   if (!failed)
   {
-  printf("transitioner::confirmTransition 12\n");
+    printf("transitioner::confirmTransition 12\n");
+
+#if 0
     /* declare transition succeeded; if for example doing 'Configure', 'Download' button will show up after that */
+    /* sergey: move it below to wait for user script to finish */
     setupSuccess ();
-  printf("transitioner::confirmTransition 13\n");
+#endif
+
+    printf("transitioner::confirmTransition 13\n");
     
     // run a script here in blocked mode so all scripts should be short
     // This is a global script to be executed at the end of a Transition
 
-	//printf("11111111111\n");
-	//sleep(10);
-	//printf("22222222222\n");
-    runUserSuccessScript ();
-	//printf("33333333333\n");
-	//sleep(10);
-	//printf("44444444444\n");
+    reporter->cmsglog (CMSGLOG_INFO, "Running user script ...\n");
+
+    state = runUserSuccessScript ();
     
     //printf(TRANS_DBG,"run transition script %08x\n",child_);
-	//printf("transitioner: run transition script %08x\n",child_);
+    //printf("transitioner: run transition script %08x\n",child_);
 
-    if(child_)
+    if(child_) //sergey: execute 'transitioner::execute(void)' function from this file, it does actual transition operations
     {
-	  //printf("exec script 1\n");
+      printf("exec script 1\n");fflush(stdout);
       child_->execute();
-	  //printf("exec script 2\n");
+      printf("exec script 2\n");fflush(stdout);
       child_ = 0;
     }
     else
     {
-      // send success to daq run
-	  //printf("exec script 3\n");
-      sendTransitionResult (CODA_SUCCESS);
-	  //printf("exec script 4\n");
+      // sergey: check what user script returned, and act accordingly 
+
+      if(state==0)  // send success to daq run
+      {
+        reporter->cmsglog (CMSGLOG_INFO, " ... user script executed\n");
+
+        printf("success 2\n");fflush(stdout);
+        setupSuccess ();
+        sendTransitionResult (CODA_SUCCESS);
+      }
+      else
+      {
+        //sergey: if user script returns different error numbers, we can print here different messages
+	reporter->cmsglog (CMSGLOG_ERROR, "USER SCRIPT FAILED, PROBABLY RICH PROBLEM\n");
+
+        printf("failure 2\n");fflush(stdout);
+        setupFailure();
+        sendTransitionResult (CODA_ERROR); // send failure to daq run
+      }
+
     }
   }
   else
   {
+    printf("failure 1\n");fflush(stdout);
     setupFailure();
-    // send failure to daq run
-    sendTransitionResult (CODA_ERROR);
+    sendTransitionResult (CODA_ERROR); // send failure to daq run
   }
 }
 
@@ -690,7 +708,12 @@ transitioner::sendTransitionResult (int success)
   run->cmdFinalResult (success);
 }
 
-void
+
+
+
+
+
+int/*void*/
 transitioner::runUserSuccessScript (void)
 {
 #ifdef _TRACE_OBJECTS
@@ -727,25 +750,22 @@ transitioner::runUserSuccessScript (void)
 #ifdef _TRACE_OBJECTS
     printf("transitioner::runUserSuccessScript 5\n");fflush(stdout);
 #endif
-    return;
+    return(CODA_SUCCESS);
   }
 
 #ifdef _TRACE_OBJECTS
   printf("transitioner::runUserSuccessScript 6\n");fflush(stdout);
 #endif
+
+
   // construct a user script which has X window Display information
   char     realscript[1024];  // no way to exceed 1024 chars
   ::sprintf (realscript, "setenv DISPLAY %s; ", run->controlDisplay());
   ::strcat  (realscript, script);
 
-#ifdef _TRACE_OBJECTS
+  //#ifdef _TRACE_OBJECTS
   printf("transitioner::runUserSuccessScript: State finished real script is: %s\n", realscript);fflush(stdout);
-#endif
-
-  /*
-  system(realscript);
-  */
-
+  //#endif
   
   // start up a child process 
   ::fflush (stdout);
@@ -764,7 +784,7 @@ transitioner::runUserSuccessScript (void)
   if(pid < 0) // unable to fork
   {
     //printf("Unable to fork - error\n");
-    return;
+    return(CODA_ERROR);
   }
   else if (pid == 0) // child process
   {
@@ -773,7 +793,7 @@ transitioner::runUserSuccessScript (void)
     close(2); dup (tty);
     close(tty);
 
-	//printf("111\n");
+    printf("111 transitioner::runUserSuccessScript >%s<\n",realscript);
 	//sleep(10);
 	//printf("222\n");
 
@@ -790,7 +810,7 @@ transitioner::runUserSuccessScript (void)
 //kill(pid, 9);
 //printf("777\n");
 
-    exit(127);
+    //exit(127); sergey: comment it out to get estatus below
   }
 
   // parent process
@@ -816,10 +836,9 @@ transitioner::runUserSuccessScript (void)
   // Hysterical past - Ask Jie Chen, I don't know - RWM!
   estatus = (signed char) (status>>8)&0xff;
 
-#ifdef _TRACE_OBJECTS
-  printf("transitioner.cc: script terminated with status %x estatus = %d\n",
-    status,estatus);
-#endif
+  //#ifdef _TRACE_OBJECTS
+  printf("transitioner.cc: script terminated with status 0x%x, estatus = %d\n",status,estatus);
+  //#endif
 
   if((wpid == -1) || (estatus == -2))
   {
@@ -840,7 +859,9 @@ transitioner::runUserSuccessScript (void)
   ::signal (SIGINT, istat);
   ::signal (SIGQUIT, qstat);
 
-  //return(rtn_stat);
 
-  return;
+  //sergey: have to return status !!!
+  return(rtn_stat);
+
+  //return;
 }

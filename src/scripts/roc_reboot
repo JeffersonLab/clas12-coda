@@ -77,11 +77,11 @@ set roc_name_snmp = ( dc11       dc12       dc13       dc21       \
                       dc33       dc41       dc42       dc43       \
                       dc51       dc52       dc53       dc61       \
                       dc62       dc63       tage       polar      \
-                      taggermac  adccnd1    svt3       ioctest0   \
-                      scaler1    pcal0      pretrig3   pretrig4   \
+                      taggermac  adccnd1    svt333     ioctest0   \
+                      scaler1    pcal0      clondaq11  pretrig4   \
                       croctest1  croctest2  hps2       test1      \
                       roc1       halldtrg3  jlab12vme  tdcctof1   \
-                      adcecal1   svt1       wolfram1   adcband1   \
+                      adcecal1   svt1       xxxxx      adcband1   \
                       hps1       hps2       cnd1       tdcecal1   \
                       tdcpcal1   tdcftof1   adcpcal1   adcftof1   \
                       adcecal1   adcftof6   tdcftof6   adcpcal6   \
@@ -98,7 +98,8 @@ set roc_name_snmp = ( dc11       dc12       dc13       dc21       \
                       adcft3     pgem       prad1      prad2 \
                       prad3      rich4      mvt2       tdcband1 \
                       classchv1  test0      test2      classc10 \
-                      mvt3       hdice1     test3 )
+                      mvt3       svt3       test3      bdx0 \
+                      test4      prad0      alert1 )
 
 
 #***  Set IP list for ROCs snmp-controlled ***
@@ -108,10 +109,10 @@ set ip_snmp = ( 129.57.68.184   129.57.68.179   129.57.160.200  129.57.68.183  \
                 129.57.68.171   129.57.68.177   129.57.68.174   129.57.160.202 \
                 129.57.68.180   129.57.160.201  129.57.160.137  129.57.69.33  \
                 129.57.160.138  129.57.160.151  129.57.86.47    129.57.167.83  \
-                129.57.167.85   129.57.86.175   129.57.69.32    129.57.69.47   \
+                129.57.167.85   129.57.86.175   129.57.69.255   129.57.69.47   \
                 129.57.69.30    129.57.69.28    129.57.69.40    129.57.86.122   \
                 129.57.167.104  129.57.167.47   129.57.167.56   129.57.160.158   \
-                129.57.167.80   129.57.160.236  129.57.86.34    129.57.68.229  \
+                129.57.167.80   129.57.160.197  129.57.86.174   129.57.68.229  \
                 129.57.167.164  129.57.167.165  129.57.86.53    129.57.167.52  \
                 129.57.167.54   129.57.167.73   129.57.167.81   129.57.167.156 \
                 129.57.167.80   129.57.167.157  129.57.167.158  129.57.167.39  \
@@ -120,15 +121,16 @@ set ip_snmp = ( 129.57.68.184   129.57.68.179   129.57.160.200  129.57.68.183  \
                 129.57.167.178  129.57.167.189  129.57.167.186  129.57.167.188 \
                 129.57.167.185  129.57.167.187  129.57.167.183  129.57.167.212 \
                 129.57.167.192  129.57.167.216  129.57.167.211  129.57.167.251 \
-                129.57.167.21   129.57.167.32   129.57.167.22   129.57.167.34  \
+                129.57.167.21   129.57.167.32   129.57.167.22   129.57.167.97  \
                 129.57.167.19   129.57.167.37   129.57.167.27   129.57.167.93 \
                 129.57.86.40    129.57.86.67    129.57.167.196  129.57.167.199 \
                 129.57.86.71    129.57.86.140   129.57.160.198  129.57.160.60 \
                 129.57.160.184  129.57.68.198   129.57.68.192   129.57.68.194 \
                 129.57.68.196   129.57.160.146  129.57.160.147  129.57.160.148 \
                 129.57.160.149  129.57.160.215  129.57.160.216  129.57.160.144 \
-                129.57.160.225  129.57.68.230   129.57.68.231   129.57.167.146 \
-                129.57.160.197  129.57.86.79    129.57.86.144 )
+                129.57.160.225  129.57.68.201   129.57.68.249   129.57.167.146 \
+                129.57.160.236  129.57.86.79    129.57.86.144   129.57.68.246 \
+                129.57.68.9     129.57.86.201   129.57.160.236 )
 
 #***  Set list of soft-IOCS rebooted via service command ***
 #
@@ -199,25 +201,19 @@ if ( $group == $group_snmp ) then
 #***** snmp-controlled ROCs processing :
 #
 
-#----------  SP: CPU in pretrig4 Dec.01, 2011
-#----------  Switch OFF secondary VME crate pretrig4
-  if ( $roc == "pretrig3" ) then
-    snmpset -v 1 -c private 129.57.69.47 enterprises.19947.1.1.1.0 i 0
+  if ( $roc == "clondaq11" ) then  #special case
+    snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 1
     sleep 5
+    snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 2
+  else # generic case
+    set ip = ${ip_snmp[$ii]}
+    snmpset -v 1 -c private $ip enterprises.19947.1.1.1.0 i 0
+    sleep 5
+    snmpset -v 1 -c private $ip enterprises.19947.1.1.1.0 i 1
   endif
 
-  set ip = ${ip_snmp[$ii]}
-  snmpset -v 1 -c private $ip enterprises.19947.1.1.1.0 i 0
-  sleep 5
-  snmpset -v 1 -c private $ip enterprises.19947.1.1.1.0 i 1
-
-#----------  SP: CPU in pretrig4 Dec.01, 2011
-#----------  Switch ON secondary VME crate pretrig4
-  if ( $roc == "pretrig3" ) then
-    sleep 10
-    snmpset -v 1 -c private 129.57.69.47 enterprises.19947.1.1.1.0 i 1
-  endif
-
+  # logfile
+  echo "`date` $roc" >> /logs/rocs/roc_reboot.log
 
 else if ( $group == $group_PwSw ) then
 #

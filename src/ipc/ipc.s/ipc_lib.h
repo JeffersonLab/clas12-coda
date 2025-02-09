@@ -582,6 +582,8 @@ IpcProducer &sender = IpcProducer::Instance();
       {
         sleep(1); // it will hung if does NOT sleep here !
       }
+      printf("ipc_lib.h: out of while loop: producer=0x%llx, session=0x%llx, message=0x%llx\n",producer,session,message);fflush(stdout);
+
       //printf("IpcProducer::waitUntilReady() ready !!!\n");
     }
 
@@ -675,8 +677,16 @@ printf("IpcProducer::run: 3\n");
 
     void clearMsg()
 	{
-      message->clearBody();
-      return;
+	  if(message==NULL)
+	  {
+            printf("ipc_lib.h: ERROR: tried to call clearBody() for message=NULL\n");fflush(stdout);
+	  }
+          else
+	  {
+            //printf("ipc_lib.h: calling clearBody for message=0x%llx\n",message);fflush(stdout);
+            message->clearBody();
+	  }
+          return;
 	}
 
     int sendMsg()

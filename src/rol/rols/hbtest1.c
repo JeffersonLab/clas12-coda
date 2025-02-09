@@ -19,6 +19,10 @@ Press y to load firmware (mti91.svf) to the TI via VME...
 #undef NEW
 
 
+
+#define USE_V1190
+
+
 #define USE_SDC
 
 /* HPS firmware:
@@ -166,6 +170,49 @@ static unsigned long adcadr[4] = {0x180000, 0, 0, 0};
 #ifdef USE_ADC792
 static int nadcs;
 #endif
+
+
+
+
+/*
+#ifdef USE_V1190
+*/
+
+/* if event rate goes higher then 10kHz, with random triggers we have wrong
+slot number reported in GLOBAL HEADER and/or GLOBAL TRAILER words; to work
+around that problem temporary patches were applied - until fixed (Sergey) */
+#define SLOTWORKAROUND
+
+static int tdctypebyslot[NBOARDS];
+static int error_flag[NBOARDS];
+static int ndsc2=0, ndsc2_daq=0;
+static int ntdcs;
+
+int
+getTdcTypes(int *typebyslot)
+{
+  int jj;
+  for(jj=0; jj<NBOARDS; jj++) typebyslot[jj] = tdctypebyslot[jj];
+  return(ntdcs);
+}
+
+#ifdef SLOTWORKAROUND
+static int slotnums[NBOARDS];
+int
+getTdcSlotNumbers(int *slotnumbers)
+{
+  int jj;
+  for(jj=0; jj<NBOARDS; jj++) slotnumbers[jj] = slotnums[jj];
+  return(ntdcs);
+}
+#endif
+
+/*
+#endif
+*/
+
+
+
 
 
 /*#ifdef DMA_TO_BIGBUF*/
@@ -387,22 +434,13 @@ abcReadPeds(int rocid)
 #endif
 
 
-int
-getTdcTypes(int *typebyslot)
-{
-  return(0);
-}
-
-int
-getTdcSlotNumbers(int *slotnumbers)
-{
-  return(0);
-}
 
 static void
 __download()
 {
   int i1, i2, i3;
+  int ii, slot;
+
 #ifdef USE_FADC250
 
   int id, isl, ichan;
@@ -798,6 +836,66 @@ STATUS for FADC in slot 18 at VME (Local) base address 0x900000 (0xa16b1000)
   printf("ROL1: nadcs = %d\n\n",nadcs);
 #endif
 
+
+
+#ifdef USE_V1190
+  printf("V1190 Download() starts =========================\n");
+
+vmeBusLock();
+  ntdcs = tdc1190Init(0x11100000,0x80000,20,0);
+  if(ntdcs>0)
+  {
+  /*sergey: temporary for highbtest3 only !!!!!!!!*/
+    tdc1190SetGeoAddress(0, 12);
+  /*sergey: temporary for highbtest3 only !!!!!!!!*/
+
+    TDC_READ_CONF_FILE;
+  }
+vmeBusUnlock();
+
+  for(ii=0; ii<ntdcs; ii++)
+  {
+    slot = tdc1190Slot(ii);
+    tdctypebyslot[slot] = tdc1190Type(ii);
+    printf(">>> id=%d slot=%d type=%d\n",ii,slot,tdctypebyslot[slot]);
+  }
+
+
+
+#ifdef SLOTWORKAROUND
+  for(ii=0; ii<ntdcs; ii++)
+  {
+vmeBusLock();
+    slot = tdc1190GetGeoAddress(ii);
+vmeBusUnlock();
+	slotnums[ii] = slot;
+    printf("[%d] slot %d\n",ii,slotnums[ii]);
+  }
+#endif
+
+
+  /* if TDCs are present, set busy from P2 */
+  if(ntdcs>0)
+  {
+    printf("Set BUSY from P2 for TDCs\n");
+vmeBusLock();
+    tiSetBusySource(TI_BUSY_P2,0);
+vmeBusUnlock();
+  }
+
+  for(ii=0; ii<ntdcs; ii++)
+  {
+vmeBusLock();
+    tdc1190Clear(ii);
+vmeBusUnlock();
+    error_flag[ii] = 0;
+  }
+
+  printf("V1190 Download() ends =========================\n\n");
+#endif
+
+
+
   logMsg("INFO: User Download Executed\n",1,2,3,4,5,6);
 }
 
@@ -1011,6 +1109,17 @@ faSync(0);
 
 #endif
 
+
+#ifdef USE_V1190
+  for(ii=0; ii<ntdcs; ii++)
+  {
+vmeBusLock();
+    tdc1190SetBLTEventNumber(ii, block_level);
+vmeBusUnlock();
+  }
+#endif
+
+
   printf("INFO: Prestart1 Executed\n");fflush(stdout);
 
   *(rol->nevents) = 0;
@@ -1106,6 +1215,21 @@ __go()
   for(jj=0; jj<nadcs; jj++) c792Clear(jj);
 #endif
 
+
+#ifdef USE_V1190
+  for(jj=0; jj<ntdcs; jj++)
+  {
+vmeBusLock();
+    tdc1190Clear(jj);
+vmeBusUnlock();
+    error_flag[jj] = 0;
+  }
+  taskDelay(100);
+
+#endif
+
+
+
   CDOENABLE(TIPRIMARY,TIR_SOURCE,0); /* bryan has (,1,1) ... */
 
   logMsg("INFO: Go 1 Executed\n",1,2,3,4,5,6);
@@ -1131,6 +1255,16 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
   int idata;
   int stat, itime, gbready;
   int status, itimeout;
+#endif
+#ifdef USE_V1190
+  unsigned int utmp;
+  int nev, rlenbuf[22], slot;
+  unsigned long tdcslot, tdcchan, tdcval, tdc14, tdcedge, tdceventcount;
+  unsigned long tdceventid, tdcbunchid, tdcwordcount, tdcerrorflags;
+  unsigned int *tdchead;
+#ifdef SLOTWORKAROUND
+  unsigned long tdcslot_h, tdcslot_t, remember_h;
+#endif
 #endif
 #ifdef DMA_TO_BIGBUF
     unsigned int pMemBase, uMemBase, mSize;
@@ -1218,6 +1352,111 @@ vmeBusUnlock();
 
 
 
+
+#ifdef USE_V1190
+
+    tdcbuf = tdcbuf_save;
+	if(ntdcs>0)
+	{
+vmeBusLock();
+      tdc1190ReadStart(tdcbuf, rlenbuf);
+vmeBusUnlock();
+
+
+/*#if 0*/
+
+
+	  /*
+	  rlenbuf[0] = tdc1190ReadBoard(0, tdcbuf);
+	  rlenbuf[1] = tdc1190ReadBoard(1, &tdcbuf[rlenbuf[0]]);
+	  */
+
+      /*check if anything left in event buffer; if yes, print warning message and clear event buffer
+      for(jj=0; jj<ntdcs; jj++)
+      {
+        nev = tdc1190Dready(jj);
+        if(nev > 0)
+		{
+          printf("WARN: v1290[%2d] has %d events - clear it\n",jj,nev);
+          tdc1190Clear(jj);
+		}
+	  }
+      for(ii=0; ii<rlenbuf[0]; ii++) tdcbuf[ii] = LSWAP(tdcbuf[ii]);
+	  */
+
+      itdcbuf = 0;
+      njjloops = ntdcs;
+
+      BANKOPEN(0xe10B,1,rol->pid);
+
+      for(ii=0; ii<njjloops; ii++)
+      {
+        rlen = rlenbuf[ii];
+		/*
+        printf("rol1(TDCs): ii=%d, rlen=%d\n",ii,rlen);
+		*/
+
+	  /*	  
+#ifdef DEBUG
+        level = tdc1190GetAlmostFullLevel(ii);
+        iii = tdc1190StatusAlmostFull(ii);
+        logMsg("ii=%d, rlen=%d, almostfull=%d level=%d\n",ii,rlen,iii,level,5,6);
+#endif
+	  */	  
+
+        if(rlen <= 0) continue;
+
+        tdc = &tdcbuf[itdcbuf];
+        itdcbuf += rlen;
+
+
+#ifdef SLOTWORKAROUND
+		/* go through current board and fix slot number */
+        for(jj=0; jj<rlen; jj++)
+		{
+          utmp = LSWAP(tdc[jj]);
+
+          if( ((utmp>>27)&0x1F) == 8 ) /* GLOBAL HEADER */
+		  {
+            slot = utmp&0x1f;
+            if( slot != slotnums[ii] )
+			{
+              /*printf("ERROR: old=0x%08x: WRONG slot=%d IN GLOBAL HEADER, must be %d - fixed\n",utmp,slot,slotnums[ii]);*/
+              utmp = (utmp & 0xFFFFFFE0) | slotnums[ii];
+              /*printf("new=0x%08x\n",utmp);*/
+              tdc[jj] = LSWAP(utmp);
+            }
+		  }
+          else if( ((utmp>>27)&0x1F) == 0x10 ) /* GLOBAL TRAILER */
+		  {
+            slot = utmp&0x1f;
+            if( slot != slotnums[ii] )
+			{
+              /*printf("ERROR: old=0x%08x: WRONG slot=%d IN GLOBAL TRAILER, must be %d - fixed\n",utmp,slot,slotnums[ii]);*/
+              utmp = (utmp & 0xFFFFFFE0) | slotnums[ii];
+              /*printf("new=0x%08x\n",utmp);*/
+              tdc[jj] = LSWAP(utmp);
+            }
+		  }
+        }
+#endif
+
+        for(jj=0; jj<rlen; jj++) *rol->dabufp ++ = tdc[jj];
+
+      } /*for(ii=0; ii<njjloops; ii++)*/
+
+      BANKCLOSE;
+
+
+
+/*#endif*/ /*if 0*/
+
+
+
+	} /*if(ntdcs>0)*/
+
+
+#endif /* USE_V1190 */
 
 
 

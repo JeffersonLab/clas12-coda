@@ -1,11 +1,32 @@
 // scope.h
 
 #define SCOPE_SAMPLEDEPTH		128
-#define SCOPE_CHANNELCOUNT		256/*sergey: was 128*/
+#define SCOPE_CHANNELCOUNT		256 /*sergey: was 128*/
 #define SCOPE_SIGNALCOUNT		128
 #define MAX_INTENSITY_COLOR		255
 #define MIN_INTENSITY_COLOR		64
 #define SCOPE_COLOR_DEFAULT		255
+#define CLOCK_PERIOD_NS			5
+
+/*scope*/
+#define ECAL_TRIG_STATUS				0x3000
+#define ECAL_TRIG_VALUE7				0x3004
+#define ECAL_TRIG_VALUE6			   	0x3008
+#define ECAL_TRIG_VALUE5			   	0x300C
+#define ECAL_TRIG_VALUE4			   	0x3010
+#define ECAL_TRIG_VALUE3			   	0x3014
+#define ECAL_TRIG_VALUE2			   	0x3018
+#define ECAL_TRIG_VALUE1			   	0x301C
+#define ECAL_TRIG_VALUE0			   	0x3020
+#define ECAL_TRIG_INGORE7			   	0x3024
+#define ECAL_TRIG_INGORE6			   	0x3028
+#define ECAL_TRIG_INGORE5			   	0x302C
+#define ECAL_TRIG_INGORE4			   	0x3030
+#define ECAL_TRIG_INGORE3			   	0x3034
+#define ECAL_TRIG_INGORE2			   	0x3038
+#define ECAL_TRIG_INGORE1			   	0x303C
+#define ECAL_TRIG_INGORE0			   	0x3040
+#define ECAL_TRIG_BUFFER			   	0x3044
 
 class ScopeTimer;
 

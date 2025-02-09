@@ -759,6 +759,7 @@ unsigned int tsGetFPInput();
 unsigned int tsGetGTPInput();
 unsigned int tsGetBlockBufferLevel();
 int tsEnableTriggerSource();
+int tsGetNumberOfBlocksInBuffer();
 /* sergey */
 
 #endif /* TSLIB_H */

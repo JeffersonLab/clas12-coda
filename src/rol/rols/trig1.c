@@ -351,6 +351,14 @@ vmeBusUnlock();
   tdInit((3<<19),0x80000,20,0);
   ntd = tdGetNtds(); /* actual number of TD boards found  */
 
+  for(id=0; id<ntd; id++) 
+  {
+    slot = tdSlot(id);
+    tdResetMGTRx(id);
+    tdResetSlaveConfig(id); /*sergey: remove busy's from all 8 fibers, may be left from previous runs*/
+  }
+
+
   tdGSetBlockLevel(block_level);
   tdGSetBlockBufferLevel(buffer_level);
 
@@ -670,6 +678,7 @@ vmeBusUnlock();
   }
 
 
+
   printf("INFO: Prestart1 Executed\n");fflush(stdout);
 
   *(rol->nevents) = 0;
@@ -770,7 +779,7 @@ vmeBusUnlock();
 void
 usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
 {
-  int *jw, ind, ind2, i, ii, jj, jjj, blen, len, rlen, itdcbuf, nbytes;
+  int *jw, ind, ind2, i, ii, jj, jjj, blen, len, rlen, itdcbuf, nbytes, nblocks;
   unsigned int *tdcbuf_save, *tdc, trailer;
   unsigned int *dabufp1, *dabufp2;
   int njjloops, slot;
@@ -841,13 +850,13 @@ vmeBusUnlock();
     }
     else
     {
-	  ;
-	  /*
-      printf("ts: len=%d\n",len);
-      for(jj=0; jj<len; jj++) printf("ts[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
-	  */
+      ;
+	  
+      //printf("TS nwords(1) = %d\n",len);fflush(stdout);
+      //for(jj=0; jj<len; jj++) printf("ts[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
+	  
 	  /*	  
-ts: len=8
+TS nwords(1) = 8
 ts[ 0] 0x8555d101
 ts[ 1] 0xff102001
 ts[ 2] 0x3a010004
@@ -857,6 +866,31 @@ ts[ 5] 0x00000005
 ts[ 6] 0x02000000
 ts[ 7] 0x8d400008
 	  */
+
+      /*
+TS nwords(1) = 12
+ts[ 0] 0x85575001
+ts[ 1] 0xff112001
+ts[ 2] 0xfe010006
+ts[ 3] 0x00012f50
+ts[ 4] 0xeccff50f
+ts[ 5] 0x00000002
+ts[ 6] 0x00000000
+ts[ 7] 0x00000000
+ts[ 8] 0x00000000
+ts[ 9] 0x8d40000a
+ts[10] 0xfd4f1115
+ts[11] 0xfd4f1115
+      */
+
+vmeBusLock();
+    nblocks = tsGetNumberOfBlocksInBuffer();
+vmeBusUnlock();
+    //if(nblocks!=1/*block_level*/)
+    {
+      //printf("TS nblocks(2) = %d\n",nblocks);fflush(stdout);
+    }
+
 
 
       BANKOPEN(0xe10A,1,rol->pid);
@@ -1197,7 +1231,7 @@ __status()
 #else
 
 void
-fadc1_dummy()
+trig1_dummy()
 {
   return;
 }

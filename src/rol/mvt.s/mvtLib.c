@@ -237,6 +237,7 @@ char *mvtRocId2SysName( int roc_id )
     else if( roc_id == 0x51 ) return "FMT"; // 81 mvt3
     else if( roc_id == 0x4B ) return "FTT"; // 75 mmft1
     else if( roc_id == 0x3F ) return "JTB"; // 63 svt3
+    else if( roc_id == 0x4F ) return "ART"; // 79 alert1
     else if( roc_id == 0x01 ) return "STB"; //  1 sedipcq156
     else                      return "UKN";
 }
@@ -248,6 +249,7 @@ int mvtRocName2RocId( char *roc_str )
 	else if( strcmp( roc_str, "mvt3"       ) == 0 ) return 0x51; // 81 mvt3
 	else if( strcmp( roc_str, "mmft1"      ) == 0 ) return 0x4B; // 75 mmft1
 	else if( strcmp( roc_str, "svt3"       ) == 0 ) return 0x3F; // 63 svt3
+        else if( strcmp( roc_str, "alert1"     ) == 0 ) return 0x4F; // 79 alert1
 	else if( strcmp( roc_str, "sedipcq156" ) == 0 ) return 0x01; //  1 sedipcq156
 	else                                            return 0x00; // Unknown
 }
@@ -259,6 +261,7 @@ char *mvtRocId2RocName( int roc_id )
     else if( roc_id == 0x51 ) return "mvt3";       // 81 mvt3
     else if( roc_id == 0x4B ) return "mmft1";      // 75 mmft1
     else if( roc_id == 0x3F ) return "svt3";       // 63 svt3
+    else if( roc_id == 0x4F ) return "alert1";     // 79 alert1
     else if( roc_id == 0x01 ) return "sedipcq156"; //  1 sedipcq156
     else                      return "UKN";
 }

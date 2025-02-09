@@ -3,8 +3,11 @@
 DVCS Trigger System simulation */
  
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
  
 #include "bosio.h"
+
 #define NBCS 700000
 #include "bcs.h"
 

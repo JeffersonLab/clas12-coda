@@ -46,6 +46,7 @@ extern char confFile[256]; /* defined in coda_ebc.c */
 /* _decode_ functions decodes input banks headers and bump 'dabufp' pointers to the first data word */
 
 
+
 /* decode fragment header */
 int 
 CODA_decode_frag(unsigned int **datap, evDesc desc)
@@ -106,7 +107,7 @@ CODA_decode_spec(unsigned int **datap, evDesc desc)
   desc->type  = ((*datap)[1] >> 16) & 0x00ff;
   SOFT_TRIG_FIX;
   marker = (*datap)[1] & 0xffff;
-  desc->time = (*datap)[2];
+  desc->time_ = (*datap)[2];
 
 
 desc->soe = *datap;
@@ -226,7 +227,7 @@ CODA_encode_spec(unsigned int **datap, evDesc desc)
   (*datap)[3] = 0x01CC | (desc->type << 16);
 #endif
 
-  (*datap)[4] = desc->time;
+  (*datap)[4] = desc->time_;
 
 
   switch(desc->type)

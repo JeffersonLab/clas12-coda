@@ -11,7 +11,7 @@ static int nusertrig, ndone;
 
 #undef DMA_TO_BIGBUF /*if want to dma directly to the big buffers*/
 
-#undef USE_FADC250
+#define USE_FADC250
 #undef USE_DSC2
 #undef USE_V1190
 #undef USE_SSP
@@ -394,25 +394,25 @@ __download()
   int fadc_mode = 1, iFlag = 0;
   int ich, NSA, NSB;
   unsigned int maxA32Address;
-  unsigned int fadcA32Address = 0x09000000;
+  unsigned int fadcA32Address = 0x0A000000; //0x09000000 is used by mvtSSP
 #endif
 
 /********************************************************************
  * MVT START : Download
  *******************************************************************/
 #ifdef USE_MVT
-	char log_message[256];
+  char log_message[256];
 /*
-	char logfilename[128];
-	char logfilename_backup[128];
-	char log_file_perms[16];
-	struct stat log_stat;   
-	// time variables
-	time_t      cur_time;
-	struct tm  *time_struct;
-	char *env_home;
-	char tmp_dir[512];
-	char mkcmd[512];
+  char logfilename[128];
+  char logfilename_backup[128];
+  char log_file_perms[16];
+  struct stat log_stat;   
+  // time variables
+  time_t      cur_time;
+  struct tm  *time_struct;
+  char *env_home;
+  char tmp_dir[512];
+  char mkcmd[512];
 */
 #endif
 /********************************************************************
@@ -998,11 +998,11 @@ vmeBusUnlock();
  * MVT START : Download
  *******************************************************************/
 #ifdef USE_MVT
-	// Start by managing the log file
-	if( (ret = mvtManageLogFile( &mvt_fptr_err_1, rol->pid, 1, "Coda" ) ) < 0 )
-	{
-		fprintf( stderr, "%s: mvtManageLogFile failed to open log file 1 for %s roc_id %d\n", __FUNCTION__, mvtRocId2SysName( rol->pid ), rol->pid );
-	}
+  // Start by managing the log file
+  if( (ret = mvtManageLogFile( &mvt_fptr_err_1, rol->pid, 1, "Coda" ) ) < 0 )
+  {
+    fprintf( stderr, "%s: mvtManageLogFile failed to open log file 1 for %s roc_id %d\n", __FUNCTION__, mvtRocId2SysName( rol->pid ), rol->pid );
+  }
 /*
 	// Get current time
 	cur_time = time(NULL);
@@ -1089,73 +1089,70 @@ vmeBusUnlock();
 		fflush( mvt_fptr_err_1 );
 	}
 */
-	printf("\nMVT: start\n\n");
-	printf("\nMVT: !!!!!!!!!!!!!!!!!!!!! confFile=%s, rolnum=%d, rolpid=%d\n\n", rol->confFile,rol->runNumber, rol->pid );
 
-	// Do Config here
-	vmeBusLock();
-		nmvt = mvtConfig("", rol->runNumber, rol->pid );
-	vmeBusUnlock();
+  printf("\nMVT: start\n\n");
+  printf("\nMVT: !!!!!!!!!!!!!!!!!!!!! confFile=%s, rolnum=%d, rolpid=%d\n\n", rol->confFile,rol->runNumber, rol->pid );
 
-	if( ( nmvt <= 0 ) || (3 <= nmvt) )
-	{
-		sprintf( log_message, "%s: wrong number of BEUs %d in %s crate %d; must be in [1;3] range",
+  // Do Config here
+vmeBusLock();
+  nmvt = mvtConfig("", rol->runNumber, rol->pid );
+vmeBusUnlock();
+
+  if( ( nmvt <= 0 ) || (3 <= nmvt) )
+  {
+    sprintf( log_message, "%s: wrong number of BEUs %d in %s crate %d; must be in [1;3] range - try to download again",
 			__FUNCTION__, nmvt, mvtRocId2SysName( rol->pid ), rol->pid );
-		fprintf(stderr, "%s\n", log_message );
-		if( mvt_fptr_err_1 != (FILE *)NULL )
-		{
-			fprintf(mvt_fptr_err_1, "%s\n", log_message );
-			fflush( mvt_fptr_err_1 );
-		}
-		UDP_user_request(MSGERR, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
-		UDP_user_request(MSGERR, "rol1", log_message);
-		UDP_user_request(MSGERR, "rol1", "Try to download again");
-		UDP_user_request(MSGERR, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
-	}
-	else
-	{
-		sprintf( log_message, "%s: found number of BEUs %d in %s crate %d",
+    fprintf(stderr, "%s\n", log_message );
+    if( mvt_fptr_err_1 != (FILE *)NULL )
+    {
+      fprintf(mvt_fptr_err_1, "%s\n", log_message );
+      fflush( mvt_fptr_err_1 );
+    }
+    UDP_user_request(MSGERR, "rol1mvt", log_message);
+    printf("%s\n",log_message);
+  }
+  else
+  {
+    sprintf( log_message, "%s: found number of BEUs %d in %s crate %d",
 			__FUNCTION__, nmvt, mvtRocId2SysName( rol->pid ), rol->pid );
-		fprintf( stdout, "%s\n", log_message );
-		UDP_user_request(MSGINF, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
-		UDP_user_request(MSGINF, "rol1", log_message);
-		UDP_user_request(MSGINF, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
-	}
+    fprintf( stdout, "%s\n", log_message );
+    UDP_user_request(MSGINF, "rol1mvt", log_message);
+    printf("%s\n",log_message);
+  }
 
-	// Set SD active slots
-	mvtSlotMask=0;
-	for(id=0; id<nmvt; id++)
-	{
-		MVT_SLOT = mvtSlot(id);		// no VME access here 
-		mvtSlotMask |= (1<<MVT_SLOT);
-		printf("=======================> mvtSlotMask=0x%08x\n",mvtSlotMask);
-	}
+  // Set SD active slots
+  mvtSlotMask=0;
+  for(id=0; id<nmvt; id++)
+  {
+    MVT_SLOT = mvtSlot(id);		// no VME access here 
+    mvtSlotMask |= (1<<MVT_SLOT);
+    printf("=======================> mvtSlotMask=0x%08x\n",mvtSlotMask);
+  }
 
-	vmeBusLock();
-		// To be understood during the merging
-		// For now sdInit(1) is done in mvtLib
-//		ret = sdInit(1);   /* Initialize the SD library */
-		ret = 1;
-		if( ret >= 0 )
-		{
-			sdSetActiveVmeSlots(mvtSlotMask);
-			sdStatus(1);
-		}
-		else
-		{
-			sprintf( log_message, "%s: sdInit(1) failed with %d in %s crate %d",
+vmeBusLock();
+  // To be understood during the merging
+  // For now sdInit(1) is done in mvtLib
+  // ret = sdInit(1);   /* Initialize the SD library */
+  ret = 1;
+  if( ret >= 0 )
+  {
+    sdSetActiveVmeSlots(mvtSlotMask);
+    sdStatus(1);
+  }
+  else
+  {
+    sprintf( log_message, "%s: sdInit(1) failed with %d in %s crate %d",
 				__FUNCTION__, ret, mvtRocId2SysName( rol->pid ), rol->pid );
-			fprintf( stdout, "%s\n", log_message );
-			if( mvt_fptr_err_1 != (FILE *)NULL )
-			{
-				fprintf(mvt_fptr_err_1, "%s\n", log_message );
-				fflush( mvt_fptr_err_1 );
-			}
-			UDP_user_request(MSGERR, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
-			UDP_user_request(MSGERR, "rol1", log_message);
-			UDP_user_request(MSGERR, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
-		}
-	vmeBusUnlock();
+    fprintf( stdout, "%s\n", log_message );
+    if( mvt_fptr_err_1 != (FILE *)NULL )
+    {
+      fprintf(mvt_fptr_err_1, "%s\n", log_message );
+      fflush( mvt_fptr_err_1 );
+    }
+    UDP_user_request(MSGERR, "rol1mvt", log_message);
+    printf("%s\n",log_message);
+  }
+vmeBusUnlock();
 
 #endif // #ifdef USE_MVT
 /********************************************************************
@@ -1164,6 +1161,7 @@ vmeBusUnlock();
 
   sprintf(rcname,"RC%02d",rol->pid);
   printf("rcname >%4.4s<\n",rcname);
+
 
 #ifdef SSIPC
   sprintf(ssname,"%s_%s",getenv("HOST"),rcname);
@@ -1195,19 +1193,19 @@ __prestart()
  * MVT START : Prestart
  *******************************************************************/
 #ifdef USE_MVT
-	char log_message[256];
+  char log_message[256];
 /*
-	// Log file variables
-	char logfilename[128];
-	char logfilename_backup[128];
-	char log_file_perms[16];
-	struct stat log_stat;   
-	// time variables
-	time_t      cur_time;
-	struct tm  *time_struct;
-	char *env_home;
-	char tmp_dir[512];
-	char mkcmd[512];
+  // Log file variables
+  char logfilename[128];
+  char logfilename_backup[128];
+  char log_file_perms[16];
+  struct stat log_stat;   
+  // time variables
+  time_t      cur_time;
+  struct tm  *time_struct;
+  char *env_home;
+  char tmp_dir[512];
+  char mkcmd[512];
 */
 #endif
 /********************************************************************
@@ -1516,11 +1514,11 @@ vmeBusUnlock();
  * MVT START : Prestart
  *******************************************************************/
 #ifdef USE_MVT
-	// Start by managing the log file
-	if( (ret = mvtManageLogFile( &mvt_fptr_err_1, rol->pid, 1, "Coda" ) ) < 0 )
-	{
-		fprintf( stderr, "%s: mvtManageLogFile failed to open log file 1 for %s roc_id %d\n", __FUNCTION__, mvtRocId2SysName( rol->pid ), rol->pid );
-	}
+  // Start by managing the log file
+  if( (ret = mvtManageLogFile( &mvt_fptr_err_1, rol->pid, 1, "Coda" ) ) < 0 )
+  {
+    fprintf( stderr, "%s: mvtManageLogFile failed to open log file 1 for %s roc_id %d\n", __FUNCTION__, mvtRocId2SysName( rol->pid ), rol->pid );
+  }
 /*
 	// Get current time
 	cur_time = time(NULL);
@@ -1607,79 +1605,82 @@ vmeBusUnlock();
 			time_struct->tm_hour, time_struct->tm_min );
   }
   */
-	if( mvt_fptr_err_1 != (FILE *)NULL )
-	{
-		fprintf( mvt_fptr_err_1,"%s : Information below concerns run %d tiMaster=%d\n", __FUNCTION__, rol->runNumber, tiMaster );
-		fflush(  mvt_fptr_err_1 );
-	}
 
-	if(nmvt>0)
-	{
-		vmeBusLock();
-			ret = mvtPrestart();
-		vmeBusUnlock();
+  if( mvt_fptr_err_1 != (FILE *)NULL )
+  {
+    fprintf( mvt_fptr_err_1,"%s : Information below concerns run %d tiMaster=%d\n", __FUNCTION__, rol->runNumber, tiMaster );
+    fflush(  mvt_fptr_err_1 );
+  }
+
+  if(nmvt>0)
+  {
+vmeBusLock();
+    ret = mvtPrestart();
+vmeBusUnlock();
 
     printf("Set BUSY from SWB for MVTs\n");
-    vmeBusLock();
-      tiSetBusySource(TI_BUSY_SWB,0);
-    vmeBusUnlock();
+vmeBusLock();
+    tiSetBusySource(TI_BUSY_SWB,0);
+vmeBusUnlock();
 
-		if(ret<=0)
-		{
-			sprintf( log_message, "%s: mvtPrestart failed with %d in %s crate %d",
-				__FUNCTION__, ret, mvtRocId2SysName( rol->pid ), rol->pid );
-			fprintf(stderr, "%s\n", log_message );
-			if( mvt_fptr_err_1 != (FILE *)NULL )
-			{
-				fprintf(mvt_fptr_err_1, "%s\n", log_message );
-				fflush( mvt_fptr_err_1 );
-			}
-			UDP_user_request(MSGERR, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
-			UDP_user_request(MSGERR, "rol1", log_message);
-			UDP_user_request(MSGERR, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
-		}
-		else
-		{
-			sprintf( log_message, "%s: found number of FEUs %d in %s crate %d with %d BEUs",
-				__FUNCTION__, ret, mvtRocId2SysName( rol->pid ), rol->pid, nmvt );
-			fprintf( stdout, "%s\n", log_message );
-			UDP_user_request(MSGINF, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
-			UDP_user_request(MSGINF, "rol1", log_message);
-			UDP_user_request(MSGINF, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
-		}
-		block_level = tiGetCurrentBlockLevel();
+    if(ret<=0)
+    {
+      sprintf( log_message, "%s: mvtPrestart failed with %d in %s crate %d",
+	      __FUNCTION__, ret, mvtRocId2SysName( rol->pid ), rol->pid );
+      fprintf(stderr, "%s\n", log_message );
+      if( mvt_fptr_err_1 != (FILE *)NULL )
+      {
+	fprintf(mvt_fptr_err_1, "%s\n", log_message );
+	fflush( mvt_fptr_err_1 );
+      }
+      UDP_user_request(MSGERR, "rol1mvt", log_message);
+      printf("%s\n",log_message);
+
+      nmvt=0; /*sergey: it will prvent feather operations with MVT*/
+    }
+    else
+    {
+      sprintf( log_message, "%s: found number of FEUs %d in %s crate %d with %d BEUs",
+	      __FUNCTION__, ret, mvtRocId2SysName( rol->pid ), rol->pid, nmvt );
+      fprintf( stdout, "%s\n", log_message );
+      UDP_user_request(MSGINF, "rol1mvt", log_message);
+      printf("%s\n",log_message);
+    }
+
+    block_level = tiGetCurrentBlockLevel();
     if( (block_level < 0) || (block_level > MAXEVENT) )
     {
-			sprintf( log_message, "%s: mvtPrestart in %s crate %d: unsupported TI block_level=%d; must be in [1;%d] range",
-				__FUNCTION__, mvtRocId2SysName( rol->pid ), rol->pid, block_level, MAXEVENT );
-			fprintf(stderr, "%s\n", log_message );
-			if( mvt_fptr_err_1 != (FILE *)NULL )
-			{
-				fprintf(mvt_fptr_err_1, "%s\n", log_message );
-				fflush( mvt_fptr_err_1 );
-			}
-			UDP_user_request(MSGERR, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
-			UDP_user_request(MSGERR, "rol1", log_message);
-			UDP_user_request(MSGERR, "rol1", "!!!!!!!!!!!!!!!!!!!!!");
+      sprintf( log_message, "%s: mvtPrestart in %s crate %d: unsupported TI block_level=%d; must be in [1;%d] range",
+	      __FUNCTION__, mvtRocId2SysName( rol->pid ), rol->pid, block_level, MAXEVENT );
+      fprintf(stderr, "%s\n", log_message );
+      if( mvt_fptr_err_1 != (FILE *)NULL )
+      {
+	fprintf(mvt_fptr_err_1, "%s\n", log_message );
+	fflush( mvt_fptr_err_1 );
+      }
+      UDP_user_request(MSGERR, "rol1mvt", log_message);
+      printf("%s\n",log_message);
+
+      //nmvt=0; /*sergey: it will prevent feather operations with MVT*/
     }
-		mvtSetCurrentBlockLevel( block_level );
-		if( mvt_fptr_err_1 != (FILE *)NULL )
-		{
-			fprintf(mvt_fptr_err_1, "%s; mvt block level set to %d \n", __FUNCTION__, block_level);
-			fflush( mvt_fptr_err_1 );
-		}
+    mvtSetCurrentBlockLevel( block_level );
+    if( mvt_fptr_err_1 != (FILE *)NULL )
+    {
+      fprintf(mvt_fptr_err_1, "%s; mvt block level set to %d \n", __FUNCTION__, block_level);
+      fflush( mvt_fptr_err_1 );
+    }
 /*
-		vmeBusLock();
-			mvtPrestart();
-		vmeBusUnlock();
+vmeBusLock();
+    mvtPrestart();
+vmeBusUnlock();
 */
-		mvt_to_cntr = 0;
-		mvt_to.tv_sec  = 0;
-		mvt_to.tv_usec = 90000;
-		mvt_max_wait.tv_sec  = 0;
-		mvt_max_wait.tv_usec  = 0;
-		mvt_max_to_iter = 0;
-	}
+    mvt_to_cntr = 0;
+    mvt_to.tv_sec  = 0;
+    mvt_to.tv_usec = 90000;
+    mvt_max_wait.tv_sec  = 0;
+    mvt_max_wait.tv_usec  = 0;
+    mvt_max_to_iter = 0;
+  }
 #endif // #ifdef USE_MVT
 /********************************************************************
  * MVT END : Prestart
@@ -1923,20 +1924,20 @@ vmeBusUnlock();
  * MVT START : End
  *******************************************************************/
 #ifdef USE_MVT
-	if(nmvt>0)
-	{
-		vmeBusLock();
-			mvtEnd();
-		vmeBusUnlock();		
-		if( mvt_fptr_err_1 != (FILE *)NULL )
-		{
-			mvtClrLogFilePointer();
-			fprintf(mvt_fptr_err_1,"%s: mvt had to wait %d sec & %d us and iterate %d times\n", __FUNCTION__, mvt_max_wait.tv_sec, mvt_max_wait.tv_usec, mvt_max_to_iter );
-			fflush( mvt_fptr_err_1 );
-			fclose( mvt_fptr_err_1 );
-			mvt_fptr_err_1 = (FILE *)NULL;
-		}
-	}
+  if(nmvt>0)
+  {
+vmeBusLock();
+    mvtEnd();
+vmeBusUnlock();		
+    if( mvt_fptr_err_1 != (FILE *)NULL )
+    {
+      mvtClrLogFilePointer();
+      fprintf(mvt_fptr_err_1,"%s: mvt had to wait %d sec & %d us and iterate %d times\n", __FUNCTION__, mvt_max_wait.tv_sec, mvt_max_wait.tv_usec, mvt_max_to_iter );
+      fflush( mvt_fptr_err_1 );
+      fclose( mvt_fptr_err_1 );
+      mvt_fptr_err_1 = (FILE *)NULL;
+    }
+  }
 #endif // #ifdef USE_MVT
 /********************************************************************
  * MVT END : End
@@ -2101,12 +2102,12 @@ vmeBusUnlock();
  * MVT START : go
  *******************************************************************/
 #ifdef USE_MVT
-	if(nmvt>0)
-	{
-	vmeBusLock();
-		mvtGo();
-	vmeBusUnlock();
-	}
+  if(nmvt>0)
+  {
+vmeBusLock();
+    mvtGo();
+vmeBusUnlock();
+  }
 #endif // #ifdef USE_MVT
 /********************************************************************
  * MVT END : gp
@@ -2161,23 +2162,23 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
  * USE_FADC250 and USE_MVT
  *******************************************************************/
 #if defined(USE_FADC250) || defined(USE_MVT)
-	unsigned int datascan, mask;
-	int id;
-	int dCnt, idata;
+  unsigned int datascan, mask;
+  int id;
+  int dCnt, idata;
 #endif
 
 /********************************************************************
  * MVT START : usrtrig
  *******************************************************************/
 #ifdef USE_MVT
-//	int id;
-//	int dCnt, idata;
-	int mvtgbr;
-	int mvt_to_iter;
-	// Software timeout for the MVT readout0
-	struct timeval mvt_t0;
-	struct timeval mvt_t1;
-	struct timeval mvt_dt;
+//  int id;
+//  int dCnt, idata;
+  int mvtgbr;
+  int mvt_to_iter;
+  // Software timeout for the MVT readout0
+  struct timeval mvt_t0;
+  struct timeval mvt_t1;
+  struct timeval mvt_dt;
 #endif
 /********************************************************************
  * MVT END : usrtrig
@@ -2244,12 +2245,12 @@ vmeBusUnlock();
  * MVT START : usrtrig
  *******************************************************************/
 #ifdef USE_MVT
-			if( mvt_fptr_err_1 != (FILE *)NULL )
-			{
-				fprintf(mvt_fptr_err_1, "ERROR in tiReadBlock : No data or error, len = %d\n",len);
-				mvtTiStatusDump(1, mvt_fptr_err_1);
-				fflush( mvt_fptr_err_1);
-			}
+      if( mvt_fptr_err_1 != (FILE *)NULL )
+      {
+	fprintf(mvt_fptr_err_1, "ERROR in tiReadBlock : No data or error, len = %d\n",len);
+	mvtTiStatusDump(1, mvt_fptr_err_1);
+	fflush( mvt_fptr_err_1);
+      }
 #endif
 /********************************************************************
  * MVT END : usrtrig
@@ -2476,77 +2477,78 @@ vmeBusUnlock();
  * MVT START : usrtrig
  *******************************************************************/
 #ifdef USE_MVT
-		if(nmvt>0)
-		{
-			gettimeofday(&mvt_t0, 0);
-			mvt_to_iter = 0;
-			do
-			{
-				vmeBusLock();
-					mvtgbr = mvtGBReady(rol->pid);
-				vmeBusUnlock();
-				if( mvtgbr == mvtSlotMask ) 
-				{
-					break;
-				}
-				mvt_to_iter++;
-				gettimeofday(&mvt_t1, 0);
-				timersub(&mvt_t1,&mvt_t0,&mvt_dt);
-			} while( timercmp(&mvt_dt,&mvt_to,<) );
-			if( mvtgbr != mvtSlotMask )
-			{
-				mvt_to_cntr++;
-				printf("MVT NOT READY: gbready=0x%08x, expect 0x%08x, to_cntr=%d EVENT_NUMBER=%d\n", mvtgbr, mvtSlotMask, mvt_to_cntr, EVENT_NUMBER);
-				if( mvt_fptr_err_1 != (FILE *)NULL )
-				{
-					fprintf(mvt_fptr_err_1, "MVT NOT READY: gbready=0x%08x, expect 0x%08x, to_cntr=%d EVENT_NUMBER=%d\n", mvtgbr, mvtSlotMask, mvt_to_cntr, EVENT_NUMBER);
-					if( mvt_to_cntr <= 5 )
-						mvtStatusDump(0, mvt_fptr_err_1);
-					if( mvt_to_cntr = 5 )
-						fprintf(mvt_fptr_err_1, "Too many timeouts; mvtStatusDump will not be called any more\n");
-					fflush( mvt_fptr_err_1 );
-				}
-			}
-			else
-			{
-				if( mvt_to_iter )
-				{
-					if( mvt_max_to_iter < mvt_to_iter )
-						mvt_max_to_iter = mvt_to_iter;
-					if( timercmp(&mvt_max_wait, &mvt_dt,<) )
-					{
-						mvt_max_wait.tv_sec = mvt_dt.tv_sec;
-						mvt_max_wait.tv_usec = mvt_dt.tv_usec;
-					}
-				}
+    if(nmvt>0)
+    {
+      gettimeofday(&mvt_t0, 0);
+      mvt_to_iter = 0;
+      do
+      {
+        vmeBusLock();
+	mvtgbr = mvtGBReady(rol->pid);
+	vmeBusUnlock();
+	if( mvtgbr == mvtSlotMask ) 
+	{
+	  break;
+	}
+	mvt_to_iter++;
+	gettimeofday(&mvt_t1, 0);
+	timersub(&mvt_t1,&mvt_t0,&mvt_dt);
+      } while( timercmp(&mvt_dt,&mvt_to,<) );
+      if( mvtgbr != mvtSlotMask )
+      {
+        mvt_to_cntr++;
+	printf("MVT NOT READY: gbready=0x%08x, expect 0x%08x, to_cntr=%d EVENT_NUMBER=%d\n", mvtgbr, mvtSlotMask, mvt_to_cntr, EVENT_NUMBER);
+	if( mvt_fptr_err_1 != (FILE *)NULL )
+	{
+	  fprintf(mvt_fptr_err_1, "MVT NOT READY: gbready=0x%08x, expect 0x%08x, to_cntr=%d EVENT_NUMBER=%d\n", mvtgbr, mvtSlotMask, mvt_to_cntr, EVENT_NUMBER);
+	  if( mvt_to_cntr <= 5 )
+	    mvtStatusDump(0, mvt_fptr_err_1);
+	  if( mvt_to_cntr = 5 )
+	    fprintf(mvt_fptr_err_1, "Too many timeouts; mvtStatusDump will not be called any more\n");
+	  fflush( mvt_fptr_err_1 );
+	}
+      }
+      else
+      {
+	if( mvt_to_iter )
+	{
+	  if( mvt_max_to_iter < mvt_to_iter )
+	    mvt_max_to_iter = mvt_to_iter;
+	  if( timercmp(&mvt_max_wait, &mvt_dt,<) )
+	  {
+	    mvt_max_wait.tv_sec = mvt_dt.tv_sec;
+	    mvt_max_wait.tv_usec = mvt_dt.tv_usec;
+	  }
+	}
 
-				vmeBusLock();
-					len = mvtReadBlock(rol->pid,tdcbuf,1000000,1);
-					//printf("ROL1: mvt len = %d words\n",len);
-				vmeBusUnlock();
-				if(len>0)
-				{
+vmeBusLock();
+	len = mvtReadBlock(rol->pid,tdcbuf,1000000,1);
+	//printf("ROL1: mvt len = %d words\n",len);
+vmeBusUnlock();
+
+	if(len>0)
+	{
 /*
-		                        if( mvt_fptr_err_1 != (FILE *)NULL )
-               			        {
-                     		          	fprintf(mvt_fptr_err_1, "%s: MVT block len=%d\n",__FUNCTION__, len);
-                        		        fflush( mvt_fptr_err_1);
-                      			 }
+	  if( mvt_fptr_err_1 != (FILE *)NULL )
+          {
+            fprintf(mvt_fptr_err_1, "%s: MVT block len=%d\n",__FUNCTION__, len);
+            fflush( mvt_fptr_err_1);
+          }
 */
-					BANKOPEN(0xe118,1,rol->pid);
+	  BANKOPEN(0xe118,1,rol->pid);
 #ifdef DEBUG_MVT
-					if( mvt_fptr_err_1 != (FILE *)NULL )
-					{
-						fprintf(mvt_fptr_err_1,"%s : mvt data len=%d to be copied to rol->dabufp=0x%08x first data=0x%08x\n",
-							__FUNCTION__, len, rol->dabufp, tdcbuf[00] );
-						fflush( mvt_fptr_err_1 );
-					}
+	  if( mvt_fptr_err_1 != (FILE *)NULL )
+	  {
+	    fprintf(mvt_fptr_err_1,"%s : mvt data len=%d to be copied to rol->dabufp=0x%08x first data=0x%08x\n",
+		    __FUNCTION__, len, rol->dabufp, tdcbuf[00] );
+	    fflush( mvt_fptr_err_1 );
+	  }
 #endif
-					for(jj=0; jj<len; jj++) *rol->dabufp++ = tdcbuf[jj];
-					BANKCLOSE;
-				}
-			}
-   		} // if(nmvt>0)
+	  for(jj=0; jj<len; jj++) *rol->dabufp++ = tdcbuf[jj];
+	  BANKCLOSE;
+	}
+      }
+    } // if(nmvt>0)
 #endif // #ifdef USE_MVT
 /********************************************************************
  * MVT END : usrtrig
@@ -2603,6 +2605,11 @@ vmeBusUnlock();
     }
 #endif /* USE_SSP */
 #endif
+
+
+
+
+
 
 #ifdef USE_FADC250
 

@@ -455,6 +455,72 @@ bool CrateMsgClient::ReadScalers(int slot, unsigned int **val, int *len)
 
 
 
+// same as ReadScalers() but without memory allocation
+
+bool CrateMsgClient::GetScalers(int slot, unsigned int *val, int *len)
+{
+  int lenout;
+
+  if(!CheckConnection(__FUNCTION__)) return kFALSE;
+
+  Msg.type = SCALER_SERVER_READ_BOARD;
+  Msg.len = 8;
+  Msg.msg.m_Cmd_ReadScalers.cnt = 70; /* ignored by server */
+  Msg.msg.m_Cmd_ReadScalers.slot = slot;
+
+  //printf("CrateMsgClient::GetScalers: befor cnt %d %d\n",Msg.msg.m_Cmd_ReadScalers.cnt,Msg.msg.m_Cmd_ReadScalers_Rsp.cnt);fflush(stdout);
+  SendRaw(&Msg, Msg.len+8);
+  //printf("CrateMsgClient::GetScalers: after SendRaw()\n");fflush(stdout);
+
+  if(RcvRsp(Msg.type))
+  {
+    //printf("CrateMsgClient::GetScalers: after cnt %d %d\n",Msg.msg.m_Cmd_ReadScalers.cnt,Msg.msg.m_Cmd_ReadScalers_Rsp.cnt);fflush(stdout);
+    if(swap)
+    {
+      Msg.msg.m_Cmd_ReadScalers_Rsp.cnt = LSWAP(Msg.msg.m_Cmd_ReadScalers_Rsp.cnt);
+    }
+
+    // check output buffer length
+    if( (*len) < Msg.msg.m_Cmd_ReadScalers_Rsp.cnt )
+    {
+      printf("CrateMsgClient::GetScalers: want to send %d words, but not enough space in output buffer (%d words) - will truncate\n",
+             Msg.msg.m_Cmd_ReadScalers_Rsp.cnt,(*len));fflush(stdout);
+      lenout = (*len);
+    }
+    else
+    {
+      lenout = Msg.msg.m_Cmd_ReadScalers_Rsp.cnt;
+    }
+
+    *len = lenout;
+    //printf("CrateMsgClient::GetScalers: *len=%d\n",*len);fflush(stdout);
+
+    if(swap)
+    {
+      for(int i = 0; i < lenout; i++)
+      {
+	val[i] = LSWAP(Msg.msg.m_Cmd_ReadScalers_Rsp.vals[i]);
+      }
+    }
+    else
+    {
+      for(int i = 0; i < lenout; i++)
+      {
+	val[i] = Msg.msg.m_Cmd_ReadScalers_Rsp.vals[i];
+	//printf("[%2d] 0x%08x\n",i,val[i]);fflush(stdout);
+      }
+    }
+
+    return kTRUE;
+  }
+
+  return kFALSE;
+}
+
+
+
+
+
 bool CrateMsgClient::ReadData(int slot, unsigned int **val, int *len)
 {
   if(!CheckConnection(__FUNCTION__)) return kFALSE;

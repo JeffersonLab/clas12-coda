@@ -381,12 +381,8 @@ XcodaEditorIconBox(Widget parent)
   /*XtSetArg(args[ac], XmNwidth, 75); ac++;*/
   XtSetArg(args[ac], XmNheight,105); ac++;
 
-printf("14\n");
-
   sc = XtCreateManagedWidget("icon_sw", xmScrolledWindowWidgetClass,
 			     parent, args, ac);
-
-printf("15\n");
 
   ac = 0;
 

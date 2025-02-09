@@ -37,7 +37,7 @@ evOpenBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum
 
   if(evLinkBank(buf, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data1) > 0)
   {
-    printf("evOpenBank ERROR: bank tag=%d num=%d exist already\n",banktag,banknum);
+    printf("evOpenBank ERROR: bank tag=%d num=%d exist already at ind=%d\n",banktag,banknum,ind_data1);
     return(0);
   }
 
@@ -298,7 +298,7 @@ evOpenFrag(unsigned int *buf, int fragtag, int fragnum)
   /* if fragment exist, cannot create it */
   if(evLinkFrag(buf, fragtag, fragnum) > 0)
   {
-    printf("evOpenFrag ERROR: fragment tag=%d num=%d exist already\n",fragtag,fragnum);
+    printf("evOpenFrag(evLinkFrag) ERROR: fragment tag=%d num=%d exist already\n",fragtag,fragnum);
     return(0);
   }
 
@@ -330,7 +330,7 @@ evLinkFrag(unsigned int *buf, int fragtag, int fragnum)
   while(ind<len)
   {
 #ifdef DEBUG
-    printf("evLinkFrag: ind=%d len=%d\n",ind,len);
+    printf("evLinkFrag: ind=%d len=%d\n",ind,len);fflush(stdout);
 #endif
     nw = buf[ind] + 1;
     tag1 = (buf[ind+1]>>16)&0xffff;
@@ -338,7 +338,7 @@ evLinkFrag(unsigned int *buf, int fragtag, int fragnum)
     typ1 = (buf[ind+1]>>8)&0x3f;
     num1 =  buf[ind+1]&0xff;
 #ifdef DEBUG
-    printf("evLinkFrag: tag1=%d typ1=%d\n",tag1,typ1);
+    printf("evLinkFrag: tag1=%d typ1=%d\n",tag1,typ1);fflush(stdout);
 #endif
 
     /*check if it is right fragment*/
@@ -347,7 +347,7 @@ evLinkFrag(unsigned int *buf, int fragtag, int fragnum)
 	  if(tag1==fragtag && (num1==fragnum || fragnum<0))
       {
 #ifdef DEBUG
-        printf("evLinkFrag: right frag, return ind=%d\n",ind);
+        printf("evLinkFrag: right frag, return ind=%d\n",ind);fflush(stdout);
 #endif
         return(ind);
       }
@@ -373,7 +373,9 @@ evCopyFrag(unsigned int *buf, int fragtag, int fragnum, unsigned int *bufout)
     return(-1);
   }
 
+#ifdef DEBUG
   printf("evCopyFrag: input frag ind=%d, header=%d 0x%08x\n",ind1,buf[ind1],buf[ind1+1]);
+#endif
   if(fragnum<0)
   {
     num = buf[ind1+1]&0xff;
@@ -382,20 +384,29 @@ evCopyFrag(unsigned int *buf, int fragtag, int fragnum, unsigned int *bufout)
   {
     num = fragnum;
   }
-  printf("evCopyFrag: input fragnum=%d\n",num);
-
+#ifdef DEBUG
+  printf("evCopyFrag: input fragnum=%d\n",num);fflush(stdout);
+#endif
   /* if output fragment exist, cannot create it */
   if( evLinkFrag(bufout, fragtag, num) > 0)
   {
-    printf("evCopyFrag ERROR: output fragment tag=%d num=%d exist already\n",fragtag,num);
+    printf("evCopyFrag ERROR: output fragment tag=%d num=%d exist already\n",fragtag,num);fflush(stdout);
     return(-1);
   }
-
+#ifdef DEBUG
+  printf("evCopyFrag: 111\n");fflush(stdout);
+#endif  
   ind2 = bufout[0] + 1; /* index of the first word after existing event */
 
   nw = buf[ind1]+1;
+#ifdef DEBUG
+  printf("evCopyFrag: ind2=%d nw=%d\n",ind2,nw);fflush(stdout);
+#endif
   memcpy(&bufout[ind2],&buf[ind1],nw<<2);
   bufout[0] += nw; /* increase event length */
+#ifdef DEBUG
+  printf("evCopyFrag: bufout[0]=%d\n",bufout[0]);fflush(stdout);
+#endif
 
   return(0);
 }
@@ -413,7 +424,9 @@ evCopyBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum
     return(-1);
   }
 
-  printf("evCopyFrag: input bank ind=%d, header=%d 0x%08x\n",ind1,buf[ind1],buf[ind1+1]);
+#ifdef DEBUG
+  printf("evCopyBank: input bank ind=%d, header=%d 0x%08x\n",ind1,buf[ind1],buf[ind1+1]);
+#endif
   if(fragnum<0)
   {
     num = buf[ind1+1]&0xff;
@@ -422,12 +435,14 @@ evCopyBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum
   {
     num = fragnum;
   }
-  printf("evCopyFrag: input fragnum=%d\n",num);
+#ifdef DEBUG
+  printf("evCopyBank: input fragnum=%d\n",num);
+#endif
 
   /* if output fragment exist, cannot create it */
   if( evLinkFrag(bufout, fragtag, num) > 0)
   {
-    printf("evCopyFrag ERROR: output fragment tag=%d num=%d exist already\n",fragtag,num);
+    printf("evCopyBank ERROR: output fragment tag=%d num=%d exist already\n",fragtag,num);
     return(-1);
   }
 

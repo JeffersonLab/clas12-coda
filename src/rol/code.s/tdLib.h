@@ -458,6 +458,7 @@ int tdGetNtds();
 /*from Alex Somov*/
 unsigned int tdReadScalers(int id, volatile unsigned int *data);
 
-
+/*sergey*/
+int tdPortIsUp(int id, int port);
 
 #endif /* TDLIB_H */

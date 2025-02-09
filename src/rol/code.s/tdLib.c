@@ -565,7 +565,7 @@ tdStatus(int id, int pflag)
       printf("  trigsrc        (0x%04lx) = 0x%08x\t", (unsigned long)(&TDp[id]->trigsrc) - TDBase, trigsrc);
       printf("  sync           (0x%04lx) = 0x%08x\n", (unsigned long)(&TDp[id]->sync) - TDBase, sync);
       printf("  busy           (0x%04lx) = 0x%08x\t", (unsigned long)(&TDp[id]->busy) - TDBase, busy);
-      printf("  blockBuffer    (0x%04lx) = 0x%08x\t", (unsigned long)(&TDp[id]->blockBuffer) - TDBase, blockBuffer);
+      printf("  blockBuffer    (0x%04lx) = 0x%08x\n", (unsigned long)(&TDp[id]->blockBuffer) - TDBase, blockBuffer);
 
       printf("  output         (0x%04lx) = 0x%08x\n", (unsigned long)(&TDp[id]->output) - TDBase, output);
 
@@ -2192,6 +2192,38 @@ tdGetConnectedFiberMask(int id)
   return rval;
 }
 
+
+/*sergey*/
+/*port from 1*/
+int
+tdPortIsUp(int id, int port)
+{
+  unsigned int fiber;
+
+  if(id==0) id=tdID[0];
+
+  if(TDp[id]==NULL)
+  {
+    printf("%s: ERROR: TD in slot %d not initialized\n",__FUNCTION__,id);
+    return ERROR;
+  }
+
+  if(port<1 || port>8)
+    {
+      printf("port=%d out of range, must be 1<=port<=8\n",port);
+      return ERROR;
+    }
+
+  TDLOCK;
+  fiber = vmeRead32(&TDp[id]->fiber);
+  TDUNLOCK;
+
+  if(!(fiber & TD_FIBER_CONNECTED_TI(port))) return(0);
+  else return(1);
+}
+/*sergey*/
+
+
 /**
  * @ingroup Status
  * @brief Returns the mask of fiber channels that report a "connected"
@@ -2446,6 +2478,9 @@ tdResetMGT(int id)
   TDUNLOCK;
   taskDelay(1);
 
+  //sergey
+  //sleep(1);
+
   return OK;
 }
 
@@ -2493,6 +2528,9 @@ tdResetFiber(int id)
   vmeWrite32(&TDp[id]->reset, TD_RESET_FIBER);
   TDUNLOCK;
   taskDelay(1);
+
+  //sergey
+  //sleep(1);
 
   return OK;
 }
@@ -3575,7 +3613,7 @@ tdGetNtds()
   * @brief Return BUSY counter for specified Busy Source
   * @param id Slot number
   * @return busy counters:
-      data[0]  -  data[7] -  Fiber,
+      data[0]  -  data[7] -  Fiber number
       data[8]  -  Loopback
       data[9]  -  Livetime
       data[10] -  Busytime

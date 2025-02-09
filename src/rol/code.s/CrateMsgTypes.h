@@ -31,7 +31,8 @@
 #define SCALER_TYPE_SSP         4
 #define SCALER_TYPE_TD          5
 #define SCALER_TYPE_TS          6
-#define SCALER_TYPE_MAX         7   /* the maximum number of different board types */
+#define  SCALER_TYPE_PETIROC    7
+#define SCALER_TYPE_MAX         8   /* the maximum number of different board types */
 
 
 #define SCALER_PARTYPE_THRESHOLD    0
@@ -208,26 +209,28 @@ typedef struct
   
   union
   {
-	Cmd_Read16				  m_Cmd_Read16;
-	Cmd_Read16_Rsp			  m_Cmd_Read16_Rsp;
-	Cmd_Write16				  m_Cmd_Write16;
-	Cmd_Read32				  m_Cmd_Read32;
-	Cmd_Read32_Rsp			  m_Cmd_Read32_Rsp;
-	Cmd_Write32				  m_Cmd_Write32;
-	Cmd_Delay				  m_Cmd_Delay;
+    Cmd_Read16		      m_Cmd_Read16;
+    Cmd_Read16_Rsp	      m_Cmd_Read16_Rsp;
+    Cmd_Write16		      m_Cmd_Write16;
+    Cmd_Read32		      m_Cmd_Read32;
+    Cmd_Read32_Rsp	      m_Cmd_Read32_Rsp;
+    Cmd_Write32		      m_Cmd_Write32;
+    Cmd_Delay		      m_Cmd_Delay;
 
-	Cmd_ReadScalers	          m_Cmd_ReadScalers;
-	Cmd_ReadScalers_Rsp	      m_Cmd_ReadScalers_Rsp;
-	Cmd_GetCrateMap	          m_Cmd_GetCrateMap;
-	Cmd_GetCrateMap_Rsp	      m_Cmd_GetCrateMap_Rsp;
-	Cmd_GetBoardParams	      m_Cmd_GetBoardParams;
-	Cmd_GetBoardParams_Rsp	  m_Cmd_GetBoardParams_Rsp;
-	Cmd_GetChannelParams	  m_Cmd_GetChannelParams;
-	Cmd_GetChannelParams_Rsp  m_Cmd_GetChannelParams_Rsp;
-	Cmd_SetChannelParams	  m_Cmd_SetChannelParams;
+    Cmd_ReadScalers	      m_Cmd_ReadScalers;
+    Cmd_ReadScalers_Rsp	      m_Cmd_ReadScalers_Rsp;
+    Cmd_GetCrateMap	      m_Cmd_GetCrateMap;
+    Cmd_GetCrateMap_Rsp	      m_Cmd_GetCrateMap_Rsp;
+    Cmd_GetBoardParams	      m_Cmd_GetBoardParams;
+    Cmd_GetBoardParams_Rsp    m_Cmd_GetBoardParams_Rsp;
+    Cmd_GetChannelParams      m_Cmd_GetChannelParams;
+    Cmd_GetChannelParams_Rsp  m_Cmd_GetChannelParams_Rsp;
+    Cmd_SetChannelParams      m_Cmd_SetChannelParams;
 
-	unsigned char			  m_raw[MAX_MSG_SIZE];
+    unsigned char	      m_raw[MAX_MSG_SIZE];
+
   } msg;
+
 } CrateMsgStruct;
 
 /*****************************************************/

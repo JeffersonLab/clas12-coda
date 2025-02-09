@@ -17,6 +17,13 @@
  *
  *----------------------------------------------------------------------------*/
 
+/*
+cd $CLON_PARMS/firmwares
+tiFirmwareUpdate 0xa80000 tip81.svf
+ */
+
+
+#if defined(VXWORKS) || defined(Linux_vme)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -787,4 +794,14 @@ tiFirmwareUsage()
   printf("\n");
 
 }
+#endif
+
+#else /* dummy version*/
+
+void
+main()
+{
+  exit(0);
+}
+
 #endif

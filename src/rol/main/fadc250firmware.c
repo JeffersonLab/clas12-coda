@@ -25,11 +25,11 @@ UNIX:
 
  cd $CLON_PARMS/firmwares
 
- fadc250firmware 1 fe_fadc_ctrl_b3.mcs
- fadc250firmware 2 fe_fadc_adc_1b05.mcs
-
  ##fadc250firmware 1 fe_fadc_ctrl_b3.mcs
- ##fadc250firmware 2 fe_fadc_adc_1b02.mcs
+ ##fadc250firmware 2 fe_fadc_adc_1b05.mcs
+
+ fadc250firmware 1 fe_fadc_ctrl_b3.mcs
+ fadc250firmware 2 fe_fadc_adc_1b02.mcs
 
  ##fadc250firmware 1 fe_fadc_ctrl_b2.mcs
  ##fadc250firmware 2 fe_fadc_adc_1b02.mcs

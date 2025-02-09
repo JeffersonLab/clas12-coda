@@ -54,7 +54,8 @@ typedef struct
 /* 0x0010-0x0013 */ volatile unsigned int    BoardId;
 /* 0x0014-0x0017 */ volatile unsigned int    ICAP;
 /* 0x0018-0x001B */ volatile unsigned int    FWRev;
-/* 0x001C-0x00FF */ BLANKRICH[(0x0100-0x001C)/4];
+/* 0x001C-0x001F */ volatile unsigned int    FWTime;
+/* 0x0020-0x00FF */ BLANKRICH[(0x0100-0x0020)/4];
 } RICH_clk;
 
 typedef struct
@@ -216,17 +217,9 @@ typedef struct
 /* 0x0008-0x000B */ volatile unsigned int    ErrAddrH;
 /* 0x000C-0x000F */ BLANKRICH[(0x0010-0x000C)/4];
 /* 0x0010-0x0013 */ volatile unsigned int    HeartBeatCnt;
-/* 0x0014-0x0017 */ volatile unsigned int    InitializationCnt;
-/* 0x0018-0x001B */ volatile unsigned int    ObservationCnt;
+/* 0x0014-0x001B */ BLANKRICH[(0x001C-0x0014)/4];
 /* 0x001C-0x001F */ volatile unsigned int    CorrectionCnt;
-/* 0x0020-0x0023 */ volatile unsigned int    ClassifactionCnt;
-/* 0x0024-0x0027 */ volatile unsigned int    InjectionCnt;
-/* 0x0028-0x002B */ volatile unsigned int    EssentialCnt;
-/* 0x002C-0x002F */ volatile unsigned int    UncorrectableCnt;
-/* 0x0030-0x0033 */ volatile unsigned int    RamAddr;
-/* 0x0034-0x0037 */ volatile unsigned int    RamWrData;
-/* 0x0038-0x003B */ volatile unsigned int    RamRdData;
-/* 0x003C-0x003F */ BLANKRICH[(0x0040-0x003C)/4];
+/* 0x0020-0x003F */ BLANKRICH[(0x0040-0x0020)/4];
 /* 0x0040-0x0043 */ volatile unsigned int    RegData;
 /* 0x0044-0x0047 */ volatile unsigned int    RegCtrl;
 /* 0x0048-0x004F */ BLANKRICH[(0x0050-0x0048)/4];
@@ -239,7 +232,10 @@ typedef struct
 /* 0x0068-0x006F */ BLANKRICH[(0x0070-0x0068)/4]; 
 /* 0x0070-0x0073 */ volatile unsigned int    FiberCtrl;
 /* 0x0074-0x0077 */ volatile unsigned int    FiberStatus;
-/* 0x0078-0x00FF */ BLANKRICH[(0x0100-0x0078)/4];
+/* 0x0078-0x007F */ BLANKRICH[(0x0080-0x0078)/4];
+/* 0x0080-0x0083 */ volatile unsigned int    FpgaRebootCtrl;
+/* 0x0084-0x0087 */ volatile unsigned int    FpgaRebootStatus;
+/* 0x0088-0x00FF */ BLANKRICH[(0x0100-0x0088)/4];
 } RICH_Testing;
 
 // Mux signal selection for SD->*Src registers
@@ -357,6 +353,16 @@ typedef struct
     int fpga_mgt_1v;
     int fpga_mgt_1_2v;
   } voltages;
+
+  // SEM
+  struct
+  {
+    int heartbeat;
+    int seu_cnt;
+  } sem;
+
+  // Event builder status
+  int eb_status;
 } sspRich_Monitor;
 
 
@@ -401,6 +407,7 @@ int sspRich_GetMarocReg(int id, int fiber, int chip, int reg, int channel, int *
 #define SSP_RICH_ASIC_TYPE_2MAROC         2
 #define SSP_RICH_ASIC_TYPE_3MAROC         3
 int sspRich_UpdateMarocRegs(int id, int fiber);
+int sspRich_UpdateMarocRegsAllFibers(int id);
 
 #define RICH_MAROC_REGS_WR      0
 #define RICH_MAROC_REGS_RD      1
@@ -417,5 +424,13 @@ int sspRich_Init(int id);
 int sspRich_FirmwareVerifyAll(int id, const char *filename);
 int sspRich_FirmwareVerify(int id, int fiber, const char *filename);
 int sspRich_FirmwareUpdate(int id, int fiber, const char *filename);
+int sspRich_RichSlot(int id, int image);
+int sspRich_RebootSlot(int id, int image);
+int sspRich_SEM_InjectError(int id, int fiber);
+
+// Parallel slot init functions
+int sspRich_GInit();
+int sspRich_GReboot(int image);
+int sspRich_GScanFibers();
 
 #endif

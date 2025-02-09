@@ -11,7 +11,7 @@ xprop -root | grep 00_00
 !!!
   xprop -root _NET_CLIENT_LIST
 
-when 'rocs' starts, 0x320003b added to the end
+when 'rocs' starts (as standalone, not as embedded), 0x320003b added to the end
 
 
 get the window ID of the currently active window:
@@ -40,18 +40,19 @@ XInternAtom(,'property name,) returns property ID
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <ctype.h>
 
-#include <X11/Intrinsic.h>
-#include <X11/Xatom.h>
-#include <X11/StringDefs.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
+//#include <X11/Intrinsic.h>
+//#include <X11/Xatom.h>
+//#include <X11/StringDefs.h>
+//#include <X11/Xlib.h>
+//#include <X11/Xutil.h>
 
 #include <Xm/Text.h>
 
 
-#undef DEBUG
+//#define DEBUG
 
 
 /* sergey: USE_TK is defined only in codatcl1.0/Makefile, it used when codaRegistry.c is included
@@ -127,8 +128,6 @@ static RegisteredInterp *registry = NULL;
 				/* List of all interpreters
 				 * registered by this process. */
 
-#define MAX_PROP_WORDS 100000
-
 /*
  * The following variable can be set while debugging to do things like
  * skip locking the server.
@@ -147,7 +146,7 @@ static int tkSendSerial = 0;
  * this module:
  */
 
-#define MAX_PROP_WORDS 100000
+#define MAX_PROP_WORDS 20000
 
 /*
  * The default X error handler gets saved here, so that it can
@@ -271,11 +270,11 @@ codaRegOpen(Display *display, int lock)
   regPtr->modified = 0;
   regPtr->allocedByX = 1;
 
+#ifdef DEBUG
+  printf("  codaRegistry::codaRegOpen reached: display=0x%x, lock=%d\n",display,lock);
+#endif
   if (lock)
   {
-#ifdef DEBUG
-    printf(">>> codaRegistry::codaRegOpen: lock !!!!!!!!!!!!!\n");
-#endif
     XGrabServer(display);
     regPtr->locked = 1;
   }
@@ -285,47 +284,51 @@ codaRegOpen(Display *display, int lock)
 
 regPtr->propLength = 0; /* sergey : ??? */
 long_offset = 0;
-long_length = 10000;
+long_length = 20000;
 
   defaultHandler = XSetErrorHandler(ErrorProc);
   result = XGetWindowProperty(display,
-				              (Window)RootWindow(display, 0),
-				              (Atom)registryProperty,
-				              long_offset, long_length,
-				              (Bool)False,
+			      (Window)RootWindow(display, 0),
+			      (Atom)registryProperty,
+			      long_offset, long_length,
+			      (Bool)False,
                               (Atom)XA_STRING,
                               (Atom *)&actualType,
                               (int *)&actualFormat,
-				              (unsigned long *)&regPtr->propLength,
+			      (unsigned long *)&regPtr->propLength,
                               (unsigned long *)&bytesAfter,
-				              (unsigned char **) &regPtr->property);
+			      (unsigned char **) &regPtr->property);
 
 
 #ifdef DEBUG
-  printf(">>> codaRegistry::codaRegOpen: regPtr->propLength=%d\n",regPtr->propLength);
+  printf("  codaRegistry::codaRegOpen: regPtr->propLength=%d\n",regPtr->propLength);
 #endif
 
   XSetErrorHandler(defaultHandler);
   if (actualType == None)
   {
+#ifdef DEBUG
+    printf("  codaRegistry::codaRegOpen: actualType == None !!!\n");
+#endif
     regPtr->propLength = 0;
     regPtr->property = NULL;
   }
   else if ((result != Success) || (actualFormat != 8) || (actualType != XA_STRING))
   {
-      /*
-       * The property is improperly formed;  delete it.
-       */
+    /* The property is improperly formed;  delete it */
+#ifdef DEBUG
+    printf("  codaRegistry::codaRegOpen: property is improperly formed, delete it\n");
+#endif
       
     if (regPtr->property != NULL)
     {
-	  XFree(regPtr->property);
-	  regPtr->propLength = 0;
-	  regPtr->property = NULL;
+      XFree(regPtr->property);
+      regPtr->propLength = 0;
+      regPtr->property = NULL;
     }
     XDeleteProperty(display,
-		      RootWindow(display, 0),
-		      registryProperty);
+		    RootWindow(display, 0),
+		    registryProperty);
   }
     
     /*
@@ -790,6 +793,7 @@ CODAGetAppNames(Display *display)
   int count;
 
   char *names = NULL;
+
   /* Read the registry property, then scan through all of its entries.
      Validate each entry to be sure that its application still exists. */
   regPtr = codaRegOpen(display, 1);
@@ -799,58 +803,59 @@ CODAGetAppNames(Display *display)
     entry = p;
     if (sscanf(p,  "%x",(unsigned int *) &commWindow) != 1)
     {
-	  commWindow =  None;
+      commWindow =  None;
     }
     while ((*p != 0) && (!isspace((unsigned char)(*p))))
     {
-	  p++;
+      p++;
     }
     if (*p != 0)
     {
-	  p++;
+      p++;
     }
     entryName = p;
     while (*p != 0)
     {
-	  p++;
+      p++;
     }
     p++;
     if (ValidateWindowName(display, entryName, commWindow, 1))
     {
-	  /* The application still exists; add its name to the result */
-	  if (names == NULL)
+      /* The application still exists; add its name to the result */
+      if (names == NULL)
       {
-	    names = (char *) malloc(strlen(entryName)+1);
-	    strcpy(names,entryName);
-	  }
+	names = (char *) malloc(strlen(entryName)+1);
+	strcpy(names,entryName);
+      }
       else
       {
-	    names = (char *) realloc(names,strlen(names)+strlen(entryName)+2);
-	    strcat(names," ");
-	    strcat(names,entryName);
-	  }
+	names = (char *) realloc(names,strlen(names)+strlen(entryName)+2);
+	strcat(names," ");
+	strcat(names,entryName);
+      }
     }
     else
     {
-	  /* This name is bogus (perhaps the application died without
-	     cleaning up its entry in the registry?).  Delete the name */
+      /* This name is bogus (perhaps the application died without
+	 cleaning up its entry in the registry?).  Delete the name */
 	
-	  count = regPtr->propLength - (p - regPtr->property);
-	  if (count > 0)
+      count = regPtr->propLength - (p - regPtr->property);
+      if (count > 0)
       {
-	    memmove((void *) entry, (void *) p, (size_t) count);
-	  }
-	  regPtr->propLength -= p - entry;
-	  regPtr->modified = 1;
-	  p = entry;
+	memmove((void *) entry, (void *) p, (size_t) count);
+      }
+      regPtr->propLength -= p - entry;
+      regPtr->modified = 1;
+      p = entry;
     }
   }
+
   codaRegClose(regPtr);
   return(names);
 }
 
 int
-CODAGetAppWindow(Display *display,char *name)
+CODAGetAppWindow(Display *display, char *name)
 {
   Window window;
   char *p, *entry, *entryName;
@@ -858,15 +863,16 @@ CODAGetAppWindow(Display *display,char *name)
   Window commWindow;
   int count;
 
-  /*printf("\ncodaRegistry::CODAGetAppWindow: regPtr->property >%s<\n",regPtr->property);*/
-
-  /* Read the registry property, then scan through all of its entries.
-     Validate each entry to be sure that its application still exists. */
-
+#ifdef DEBUG
+  printf("\ncodaRegistry::CODAGetAppWindow reached\n");fflush(stdout);
+  printf("   Read the registry property, then scan through all of its entries.\n");fflush(stdout);
+  printf("   Validate each entry to be sure that its application still exists.\n\n");fflush(stdout);
+#endif
+  
   regPtr = codaRegOpen(display, 1);
 #ifdef DEBUG
-  printf("codaRegistry::CODAGetAppWindow: regPtr=0x%08x\n",regPtr);
-  printf("codaRegistry::CODAGetAppWindow: regPtr->propLength=%d\n\n",regPtr->propLength);
+  printf("codaRegistry::CODAGetAppWindow: regPtr=0x%08x\n",regPtr);fflush(stdout);
+  printf("codaRegistry::CODAGetAppWindow: regPtr->propLength=%d\n\n",regPtr->propLength);fflush(stdout);
 #endif
 
   for(p = regPtr->property; (p-regPtr->property) < regPtr->propLength; )
@@ -879,9 +885,9 @@ CODAGetAppWindow(Display *display,char *name)
     }
 #ifdef DEBUG
     else
-	{
-      printf("codaRegistry::CODAGetAppWindow: p >%s<\n",p);
-	}
+    {
+      printf("codaRegistry::CODAGetAppWindow: p >%s<\n",p);fflush(stdout);
+    }
 #endif
 
     while((*p != 0) && (!isspace((unsigned char)(*p)))) p++;
@@ -894,28 +900,34 @@ CODAGetAppWindow(Display *display,char *name)
     p++;
 
 #ifdef DEBUG
-    printf("codaRegistry::CODAGetAppWindow: entryName >%s<, name >%s<\n",entryName,name);
+    printf("codaRegistry::CODAGetAppWindow: entryName >%s<, looking for name >%s<\n",entryName,name);fflush(stdout);
 #endif
-    if (strcmp(entryName,name) == 0)
+    if (strcmp(entryName,name) == 0) /*found something*/
     {
       if (ValidateWindowName(display, entryName, commWindow, 1))
       {
-	    codaRegClose(regPtr);
-	    return(commWindow); 
+	codaRegClose(regPtr);
+#ifdef DEBUG
+        printf("codaRegistry::CODAGetAppWindow: found it, return commWindow=0x%x\n",commWindow);fflush(stdout);
+#endif
+	return(commWindow); 
       }
       else
       {
-	    /* This name is bogus (perhaps the application died without
-	       cleaning up its entry in the registry?).  Delete the name. */
+	/* This name is bogus (perhaps the application died without
+	   cleaning up its entry in the registry?).  Delete the name. */
 	
-	    count = regPtr->propLength - (p - regPtr->property);
-	    if (count > 0)
+#ifdef DEBUG
+        printf("codaRegistry::CODAGetAppWindow: name is bogus, delete the name\n");fflush(stdout);
+#endif
+	count = regPtr->propLength - (p - regPtr->property);
+	if (count > 0)
         {
-	      memmove((void *) entry, (void *) p, (size_t) count);
-	    }
-	    regPtr->propLength -= p - entry;
-	    regPtr->modified = 1;
-	    p = entry;
+	  memmove((void *) entry, (void *) p, (size_t) count);
+	}
+	regPtr->propLength -= p - entry;
+	regPtr->modified = 1;
+	p = entry;
       }
     }
   }
@@ -924,6 +936,7 @@ CODAGetAppWindow(Display *display,char *name)
 
   return(0);
 }
+
 
 /*
  *--------------------------------------------------------------
@@ -1031,38 +1044,34 @@ static int codaSendSerial = 0;
 int
 coda_Send(Display *display, char *destName, char *cmd)
 {
-    Window commWindow;
-    int result, c, async, i, firstArg;
-    size_t length;
-    NameRegistry *regPtr;
+  Window commWindow;
+  int result, c, async, i, firstArg;
+  size_t length;
+  NameRegistry *regPtr;
 
-    Atom commProperty = XInternAtom(display,"COMM",False);
-    defaultHandler = XSetErrorHandler(ErrorProc);
+  Atom commProperty = XInternAtom(display,"COMM",False);
+  defaultHandler = XSetErrorHandler(ErrorProc);
 
-    /*
-     * Bind the interpreter name to a communication window.
-     */
-    regPtr = codaRegOpen(display, 1);
-    commWindow = RegFindName(regPtr, destName);
-    if (ValidateWindowName(display, destName, commWindow, 1) == 0) {
-      /*
-       * This name is bogus (perhaps the application died without
-       * cleaning up its entry in the registry?).  Delete the name.
-       */
-      RegDeleteName(regPtr,destName);
-      commWindow == None;
-    }
+  /* Bind the interpreter name to a communication window */
+  regPtr = codaRegOpen(display, 1);
+  commWindow = RegFindName(regPtr, destName);
+  if (ValidateWindowName(display, destName, commWindow, 1) == 0)
+  {
+    /* This name is bogus (perhaps the application died without
+    cleaning up its entry in the registry?).  Delete the name */
+    RegDeleteName(regPtr,destName);
+    commWindow == None;
+  }
 
-    codaRegClose(regPtr);
-    if (commWindow == None) {
-      return TCL_ERROR;
-    } 
+  codaRegClose(regPtr);
+  if (commWindow == None)
+  {
+    return(TCL_ERROR);
+  } 
 
-    (void) AppendPropCarefully(display, commWindow,
-			       commProperty, cmd,
-			       strlen(cmd) + 1,
-			       (PendingCommand *) NULL);
-    return TCL_OK;
+  (void) AppendPropCarefully(display, commWindow, commProperty, cmd, strlen(cmd) + 1, (PendingCommand *) NULL);
+  
+  return(TCL_OK);
 }
 
 
@@ -1154,7 +1163,7 @@ resizeHandler(Widget w, Window target, XEvent *eventPtr)
       printf("NAME >%s<\n",name);fflush(stdout);
 #endif
       if(!strcmp(name,"cterm"))
-	  {
+      {
 #ifdef DEBUG
         printf("OLD HEIGHT %d\n",wc.height);fflush(stdout);
 #endif
@@ -1163,20 +1172,20 @@ resizeHandler(Widget w, Window target, XEvent *eventPtr)
 #ifdef DEBUG
         printf("NEW HEIGHT %d\n",wc.height);fflush(stdout);
 #endif
-	  }
+      }
 #ifdef DEBUG
       else
-	  {
+      {
         printf("KEEP HEIGHT %d\n",wc.height);fflush(stdout);
-	  }
+      }
 #endif
       XFree(name);
     }
 #ifdef DEBUG
     else
-	{
+    {
       printf("XFetchName() returns %d\n",ret);fflush(stdout);
-	}
+    }
 #endif
   }
 
@@ -1248,7 +1257,7 @@ motifHandler(Widget w, XtPointer p, XEvent *eventPtr)
 {
   Atom commProperty;
   char *propInfo;
-  int result, actualFormat;
+  int result, actualFormat, ii;
   unsigned long numItems, bytesAfter;
   long long_offset, long_length;
 
@@ -1265,22 +1274,20 @@ motifHandler(Widget w, XtPointer p, XEvent *eventPtr)
   int x, y, wid, hit, bw, d;
   Window root;
 
-	  /*sergey
-	  Widget target;
-	  */
-      Window target;
+  /*sergey
+  Widget target;
+  */
+  Window target;
 
-	  /*sergey
-      Widget parent;
-	  */
-      /*Drawable*/Window parent; /*sergey: ??? */
+  /*sergey
+  Widget parent;
+  */
+  /*Drawable*/Window parent; /*sergey: ??? */
 
-	  int counter1;
-	  XWindowChanges wc;
+  int counter1;
+  XWindowChanges wc;
 
-
-
-
+  char *widget_name;
 
 
   /*
@@ -1301,7 +1308,7 @@ motifHandler(Widget w, XtPointer p, XEvent *eventPtr)
 
 
 /*
-printf("abc1 %d\n",abc[0]);fflush(stdout);
+printf("codaRegistry::motifHandler: abc1 %d\n",abc[0]);fflush(stdout);
 */
 /*
 Atom XInternAtom(display, atom_name, only_if_exists)
@@ -1316,16 +1323,16 @@ Atom XInternAtom(display, atom_name, only_if_exists)
 
   /*sergey: just printing*/
 #ifdef DEBUG
-  printf("eventPtr->xproperty:\n");
-  printf("type=%d serial=%d send_event=%d display=0x%08x(0x%08x) window=0x%08x atom=%d time=%d state=%d\n",
-		 eventPtr->xproperty.type,
-		 eventPtr->xproperty.serial,
-		 eventPtr->xproperty.send_event,
-		 eventPtr->xproperty.display,
-		 eventPtr->xproperty.display,
-		 eventPtr->xproperty.window,
-		 eventPtr->xproperty.atom,
-		 eventPtr->xproperty.time,
+  printf("codaRegistry::motifHandler: eventPtr->xproperty:\n");
+  printf("codaRegistry::motifHandler: type=%d serial=%d send_event=%d display=0x%08x(0x%08x) window=0x%08x atom=%d time=%d state=%d\n",
+	 eventPtr->xproperty.type,
+	 eventPtr->xproperty.serial,
+	 eventPtr->xproperty.send_event,
+	 eventPtr->xproperty.display,
+	 eventPtr->xproperty.display,
+	 eventPtr->xproperty.window,
+	 eventPtr->xproperty.atom,
+	 eventPtr->xproperty.time,
          eventPtr->xproperty.state);
 #endif
   /*sergey: just printing*/
@@ -1334,13 +1341,21 @@ Atom XInternAtom(display, atom_name, only_if_exists)
   /* sergey: ?? if(eventPtr->xproperty.state != PropertyNewValue) means we've been here already
      and resizeHandler is registered, so we just returned */
 
-		   if ((eventPtr->xproperty.atom != commProperty) || (eventPtr->xproperty.state != PropertyNewValue)) /*or PropertyDelete !?*/
+  if( (eventPtr->xproperty.atom != commProperty) || (eventPtr->xproperty.state != PropertyNewValue) ) /*or PropertyDelete !?*/
   {
 #ifdef DEBUG
-    printf("codaRegistry::motifHandler: return !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    printf("codaRegistry::motifHandler: return !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! (0x%x 0x%x 0x%x 0x%x)\n",
+	   eventPtr->xproperty.atom,commProperty,eventPtr->xproperty.state,PropertyNewValue);
 #endif
     /*XFree(commProperty);*/ /*sergey ??? */
     return;
+  }
+  else
+  {
+#ifdef DEBUG
+    printf("codaRegistry::motifHandler: do NOT return !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! (0x%x 0x%x 0x%x 0x%x)\n",
+	   eventPtr->xproperty.atom,commProperty,eventPtr->xproperty.state,PropertyNewValue);
+#endif
   }
 
 /*
@@ -1366,14 +1381,14 @@ int XGetWindowProperty(display, w, property, long_offset, long_length, delete, r
   long_offset = 0;
   long_length = MAX_PROP_WORDS;
   result = XGetWindowProperty(dis,
-				              win,
+			      win,
                               commProperty, long_offset, long_length, True,
-							  (Atom)XA_STRING, (Atom *)&actualType, (int *)&actualFormat,
-				              (unsigned long *)&numItems, (unsigned long *)&bytesAfter,
+			      (Atom)XA_STRING, (Atom *)&actualType, (int *)&actualFormat,
+			      (unsigned long *)&numItems, (unsigned long *)&bytesAfter,
                               (unsigned char **)&propInfo);
 
 /*
-printf("abc2 %d\n",abc[0]);fflush(stdout);
+printf("codaRegistry::motifHandler: abc2 %d\n",abc[0]);fflush(stdout);
 */
 
 
@@ -1387,11 +1402,11 @@ printf("abc2 %d\n",abc[0]);fflush(stdout);
   {
     if (propInfo[0] == 'r')
     {
-	  sscanf(&propInfo[2],"%x %x", &target, &parent);
+      sscanf(&propInfo[2],"%x %x", &target, &parent);
 
 #ifdef DEBUG
-	  printf("sizes: target=%d parent=%d\n",sizeof(target),sizeof(parent));
-	  printf("target=0x%08x parent=0x%08x\n",target,parent);
+      printf("codaRegistry::motifHandler: sizes: target=%d parent=%d\n",sizeof(target),sizeof(parent));
+      printf("codaRegistry::motifHandler: target=0x%08x parent=0x%08x\n",target,parent);
 #endif
 
 	  /*
@@ -1406,8 +1421,8 @@ Status XGetGeometry(display, d, root_return, x_return, y_return, width_return,
         unsigned int *depth_return;
 	  */
 
-	  XGetGeometry(dis, parent, &root, &x, &y, &wid, &hit, &bw, &d);
-	  wc.x = 0;
+      XGetGeometry(dis, parent, &root, &x, &y, &wid, &hit, &bw, &d);
+      wc.x = 0;
       wc.y = 0;
       wc.width  = wid;
       wc.height = hit;
@@ -1419,22 +1434,118 @@ int XConfigureWindow(Display *display, Window w, unsigned value_mask, XWindowCha
 	  */
       XConfigureWindow(dis, target, CWWidth | CWHeight, &wc);
 
-	  XWithdrawWindow(dis, target, 0);
-	  
-	  for (counter1 = 0; counter1 < 125; counter1++) /*sergey: was 25; what is it !!!*/
+      XWithdrawWindow(dis, target, 0);
+
+      
+      /*from web:
+The problem is that once the Window manager has seen a toplevel window it takes some degree of control over it.
+It's supposed to give up said control when the window is reparented, but GNOME being GNOME just ignores that.
+
+You probably need to reparent the window before it's first shown, since the WM is not supposed to touch not-yet-visible windows.
+
+So you need to do something like this:
+
+  var window = new Window();
+  await Task.Delay(10); // this will force X11 flush on avalonia side, the window is not visible to other X11 clients apps before the next XFlush/XSync.
+  XReparentWindow(_display, window.PlatformImpl.Handle.Handle, offscreenWindowHandle, 0, 0);
+  XSync(_display);
+  window.Show();
+  await Task.Delay(10); // this will force X11 flush on avalonia side
+
+After that the window should probably be embeddable without GNOME interfering.
+       */
+
+
+
+      
+
+
+
+      
+      XMapWindow(dis, target);
+      XFlush(dis);
+      /* at that point, window manager does following (maybe):
+            wm_target = XCreateWindow(...);
+            XUnmapWindow(..., target);
+            XReparentWindow(..., target, wm_target, ...);
+            XMapWindow(..., target);
+       */
+#ifdef DEBUG
+      printf("\nSleep a little to give window manager time to finish whatever it is doing ..\n");fflush(stdout);
+#endif
+
+      widget_name = strdup(XtName(w));
+#ifdef DEBUG
+      printf("codaRegistry::motifHandler: widget_name>%s<\n",widget_name);
+#endif
+      if( strcmp( ((char *)&widget_name[5]), "_WINDOW") ) // do not sleep for individual roc windows ...
       {
-	    XReparentWindow(dis, target, parent, 0, 0);
-	    XSync(dis, False);
-	  }
-	  
-	  XMapWindow(dis, target);
-  
+#ifdef DEBUG
+        printf("NOT XX_XX_WINDOW -> sleep a little\n");
+#endif
+        sleep(1); /* we give window manager time to finish above actions (increase if 'gnome' want it !!!)*/
+      }
+
+      XUnmapWindow(dis, target);
+      XFlush(dis);
+      /* at that point, window manager does following (maybe):
+            XReparentWindow(..., target, root, ...);
+            XDestroyWindow(..., wm_target);
+       */
+      
+#ifdef DEBUG 
+      printf(".. looking for the right window:\n");fflush(stdout);
+#endif
+      for(ii=0; ii<25; ii++)
+      {
+	Window root, window, *ch;
+	unsigned int nch;
+        XQueryTree(dis, target, &root, &window, &ch, &nch);
+#ifdef DEBUG
+	printf("  ATTEMPT[%2d]=> parent=0x%x, window=0x%x\n",ii,parent,window);
+#endif
+	if(parent!=window) XReparentWindow(dis, target, parent, 0, 0);
+	if(nch>0) XFree(ch);
+	XSync(dis, False);
+        if(parent==window)
+	{
+#ifdef DEBUG
+	  printf("  ===> GOT IT !\n");
+#endif
+	  break;
+	}
+      }
+      XMapWindow(dis, target);
+
+
+      
+/*sergey: was this
+      for (counter1 = 0; counter1 < 125; counter1++) //sergey: was 25, set it to 125, what is it !!!
+      {
+	XReparentWindow(dis, target, parent, 0, 0);
+	XSync(dis, False);
+      }
+      XMapWindow(dis, target);
+*/
+
+
+
+
+
+
+
+
+      
+
+
+
+      
 	  /*
 void XtAddEventHandler(Widget w, EventMask event_mask, Boolean nonmaskable, XtEventHandler proc, XtPointer client_data);
 	  */
 
 /*
-printf("abc3 %d\n",abc[0]);fflush(stdout);
+printf("codaRegistry::motifHandler: abc3 %d\n",abc[0]);fflush(stdout);
 */
 /*
       Display *XtDisplay(Widget w); 
@@ -1444,52 +1555,52 @@ printf("abc3 %d\n",abc[0]);fflush(stdout);
 
 
 #ifdef DEBUG
-	  printf("BEFOR ?? (0x%08x) (0x%08x)\n",dis,parent);fflush(stdout);
+      printf("codaRegistry::motifHandler: BEFOR ?? (0x%08x) (0x%08x)\n",dis,parent);fflush(stdout);
 #endif
 
       w2 = XtWindowToWidget(dis, parent);
 
 #ifdef DEBUG
-	  printf("BEFOR ??? (w2=0x%08x)\n",w2);fflush(stdout);
+      printf("codaRegistry::motifHandler: BEFOR ??? (w2=0x%08x)\n",w2);fflush(stdout);
 #endif
       if(w2==NULL)
-	  {
+      {
 #ifdef DEBUG
         printf("codaRegistry::motifHandler: ERROR: w2=0x%08x - return\n",w2);fflush(stdout);
 #endif
         return;
-	  }
+      }
 
-	  w1 = XtParent(w2);
+      w1 = XtParent(w2);
 
 /*
-printf("abc4 %d\n",abc[0]);fflush(stdout);
+printf("codaRegistry::motifHandler: abc4 %d\n",abc[0]);fflush(stdout);
 */
 #ifdef DEBUG
-	  printf("BEFOR !\n");fflush(stdout);	  
+      printf("codaRegistry::motifHandler: BEFOR !\n");fflush(stdout);	  
 #endif
 
-	  /*sergey: 'w1' for runcontrol/rocs, 'w2' for cterm ??????????????????*/
+      /*sergey: 'w1' for runcontrol/rocs, 'w2' for cterm ??????????????????*/
 
       /* first parameter 'w1' means tied to parent widget, in case of 'rocs' it will be called when 'xtermsFrame_[]' resized,
       and 'resizeHandler' will get xtermsFrame_[]'s sizes; if 'w2' used, handler will be called when 'xterms[]' resized, and
       'xterms[]' sizes will be reported, so we can use them to resize our xterm */
-	  /* if 'w2', panes not resized correctly at startup !!! */
-	  XtAddEventHandler( (Widget)w1/*w2*/, (EventMask)StructureNotifyMask, (Boolean)False, (XtEventHandler)resizeHandler, (XtPointer)target);
+      /* if 'w2', panes not resized correctly at startup !!! */
+      XtAddEventHandler( (Widget)w1/*w2*/, (EventMask)StructureNotifyMask, (Boolean)False, (XtEventHandler)resizeHandler, (XtPointer)target);
 
 #ifdef DEBUG
-	  printf("AFTER (w1=0x%08x) (target=0x%08x)\n",w1,target);fflush(stdout);
+      printf("codaRegistry::motifHandler: AFTER (w1=0x%08x) (target=0x%08x)\n",w1,target);fflush(stdout);
 #endif
 
 #if 0
-	  /* need it ???  originally 'w2' was here !!!*/
-	  XtAddEventHandler(/*w2*/w1, ExposureMask, False, exposeHandler, target);
+      /* need it ???  originally 'w2' was here !!!*/
+      XtAddEventHandler(/*w2*/w1, ExposureMask, False, exposeHandler, target);
 #endif
     }
     else if (messageCallback)
-	{
-	  (*messageCallback)(propInfo);
-	}
+    {
+      (*messageCallback)(propInfo);
+    }
 
     XFree(propInfo); /*release memory*/
   }
@@ -1500,12 +1611,32 @@ codaSendInit(Widget w, char *name)
 {
   XSetWindowAttributes atts;
 
+#ifdef DEBUG
+  printf("codaRegistry::codaSendInit: w=0x%x, name >%s<\n",w,name);
+#endif
+
   XtAddEventHandler(w, PropertyChangeMask, False, (XtEventHandler)motifHandler, (XtPointer)NULL);
 
   CODASetAppName(XtDisplay(w),XtWindow(w),name);
 
-  return TCL_OK;
+  return(TCL_OK);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*
  *--------------------------------------------------------------
@@ -1533,6 +1664,7 @@ codaSendInit(Widget w, char *name)
     XEvent *eventPtr      - Information about event
 */
 #ifdef DONOTKNOW
+bla
 static void
 SendEventProc(ClientData clientData, XEvent *eventPtr)
 {
@@ -1544,32 +1676,53 @@ SendEventProc(ClientData clientData, XEvent *eventPtr)
   Atom actualType;
   Atom commProperty = XInternAtom(Tk_Display(window),"COMM",False);
 
-    if ((eventPtr->xproperty.atom != commProperty)
-	    || (eventPtr->xproperty.state != PropertyNewValue)) {
-	return;
-    }
+  if ((eventPtr->xproperty.atom != commProperty) || (eventPtr->xproperty.state != PropertyNewValue))
+  {
+    return;
+  }
 
-    /*
-     * Read the comm property and delete it.
-     */
+  /* Read the comm property and delete it */
 
-    propInfo = NULL;
-    {
-      result = XGetWindowProperty(Tk_Display(window),
-				  Tk_WindowId(window),
-				  commProperty, 0, MAX_PROP_WORDS, True,
-				  XA_STRING, &actualType, &actualFormat,
-				  &numItems, &bytesAfter, (unsigned char **) &propInfo);
-    }
-    if (propInfo) {
-      XFree(propInfo);
-    }
+  propInfo = NULL;
+  {
+    result = XGetWindowProperty(Tk_Display(window),
+				Tk_WindowId(window),
+			        commProperty, 0, MAX_PROP_WORDS, True,
+		      	        XA_STRING, &actualType, &actualFormat,
+				&numItems, &bytesAfter, (unsigned char **) &propInfo);
+  }
+  if (propInfo)
+  {
+    XFree(propInfo);
+  }
 
 }
 #endif
 
 
+
+
+
+
+/* Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk */
+/* Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk */
+/* Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk */
+/* Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk */
+/* Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk Tcl/Tk */
+
+
+
+
+
 #else /*USE_TK*/
+
+
+
+
+
+
+
+
 
 
 /*

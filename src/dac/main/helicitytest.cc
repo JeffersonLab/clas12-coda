@@ -24,6 +24,7 @@ using namespace std;
 static int inIBuf[25][NHITS];
 static double inFBuf[25][NHITS];
 
+#include "ipc.h"
 
 #include "evio.h"
 #include "evioBankUtil.h"
@@ -53,6 +54,14 @@ main(int argc, char **argv)
   char fnameout[1024];
   int nfile, status, handlerin, handlerout, maxevents, iev;
   nfile = 0;
+
+
+
+  printf("Connecting to IPC server ..\n");
+  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
+  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
+  printf(".. done connecting to IPC server.\n");
+
 
 
   /* emulate Prestart event */
@@ -150,6 +159,7 @@ main(int argc, char **argv)
 
   } /* for */
 
+  epics_json_msg_close();
 
   exit(0);
 }

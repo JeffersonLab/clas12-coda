@@ -40,29 +40,9 @@
 #define FTOF_CFG_SECTOR					0x1004
 #define FTOF_TRIG0_SCALER				0x1008
 
-#define FTOF_REVISION				    0x2000
+#define FTOF_REVISION				        0x2000
 #define FTOF_ENABLE_SCALERS				0x2004
-#define FTOF_REF_SCALER				    0x2008
-
-/*scope*/
-#define FTOF_TRIG_STATUS				0x3000
-#define FTOF_TRIG_VALUE7				0x3004
-#define FTOF_TRIG_VALUE6			   	0x3008
-#define FTOF_TRIG_VALUE5			   	0x300C
-#define FTOF_TRIG_VALUE4			   	0x3010
-#define FTOF_TRIG_VALUE3			   	0x3014
-#define FTOF_TRIG_VALUE2			   	0x3018
-#define FTOF_TRIG_VALUE1			   	0x301C
-#define FTOF_TRIG_VALUE0			   	0x3020
-#define FTOF_TRIG_INGORE7			   	0x3024
-#define FTOF_TRIG_INGORE6			   	0x3028
-#define FTOF_TRIG_INGORE5			   	0x302C
-#define FTOF_TRIG_INGORE4			   	0x3030
-#define FTOF_TRIG_INGORE3			   	0x3034
-#define FTOF_TRIG_INGORE2			   	0x3038
-#define FTOF_TRIG_INGORE1			   	0x303C
-#define FTOF_TRIG_INGORE0			   	0x3040
-#define FTOF_TRIG_BUFFER			   	0x3044
+#define FTOF_REF_SCALER				        0x2008
 
 
 /************************************************/

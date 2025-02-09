@@ -8,6 +8,7 @@
 #include <math.h>
 
 #include "evio.h"
+#include "evioBankUtil.h"
 #include "et.h"
 
 #define ET_EVENT_ARRAY_SIZE 3/*100*/
@@ -68,7 +69,7 @@ et_initialize(void)
 
   et_station_config_init(&sconfig);
   et_station_config_setselect(sconfig,  ET_STATION_SELECT_ALL);
-  et_station_config_setblock(sconfig,   ET_STATION_BLOCKING);
+  et_station_config_setblock(sconfig,   ET_STATION_NONBLOCKING);
   et_station_config_setuser(sconfig,    ET_STATION_USER_MULTI);
   et_station_config_setrestore(sconfig, ET_STATION_RESTORE_OUT);
   et_station_config_setprescale(sconfig,1);
@@ -141,17 +142,21 @@ main(int argc, char **argv)
   int nfile, nevents, etstart, etstop, len;
   char filename[1024];
   int fd_evio, status, ifpga, nchannels, tdcref;
-  unsigned long long *b64, timestamp, timestamp_old;
-  unsigned int *b32;
-  unsigned short *b16;
-  unsigned char *b08;
+  unsigned long long timestamp, timestamp_old;
+  unsigned int *ptr;
   int trig,chan,fpga,apv,hybrid;
   int i1, type, timestamp_flag;
-  float f1,f2;
+  float f1,f2,ratio;
   unsigned int word;
-  int iet, maxevents;
+  int iet, maxevents, fpcount=0, fccount=0;;
   int handle1, buflen, recl;
   size_t size;
+  int fragtag, fragnum, banktag, banknum, ind, ind_data, itmp;
+  int slot, nchan, ievent, nsamples;
+  uint64_t tstime, dtstime;
+  uint32_t tstime1, tstime2, gtp_trigbits, fp_trigbits, fp_befor, faraday_bit;
+
+  GET_PUT_INIT;
 
   int nr,sec,strip,nl,ncol,nrow,i,j, k, ii,jj,kk,l,l1,l2,ichan,nn,mm,iev,nbytes,ind1;
   char title[128], *ch;
@@ -232,13 +237,11 @@ iev = 0;
 nfile = 0;
 while(1)
 {
-
-
   {
     status = et_events_get(et_sys, et_attach, pe, ET_SLEEP,
                             NULL, ET_EVENT_ARRAY_SIZE, &nevents);
 
-    printf("INFO: et_events_get() returns %d, nevents=%d\n",status,nevents);
+    //printf("INFO: et_events_get() returns %d, nevents=%d\n",status,nevents);
 
     /* if no events or error ... */
     if ((nevents < 1) || (status != ET_OK))
@@ -267,7 +270,7 @@ while(1)
       etstart = 0;
       etstop  = nevents - 1;
 
-	  printf("1\n");
+      //printf("1\n");
 
       /* if we got control event(s) */
       if (gotControlEvent(pe, nevents))
@@ -275,63 +278,143 @@ while(1)
         /* scan for prestart and end events */
         for (i=0; i<nevents; i++)
         {
-	      if (pe[i]->control[0] == prestartEvent)
+	  if (pe[i]->control[0] == prestartEvent)
           {
-	        printf("Got Prestart Event!!\n");
-	        /* look for first prestart */
-	        if (PrestartCount == 0)
+	    printf("Got Prestart Event!!\n");
+	    /* look for first prestart */
+	    if (PrestartCount == 0)
             {
-	          /* ignore events before first prestart */
-	          etstart = i;
-	          if (i != 0)
+	      /* ignore events before first prestart */
+	      etstart = i;
+	      if (i != 0)
               {
-	            printf("ignoring %d events before prestart\n",i);
-	          }
-	        }
-            PrestartCount++;
+	        printf("ignoring %d events before prestart\n",i);
 	      }
-	      else if (pe[i]->control[0] == endEvent)
+	    }
+            PrestartCount++;
+	  }
+	  else if (pe[i]->control[0] == endEvent)
           {
-	        /* ignore events after last end event & quit */
+	    /* ignore events after last end event & quit */
             printf("Got End event\n");
             etstop = i;
-	      }
+	  }
         }
       }
-	  printf("2\n");
-	}
+      //printf("2\n");
+    }
     maxevents = iev + etstop; 
     iet = 0;
-    printf("iev=%d, etstop=%d maxevents=%d\n",iev,etstop,maxevents);
+    //printf("iev=%d, etstop=%d maxevents=%d\n",iev,etstop,maxevents);
   }
 
   timestamp_old = 0;
 
 
 
-/*by-pass prestart-end logic*/
-maxevents = nevents;
-iet=0;
+  /*by-pass prestart-end logic*/
+  maxevents = nevents;
+  iet=0;
 
 
-  while(iet/*iev*/<maxevents)
+  while(iet<maxevents)
   {
     iev ++;
 
-    if(!(iev%10000)) printf("\n\n\nEvent %d\n\n",iev);
-    printf("\n\n\nEvent %d, iet=%d, maxevents=%d\n\n",iev,iet,maxevents);
+    if(!(iev%25000))
+    {
+      printf("\nEvent %d",iev);
+      if(fccount>0)
+      {
+        ratio = ((float)fpcount)/((float)fccount);
+        printf(" - ratio=%f (%6d / %6d)\n",ratio,fpcount,fccount);
+      }
+      else
+      {
+        printf(" - no FC\n");
+      }
+      fpcount = fccount = 0;
+    }
+
+    //printf("\n\n\nEvent %d, iet=%d, maxevents=%d\n\n",iev,iet,maxevents);
 
 
-      if(iet >= maxevents)
-	  {
-        printf("ERROR: iet=%d, maxevents=%d\n",iet,maxevents);
-        exit(0);
-	  }
+    if(iet >= maxevents)
+    {
+      printf("ERROR: iet=%d, maxevents=%d\n",iet,maxevents);
+      exit(0);
+    }
 
 
       et_event_getlength(pe[iet], &size); /*get event length from et*/
       len = size;
-	  /*if(len==2388)*/ printf("event length=%d\n",len);
+      //printf("event length=%d\n",len);
+
+      ptr = (unsigned int *)pe[iet]->pdata;
+	
+      /* skip evio record header, evLinkBnk() etc functions assumes there is no record header */
+      ptr += 8;
+      len -= 32;
+	
+
+      /**********************/
+      /* process event here */
+      /**********************/
+
+      unsigned int *bufptr = ptr;
+
+      /*************/
+      /* head bank */
+
+      fragtag = 37;
+      fragnum = -1;
+      banktag = 0xe10a;
+      banknum = 0;
+
+      ind = 0;
+      for(banknum=0; banknum<40; banknum++)
+      {
+        //printf("looking for %d %d  - 0x%04x %d\n",fragtag, fragnum, banktag, banknum);fflush(stdout);
+        ind = evLinkBank(bufptr, fragtag, fragnum, banktag, banknum, &nbytes, &ind_data);
+	//printf("after\n");fflush(stdout);
+        if(ind>0) break;
+      }
+
+      if(ind<=0)
+      {
+        //printf("ERROR: cannot find HEAD bank (fragtag=%d tag=%d)\n",fragtag,banktag);
+        ievent = 0;
+        /*return(0);*/
+      }
+      else
+      {
+        b08 = (unsigned char *) &bufptr[ind_data];
+        GET32(itmp);
+        GET32(ievent);
+
+        GET32(tstime1);
+        GET32(tstime2); tstime2 = tstime2 & 0xFFFF; /* bits [31:16] is something else, mask it off */
+
+        tstime = ((uint64_t)tstime2<<32) | (uint64_t)tstime1;
+        //printf("tstime2=0x%06x tstime1=0x%06x -> tstime=0x%llx\n",tstime2,tstime1,tstime);
+
+        GET32(gtp_trigbits);
+        GET32(fp_trigbits);
+        GET32(itmp);
+        fp_befor = (itmp>>16)&0xFFFF;
+        if((fp_befor&0x20)>0 )
+	{
+          //printf("ievent=%d - urvell\n",ievent);
+          fpcount++;
+	}
+        if((fp_befor&0x80)>0 )
+	{
+          //printf("ievent=%d - fc\n",ievent);
+          fccount++;
+	}
+      }
+
+
 
 
 #if 0
@@ -416,10 +499,12 @@ a123:
     }
   }
 
+  /* if want to exit after some events
   if(iev>=MAXEVENTS)
   {
     break;
   }
+  */
 
 } /*while*/
 

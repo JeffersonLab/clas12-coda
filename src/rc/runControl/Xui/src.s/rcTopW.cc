@@ -70,8 +70,14 @@ rcTopW::CreateBaseWidget (Widget parent)
 #endif
   
   ac = 0;
+
+  //sergey: if want fixed main widget size
+  //XtSetArg (arg[ac], XtNheight, 1000); ac++;
+  //XtSetArg (arg[ac], XtNwidth, 1200); ac++;
   XtSetArg (arg[ac], XtNheight, HeightOfScreen(XtScreen(parent))); ac++;
   XtSetArg (arg[ac], XtNwidth, WidthOfScreen(XtScreen(parent))); ac++;
+
+
   XtSetValues (parent, arg, ac);
 
   window_ = new rcMenuWindow (parent, (char *)"rcTopWindow", netHandler_);

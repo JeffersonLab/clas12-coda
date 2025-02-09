@@ -28,6 +28,25 @@ main(int argc, char *argv[])
   char myname[256];
   unsigned int addr, laddr;
   int slot = 0, nssp = 0;
+  char hostname[128];
+  char *s;
+
+  gethostname(hostname,127);
+  s = hostname;
+  hostname[strlen(hostname)] = 0;
+  while(*s)
+  {
+    if(*s == '.')
+    {
+      *s = 0x00;
+      break;
+    }
+    *s = toupper((unsigned char) *s);
+    s++;
+  }
+
+printf("Invalid host: %s supported\n", hostname);
+exit(1);
 
   printf("\n");
   if(argc==2||argc==3)
@@ -47,7 +66,7 @@ main(int argc, char *argv[])
   }
   else
   {
-    printf("Usage: sspfirmware <bin file> [slot]\n");
+    printf("Usage: richfirmware <bin file> [slot]\n");
     exit(0);
   }
   printf("\n");
@@ -60,8 +79,8 @@ main(int argc, char *argv[])
   {
     sspInit(slot<<19, 0, 1, SSP_INIT_NO_INIT | SSP_INIT_SKIP_FIRMWARE_CHECK);
     sspRich_Init(slot);
-//    sspRich_FirmwareUpdateVerifyAll(slot, myname);
-    sspRich_FirmwareVerifyAll(slot, myname);
+    sspRich_FirmwareUpdateVerifyAll(slot, myname);
+//    sspRich_FirmwareVerifyAll(slot, myname);
   }
   else
   {
@@ -73,8 +92,8 @@ main(int argc, char *argv[])
       if(sspGetFirmwareType(slot) == SSP_CFG_SSPTYPE_HALLBRICH)
       {
         sspRich_Init(slot);
-//        sspRich_FirmwareUpdateVerifyAll(slot, myname);
-        sspRich_FirmwareVerifyAll(slot, myname);
+        sspRich_FirmwareUpdateVerifyAll(slot, myname);
+//        sspRich_FirmwareVerifyAll(slot, myname);
       }
     }
   }

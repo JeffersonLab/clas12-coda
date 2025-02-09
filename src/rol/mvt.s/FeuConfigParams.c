@@ -262,6 +262,7 @@ int FeuParamsCol_Sprintf( FeuParamsCol *feu_params_col, char *buf  )
 			}
 			if( (feu == 0) || (feu_params_col->feu_params[feu].Main_Conf_DreamMask != feu_params_col->feu_params[0].Main_Conf_DreamMask) )
 			{
+			        printf("S: FeuParamsCol_Sprintf: Feu=%s Main_Conf_DreamMask 0x%02x\n", feu_str, feu_params_col->feu_params[feu].Main_Conf_DreamMask );
 				sprintf( append_str, "Feu %s Main_Conf_DreamMask 0x%02x\n", feu_str, feu_params_col->feu_params[feu].Main_Conf_DreamMask );
 				strcat( buf, append_str);
 			}
@@ -848,7 +849,7 @@ int FeuParamsCol_Parse( FeuParamsCol *feu_params_col, int line_num )
 
 	if( feu_params_col == (FeuParamsCol *)NULL )
 	{
-		fprintf( stderr, "FeuParamsCol_Fread: feu_params_col=Null\n" );
+		fprintf( stderr, "FeuParamsCol_Parse: feu_params_col=Null\n" );
 		return D_RetCode_Err_Null_Pointer;
 	}
 
@@ -862,17 +863,20 @@ int FeuParamsCol_Parse( FeuParamsCol *feu_params_col, int line_num )
 				feu=0;
 //				feu_params_col->feu_params[feu].Feu_RunCtrl_Id = 255;
 				feu_params_col->feu_params[feu].Feu_RunCtrl_Id = 0;
+				//printf("S: '*' - apply for all Feu's -> feu=%d\n",feu);
 			}
 			else
 			{
 				feu=atoi(argv[1]);
 				if( (feu<0) || ((D_FeuParamsCol_NumOfFeuParams-1)<feu) )
 				{
-					fprintf( stderr, "FeuParamsCol_Fread: line=%d wrong feu=%d\n", line_num, feu );
+				        printf("S: line=%d wrong feu=%d\n", line_num, feu );
+					fprintf( stderr, "FeuParamsCol_Parse: line=%d wrong feu=%d\n", line_num, feu );
 					return D_RetCode_Err_Wrong_Param;
 				}
+				//printf("S: feu=%d\n",feu);
 			}
-//fprintf( stderr, "FeuParamsCol_Fread: argc=%d argv %s %s %s %s\n", argc, argv[0], argv[1], argv[2], argv[3] );
+//fprintf( stderr, "FeuParamsCol_Parse: argc=%d argv %s %s %s %s\n", argc, argv[0], argv[1], argv[2], argv[3] );
 			// Trigger generator parameters
 			if( strcmp( argv[2], "Trig_Conf_Rate" ) == 0 )
 			{
@@ -975,6 +979,7 @@ int FeuParamsCol_Parse( FeuParamsCol *feu_params_col, int line_num )
 			else if( strcmp( argv[2], "Main_Conf_DreamMask"   ) == 0 )
 			{
 				feu_params_col->feu_params[feu].Main_Conf_DreamMask=strtol( argv[3], &end_ptr, 16 );
+				printf("S: FeuParamsCol_Parse: Main_Conf_DreamMask: feu=%d, argv[3]='%s', &end_ptr=0x%x\n",feu,argv[3],&end_ptr);
 			}
 			else if( strcmp( argv[2], "Main_Conf_DreamPol"   ) == 0 )
 			{
@@ -1302,7 +1307,10 @@ int FeuParamsCol_PropComParams( FeuParamsCol *feu_params_col )
 		if( feu_params_col->feu_params[feu].Main_Conf_ClkSel[0]=='\0' )
 			sprintf(feu_params_col->feu_params[feu].Main_Conf_ClkSel, "%s", feu_params_col->feu_params[0].Main_Conf_ClkSel);
 		if( feu_params_col->feu_params[feu].Main_Conf_DreamMask < 0 )
+		{
 			feu_params_col->feu_params[feu].Main_Conf_DreamMask = feu_params_col->feu_params[0].Main_Conf_DreamMask;
+                        printf("S: FeuParamsCol_PropComParams: set feu_params_col->feu_params[feu=%d].Main_Conf_DreamMask = 0x%x\n",feu,feu_params_col->feu_params[feu].Main_Conf_DreamMask);
+		}
 		if( feu_params_col->feu_params[feu].Main_Conf_DreamPol < 0 )
 			feu_params_col->feu_params[feu].Main_Conf_DreamPol = feu_params_col->feu_params[0].Main_Conf_DreamPol;
 		if( feu_params_col->feu_params[feu].Main_Conf_Samples < 0 )

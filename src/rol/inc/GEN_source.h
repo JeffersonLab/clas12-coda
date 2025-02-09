@@ -10,12 +10,8 @@
 #ifndef __GEN_ROL__
 #define __GEN_ROL__
 
-#if 0
-#define DAQ_READ_CONF_FILE  /*{daqConfig("");    if(strncasecmp(rol->confFile,"none",4)) daqConfig(rol->confFile);}*/
-#define TI_READ_CONF_FILE   /*{tiConfig("");     if(strncasecmp(rol->confFile,"none",4)) tiConfig(rol->confFile);}*/
-#endif
-#define DAQ_READ_CONF_FILE  {daqSetExpid(expid);                        daqConfig("");     if(strncasecmp(rol->confFile,"none",4)) daqConfig(rol->confFile);}
-#define TIP_READ_CONF_FILE  {tipSetExpid(expid);                        tipConfig("");     if(strncasecmp(rol->confFile,"none",4)) tipConfig(rol->confFile);}
+#define DAQ_READ_CONF_FILE  {daqSetExpid(expid);    daqConfig("");     if(strncasecmp(rol->confFile,"none",4)) daqConfig(rol->confFile);}
+#define TIP_READ_CONF_FILE  {tipusSetExpid(expid);  tipusConfig("");   if(strncasecmp(rol->confFile,"none",4)) tipusConfig(rol->confFile);}
 
 #define vmeBusLock()
 #define vmeBusUnlock()
@@ -26,8 +22,10 @@ static unsigned int *GENPollAddr = NULL;
 static unsigned int GENPollMask;
 static unsigned int GENPollValue;
 
+
+#define BLOCKLEVEL 1
 /*max tested value is 40*/
-static int block_level = /*40*/BLOCKLEVEL;
+static int block_level = BLOCKLEVEL;
 static int next_block_level = BLOCKLEVEL;
 
 
@@ -37,9 +35,12 @@ extern char *expid; /* defined in coda_component.c */
 extern char configname[128]; /* coda_component.c (need to add it in rolInt.h/ROLPARAMS !!??) */
 
 /* Put any global user defined variables needed here for GEN readout */
-#include "TIpcieLib.h"
-extern int tipDoAck;
-extern int tipIntCount;
+
+#include "TIpcieUSLib.h"
+#include "tipusConfig.h"
+extern int tipusDoAck;
+extern int tipusIntCount;
+
 /*
 extern void *tsLiveFunc;
 extern int tsLiveCalc;
@@ -50,7 +51,8 @@ void
 GEN_int_handler()
 {
   theIntHandler(GEN_handlers);                   /* Call our handler */
-  tipDoAck=0; /* Make sure the library doesn't automatically ACK */
+
+  tipusDoAck=0; /* Make sure the library doesn't automatically ACK */
 }
 
 
@@ -62,51 +64,35 @@ gentinit(int code)
   int ii, i1, i2, i3;
   unsigned int slavemask, connectmask;
 
-  tipInit(TRIG_MODE,/*0*/TIP_INIT_SKIP_FIRMWARE_CHECK);
-  tipSetBusySource(0,1); /* remove all busy conditions */
-  tipIntDisable();
+  //tipusInit(TRIG_MODE,TIPUS_INIT_SKIP_FIRMWARE_CHECK | TIPUS_INIT_USE_DMA);
+  tipusInit(TRIG_MODE,TIPUS_INIT_SKIP_FIRMWARE_CHECK);
+  tipusSetBusySource(0,1); /* remove all busy conditions */
+  tipusIntDisable();
+
+
+
+#ifndef TI_SLAVE
   TIP_READ_CONF_FILE;
-
-#ifdef TI_SLAVE
-
-  tipSetPrescale(0);
-
-  tipDisableTSInput(TIP_TSINPUT_ALL);
-
-  tipSetBusySource(TIP_BUSY_FP ,1);
-#else
-
-  tipLoadTriggerTable(0);
-
-  tipSetPrescale(0);
-
-#ifdef PULSER_TRIGGER
-    tipSetTriggerSource(TIP_TRIGGER_PULSER);
-#else
-      tipSetTriggerSource(TIP_TRIGGER_TSINPUTS);
-
-      /* Enable input 1 and 2 */
-      tipEnableTSInput(TIP_TSINPUT_ALL);
 #endif
+
+
+
+#ifdef TI_SLAVE /*slave*/
+
+  tipusSetPrescale(0);
+  tipusDisableTSInput(TIPUS_TSINPUT_ALL);
+  //tipusSetBusySource(TIPUS_BUSY_FP, 1); ???
+
+#else /*master*/
+
+  tipusLoadTriggerTable(0);
+  tipusSetPrescale(0);
+
   /* Enable self and front panel busy input */
+  tipusSetBusySource(TIPUS_BUSY_LOOPBACK  | TIPUS_BUSY_FP ,1);
+  tipusSetSyncEventInterval(0);
 
-  tipSetBusySource(TIP_BUSY_LOOPBACK  | TIP_BUSY_FP ,1);
-  tipSetSyncEventInterval(0);
-
-#endif
-
-
-
-//  tipSetBlockLevel(BLOCKLEVEL);
-
-  /* Number of blocks allowed in the system at any given time */
-//  tipSetBlockBufferLevel(BUFFERLEVEL);
-
-  /* Sync Event interval
-   *  0 : off
-   *  n : Sync event every n blocks
-   */
-
+#endif /*slave/master*/
 
 }
 
@@ -144,16 +130,19 @@ gentriglink(int code, VOIDFUNCPTR isr)
 {
   int stat=0;
   printf("TIpcie: Setting Crate ID to %d\n",rol->pid);
-  tipSetCrateID(rol->pid); /* set TI boardID equal to rocID, will be used to identify slaves */
 
-  tipIntConnect(0,isr,0);
+  printf("===> setting our roc_id = %d\n",rol->pid);
+  tipusSetCrateID(rol->pid); /* set TI boardID equal to rocID, will be used to identify slaves */
+  printf("==> reading back roc_id's: self=%d, fiber=%d\n",tipusGetCrateID(0),tipusGetCrateID(1));
 
-  tipTrigLinkReset();
+  tipusIntConnect(0,isr,0);
+  tipusTrigLinkReset();
   /* Fix from Bryan 17may16 */
 #ifndef TI_SLAVE
   usleep(10000);
-  tipSyncReset(1);
-#endif	
+  tipusSyncReset(1);
+#endif
+
 }
 
 static void 
@@ -165,64 +154,32 @@ gentenable(int code, int card)
   tsLiveCalc=1;
   tsLiveFunc = tipLive;
   */
-  tipStatus(1);
-  tipPrintTempVolt();
-
+  tipusStatus(1);
+  tipusPrintTempVolt();
   if(GEN_isAsync==0)
   {
     GENflag = 1;
-    tipDoLibraryPollingThread(0); /* Turn off library polling */	
+    tipusDoLibraryPollingThread(0); /* Turn off library polling */	
   }
-  
-  tipIntEnable(1); 
-  
-  /* Fix from Bryan 17may16 */
-#ifndef TI_SLAVE
-#ifdef PULSER_TRIGGER
-    /* Enable TI pulser */
-    if(PULSER_TYPE==0)
-	{
-	  tipSoftTrig(1,PULSER_FIXED_NUMBER,PULSER_FIXED_PERIOD,PULSER_FIXED_LONG);
-	}
-    else
-	{
-	  tipSetRandomTrigger(1,PULSER_RANDOM_FREQ);
-	}
-#endif
-#endif
+  tipusIntEnable(1); 
 
 }
 
 static void 
 gentdisable(int code, int card)
 {
-  /* Fix from Bryan 17may16 */
-#ifndef TI_SLAVE
-#ifdef PULSER_TRIGGER
-    /* Disable TI pulser */
-    if(PULSER_TYPE==0)
-	{
-	  tipSoftTrig(1,0,0,0);
-	}
-    else
-	{
-	  tipDisableRandomTrigger();
-	}
-#endif
-#endif
-
   if(GEN_isAsync==0)
   {
     GENflag = 0;
-    tipDoLibraryPollingThread(0); /* Turn off library polling */	
+    tipusDoLibraryPollingThread(0); /* Turn off library polling */	
   }
-  tipIntDisable();
-  tipIntDisconnect();
+  tipusIntDisable();
+  tipusIntDisconnect();
   /*
   tsLiveCalc=0;
   tsLiveFunc = NULL;
   */
-  tipStatus(1);
+  tipusStatus(1);
 
 }
 
@@ -241,29 +198,26 @@ genttest(int code)
 {
   unsigned int ret=0;
 
-
   /*printf("genttest\n");*/
   usleep(1);
-  ret = tipBReady();
+  ret = tipusBReady();
   if(ret==-1)
   {
     printf("%s: ERROR: tipBReady returned ERROR\n",__FUNCTION__);
   }
   if(ret)
   {
-    syncFlag = tipGetSyncEventFlag();
-    tipIntCount++;
+    syncFlag = tipusGetSyncEventFlag();
+    tipusIntCount++;
   }
-  
+
   return(ret);
 }
 
 static inline void 
 gentack(int code, unsigned int intMask)
 {
-  {
-    tipIntAck();
-  }
+  tipusIntAck();
 }
 
 
@@ -313,8 +267,7 @@ __attribute__((destructor)) void end (void)
       tsLiveCalc=0;
       tsLiveFunc = NULL;
       */
-
-      tipClose();
+      tipusClose();
       ended=1;
     }
 
@@ -325,13 +278,13 @@ __attribute__((constructor)) void start (void)
   static int started=0;
 
   if(started==0)
-    {
-      printf("ROC Load\n");
+  {
+      printf("\n!!!!!!!!!!!!!!! ROC Load !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
       
-      tipOpen();
+      tipusOpen();
       started=1;
 
-    }
+  }
 
 }
 

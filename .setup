@@ -19,12 +19,29 @@ set REDHATFILE = /etc/redhat-release
 set ARCHFILE = /etc/os-release
 setenv OSTYPE     `uname|sed 's/-/_/'`
 
+
+
+
 #obtain Linux release number (works on RHEL at least ..)
+
 if ( $OSTYPE == "Linux") then
 if ( -e $REDHATFILE ) then
-  setenv OSRELEASE `cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 7`
+    setenv OSRELEASE `cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 7`
+  if ( $OSRELEASE == "7") then
+  else
+    setenv OSRELEASE `cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 6`
+  endif
 endif
 endif
+
+#if ( $OSTYPE == "Linux") then
+#if ( -e $REDHATFILE ) then
+#  setenv OSRELEASE `cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 6`
+#endif
+#endif
+
+
+
 
 if ( $OSTYPE == "Darwin" ) then
   setenv MACHINE    `uname -p`
@@ -40,8 +57,8 @@ endif
 #for 64bit RHEL6, use different naming scheme
 if ( $OSTYPE == "Linux") then
 if ( $MACHINE == "x86_64") then
-if ( $OSRELEASE == "6") then
-  setenv MACHINE x86_64_RHEL6
+if ( $OSRELEASE == "9") then
+  setenv MACHINE x86_64_RHEL9
 endif
 endif
 endif

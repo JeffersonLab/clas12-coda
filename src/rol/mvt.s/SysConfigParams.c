@@ -1171,6 +1171,7 @@ int SysParams_Parse( SysParams *params, int line_num )
 				fprintf( stderr, "%s: FeuParamsCol_Parse failed with %d\n", __FUNCTION__, ret );
 				return ret;
 			}
+			printf("S: SysParams_Prop: params->FeuParams_Col->feu_params[1,4].Main_Conf_DreamMask = 0x%x, 0x%x \n",params->FeuParams_Col.feu_params[1].Main_Conf_DreamMask,params->FeuParams_Col.feu_params[4].Main_Conf_DreamMask);
 		}
 	} // if( argc > 0 )
 

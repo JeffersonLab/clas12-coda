@@ -21,7 +21,10 @@ CROSS_COMPILE		=
 CC			= $(CROSS_COMPILE)gcc
 AR                      = ar
 RANLIB                  = ranlib
-CFLAGS			= -O2 -I. -I/usr/include
+#
+#CFLAGS			= -O2 -I. -I/usr/include
+CFLAGS			= -g -I. -I/usr/include
+#
 CFLAGS                 += -DGEFANUC
 ifdef DEBUG
 CFLAGS			+= -Wall -g

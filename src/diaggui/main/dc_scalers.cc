@@ -134,7 +134,7 @@ int dc_scalers_app::connect_to_server()
   for(int r=0;r<3;r++)
   {
     printf("Connecting to: %s\n", Form("dc%d%d",s+1,r+1));
-    crate_dc[s][r] = new CrateMsgClient(Form("dc%d%d",s+1,r+1), MSG_PORT);
+    crate_dc[s][r] = new CrateMsgClient(Form("dc%d%d",s+1,r+1), MSG_PORT, 0);
   }
   return 0;
 }
@@ -170,6 +170,7 @@ int dc_scalers_app::read_scalers()
     for(int n=0;n<14;n++)
     {
       crate_dc[s][r]->Read32(dcrb_addr[n]+0x0304, &dc_ref[s][r][n]);
+printf("s=%d,r=%d,n=%d,ref=%d\n", s,r,n,dc_ref[s][r][n]);
       crate_dc[s][r]->Read32(dcrb_addr[n]+0x1100, &dc_scalers[s][r][n][0], 16, CRATE_MSG_FLAGS_ADRINC);
       crate_dc[s][r]->Read32(dcrb_addr[n]+0x1300, &dc_scalers[s][r][n][16], 16, CRATE_MSG_FLAGS_ADRINC);
       crate_dc[s][r]->Read32(dcrb_addr[n]+0x1500, &dc_scalers[s][r][n][32], 16, CRATE_MSG_FLAGS_ADRINC);
@@ -234,6 +235,38 @@ void dc_scalers_app::sum_scalers()
 void dc_scalers_app::button_init()
 {
   unsigned int val[1];
+  int thr[6][3][14] = {
+      {
+        {30,30,30,30,30,30,30,30,30,30,30,30,30,30},  // dc11
+        {45,45,45,45,45,45,45,45,45,45,45,45,45,45},  // dc12
+        {45,45,45,45,45,45,45,45,45,45,45,45,45,45},  // dc13
+      },
+      {
+        {30,30,30,30,30,30,30,30,30,30,30,30,30,30},  // dc21
+        {45,45,45,45,45,45,45,45,45,45,45,45,45,45},  // dc22
+        {45,45,45,45,45,45,45,45,45,45,45,45,45,45},  // dc23
+      },
+      {
+        {30,30,30,30,30,30,30,30,30,30,30,30,30,30},  // dc31
+        {45,45,45,45,45,45,45,45,45,45,45,45,45,45},  // dc32
+        {45,45,45,45,45,45,45,45,45,45,45,45,45,45},  // dc33
+      },
+      {
+        {30,30,30,45,45,30,30,30,30,30,30,30,30,30},  // dc41
+        {45,45,45,45,45,45,45,45,45,45,45,45,45,45},  // dc42
+        {45,45,45,45,45,45,45,45,45,45,45,45,45,45},  // dc43
+      },
+      {
+        {30,30,30,30,30,30,30,30,30,30,30,30,30,30},  // dc51
+        {45,45,45,45,45,45,45,45,45,45,45,45,45,45},  // dc52
+        {45,45,45,45,45,45,45,45,45,45,45,45,45,45},  // dc53
+      },
+      {
+        {30,30,30,30,30,30,30,30,30,30,30,30,30,30},  // dc61
+        {45,45,45,45,45,45,45,45,45,45,45,45,45,45},  // dc62
+        {45,45,45,45,45,45,45,45,45,45,45,45,45,45},  // dc63
+      },
+    };
   for(int s=0;s<6;s++)
   for(int r=0;r<3;r++)
   for(int n=0;n<14;n++)
@@ -248,9 +281,13 @@ void dc_scalers_app::button_init()
     // Soft reset release
     val[0] = 0;
     crate_dc[s][r]->Write32(dcrb_addr[n]+0x20, val);
+
+    usleep(10000);
+
+    // Default threshold
+    val[0] = (int)(((float)thr[s][r][n]) * -8.06f + 2048.0f);
+    crate_dc[s][r]->Write32(dcrb_addr[n]+0x24, val);
   }
-  
-  SetThreshold(pSliderThreshold->GetPosition());
 }
 
 void dc_scalers_app::SetThreshold(unsigned int thr)
@@ -297,6 +334,7 @@ void dc_scalers_app::draw_scalers()
   {
     pH[i]->Reset("");
     pH[i]->SetMaximum(1000000.0);
+//    pH[i]->SetMaximum(200000.0);
     pH[i]->SetMinimum(0.0);
   }
 

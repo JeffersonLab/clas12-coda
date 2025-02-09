@@ -266,7 +266,7 @@ tipSetCrateID_preInit(int cid)
  *
  */
 
-float demon=0;
+//float demon=0;
 
 int
 tipInit(unsigned int mode, int iFlag)

@@ -5,12 +5,15 @@
 #define NEW
 
 
+#define NEW_TI /* new TI */
+
+
 #undef SSIPC
 
 static int nusertrig, ndone;
 
 
-#undef USE_SRS
+#define USE_SRS
 
 
 #undef DEBUG
@@ -57,14 +60,26 @@ static char ssname[80];
 
 #ifdef TI_MASTER
 #define INIT_NAME srs1_master__init
+#ifdef NEW_TI
+#define TIP_READOUT TIPUS_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
+#else
 #define TIP_READOUT TIP_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
+#endif
 #else
 #ifdef TI_SLAVE
 #define INIT_NAME srs1_slave__init
+#ifdef NEW_TI
+#define TIP_READOUT TIPUS_READOUT_TS_POLL /* Poll for available data, triggers from master over fiber */
+#else
 #define TIP_READOUT TIP_READOUT_TS_POLL /* Poll for available data, triggers from master over fiber */
+#endif
 #else
 #define INIT_NAME srs1__init
+#ifdef NEW_TI
+#define TIP_READOUT TIPUS_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
+#else
 #define TIP_READOUT TIP_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
+#endif
 #endif
 #endif
 
@@ -78,8 +93,13 @@ void usrtrig_done();
 
 
 
+
+
+
+
 #define BLOCKLEVEL 1
 #define BUFFERLEVEL  8
+
 
 /* TRIG_MODE = TIP_READOUT_EXT_POLL for polling mode (External front panel input) */
 /*           = TIP_READOUT_TS_POLL  for polling mode (Fiber input from TS) */
@@ -87,45 +107,42 @@ void usrtrig_done();
 #define TRIG_MODE TIP_READOUT
 
 
-/*  PULSER_TRIGGER */
+/*  SOFTTRIG */
 /*    is for pedestal and/or debugging. */
-/*   Set to 0 to use Front Panel inputs or TS Fiber Connection (TRIG_MODE above)*/
-#undef PULSER_TRIGGER
+/*   undef to use Front Panel inputs or TS Fiber Connection (TRIG_MODE above)*/
+#undef SOFTTRIG
 
 
-#if 0
-#define PULSER_TYPE          0
-#define PULSER_FIXED_NUMBER  10
-#define PULSER_FIXED_PERIOD  10000/*27%live 6.8kHz 205MB/sec 81usROL1*/
-#define PULSER_FIXED_LONG    0
-#endif
 
-#if 1
+#ifdef SOFTTRIG
 /* PULSER_TYPE   0 - Fixed   1 - Random*/
 #define PULSER_TYPE          1
 /* PULSER_FIXED  */
 #define PULSER_FIXED_NUMBER  BLOCKLEVEL
 #define PULSER_FIXED_PERIOD  2
 #define PULSER_FIXED_LONG    1
+
 /* PULSER_RANDOM_FREQ where arg sets frequency to 500kHz/(2^(arg-1))*/
+#define PULSER_RANDOM_FREQ   15 /*6 ~15kHz, 10-500Hz, 8-2kHz, 6-7kHz(92% TI only, drops) */
 #endif
 
-#define PULSER_RANDOM_FREQ   0x7 /*0x6 ~15kHz */
 
 
 
 
-#define DO_SRS_READOUT  1
+
 
 #ifdef USE_SRS
 
 #include "srsLib.h"
-
 int srsFD[MAX_FEC];
 char FEC[MAX_FEC][100];
 int nfec=1;
 
 #endif
+
+
+
 
 #define TIR_SOURCE 1
 #include "GEN_source.h"
@@ -246,38 +263,9 @@ __download()
 
   printf("USRSTRING >%s<\n\n",rol->usrString);
 
-  /* if slave, get fiber port number from user string */
-
-//  ti_slave_fiber_port = 1; /* default */
-/*
-  ch = strstr(rol->usrString,"fp=");
-  if(ch != NULL)
-  {
-    strcpy(tmp,ch+strlen("fp="));
-    printf("tmp >>>>>>>>>>>>>>>>>>>>>%s<<<<<<<<<<<<<<<<<<<<<\n",tmp);
-    ti_slave_fiber_port = atoi(tmp);
-    printf("ti_slave_fiber_port =%d\n",ti_slave_fiber_port);
-    tiSetFiberIn_preInit(ti_slave_fiber_port);
-  }
-*/
-  /*
-  printf("srs1: downloading DDL table ...\n");
-  clonbanks_();
-  printf("srs1: ... done.\n");
-  */
-
   /**/
   CTRIGINIT;
   CDOINIT(GEN,TIR_SOURCE);
-
-
-  /************/
-  /* init daq */
-
-  /*FOR NOW
-  daqInit();
-  DAQ_READ_CONF_FILE;
-  */
 
   /*************************************/
   /* redefine TI settings if neseccary */
@@ -285,8 +273,42 @@ __download()
 #ifndef TI_SLAVE
   /* TS 1-6 create physics trigger, no sync event pin, no trigger 2 */
 vmeBusLock();
+
+#ifdef NEW_TI
+  tipusLoadTriggerTable(0);
+#else
   tipLoadTriggerTable(0/*was 3*/);
   /*was tiSetTriggerWindow(7);*/	/* (7+1)*4ns trigger it coincidence time to form trigger type */
+#endif
+
+
+
+/*in GEN_source.h ??????????
+  tipusSetTriggerHoldoff(1,1,2);
+  tipusSetTriggerHoldoff(2,4,0);
+
+  tipusSetEventFormat(3);
+  tipusSetFPInputReadout(1);
+
+  tipusSetPrescale(0);
+
+#ifdef SOFTTRIG
+  tipusSetTriggerSource(TIPUS_TRIGGER_PULSER);
+#else
+  tipusSetTriggerSource(TIPUS_TRIGGER_TSINPUTS);
+#endif
+  tipusEnableTSInput(0xf);
+
+  tipusSetBlockBufferLevel(10);
+
+  tipusSetSyncEventInterval(1000);
+  tipusSetBlockLevel(blockLevel);
+
+  tipusTrigLinkReset();
+  usleep(10000);
+*/
+
+
 vmeBusUnlock();
 #endif
 
@@ -304,6 +326,10 @@ vmeBusUnlock();
   /*************************************************************
    * Setup SRS 
    */
+
+  printf("STEP1 ==============================================================\n");
+
+  /* here we set our IP address(es), suppose to be 10.0.x.2 */
 
   nfec=0;
 
@@ -329,6 +355,10 @@ vmeBusUnlock();
     strncpy(FEC[nfec++], "10.0.6.2",100); 
     strncpy(FEC[nfec++], "10.0.7.2",100); 
   }
+  else if (rol->pid == 85) /* clon10new */
+  {
+    strncpy(FEC[nfec++], "10.0.0.2",100);  /*our IP address*/
+  }
   else
   {
     printf("ERROR1: SRS HAS WRONG PID=%d\n",rol->pid);
@@ -341,6 +371,12 @@ vmeBusUnlock();
 
   memset(&srsFD, 0, sizeof(srsFD));
 
+
+
+  printf("STEP2 ==============================================================\n");
+
+  /* hosts[] here contains receiving computer IP address(es), it have to correcpond to FEC IP address(es) set on previous step;
+     for example if FEC IP is 10.0.0.2, then computer IP must be 10.0.0.3 - make sure you configure computer local network as 10.0.0.3 */
 
   /* was when both were in clondaq6
  for(ifec=0; ifec<4; ifec++)
@@ -378,12 +414,27 @@ vmeBusUnlock();
       srsConnect((int*)&srsFD[ifec], hosts[ifec], starting_port+ifec);
     }
   }
+  else if (rol->pid == 85) /* clon10new */
+  {
+    for(ifec=0; ifec<nfec; ifec++)
+    {
+      printf("========== ifec=%d\n",ifec);
+      sprintf(hosts[ifec],"10.0.0.%d",ifec+3); /*IP address on computer we will send data to*/
+      printf("========== our FEC[ifec] is >%s<, computer hosts[ifec] is >%s<\n",FEC[ifec],hosts[ifec]);
+      printf("========== befor srsSetDAQIP (starting_port=%d, ifec=%d)\n",starting_port,ifec);
+      srsSetDAQIP(FEC[ifec], hosts[ifec], starting_port+ifec);
+      printf("========== after srsSetDAQIP\n");
+      srsConnect((int*)&srsFD[ifec], hosts[ifec], starting_port+ifec);
+      printf("========== after srsConnect\n");
+    }
+  }
   else
   {
     printf("ERROR2: SRS HAS WRONG PID=%d\n",rol->pid);
     exit(0);
   }
 
+  printf("STEP3 ==============================================================\n");
 
   /* Configure FEC */
   for(ifec=0; ifec<nfec; ifec++)
@@ -416,12 +467,19 @@ vmeBusUnlock();
     /* Same as call to 
 	srsExecConfigFile("config/fecCalPulse_IP10012.txt"); */
     srsSetApvTriggerControl(FEC[ifec],
-			      4+0, // int mode
-			      0, // int trgburst (x+1)*3 time bins
-			      0x4, // int freq
-			      0x61, // int trgdelay 61(tage total sum) 5f(scintillator trigger) 60(MASTER OR)
-			      0x7f, // int tpdelay
-			      0x9f // int rosync
+			      4, // 3 - test pulse mode, 4 - run mode
+			      2, // how many time slots the APV chip is reading from its memory
+                                 // for each trigger = (n+1)*3  
+			      4, // 40000 ???
+                                   // in test pulse mode: period of the trigger sequenser
+                                   // in run mode: deadtime
+                                   // NOTE: must be more than the DAQ time (datalength Nchannels)
+			    0x69 /*0x4c*//*0x56*//*0x60*/, // int trgdelay 61(tage total sum) 5f(scintillator trigger) 60(MASTER OR)
+                                    // Orig was 61 : Rafo, In EEL it was 6c 
+			      0x7f, // not used in run mode ??? int tpdelay: Orig Value 0x7f  // Can try 0x80
+			      0x8A // rosync: delay between the FEC trigger and the start of data recording. Default was 9f
+                                   // Adjusted to capture correctly the APV data frames
+                                   // 0x9f=3.975us  (Can try 0x6e)
 			      );
     if(rol->pid == 8)
       {
@@ -433,11 +491,21 @@ vmeBusUnlock();
 			 0xaa000bb8 | ((ifec+4)<<16) // unsigned int eventInfoData
 			 );
       }
-    else /* rol->pid == 7 */
+    else if(rol->pid == 7)
       {
 	srsSetEventBuild(FEC[ifec],
 			 0x1ff, // int chEnable
 			 550, // int dataLength
+			 2, // int mode
+			 0, // int eventInfoType
+			 0xaa000bb8 | ((ifec)<<16) // unsigned int eventInfoData
+			 );
+      }
+    else /* rol->pid == 85 */
+      {
+	srsSetEventBuild(FEC[ifec],
+			 0xcfff, //0x3fff,//0xfff/*1ff*/, // int chEnable // sergey: mask for front end cards connected
+			 1550, // int dataLength // the number of 16-bit samples, 12bits used (1 sample=128 - what ???). 3 ts = 550, 6ts = 1000, 15ts=2260, 9ts = 1400,12ts = 2000, 27ts 4000
 			 2, // int mode
 			 0, // int eventInfoType
 			 0xaa000bb8 | ((ifec)<<16) // unsigned int eventInfoData
@@ -450,7 +518,7 @@ vmeBusUnlock();
 		   0xff, // int channel_mask, 
 		   0x03, // int device_mask,
 		   0x19, // int mode, 
-		   0x80, // int latency, 
+		   0x80, // int latency, // 0x80=3.2us
 		   0x2, // int mux_gain, 
 		   0x62, // int ipre, 
 		   0x34, // int ipcasc, 
@@ -475,11 +543,13 @@ vmeBusUnlock();
 	srsExecConfigFile("config/pll_IP10012.txt"); */
     srsPLLConfig(FEC[ifec], 
 		   0xff, // int channel_mask,
-		   0, // int fine_delay, 
+		   0x10, // int fine_delay,  (was 0, must be 0x10)===> Update: put it back to 0 to check if the RMS issue on 1st two channels will be fixed. Mor Update Kondo mentioned it must be 0x10, because with new FEC it should be 0x10, unlike the old version of the crate
 		   0 // int trg_delay
 		   );
       
   }
+
+  printf("STEP4 ==============================================================\n");
 
   for(ifec=0; ifec<nfec; ifec++)
   {
@@ -488,7 +558,11 @@ vmeBusUnlock();
   
 #endif
 
+#ifdef NEW_TI
+  tipusStatus(0);
+#else
   tipStatus(0);
+#endif
 
   sprintf(rcname,"RC%02d",rol->pid);
   printf("rcname >%4.4s<\n",rcname);
@@ -503,6 +577,28 @@ vmeBusUnlock();
   //RTH
   if ( rogueCodaDownload(rcd,rol->confFile,rol->usrString) != 0 ) exit(-1);
 #endif
+
+
+
+#if 0
+#ifdef SOFTTRIG
+  /*pulser*/
+  tipusSetTriggerSourceMask(TIPUS_TRIGSRC_LOOPBACK | TIPUS_TRIGSRC_PULSER);
+  tipusSetBusySource(TIPUS_BUSY_LOOPBACK | TIPUS_BUSY_FP, 1);
+  tipusSetSyncEventInterval(0);
+#else
+  /*front panel*/
+  tipusLoadTriggerTable(0);
+  tipusSetTriggerSourceMask(TIPUS_TRIGSRC_LOOPBACK | TIPUS_TRIGSRC_TSINPUTS);
+  tipusSetBusySource(TIPUS_BUSY_LOOPBACK | TIPUS_BUSY_FP, 1);
+  tipusDisableTSInput(0x3F);
+  tipusEnableTSInput(0x10);
+  //tipusSetInputPrescale(5, 15); /*second par is same meaning as in internal pulser*/
+  tipusSetTriggerHoldoff(1,4,1);
+#endif
+#endif
+
+
 
   logMsg("INFO: User Download Executed\n",1,2,3,4,5,6);
 }
@@ -538,22 +634,40 @@ __prestart()
 
 #ifndef TI_SLAVE
 vmeBusLock();
-tipSetBusySource(TIP_BUSY_FP, 0);
-/*FOR NOW !!!!!!!!!!!!!!
-tiSetBusySource(TIP_BUSY_LOOPBACK,0);
-*/
+
+#ifdef NEW_TI
+  tipusSetBusySource(TIPUS_BUSY_FP, 0);
+#else
+  tipSetBusySource(TIP_BUSY_FP, 0);
+  /*FOR NOW !!!!!!!!!!!!!!
+  tiSetBusySource(TIP_BUSY_LOOPBACK,0);
+  */
+#endif
+
 vmeBusUnlock();
 #endif
 
 #ifdef TI_SLAVE
 vmeBusLock();
-tipSetBusySource(TIP_BUSY_FP_FADC, 0);
- /* tipSetBusySource(0, 1); */
- printf("TIpcie: Setting SyncSrc to HFBR1 and Loopback\n");
- tipSetSyncSource(TIP_SYNC_HFBR1 | TIP_SYNC_LOOPBACK);
- tipSetInstantBlockLevelChange(1);
+
+#ifdef NEW_TI
+  tipusSetBusySource(TIPUS_BUSY_FP_FADC, 0);
+  /* tipusSetBusySource(0, 1); */
+  printf("TIpcie: Setting SyncSrc to HFBR1 and Loopback\n");
+  tipusSetSyncSource(TIPUS_SYNC_HFBR1 | TIPUS_SYNC_LOOPBACK);
+  tipusSetInstantBlockLevelChange(1);
+  /*sergey: tipusSetSyncSource() resets register 0x24 (sync), so we'll loose UserSyncReset enabling, reinstall it*/
+  tipusSetUserSyncResetReceive(1);
+#else
+  tipSetBusySource(TIP_BUSY_FP_FADC, 0);
+  /* tipSetBusySource(0, 1); */
+  printf("TIpcie: Setting SyncSrc to HFBR1 and Loopback\n");
+  tipSetSyncSource(TIP_SYNC_HFBR1 | TIP_SYNC_LOOPBACK);
+  tipSetInstantBlockLevelChange(1);
   /*sergey: tipSetSyncSource() resets register 0x24 (sync), so we'll loose UserSyncReset enabling, reinstall it*/
   tipSetUserSyncResetReceive(1);
+#endif
+
 vmeBusUnlock();
 
 #endif
@@ -569,7 +683,7 @@ vmeBusUnlock();
    }
  
  /* Check SRS buffers and clear them */
- dCnt = srsCheckAndClearBuffers((int *)&srsFD, nfec,
+ dCnt = srsCheckAndClearBuffers(srsFD, nfec,
 				(volatile unsigned int *)tdcbuf,
 				2*80*1024, 1, &nframes);
  if(dCnt>0)
@@ -607,12 +721,48 @@ vmeBusUnlock();
 
 
 vmeBusLock();
+
+
+#ifdef NEW_TI
+  tipusIntDisable();
+#else
   tipIntDisable();
+#endif
+
 vmeBusUnlock();
 
 
   /* master and standalone crates, NOT slave */
 #ifndef TI_SLAVE
+
+#ifdef NEW_TI
+
+  sleep(1);
+vmeBusLock();
+  tipusSyncReset(1);
+vmeBusUnlock();
+  sleep(1);
+vmeBusLock();
+  tipusSyncReset(1);
+vmeBusUnlock();
+  sleep(1);
+vmeBusLock();
+  ret = tipusGetSyncResetRequest();
+vmeBusUnlock();
+  if(ret)
+  {
+    printf("ERROR: syncrequest still ON after tiSyncReset(); trying again\n");
+    sleep(1);
+vmeBusLock();
+    tipusSyncReset(1);
+vmeBusUnlock();
+    sleep(1);
+  }
+vmeBusLock();
+  ret = tipusGetSyncResetRequest();
+vmeBusUnlock();
+
+#else
 
   sleep(1);
 vmeBusLock();
@@ -640,6 +790,9 @@ vmeBusUnlock();
 vmeBusLock();
   ret = tipGetSyncResetRequest();
 vmeBusUnlock();
+
+#endif
+
   if(ret)
   {
     printf("ERROR: syncrequest still ON after tiSyncReset(); try 'tcpClient <rocname> tiSyncReset'\n");
@@ -661,32 +814,26 @@ vmeBusUnlock();
 /* Fix from Bryan 17may16 */
 #ifndef TI_SLAVE /* TI-slave gets its blocklevel from the TI-master (through fiber) */
 vmeBusLock();
+
+#ifdef NEW_TI
+  tipusSetBlockLevel(block_level);
+#else
   tipSetBlockLevel(block_level);
+#endif
+
 vmeBusUnlock();
 #endif
 
 
-
-
-
-
 #endif
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 vmeBusLock();
+#ifdef NEW_TI
+  tipusStatus(1);
+#else
   tipStatus(1);
+#endif
 vmeBusUnlock();
 
   printf("INFO: Prestart1 Executed\n");fflush(stdout);
@@ -697,61 +844,6 @@ vmeBusUnlock();
   return;
 }       
 
-static void
-__end()
-{
-  int iwait=0;
-  int blocksLeft=0;
-  int id;
-  int ifec=0;
-
-  printf("\n\nINFO: End1 Reached\n");fflush(stdout);
-
-  CDODISABLE(GEN,TIR_SOURCE,0);
-
-  /* Before disconnecting... wait for blocks to be emptied */
-vmeBusLock();
-  blocksLeft = tipBReady();
-vmeBusUnlock();
-  printf(">>>>>>>>>>>>>>>>>>>>>>> %d blocks left on the TI\n",blocksLeft);fflush(stdout);
-  if(blocksLeft)
-  {
-    printf(">>>>>>>>>>>>>>>>>>>>>>> before while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
-    while(iwait < 10)
-	{
-      sleep(1);
-	  if(blocksLeft <= 0) break;
-vmeBusLock();
-	  blocksLeft = tipBReady();
-      printf(">>>>>>>>>>>>>>>>>>>>>>> inside while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
-vmeBusUnlock();
-	  iwait++;
-	}
-    printf(">>>>>>>>>>>>>>>>>>>>>>> after while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
-  }
-
-#if 0
-  //RTH
-  rogueCodaEnd(rcd);
-#endif
-
-#ifdef USE_SRS
-  for(ifec=0; ifec<nfec; ifec++)
-  {
-	srsTrigDisable(FEC[ifec]);
-    srsStatus(FEC[ifec],0);
-  }
-#endif
-
-
-vmeBusLock();
-  tipStatus(1);
-vmeBusUnlock();
-
-  printf("INFO: End1 Executed\n\n\n");fflush(stdout);
-
-  return;
-}
 
 
 static void
@@ -763,6 +855,7 @@ __pause()
 } /*end pause */
 
 
+
 static void
 __go()
 {
@@ -770,29 +863,42 @@ __go()
 
   logMsg("INFO: Entering Go 1\n",1,2,3,4,5,6);
 
-/* #ifdef DOSELFSYNC */
-/* #ifdef TI_SLAVE */
-/*   printf("TIpcie: SyncReseting itself - temporary work-around\n"); */
-/* vmeBusLock(); */
-/*   tipSyncReset(0); */
-/*   usleep(100); */
-/* vmeBusUnlock(); */
-/* #endif */
-/* #endif */
+
+#ifdef TI_MASTER
+#ifdef SOFTTRIG
+  tipusSetRandomTrigger(1,0xf);
+#endif
+#endif
+
 
 #ifndef TI_SLAVE
-  /* set sync event interval (in blocks) */
 vmeBusLock();
- tipSetSyncEventInterval(0/*10000*//*block_level*/);
+
+  /* set sync event interval (in blocks) */
+#ifdef NEW_TI
+  tipusSetSyncEventInterval(0/*10000*//*block_level*/);
+#else
+  tipSetSyncEventInterval(0/*10000*//*block_level*/);
+#endif
+
 vmeBusUnlock();
+
 /* Fix from Bryan 17may16 */
 #else
 /* Block level was broadcasted from TI-Master / TS */
- block_level = tipGetCurrentBlockLevel();
- printf("rocGo: Block Level set to %d\n",block_level);
- tipSetBlockBufferLevel(0);
+#ifdef NEW_TI
+  block_level = tipusGetCurrentBlockLevel();
+  printf("rocGo: Block Level set to %d\n",block_level);
+  tipusSetBlockBufferLevel(0);
+#else
+  block_level = tipGetCurrentBlockLevel();
+  printf("rocGo: Block Level set to %d\n",block_level);
+  tipSetBlockBufferLevel(0);
+#endif
 
 #endif
+
+
 
 #if 0
   //RTH
@@ -810,7 +916,11 @@ vmeBusUnlock();
 
 #endif
 
+#ifdef NEW_TI
+  tipusStatus(1);
+#else
   tipStatus(1);
+#endif
 
   nusertrig = 0;
   ndone = 0;
@@ -820,6 +930,79 @@ vmeBusUnlock();
   logMsg("INFO: Go 1 Executed\n",1,2,3,4,5,6);
 }
 
+static void
+__end()
+{
+  int iwait=0;
+  int blocksLeft=0;
+  int id;
+  int ifec=0;
+
+  printf("\n\nINFO: End1 Reached\n");fflush(stdout);
+
+#ifdef TI_MASTER
+#ifdef SOFTTRIG
+  tipusDisableRandomTrigger();
+#endif
+#endif
+
+  CDODISABLE(GEN,TIR_SOURCE,0);
+
+  /* Before disconnecting... wait for blocks to be emptied */
+vmeBusLock();
+#ifdef NEW_TI
+  blocksLeft = tipusBReady();
+#else
+  blocksLeft = tipBReady();
+#endif
+vmeBusUnlock();
+  printf(">>>>>>>>>>>>>>>>>>>>>>> %d blocks left on the TI\n",blocksLeft);fflush(stdout);
+  if(blocksLeft)
+  {
+    printf(">>>>>>>>>>>>>>>>>>>>>>> before while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
+    while(iwait < 10)
+	{
+      sleep(1);
+	  if(blocksLeft <= 0) break;
+vmeBusLock();
+#ifdef NEW_TI
+	  blocksLeft = tipusBReady();
+#else
+	  blocksLeft = tipBReady();
+#endif
+      printf(">>>>>>>>>>>>>>>>>>>>>>> inside while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
+vmeBusUnlock();
+	  iwait++;
+	}
+    printf(">>>>>>>>>>>>>>>>>>>>>>> after while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
+  }
+
+#if 0
+  //RTH
+  rogueCodaEnd(rcd);
+#endif
+
+#ifdef USE_SRS
+  for(ifec=0; ifec<nfec; ifec++)
+  {
+    srsTrigDisable(FEC[ifec]);
+    srsStatus(FEC[ifec],0);
+  }
+#endif
+
+
+vmeBusLock();
+#ifdef NEW_TI
+  tipusStatus(1);
+#else
+  tipStatus(1);
+#endif
+vmeBusUnlock();
+
+  printf("INFO: End1 Executed\n\n\n");fflush(stdout);
+
+  return;
+}
 
 
 
@@ -876,23 +1059,37 @@ usleep(100);
 
 
 
-
     /*************/
-	/* TI stuff */
+    /* TI stuff */
 
     /* Set high, the first output port 
     tiSetOutputPort(1,0,0,0);
     */
 
+#if 0
+TIMERL_START;
+#endif
     /* Grab the data from the TI */
+#ifdef NEW_TI
+    //len = tipusReadTriggerBlock(tdcbuf);
+    len = tipusReadBlock(tdcbuf,1024,0);
+#else
     len = tipReadBlock(tdcbuf,1024,0);
+#endif
+#if 0
+TIMERL_STOP(5000/block_level,1000+rol->pid);
+#endif
 
     if(len<=0)
     {
       printf("ERROR in tipReadBlock : No data or error, len = %d\n",len);
       sleep(1);
 
+#ifdef NEW_TI
+      if(TRIG_MODE==TIPUS_READOUT_EXT_POLL) tipusSetBlockLimit(1); /* Effectively... stop triggers */
+#else
       if(TRIG_MODE==TIP_READOUT_EXT_POLL) tipSetBlockLimit(1); /* Effectively... stop triggers */
+#endif
 
     }
     else
@@ -956,9 +1153,13 @@ usleep(100);
       printf("  befor rogueCodaEvent\n");
 #endif
 
+#if 0
 TIMERL_START;
+#endif
       len = rogueCodaEvent(rcd,rol->dabufp,ii);
+#if 0
 TIMERL_STOP(100000/block_level,1000+rol->pid);
+#endif
 
       if(len<3) printf("ERROR: rogueCodaEvent returns len=%d\n",len);
 
@@ -1054,7 +1255,7 @@ TIMERL_STOP(100000/block_level,1000+rol->pid);
 
 #ifdef USE_SRS
 
-    dCnt=0;
+  dCnt=0;
 
   /************************************************************
    * SRS READOUT
@@ -1065,28 +1266,41 @@ TIMERL_STOP(100000/block_level,1000+rol->pid);
   int SRS_FEC_BASE=0;
 
   if(rol->pid == 8) /* clondaq8 */
-    {
-      SRS_FEC_BASE = 4;
-    }
+  {
+    SRS_FEC_BASE = 4;
+  }
+
   for(ifec=0; ifec<nfec; ifec++)
   {
     dCnt=0;
     BANKOPEN(0xe11f,1,5+ifec+SRS_FEC_BASE);
 
+#if 1
+TIMERL_START;
+#endif
     dCnt = srsReadBlock(srsFD[ifec],
 			   (volatile unsigned int *)rol->dabufp,
 			   2*80*1024, block_level, &nframes);
-    if(dCnt<=0)
-	{
-	  printf("**************************************************\n");
-	  printf("No SRS data or error.  dCnt = %d\n",dCnt);
-	  printf("**************************************************\n");
-	}
+#if 1
+TIMERL_STOP(5000/block_level,1000+rol->pid);
+#endif
+
+    if(dCnt==-999)
+    {
+      printf("Timeout during readout from SRS - ignore this event\n");
+    }
+    else if(dCnt<=0)
+    {
+      printf("**************************************************\n");
+      printf("No SRS data or error.  dCnt = %d\n",dCnt);
+      printf("**************************************************\n");
+    }
     else
-	{
-	  /* Bump data buffer by the amount of data received */
-	  rol->dabufp += dCnt;
-	}
+    {
+      //printf("SRS data len=%d\n",dCnt);
+      /* Bump data buffer by the amount of data received */
+      rol->dabufp += dCnt;
+    }
 
     BANKCLOSE;
   }
@@ -1099,16 +1313,16 @@ TIMERL_STOP(100000/block_level,1000+rol->pid);
 
   /* create HEAD bank if master and standalone crates, NOT slave */
 
-	event_number = (EVENT_NUMBER) * block_level - block_level;
+    event_number = (EVENT_NUMBER) * block_level - block_level;
 
     BANKOPEN(0xe112,1,0);
 
-	dabufp1 = rol->dabufp;
+    dabufp1 = rol->dabufp;
 
     *rol->dabufp ++ = LSWAP((0x10<<27)+block_level); /*block header*/
 
     for(ii=0; ii<block_level; ii++)
-	{
+    {
       event_number ++;
 	  /*
 	  printf(">>>>>>>>>>>>> %d %d\n",(EVENT_NUMBER),event_number);
@@ -1147,6 +1361,59 @@ TIMERL_STOP(100000/block_level,1000+rol->pid);
 
 
 
+#ifndef TI_SLAVE
+
+  /* create HEAD bank if master and standalone crates, NOT slave */
+
+	event_number = (EVENT_NUMBER) * block_level - block_level;
+
+    BANKOPEN(0xe112,1,0);
+
+	dabufp1 = rol->dabufp;
+
+	*rol->dabufp ++ = ((0x10<<27)+block_level); /*block header*/
+
+    for(ii=0; ii<block_level; ii++)
+	{
+      event_number ++;
+	  /*
+	  printf(">>>>>>>>>>>>> %d %d\n",(EVENT_NUMBER),event_number);
+      sleep(1);
+	  */
+      *rol->dabufp ++ = ((0x12<<27)+(event_number&0x7FFFFFF)); /*event header*/
+
+      nwords = 6; /* UPDATE THAT IF THE NUMBER OF WORDS CHANGED BELOW !!! */
+      *rol->dabufp ++ = ((0x14<<27)+nwords); /*head data*/
+
+      /* COUNT DATA WORDS FROM HERE */
+      *rol->dabufp ++ = 0; /*version  number */
+      *rol->dabufp ++ = (RUN_NUMBER); /*run  number */
+      *rol->dabufp ++ = (event_number); /*event number */
+      if(ii==(block_level-1))
+	  {
+        *rol->dabufp ++ = (time(0)); /*event unix time */
+        *rol->dabufp ++ = (EVTYPE);  /*event type */
+        *rol->dabufp ++ = 0;              /*reserved for L3 info*/
+	  }
+      else
+	  {
+        *rol->dabufp ++ = 0;
+        *rol->dabufp ++ = 0;
+        *rol->dabufp ++ = 0;
+	  }
+      /* END OF DATA WORDS */
+
+	}
+
+    nwords = ((int)rol->dabufp-(int)dabufp1)/4 + 1;
+
+    *rol->dabufp ++ = ((0x11<<27)+nwords); /*block trailer*/
+
+    BANKCLOSE;
+
+#endif
+
+
 
 
 
@@ -1171,7 +1438,11 @@ TIMERL_STOP(100000/block_level,1000+rol->pid);
 
 #ifdef TIP_UPLOADALL_NOTDEFINED      
 vmeBusLock();
+#ifdef NEW_TI
+      len = tipusUploadAll(chptr, 10000);
+#else
       len = tipUploadAll(chptr, 10000);
+#endif
 vmeBusUnlock();
 #endif
 
@@ -1190,7 +1461,7 @@ vmeBusUnlock();
         printf("%s\n",chptr);*/
         chptr += len;
         nbytes += len;
-	  }
+      }
 #endif
 
       /* 'nbytes' does not includes end_of_string ! */
@@ -1225,8 +1496,13 @@ vmeBusUnlock();
 
       int livetime, live_percent;
 vmeBusLock();
+#ifdef NEW_TI
+      tipusLatchTimers();
+      livetime = tipusLive(0);
+#else
       tipLatchTimers();
       livetime = tipLive(0);
+#endif
 vmeBusUnlock();
       live_percent = livetime/10;
 	  printf("============= Livetime=%3d percent\n",live_percent);
@@ -1275,7 +1551,11 @@ printf("8\n");
 
       /* Check TIpcie */
       int nblocks;
+#ifdef NEW_TI
+      nblocks = tipusGetNumberOfBlocksInBuffer();
+#else
       nblocks = tipGetNumberOfBlocksInBuffer();
+#endif
       /*printf(" Blocks ready for readout: %d\n\n",nblocks);*/
       
       if(nblocks > 1) /* TIpcie Blocks decrement on readout acknowledge */
@@ -1286,18 +1566,18 @@ printf("8\n");
 
 #ifdef USE_SRS
       /* Check SRS */
-      dCnt = srsCheckAndClearBuffers(&srsFD, nfec,
+      dCnt = srsCheckAndClearBuffers(srsFD, nfec,
 				     (volatile unsigned int *)tdcbuf,
 				     2*80*1024, block_level, &nframes);
       if(dCnt>0)
-	{
-	  printf("SYNC ERROR: SRS had extra data at SyncEvent.\n");
-	}
+      {
+	printf("SYNC ERROR: SRS had extra data at SyncEvent.\n");
+      }
 	  
 #endif /* USE_SRS */
       
       printf("SYNC: make sure all board buffers are empty - done\n");
-	}
+    }
 
 
 #endif /* if 0 */
@@ -1343,11 +1623,14 @@ __done()
   /* Acknowledge tir register */
   CDOACK(GEN,TIR_SOURCE,0);
 
-  // PULSER ACTION, if needeD
-#ifdef PULSER_TRIGGER
+#ifdef SOFTTRIG
   if(PULSER_TYPE==0)
   {
+#ifdef NEW_TI
+    tipusSoftTrig(1,PULSER_FIXED_NUMBER,PULSER_FIXED_PERIOD,PULSER_FIXED_LONG);
+#else
     tipSoftTrig(1,PULSER_FIXED_NUMBER,PULSER_FIXED_PERIOD,PULSER_FIXED_LONG);
+#endif
   }
 #endif
 

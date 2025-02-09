@@ -26,12 +26,14 @@ main(int argc, char *argv[])
   vmeOpenDefaultWindows();
 
 vmeBusLock();
- tiInit(0/*(21<<19)*/,2,0);
+  tiInit(0/*(21<<19)*/,2,0);
   tiStatus(1);
 vmeBusUnlock();
 
+vmeBusLock();
   nadc = faInit(0x180000,0x80000,20,0);
   if(nadc) fadc250Config("");
+vmeBusUnlock();
 
   exit(0);
 }

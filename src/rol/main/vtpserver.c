@@ -1,4 +1,5 @@
 
+
 /* vtpserver.c */
 
 #include <stdio.h>
@@ -20,6 +21,8 @@
 
 void sig_handler(int signo);
 
+static char myhostname[100];
+
 /* returns: error: -1, not found host: 0, found host: 1 */
 int
 load_firmware()
@@ -36,7 +39,7 @@ load_firmware()
     return -1;
   }
 
-  gethostname(host,sizeof(host));
+  gethostname(host,99);
   for(i=0; i<strlen(host); i++)
   {
     if(host[i] == '.')
@@ -45,6 +48,11 @@ load_firmware()
       break;
     }
   }
+
+  strcpy(myhostname,host);
+  printf("\n%s: >>> My hostname is >%s<\n",__func__,myhostname);
+
+  vtpSetHostname(myhostname);
 
   found = 0;
   while(!feof(f))
@@ -133,18 +141,24 @@ main(int argc, char *argv[])
   printf("done.\n");
   fflush(stdout);
 
-  stat = fork();
-  if(!stat)
+  stat = fork(); /*PID of the child process is returned in the parent, and 0 is returned in the child*/
+  /*need to check for -1, which is error ???*/
+
+  if(!stat) /*parent starts DiagGuiServer and returns*/
   {
     system("/usr/clas12/release/1.4.0/coda/src/rol/Linux_armv7l/bin/DiagGuiServer");
-    return 0;
+    return(0);
   }
+
+  vtpInitGlobals(); //sergey
+  vtpConfig("");
 
   count = 0;
   while(1)
   {
     count ++;
     sleep(1);
+    vtpGetRunStatus();
     vtpSendScalers();
     if((count%10)==0) vtpSendSerdes();
   }

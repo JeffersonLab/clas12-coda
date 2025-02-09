@@ -19,7 +19,8 @@ int
 main(int argc, char *argv[])
 {
   int ret;
-  unsigned int addr = 0xd000;
+  unsigned int addr = 0xc000;
+  unsigned int addr1 = 0;
 
   /* Open the default VME windows */
   vmeOpenDefaultWindows();
@@ -38,12 +39,20 @@ vmeBusUnlock();
    addr = strtol(argv[1], (char **)NULL, 16);
  }
 
- printf("use addr=0x%04x\n",addr);
+ printf("For the first board, use addr=0x%04x\n",addr);
 
 
 vmeBusLock();
+
+  printf("Programming board 0 at address 0x%04x\n",addr);
   ret = v851Init(addr,0);
-  v851_start(1000000);
+  v851_start(100000,0);
+  
+  addr1 = addr + 0x1000;
+  printf("Programming board 1 at address 0x%04x\n",addr1);
+  ret = v851Init(addr1,1);
+  v851_start(1000000,1);
+  
 vmeBusUnlock();
 
 

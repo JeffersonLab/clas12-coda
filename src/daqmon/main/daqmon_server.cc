@@ -968,7 +968,7 @@ hist_serv_thread(void *arg)
     printf("hist_serv_thread:: ................  NEW wait ......\n");
         
     sd = ss->Accept();
-    if (sd<=0)
+    if (sd<=(TSocket *)0)
     {
       printf("Error Accept sd=%lu, Close connection \n",(long int)sd);
       sd->Close();

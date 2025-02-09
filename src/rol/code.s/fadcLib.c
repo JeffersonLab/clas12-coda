@@ -2192,6 +2192,7 @@ faReadBlock(int id, volatile UINT32 *data, int nwrds, int rflag)
 	      csr = vmeRead32(&(FAp[id]->csr));  /* from Last FADC */
 	      stat = (csr)&FA_CSR_BERR_STATUS;  /* from Last FADC */
 	    }
+
 	  if((retVal>0) && (stat)) 
 	    {
 /*sergey
@@ -3261,9 +3262,13 @@ faBusy(int id)
   FAUNLOCK;
 
   if(dreg>=blreg)
+  {
     return(1);
+  }
   else
+  {
     return(0);
+  }
 }
 
 

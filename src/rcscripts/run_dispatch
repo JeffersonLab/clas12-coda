@@ -49,19 +49,35 @@ endif
 echo "run_dispatch 3"
 
 #  run script, exit using script exit status
+
 set script  = "$dirpath/run_$argv[1]_$argv[2].csh"
+
 if(-e $script) then
 echo "run_dispatch 4"
    set scriptlogfile = $CLON_LOG/run_log/run_$argv[1]_$argv[2].log 
    echo "run_dispatch starting $dirpath/run_$argv[1]_$argv[2].csh on `date`" >>& $mainlogfile
    echo "" >>& $scriptlogfile 
    echo "*** starting at: `date` ***   run `run_number`" >>& $scriptlogfile 
-   $script $script_option >>&! $scriptlogfile
-   set script_status = $status
+
+echo "run_dispatch: starting script $script $script_option ..."
+##   $script $script_option >>&! $scriptlogfile
+   $script $script_option
+   set script_status = $?
+echo "run_dispatch: ... finished script"
+
+   if( "$script_status" != 0 ) then
+     echo "run_dispatch ERROR: script_status = $script_status" >>& $mainlogfile
+     echo "run_dispatch ERROR: script_status = $script_status"
+   else
+     echo "run_dispatch INFO: script_status = $script_status" >>& $mainlogfile
+     echo "run_dispatch INFO: script_status = $script_status"
+   endif
+
    echo "*** ended at:    `date` ***" >>& $scriptlogfile 
    echo "" >>& $scriptlogfile 
    echo "" >>& $scriptlogfile 
    echo "run_dispatch ended    $dirpath/run_$argv[1]_$argv[2].csh on `date`" >>& $mainlogfile
+   echo "returns script_status = $script_status" >>& $mainlogfile
    exit($script_status) 
 else
 echo "run_dispatch 5"

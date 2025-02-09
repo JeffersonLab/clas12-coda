@@ -223,7 +223,7 @@ inline void CLR_BITS (short &word, int bits) { word &= ~bits; }
 #endif /* !defined __osf__ */
 
 #include <sys/wait.h>
-#include <rpc/rpc.h>
+//#include <rpc/rpc.h>
 #include <limits.h>
 #include <sys/shm.h>
 #include <sys/utsname.h>

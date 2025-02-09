@@ -23,8 +23,8 @@
 
   UNIX:
 
-slot 3:  TD-103
-slot 4:  TD-110
+slot 3:  TD-103 (replaced by QSFP's TD-193)
+slot 4:  TD-110 (replaced by QSFP's TD-188)
 slot 5:  TD-106
 slot 6:  TD-107
 slot 7:  TD-109

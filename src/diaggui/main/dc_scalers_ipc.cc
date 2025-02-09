@@ -194,7 +194,7 @@ int dc_scalers_app::connect_to_server()
   for(int r=0;r<3;r++)
   {
     printf("Connecting to: %s\n", Form("dc%d%d",s+1,r+1));
-    crate_dc[s][r] = new CrateMsgClient(Form("dc%d%d",s+1,r+1), MSG_PORT);
+    crate_dc[s][r] = new CrateMsgClient(Form("dc%d%d",s+1,r+1), MSG_PORT, 0);
   }
   return 0;
 }

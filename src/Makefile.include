@@ -34,21 +34,37 @@ ifeq ("$(OSTYPE)","Darwin")
 endif
 
 
+
+
+
 #obtain Linux release number (works on RHEL and CentOS at least ..)
+
 ifeq ("$(OSTYPE)","Linux")
-	FILE=centos-release
-	ifeq ($(findstring ${FILE},$(wildcard /etc/*)),) # RHEL
-		OSRELEASE = $(shell cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 7)
-	else #CentOS
-		OSRELEASE = $(shell cat /etc/centos-release | cut -d "." -f 1 | cut -d " " -f 4)
-	endif
+  OSRELEASE = $(shell cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 7)
+  ifeq ("$(OSRELEASE)","7")
+  else
+    OSRELEASE = $(shell cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 6)
+  endif
 endif
 
+#ifeq ("$(OSTYPE)","Linux")
+#	FILE=centos-release
+#	ifeq ($(findstring ${FILE},$(wildcard /etc/*)),) # RHEL
+#		OSRELEASE = $(shell cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 6)
+#	else #CentOS
+#		OSRELEASE = $(shell cat /etc/centos-release | cut -d "." -f 1 | cut -d " " -f 4)
+#	endif
+#endif
 
-#redefine MACHINE for 64bit RHEL6, use different naming scheme
+
+
+
+
+
+#redefine MACHINE for 64bit RHEL9, use different naming scheme
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-ifeq ("$(OSRELEASE)","6")
-  MACHINE = x86_64_RHEL6
+ifeq ("$(OSRELEASE)","9")
+  MACHINE = x86_64_RHEL9
 endif
 endif
 
@@ -191,8 +207,8 @@ ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
     CFLAGS = -g
 endif
 
-##FFLAGS = -g
-##CFLAGS = -g
+#FFLAGS = -g
+#CFLAGS = -g
 FFLAGS = -O2
 CFLAGS = -O2
 
@@ -215,12 +231,21 @@ endif
 #CC = gcc -rdynamic
     CC = gcc
     CXX = g++ -g
+    
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
+  ifeq ("$(MACHINE)","x86_64_RHEL9")
+    CC = gcc
+    CXX = g++
+  else
     ##CC = /apps/gcc/4.9.4/bin/gcc 
     ##CXX = /apps/gcc/4.9.4/bin/g++ 
-    CC = /apps/gcc/8.3.0/bin/gcc 
-    CXX = /apps/gcc/8.3.0/bin/g++ 
+    ##CC = /apps/gcc/8.3.0/bin/gcc 
+    ##CXX = /apps/gcc/8.3.0/bin/g++
+    CC = /apps/gcc/9.3.0/bin/gcc
+    CXX = /apps/gcc/9.3.0/bin/g++
+  endif
 endif
+
 ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
     ##CC = /apps/gcc/4.9.4/bin/gcc
     ##CXX = /apps/gcc/4.9.4/bin/g++ 
@@ -301,9 +326,16 @@ ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
     X11LIBS += -lXmu
 endif
 
+
+
 TERMCAPLIBS = -ltermcap
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
 ifeq ("$(OSRELEASE)","7")
+    TERMCAPLIBS += -lXft -lfontconfig
+endif
+endif
+ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
+ifeq ("$(OSRELEASE)","9")
     TERMCAPLIBS += -lXft -lfontconfig
 endif
 endif
@@ -312,6 +344,8 @@ ifeq ("$(OSRELEASE)","7")
     TERMCAPLIBS += -lXft -lfontconfig
 endif
 endif
+
+
 
     SYSLIBDIRS = /usr/lib
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
@@ -711,7 +745,7 @@ LIBNAMES  = $(LIBRARY)
 # generic libraries (CERNLIB etc)
 #---------------------------------
 CERNLIBDIRS = $(CERN_ROOT)/lib
-CERNLIBS = -lgraflib -lgrafX11 -lpacklib
+CERNLIBS = -lgraflib -lgrafX11 -lpacklib -lkernlib
 
 
 #--------------------------

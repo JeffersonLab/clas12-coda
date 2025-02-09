@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <unistd.h>
 
 using namespace std;
 #include <strstream>
@@ -41,6 +42,7 @@ main()
   while(1)
   {
 	//printf("1\n");
+    sleep(1);
     epics_json_msg_send("TestScalers", "int", MAXELEM, iarray);
     epics_json_msg_send("EventRate", "int", 1, iarray);
     epics_json_msg_send("TestVals", "float", MAXELEM, farray);

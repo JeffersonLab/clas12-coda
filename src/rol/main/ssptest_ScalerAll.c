@@ -23,7 +23,7 @@ int GetThreshold(int slot,int fiber,int asic);
 int ResetGains();
 int LoadGains();
 
-int gmap[8][32][3][64];// slot, fiber, asic, channel
+int gmap[MAX_VME_SLOTS+1][RICH_FIBER_NUM][3][64];// slot, fiber, asic, channel
 
 
 //----------------------------------------
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]){
 //  sspGStatus(1);
 
 
-  skipSSPRichinit=1;
+  skipSSPRichinit=0;
 
   if(skipSSPRichinit){
 
@@ -154,6 +154,22 @@ int main(int argc, char *argv[]){
   sspRich_PrintConnectedAsic_All();
 
 
+
+
+
+  // Configure the Pulser if CTEST Amplitude !=0
+  if(ctestAmplitude>0){
+    for(i=0;i<nssp;i++){
+      slot = sspSlot(i);
+      // SSP setup
+      // Note: SSP RICH is 125MHz clocked, so sspPulserSetup frequency assumes 250MHz, so:
+      //       asking for 20kHz will give 10kHz on SSP RICH (will be fixed at some point)
+      sspPulserSetup(slot, 2*pulserFrequency, 0.5, 0xFFFFFFFF);
+      sspSetIOSrc(slot, SD_SRC_TRIG2, SD_SRC_SEL_PULSER);
+    }
+  }
+
+#if 0
   // Configure the Pulser
   for(i=0;i<nssp;i++){
     slot = sspSlot(i);
@@ -163,6 +179,9 @@ int main(int argc, char *argv[]){
     sspPulserSetup(slot, pulserFrequency/2., 0.5, 0xFFFFFFFF);
     sspSetIOSrc(slot, SD_SRC_TRIG2, SD_SRC_SEL_PULSER);
   }
+#endif
+
+
 
 }// end of SSPRICHinit
 
@@ -177,7 +196,7 @@ int main(int argc, char *argv[]){
    fprintf(stdout,".");
     slot = sspSlot(i);
     sspRich_GetConnectedFibers(slot, &fibers);
-  
+    printf("nssp %d, slot %d, fibers %d\n", i, slot, fibers); 
     for(j=0; j < 32; j++)
     {
       if(fibers & (1<<j))
@@ -229,6 +248,7 @@ int main(int argc, char *argv[]){
   sleep(duration);
 
   // READ SCALER
+  int nBoard = -1;
   for(i=0;i<nssp;i++){
     slot = sspSlot(i);
     sspRich_GetConnectedFibers(slot, &fibers);
@@ -237,8 +257,10 @@ int main(int argc, char *argv[]){
       if(fibers & (1<<j))
       {
         if(sspRich_IsAsicInvalid(slot,j)) continue;
-
-        sprintf(foutName,"ssprich_scaler_%03d.txt",(slot-3)*32+j); // ABSOLUTE TILE!!
+	nBoard++;
+	
+        //sprintf(foutName,"ssprich_scaler_%03d.txt",(slot-3)*32+j); // ABSOLUTE TILE!!
+        sprintf(foutName,"ssprich_scaler_%03d.txt", nBoard); 
         fout = fopen(foutName,"w");
         if(fout==NULL){printf("Error: file %s not opened\n",foutName); return -1;}
 
@@ -383,8 +405,8 @@ int ResetGains(){
 
  int slot, fiber, asic, channel;
  int gain_default=64;
- for(slot=3;slot<=7;slot++)
-   for(fiber=0;fiber<=31;fiber++)
+ for(slot=0;slot<MAX_VME_SLOTS+1;slot++)
+   for(fiber=0;fiber<RICH_FIBER_NUM;fiber++)
      for(asic=0;asic<=2;asic++)
        for(channel=0;channel<=63;channel++)
          gmap[slot][fiber][asic][channel]= gain_default;

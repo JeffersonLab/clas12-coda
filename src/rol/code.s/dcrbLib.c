@@ -34,7 +34,6 @@
 #include <unistd.h>
 #endif
 
-
 /* Include DCRB definitions */
 #include "dcrbLib.h"
 
@@ -181,19 +180,6 @@ dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
   int noBoardInit=0;
   int useList=0;
 
-  /* Check if we have already Initialized boards before */
-  if((dcrbInited>0) && (dcrbID[0] != 0)) 
-  {
-    /* Hard Reset of all DCRB boards in the Crate
-    for(ii=0; ii<ndcrb; ii++) 
-	{
-	  dcrbHardReset(dcrbID[ii]);
-	}
-    taskDelay(120);
-    */
-    ;
-  }
-
   /* Check if we're initializing using a list */
   useList=(iFlag&(1<<17))>>17;
 
@@ -313,7 +299,7 @@ dcrbInit(unsigned int addr, unsigned int addr_inc, int ndc, int iFlag)
     if(!noBoardInit)
 	{
       printf("HardReseting slot %d ..\n",dcrbID[ii]);fflush(stdout);
-      /*dcrbHardReset(dcrbID[ii]);*/
+      dcrbHardReset(dcrbID[ii]);
       printf(".. done.\n");fflush(stdout);
 	}
   }
@@ -540,6 +526,15 @@ skipmultiblock:
 int
 dcrbHardReset(int id)
 {
+  if(id==0) id=dcrbID[0];
+
+  if((id<=0) || (id>21) || (DCRBp[id] == NULL)) 
+  {
+    printf("dcrbStatus: ERROR : DCRB in slot %d is not initialized \n",id);
+    return(-1);
+  }
+  vmeWrite32(&(DCRBp[id]->Cfg.Reboot), 0x1);
+/*
 	int i;
 	unsigned short reloadSequence[] = {
 		0xFFFF, 0xAA99, 0x5566, 0x3261,
@@ -557,7 +552,7 @@ dcrbHardReset(int id)
 	}
 	for(i = 0; i < 10; i++)
 		vmeWrite32(&(DCRBp[id]->Cfg.ICapCtrl), DCRB_ICAP_CE | DCRB_ICAP_CLK);
-	
+*/	
 	return(OK);
 }
 
@@ -633,6 +628,7 @@ dcrbStatus(int id, int sflag)
   unsigned int readoutCfg;
   unsigned int chDisable[6], tdcConfig[6];
   unsigned int gtp_ctrl[2], gtp_ctrl1[2], gtp_status[2], gtp_error[2];
+  unsigned int heartbeatcnt, seucnt;
 
   if(id==0) id=dcrbID[0];
 
@@ -687,7 +683,12 @@ dcrbStatus(int id, int sflag)
   gtp_status[1] = vmeRead32(&DCRBp[id]->Ser[1].Status);
   gtp_error[0]  = vmeRead32(&DCRBp[id]->Ser[0].ErrTile0);
   gtp_error[1]  = vmeRead32(&DCRBp[id]->Ser[1].ErrTile0);
+  heartbeatcnt = vmeRead32(&DCRBp[id]->Cfg.HeartbeatCnt);
+  seucnt = vmeRead32(&DCRBp[id]->Cfg.SEUCnt);
   DCRBUNLOCK;
+
+printf("&DCRBp[id]->Cfg.BoardId=0x%lx\n", (unsigned long)&DCRBp[id]->Cfg.BoardId);
+printf("&DCRBp[id]->Tdc[0].DeadCycles=0x%lx\n", (unsigned long)&DCRBp[id]->Tdc[0].DeadCycles);
 
 #ifdef VXWORKS
   printf("\nSTATUS for DCRB in slot %d at base address 0x%x \n",
@@ -784,6 +785,10 @@ dcrbStatus(int id, int sflag)
     gtp_ctrl[0], gtp_ctrl1[0], gtp_status[0], gtp_error[0]);
   printf("   Serdes1: ctrl=%08X, ctrl1=%08X, status=%08X, errors=%08X\n", 
     gtp_ctrl[1], gtp_ctrl1[1], gtp_status[1], gtp_error[1]);
+ 
+  printf("\n SEU Status:\n");
+  printf("   heartbeatcnt: %d\n", heartbeatcnt);
+  printf("   seucnt: %d\n", seucnt);
 
   printf("\n");
 }
@@ -821,7 +826,8 @@ dcrbSetProcMode(int id, unsigned int lookBack, unsigned int windowWidth, unsigne
   /*Defaults */
   if((lookBack==0)||(lookBack>DCRB_MAX_LOOKBACK))  lookBack  = DCRB_DEFAULT_LOOKBACK;
   if((windowWidth==0)||(windowWidth>DCRB_MAX_WINDOW)) windowWidth = DCRB_DEFAULT_WINDOW;
-  if((deadTime==0)||(deadTime>DCRB_MAX_DEADTIME)) deadTime = DCRB_MAX_DEADTIME;
+//  if((deadTime==0)||(deadTime>DCRB_MAX_DEADTIME)) deadTime = DCRB_MAX_DEADTIME;
+  if((deadTime>DCRB_MAX_DEADTIME)) deadTime = DCRB_MAX_DEADTIME;
 
   /* Consistancy check */
   if(windowWidth > lookBack) 

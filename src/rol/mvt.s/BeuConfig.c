@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "ReturnCodes.h"
 #include "BeuConfig.h"
@@ -30,13 +31,13 @@
 // BEU Control structures
 volatile struct BEUSSP_A24RegStruct *beu_reg_control[DEF_MAX_NB_OF_BEU];
 volatile unsigned int               *beu_fifo[DEF_MAX_NB_OF_BEU];
+
 /* pointer to BEUSSP multi block adress window */
-extern volatile unsigned int        *BEUSSPmblk = 0;
+/*extern*/ volatile unsigned int        *BEUSSPmblk = 0; //sergey: not used here, but used in SysConfig.c; remove 'extern', or move to SysConfig.c ?
 
-
- #ifndef OK
+#ifndef OK
  #define OK 0
- #endif 
+#endif 
 
 /*
  * Set system in Running or Idle state

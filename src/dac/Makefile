@@ -13,10 +13,24 @@ MAIN = dac
 #------------------
 include $(CODA)/src/Makefile.include
 
-#CFLAGS = -O2
-#CXXFLAGS = $(CFLAGS)
-#CC = /apps/gcc/4.9.4/bin/gcc -O2
-#CXX = /apps/gcc/4.9.4/bin/g++ -O2
+
+
+# uncomment following piece for debugging ###
+CFLAGS = -g -fPIC -DLinux -DLINUX
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
+  CFLAGS += -DLinux_vme -I$(CODA)/src/rol/jvme
+endif
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+  CFLAGS += -DLinux_x86_64
+endif
+ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+  CFLAGS += -DLinux_armv7l
+endif
+#############################################
+
+
+
+
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
   LDCC = $(LDCXX)
@@ -28,9 +42,6 @@ endif
 ifeq ("$(OSTYPE_MACHINE)","SunOS_sun4u")
     CFLAGS += -DSunOS_sun4u
 endif
-
-
-
 
 
 #------------------------
@@ -136,11 +147,14 @@ else ifeq ("$(OSTYPE_MACHINE)","Linux_nios2")
 
 else
 
-  LIBNAMES += $(globallib)/libcreg.a
-  LIBNAMES += $(globallib)/libcodautil.a
+  LIBNAMES += $(CODA)/src/creg/$(OSTYPE_MACHINE)/lib/libcreg.a
+  LIBNAMES += $(CODA)/src/codautil/$(OSTYPE_MACHINE)/lib/libcodautil.a
 
   ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
     LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+  endif
+  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
+    LIBNAMES += /usr/lib64/libmariadb.so
   endif
   ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
     LIBNAMES += /usr/lib64/mysql/libmysqlclient.so

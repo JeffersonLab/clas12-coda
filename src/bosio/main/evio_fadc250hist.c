@@ -5,7 +5,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#undef DEBUG
+//#define DEBUG
+
+
+#define ROCID 90
+#define NSAMPS4PED 10
+
+
+#define MAX(a,b)          ( (a) > (b) ? (a) : (b) )
  
 #define NWPAWC 10000000 /* Length of the PAWC common block. */
 #define LREC 1024       /* Record length in machine words. */
@@ -144,7 +151,7 @@ main(int argc, char **argv)
   int handler, status, ifpga;
   unsigned long long *b64;
   unsigned int *b32;
-  unsigned short *b16;
+  unsigned short *b16, iw16;
   unsigned char *b08;
   int trig,chan,fpga,apv,hybrid;
   int i1;
@@ -180,23 +187,23 @@ main(int argc, char **argv)
 
 
 
-  nbins=100;
+  nbins=120;
   x1 = 0.;
-  x2 = 100.;
+  x2 = 120.;
   ww = 0.;
   for(ii=1; ii<=21; ii++)
   {
     for(jj=0; jj<=15; jj++)
     {
       idn = ii*100+jj;
-      sprintf(title,"baseline sl%d ch%d",ii,jj);
+      sprintf(title,"rawdata sl%d ch%d",ii,jj);
       hbook1_(&idn,title,&nbins,&x1,&x2,&ww,strlen(title));
     }
   }
 
-  nbins=250;
+  nbins=400;
   x1 = 0.;
-  x2 = 250.;
+  x2 = 400.;
   ww = 0.;
   for(ii=1; ii<=21; ii++)
   {
@@ -209,8 +216,8 @@ main(int argc, char **argv)
   }
 
   
-  nbins=4000;
-  x1 = 0.;
+  nbins=4100;
+  x1 = -1000.;
   x2 = 40000.;
   ww = 0.;
   for(ii=1; ii<=21; ii++)
@@ -222,6 +229,33 @@ main(int argc, char **argv)
       hbook1_(&idn,title,&nbins,&x1,&x2,&ww,strlen(title));
     }
   }
+
+  idn = 25000;
+  sprintf(title,"2d moller",jj);
+  nbins = 100;
+  nbins1 = 100;
+  x1 = 0.;
+  x2 = 1000.;
+  y1 = 0.;
+  y2 = 1000.;
+  ww = 0.;
+  hbook2_(&idn,title,&nbins,&x1,&x2,&nbins1,&y1,&y2,&ww,strlen(title));
+
+
+  nbins = 200;
+  nbins1 = 200;
+  x1 = -1000.;
+  x2 = 10000.;
+  y1 = -1000.;
+  y2 = 10000.;
+  ww = 0.;
+  for(ii=0; ii<12; ii++)
+  {
+    idn = 26000+ii;
+    sprintf(title,"2d for group %2d",ii);
+    hbook2_(&idn,title,&nbins,&x1,&x2,&nbins1,&y1,&y2,&ww,strlen(title));
+  }
+
 
   nbins=100;
   x1 = 0.;
@@ -259,6 +293,10 @@ main(int argc, char **argv)
   ww = 0.;
 
 
+
+
+
+
   status = evOpen(argv[1],"r",&handler);
   if(status < 0)
   {
@@ -282,14 +320,17 @@ main(int argc, char **argv)
     if(iev < 3) continue; /*skip first 2 events*/
 
 	
-    if((ind1 = evNlink(buf, 21, 0xe101, 0, &nbytes)) > 0)
+    if((ind1 = evNlink(buf, ROCID, 0xe101, 0, &nbytes)) > 0)
     {
       unsigned char *end;
       unsigned long long time;
       int crate,slot,trig,nchan,chan,nsamples,notvalid,edge,data,count,ncol1,nrow1;
       int oldslot = 100;
       int ndata0[22], data0[21][8];
-      int baseline, sum, channel;
+      float sum, ped, integral, ww16, wmax;
+      int moller1, moller2;
+      int ba[12][2];
+
 #ifdef DEBUG
       printf("ind1=%d, nbytes=%d\n",ind1,nbytes);
 #endif
@@ -298,6 +339,8 @@ main(int argc, char **argv)
 #ifdef DEBUG
       printf("ind1=%d, nbytes=%d (from 0x%08x to 0x%08x)\n",ind1,nbytes,b08,end);
 #endif
+      moller1 = moller2 = 0;
+      for(ii=0; ii<12; ii++) ba[ii][0]=ba[ii][1]=0;
       while(b08<end)
       {
 #ifdef DEBUG
@@ -311,37 +354,126 @@ main(int argc, char **argv)
         printf("slot=%d, trig=%d, time=%lld nchan=%d\n",slot,trig,time,nchan);
 #endif
         for(jj=0; jj<nchan; jj++)
-	    {
+	{
           GET8(chan);
           /*chan++;*/
           GET32(nsamples);
 #ifdef DEBUG
           printf("  chan=%d, nsamples=%d\n",chan,nsamples);
 #endif
+          sum = 0.0;
+          integral = 0.0;
+          wmax = 0.0;
           for(kk=0; kk<nsamples; kk++)
-	      {
-            tmpx = kk+0.5;
-	        GET16(ww);
-	        idn = slot*100+chan;
-	        hf1_(&idn,&tmpx,&ww);
+	  {
+	    GET16(iw16);
+            ww16 = (float)iw16;
 
-	        idn = 10000 + slot*100+chan;
-            tmpx = ww;
-            ww = 1.;
-	        hf1_(&idn,&tmpx,&ww);
-	      }
+            /*rawdata*/
+            tmpx = kk+0.5;
+	    idn = slot*100+chan;
+	    hf1_(&idn,&tmpx,&ww16);
+
+            if(kk<NSAMPS4PED)
+	    {
+              sum = sum + ww16;
 	    }
+            else if(kk==NSAMPS4PED)
+	    {
+              ped = sum / (float)NSAMPS4PED;
+              //printf("ped=%f\n",ped);
+
+              /*pedestal*/
+              idn = 10000 + slot*100+chan;
+              tmpx = ww16;
+              ww = 1.;
+	      hf1_(&idn,&tmpx,&ww);
+	    }
+            else if(kk>15 && kk<40)
+	    {
+              wmax = MAX(wmax,(ww16 - ped));
+              integral = integral + (ww16 - ped);
+              //printf("[kk=%2d] integral=%7.2f wmax=%7.2f ...\n",kk,integral,wmax);
+	    }
+	  }
+
+	  //if(wmax>10.)
+	  {
+            if(slot==3 && chan==14) moller1 = integral;
+            if(slot==3 && chan==15) moller2 = integral;
+
+            if     (slot==3 && chan==13) ba[0][0] = integral;
+            else if(slot==3 && chan==12) ba[1][0] = integral;
+            else if(slot==3 && chan==11) ba[2][0] = integral;
+            else if(slot==3 && chan==10) ba[3][0] = integral;
+            else if(slot==3 && chan==9) ba[4][0] = integral;
+            else if(slot==3 && chan==8) ba[5][0] = integral;
+            else if(slot==3 && chan==7) ba[6][0] = integral;
+            else if(slot==3 && chan==6) ba[7][0] = integral;
+            else if(slot==3 && chan==5) ba[8][0] = integral;
+            else if(slot==3 && chan==4) ba[9][0] = integral;
+            else if(slot==3 && chan==3) ba[10][0] = integral;
+            else if(slot==3 && chan==2) ba[11][0] = integral;
+
+            if     (slot==3 && chan==1) ba[0][1] = integral;
+            else if(slot==4 && chan==2) ba[1][1] = integral;
+            else if(slot==4 && chan==0) ba[2][1] = integral;
+            else if(slot==4 && chan==1) ba[3][1] = integral;
+            else if(slot==3 && chan==0) ba[4][1] = integral;
+            else if(slot==4 && chan==3) ba[5][1] = integral;
+            else if(slot==4 && chan==4) ba[6][1] = integral;
+            else if(slot==4 && chan==5) ba[7][1] = integral;
+            else if(slot==4 && chan==6) ba[8][1] = integral;
+            else if(slot==4 && chan==7) ba[9][1] = integral;
+            else if(slot==4 && chan==8) ba[10][1] = integral;
+            else if(slot==4 && chan==9) ba[11][1] = integral;
+
+            //printf("integral=%f\n",integral);
+
+            /*spectra*/
+            tmpx = integral;
+	    ww = 1.;
+	    idn = 20000+slot*100+chan;
+	    hf1_(&idn,&tmpx,&ww);
+
+	    if(moller1>0 && moller2>0)
+	    {
+              idn = 25000;
+              tmpx = (float)moller1;
+              tmpy = (float)moller2;
+ 	      ww = 1.;
+             hf2_(&idn,&tmpx,&tmpy,&ww);
+	    }
+	  }
+
+
+
+	}
 #ifdef DEBUG
         printf("end loop: b08=0x%08x\n",b08);
 #endif
       }
+
+      for(ii=0;ii<12;ii++)
+      {
+        if(ba[ii][0]>500 && ba[ii][1]>500)
+	{
+          //printf("[%2d] %6d %6d\n",ii,ba[ii][0],ba[ii][1]);
+          idn = 26000+ii;
+          tmpx = (float)ba[ii][0];
+          tmpy = (float)ba[ii][1];
+	  ww   = 1.;
+          hf2_(&idn,&tmpx,&tmpy,&ww);
+	}
+      }
+
     }
 
 
 	
 
-
-    if((ind1 = evNlink(buf, 21, 0xe103, 0, &nbytes)) > 0)
+#if 0
+    if((ind1 = evNlink(buf, ROCID, 0xe103, 0, &nbytes)) > 0)
     {
       unsigned short pulse_time;
       unsigned int pulse_integral;
@@ -350,7 +482,7 @@ main(int argc, char **argv)
       int crate,slot,trig,nchan,chan,npulses,notvalid,edge,data,count,ncol1,nrow1;
       int oldslot = 100;
       int ndata0[22], data0[21][8];
-      int baseline, sum, channel;
+      int sum, channel;
 
 
       b08 = (unsigned char *) &buf[ind1];
@@ -391,7 +523,7 @@ main(int argc, char **argv)
           printf("  chan=%d, npulses=%d\n",chan,npulses);
 #endif
           for(kk=0; kk<npulses; kk++)
-	      {
+	  {
             b16 = (unsigned short *)b32;
             pulse_time = (*b16++)>>6;
             b32 = (unsigned int *)b16;
@@ -400,23 +532,23 @@ main(int argc, char **argv)
             printf(" b32=0x%08x:  pulse_time=%d pulse_integral=%d\n",b32,pulse_time,pulse_integral);
 #endif			
             tmpx = pulse_integral;
-	        ww   = 1.;
-	        idn  = 20000+slot*100+chan;
-	        hf1_(&idn,&tmpx,&ww);
+	    ww   = 1.;
+	    idn  = 20000+slot*100+chan;
+	    hf1_(&idn,&tmpx,&ww);
 
             tmpx = pulse_time;
-	        ww   = 1.;
-	        idn  = 30000+slot*100+chan;
-	        hf1_(&idn,&tmpx,&ww);
-			
-	      }
-	    }
+	    ww   = 1.;
+	    idn  = 30000+slot*100+chan;
+	    hf1_(&idn,&tmpx,&ww);	
+	  }
+	}
         b08 = (unsigned char *)b32;
 #ifdef DEBUG
         printf("end loop: b08=0x%08x\n",b08);
 #endif
       }
     }
+#endif
 
 
   }

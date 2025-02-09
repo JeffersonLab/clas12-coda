@@ -338,19 +338,19 @@ ettStart()
     if(listArgc>0) strcpy(etp->station,listArgv[0]);
     printf("ET station name in database is >%s<\n",etp->station);
     if(strlen(etp->station)<1)
-	{
+    {
       printf("ET station name length is %d, will use default station name\n",strlen(etp->station));
       strcpy(etp->station,"ETT");
-	}
+    }
     else if(!isalpha(etp->station[0]))
-	{
+    {
       printf("Not alpha (%c) in first position of the ET station name, will use default station name\n",etp->station[0]);
       strcpy(etp->station,"ETT");
-	}
+    }
     else
-	{
+    {
       printf("ET station name from database >%s< looks good\n",etp->station);
-	}
+    }
   }
   else
   {
@@ -482,25 +482,34 @@ printf("12\n");fflush(stdout);
 
   if( !strncmp(etp->station,"ROUNDROBIN",10))
   {
-    printf("============== ROUND-ROBIN ====================\n");fflush(stdout);
+    printf("============== ROUND-ROBIN ALWAYS BLOCKING ====================\n");fflush(stdout);
 
     /* ET station "round-robin" mode */
     et_station_config_setflow(etp->sconfig, ET_STATION_PARALLEL);
     et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_RROBIN);
     et_station_config_setblock(etp->sconfig, ET_STATION_BLOCKING);
   }
-  else
+  else if( !strncmp(etp->station,"BLOCKING",8))
   {
-    printf("============== NOT ROUND-ROBIN ====================\n");fflush(stdout);
+    printf("============== BLOCKING ====================\n");fflush(stdout);
 
     /* ET station "all" mode */
     et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_ALL);
     et_station_config_setblock(etp->sconfig, ET_STATION_BLOCKING);
+  }
+  else
+  {
+    printf("============== NONBLOCKING ====================\n");fflush(stdout);
 
-    /* ET station "on req" mode 
+    /* ET station "all" mode 
+    et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_ALL);
+    et_station_config_setblock(etp->sconfig, ET_STATION_BLOCKING);
+	*/
+
+    /* ET station "on req" mode */
     et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_ALL);
     et_station_config_setblock(etp->sconfig, ET_STATION_NONBLOCKING);
-    */
+    
     /* ET station "condition" mode 
     et_station_config_setselect(etp->sconfig, ET_STATION_SELECT_MATCH);
     et_station_config_setblock(setp->config, ET_STATION_BLOCKING);
@@ -553,7 +562,7 @@ printf("12\n");fflush(stdout);
     if (status == ET_ERROR_EXISTS)
     {
       /* my_stat contains pointer to existing station */;
-      printf("station already exists, will attach to it\n");
+      printf("\nET station already exists, will attach to it (our station settings will be ignored)\n\n");
 
       /* get id and attach to existing station (must be created by 'et_start' */
       if((status = et_station_name_to_id(etp->id_from, &etp->stat_from, etp->station)) < ET_OK)

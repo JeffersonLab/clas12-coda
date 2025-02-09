@@ -147,6 +147,8 @@ TIPRIMARY_int_handler(int arg)
 
 
 static unsigned long i2_from_rol1;
+static char ourhostname[128];
+static char ourvtphostname[128];
 
 static void
 tiprimarytinit(int code)
@@ -154,15 +156,25 @@ tiprimarytinit(int code)
   int ii, ret, j1, j2;
   unsigned long i1, i2, i3;
   unsigned int slavemask, connectmask;
+  char chtmp[256];
+  char *p, tmp[1000];
 
   /*int overall_offset=0x80;*/
-
-
 
 
 /* TEMPORARY!!! this will kill mutex so DiagGuiServer must be restarted after that !!!!!!!!!!!!!!!!!!!!! */
 vmeCheckMutexHealth(1); /*- use 'mutexclean' command if needed !!!!!!!!!!!!!!!!!!!*/
 
+  /* get our hostname and our vtp hostname if it exist */
+  strcpy(tmp,getenv("HOST"));
+  if( (p=strchr(tmp,'.'))!=NULL )
+  {
+    printf("Will use everything before first '.' appearance in HOST=>%s<\n",tmp);
+    *p = '\0';
+  }
+  sprintf(ourhostname,"%s",tmp);
+  sprintf(ourvtphostname,"%svtp",tmp);
+  printf("TIPRIMARY: our hostname is >%s<, our vtp hostname is >%s<\n",ourhostname,ourvtphostname);
 
 
   /* DMA setup */
@@ -210,7 +222,8 @@ vmeBusLock();
   if(ret<0)
   {
     printf("ERROR: tiInit() returns %d \n",ret);
-    UDP_user_request(MSGERR, "rol1", "tiInit() failure. Do 'Reset' and  'Download' again !");
+    sprintf(chtmp,"tiInit() failure in >%s<. Do 'Reset' and  'Download' again !",ourhostname);
+    UDP_user_request(MSGERR, "rol1", chtmp);
     /*exit(0);*/
   }
 #ifdef DEBUG
@@ -242,16 +255,9 @@ vmeBusUnlock();
 
   /* only 1 trigger type for physics trigger */
 vmeBusLock();
-/*tiSetTriggerSource(TI_TRIGGER_TSINPUTS); move to config */
 
-/* moved to config
-  tiDisableTSInput(TI_TSINPUT_ALL);
-  tiEnableTSInput( TI_TSINPUT_1 | TI_TSINPUT_2 | TI_TSINPUT_3 | TI_TSINPUT_4 | TI_TSINPUT_5 | TI_TSINPUT_6);
-*/
   tiLoadTriggerTable(3);
-
   tiSetFPInputReadout(1); /* add extra word in data, it contains front panel bits */
-
   tiSetBusySource(TI_BUSY_FP,0); /* for master TI, always enable front panel inhibit */
 
 vmeBusUnlock();
@@ -310,7 +316,7 @@ try_again1:
 vmeBusLock();
   connectmask = tiGetConnectedFiberMask();
   printf("FIBER CONNECT MASK: 0x%08x\n",connectmask);
-  slavemask = tiGetSlaveMask(); /* ERROR: we do not have it yet, addSlave() will be called in Prestart !!! */
+  slavemask = tiGetSlaveMask(); /* ERROR: we do not have it yet, tiAddSlave() will be called in Prestart !!! */
   printf("FIBER SLAVE MASK: 0x%08x\n",slavemask);
 vmeBusUnlock();
   for(ii=0; ii<8; ii++)
@@ -351,10 +357,6 @@ vmeBusUnlock();
 #endif
 
 
-
-
-
-
 }
 
 
@@ -365,7 +367,6 @@ tiprimarytriglink(int code, VOIDFUNCPTR isr)
 {
   int numRows, ix, port, roc_id_db, roc_id_fiber[9], have_sync_vtp;
   char tmp[1000];
-  char ourhostname[128], ourvtphostname[128], *p;
   MYSQL *dbsocket;
   MYSQL_RES *result;
   MYSQL_ROW row;
@@ -430,19 +431,7 @@ vmeBusUnlock();
     numRows = mysql_num_rows(result);
     printf("TIPRIMARY: nrow=%d, my rocid=%d\n",numRows,rol->pid);
 
-
-	/* get our hostname and our vtp hostname if it exist */
-    strcpy(tmp,getenv("HOST"));
-    if( (p=strchr(tmp,'.'))!=NULL )
-	{
-      printf("Will use everything before first '.' appearance in HOST=>%s<\n",tmp);
-      *p = '\0';
-	}
-    sprintf(ourhostname,"%s",tmp);
-    sprintf(ourvtphostname,"%svtp",tmp);
-    printf("TIPRIMARY: our hostname is >%s<, our vtp hostname is >%s<\n",ourhostname,ourvtphostname);
     have_sync_vtp = 0;
-
 
 
 
@@ -477,6 +466,8 @@ vmeBusUnlock();
       {
         roc_id_db = atoi(row[2]);
         printf("   TIPRIMARY: roc_id_db = %d\n",roc_id_db);
+
+
 
 #ifdef USE_HPS
 
@@ -533,10 +524,27 @@ vmeBusUnlock();
 #endif
 
 
-		{
+
+#if 0
+	printf("SRS: roc_id_db=%d\n",roc_id_db);
+	/*SRS !!!!!!!!!!!!!!!*/
+        if(roc_id_db==85) /*temporary until resolved in hardware*/
+	{
+          printf("   TIPRIMARY: add slave connected to fiber 1 (clon10new)\n");
+vmeBusLock();
+          tiAddSlave(1);
+vmeBusUnlock();
+	}
+        else
+#endif
+
+
+
+	{
           printf("   TIPRIMARY: looping over ports ..\n");
           for(port=1; port<=8; port++)
           {
+            printf("==> roc_id_db=%d, roc_id_fiber[%d]=%d\n",roc_id_db,port,roc_id_fiber[port]);
             if(roc_id_db == roc_id_fiber[port])
 		    {
               if(roc_id_db == rol->pid) /* never here ? */
@@ -553,6 +561,13 @@ vmeBusUnlock();
               break;
             }
           }
+
+		  /*
+vmeBusLock();
+tiAddSlave(1);
+vmeBusUnlock();
+		  */
+
 		}
 
 

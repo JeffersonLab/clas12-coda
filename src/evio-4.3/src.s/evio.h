@@ -53,6 +53,10 @@
 #define S_EVFILE_BADARG     0x80730007  /**< Invalid function argument */
 #define S_EVFILE_BADMODE    0x80730008  /**< Wrong mode used in evOpen for this operation */
 
+/*sergey*/
+#define S_EVFILE_BADLEN     0x80730009 /*evRead seems OK but returned buffer has 0 in the first word, should be buffer length*/
+/*sergey*/
+
 /* macros for swapping ints of various sizes */
 #ifdef VXWORKS
 

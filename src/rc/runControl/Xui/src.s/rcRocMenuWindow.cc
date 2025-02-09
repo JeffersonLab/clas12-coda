@@ -441,16 +441,16 @@ rcRocMenuWindow::createXterms (Widget widget, char *name)
   {
     ac = 0;
     /*XtSetArg (arg[ac], XmNequalSize,  True); ac++; */
-	/*XtSetArg (arg[ac], XmNallowResize,  True); ac++; */
-	/*XtSetArg (arg[ac], XmNskipAdjust,  False); ac++; default */
-	/*XtSetArg (arg[ac], XmNresizeToPreferred,  True); ac++; */
-	/*XtSetArg (arg[ac], XmNpreferredPaneSize, height); ac++; */
+    /*XtSetArg (arg[ac], XmNallowResize,  True); ac++; */
+    /*XtSetArg (arg[ac], XmNskipAdjust,  False); ac++; default */
+    /*XtSetArg (arg[ac], XmNresizeToPreferred,  True); ac++; */
+    /*XtSetArg (arg[ac], XmNpreferredPaneSize, height); ac++; */
 
-	/* following effects panes resizing process */
-	//XtSetArg (arg[ac], XmNpaneMaximum, hmax); ac++;
-	//XtSetArg (arg[ac], XmNpaneMinimum, hmin); ac++;
+    /* following effects panes resizing process */
+    //XtSetArg (arg[ac], XmNpaneMaximum, hmax); ac++;
+    //XtSetArg (arg[ac], XmNpaneMinimum, hmin); ac++;
 
-	XtSetArg (arg[ac], XtNwidth, width); ac++;
+    XtSetArg (arg[ac], XtNwidth, width); ac++;
     XtSetArg (arg[ac], XtNheight, height); ac++;
     printf("INITIALLY xterms[%d] width=%d height=prefsize=%d\n",nxterms,width,height);
 
@@ -683,7 +683,7 @@ rcRocMenuWindow::createMenuWindow (Widget parent)
   /*******************/
   /* create tabs area */
 
-  tabLabels_[0] = strdup("rocs");
+  tabLabels_[0] = strdup("rocs0"); /*name of the first rocs tabs, it will be more of them created in rocs.cc*/
 
   ac = 0;
   XtSetArg (arg[ac], XtNlabels, tabLabels_); ac++;
@@ -1121,10 +1121,11 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
 			else if(comp[ncomp_].type == CODA_EB)       {type_name[ncomp_] = (char *)"EB";       bg_name[ncomp_] = (char *)"yellow";}
 			else if(comp[ncomp_].type == CODA_ET)       {type_name[ncomp_] = (char *)"ET";       bg_name[ncomp_] = (char *)"yellow";}
             else if(comp[ncomp_].type == CODA_ETT)      {type_name[ncomp_] = (char *)"ETT";      bg_name[ncomp_] = (char *)"yellow";}
+            else if(comp[ncomp_].type == CODA_SRO)      {type_name[ncomp_] = (char *)"SRO";      bg_name[ncomp_] = (char *)"yellow";}
             else if(comp[ncomp_].type == CODA_TRIG)     {type_name[ncomp_] = (char *)"TS";       bg_name[ncomp_] = (char *)"lightblue";}  
             else if(comp[ncomp_].type == CODA_RCS)      {type_name[ncomp_] = (char *)"RCS";      bg_name[ncomp_] = (char *)"white";}
             else if(comp[ncomp_].type == CODA_ER)       {type_name[ncomp_] = (char *)"ER";       bg_name[ncomp_] = (char *)"yellow";}
-            else if(comp[ncomp_].type == CODA_UC)       {type_name[ncomp_] = (char *)"UC";       bg_name[ncomp_] = (char *)"white";}
+            else if(comp[ncomp_].type == CODA_SPR)       {type_name[ncomp_] = (char *)"SPR";       bg_name[ncomp_] = (char *)"white";}
             else if(comp[ncomp_].type == CODA_L3)       {type_name[ncomp_] = (char *)"L3";       bg_name[ncomp_] = (char *)"yellow";}
             else if(comp[ncomp_].type == CODA_LOG)      {type_name[ncomp_] = (char *)"LOG";      bg_name[ncomp_] = (char *)"white";}
             else if(comp[ncomp_].type == CODA_SC)       {type_name[ncomp_] = (char *)"SC";       bg_name[ncomp_] = (char *)"white";}
@@ -1217,7 +1218,11 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
           myargv[myargc++] = strdup( temp );
 
           myargv[myargc++] = strdup( "-expect" );
-          sprintf(temp,"ssh %s:%s",comp[kk].node_name,comp[kk].node_name);
+
+ 	  /*unsetenv DISPLAY disables X forwarding, and ssh connects faster*/
+          sprintf(temp,"unsetenv DISPLAY; ssh %s:%s",comp[kk].node_name,comp[kk].node_name);
+          //sprintf(temp,"ssh %s:%s",comp[kk].node_name,comp[kk].node_name);
+
           myargv[myargc++] = strdup( temp );
 
           sprintf(temp,"stop_coda_process -p %s -match \"%s %s\"",comp[kk].boot_string,comp[kk].comp_name,type_name[kk]);

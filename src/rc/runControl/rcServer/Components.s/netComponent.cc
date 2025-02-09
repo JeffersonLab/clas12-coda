@@ -104,6 +104,11 @@
 #include <daqRun.h>
 #include <codaCompClnt.h>
 
+//sergey
+#define TRUE  1
+#define FALSE 0
+
+
 #ifdef USE_TK
 #include <rcTclInterface.h>
 #endif
@@ -164,7 +169,6 @@ netComponent::bootThread (void *arg)
 				      comp->type_, comp->node_,updateI);
 
       comp->transformState (CODA_BOOTED, CODA_BOOTED, comp->status_);
-
       if (comp->status_ == CODA_SUCCESS)
       {
 	    comp->established_ = 1;
@@ -837,7 +841,6 @@ netComponent::download(void)
 
     /* wait for state to become 'CODA_DOWNLOADED' */
     transformState(CODA_DOWNLOADING, CODA_DOWNLOADED, status_);
-
     if(status_ == CODA_SUCCESS)
     {
 #ifdef DEBUG_MSGS
@@ -939,7 +942,6 @@ netComponent::go (void)
       }
 
       transformState(CODA_ACTIVATING, CODA_ACTIVE, status_);
-
       if(status_ == CODA_SUCCESS)
       {
         if(state_ == CODA_ACTIVE)
@@ -1032,7 +1034,6 @@ netComponent::pause (void)
       }
 
       transformState (CODA_PAUSING, CODA_PAUSED, status_);
-
       if(status_ == CODA_SUCCESS)
       {
         if(state () == CODA_PAUSED)
@@ -1091,14 +1092,20 @@ netComponent::end (void)
     if (state () >= CODA_DOWNLOADED)
     {
       reporter->cmsglog (CMSGLOG_INFO,"%s end......\n", title_);
-
+#ifdef DEBUG_MSGS
+      printf("%s end......\n",title_);
+#endif
       codaDaCompSetState (title_, CODA_ENDING);
 
       status_ = ::codaDaEnd (title_, 0);
+
       transformState (CODA_ENDING, CODA_DOWNLOADED, status_);
       if (status_ == CODA_SUCCESS)
       {
 	    reporter->cmsglog (CMSGLOG_INFO1,"%s end underway......\n", title_);
+#ifdef DEBUG_MSGS
+        printf("%s end underway......\n",title_);
+#endif
 
 	    // hack to allow pause/resume script. RWM April 99
 	    if (strcmp(type_, "TS") == 0)
@@ -1109,6 +1116,9 @@ netComponent::end (void)
       else
       {
 	    reporter->cmsglog (CMSGLOG_ERROR,"%s end failed\n", title_);
+#ifdef DEBUG_MSGS
+        printf("%s end failed\n",title_);
+#endif
       }
     }
   }
@@ -1297,20 +1307,29 @@ netComponent::transformState(int state1, int state2, int& status)
   // status is < 0 if the call failed
 
 #ifdef DEBUG_MSGS
-  printf("netComponent::transformState reached\n");
+  printf("netComponent::transformState reached: state1=%d state2=%d status=%d\n",state1,state2,status);
 #endif
 
   if(status == state1 || status == state2)
   {
+#ifdef DEBUG_MSGS
+    printf("netComponent::transformState info: status=%d\n",status);
+#endif
     setState (status);
     status = CODA_SUCCESS;
   }
   else if(status < 0)
   {
+#ifdef DEBUG_MSGS
+    printf("netComponent::transformState error: status=%d\n",status);
+#endif
     status = CODA_ERROR;
   }
   else
   {
+#ifdef DEBUG_MSGS
+    printf("netComponent::transformState warn: status=%d\n",status);
+#endif
     setState (status);
     status = CODA_ERROR;
   }
@@ -1365,7 +1384,7 @@ netComponent::runScript(char *scriptName)
     close (1); dup (tty);
     close (2); dup (tty);
     close (tty);
-
+    printf("netComponent::runScript 1\n");
     return (execlp ("csh", "csh", "-c", realscript, (char *)0));
   }
 

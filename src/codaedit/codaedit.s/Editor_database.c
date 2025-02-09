@@ -65,7 +65,7 @@
 
 #include "libdb.h"
 
-#define _CODA_DEBUG
+//#define _CODA_DEBUG
 
 #define PRIORITY_TABLE_NAME "priority"
 #define RUNTYPE_TABLE_NAME  "runTypes"
@@ -93,8 +93,8 @@ static char* compTypeString[] = {
   "ER",
   "LOG",
   "SC", 
-  "UC",
-  "RCS",
+  "SPR", /*sergey: was 'UC' */
+  "SRO", /*sergey: was 'RCS' */
   "FILE",
   "FILE",
   "DEBUG",
@@ -748,6 +748,27 @@ createPriorityTable (void)
 #endif
     return -1;
   }
+
+  /* SRO class */
+  sprintf (queryString, "insert into %s\n", PRIORITY_TABLE_NAME);  
+  strcat  (queryString, "values ('SRO', 17)"); 
+  if (mysql_query (mysql, queryString) != 0) {
+#ifdef _CODA_DEBUG
+    printf ("Insert priority value error: %s\n", mysql_error(mysql));
+#endif
+    return -1;
+  }
+
+  /* SPR class */
+  sprintf (queryString, "insert into %s\n", PRIORITY_TABLE_NAME);  
+  strcat  (queryString, "values ('SPR', 18)"); 
+  if (mysql_query (mysql, queryString) != 0) {
+#ifdef _CODA_DEBUG
+    printf ("Insert priority value error: %s\n", mysql_error(mysql));
+#endif
+    return -1;
+  }
+
   return 0;
 }
   
@@ -1533,7 +1554,9 @@ createRcNetCompsFromDbase (rcNetComp** comp, int *num)
   mysql_free_result (res);
   *num = i;
 
+#ifdef _CODA_DEBUG
   printf("createRcNetCompsFromDbase: selected %d components from 'process' table\n",i);
+#endif
 
   return 0;
 }

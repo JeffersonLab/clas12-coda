@@ -65,7 +65,7 @@ typedef struct data_description
                 which ROC the data came from it matches the ID in the process
                 table. */
 
-  unsigned int time; /* (R) Integer time since epoch - set by the EB for use
+  unsigned int time_; /* (R) Integer time since epoch - set by the EB for use
                          in *_encode_* routines. */
 
   int rocs[32]; /* (R) Reserved space: to be defined */

@@ -1409,7 +1409,7 @@ debCloseLink(DATA_LINK theLink, MYSQL *dbsock)
 
   /* release memory */
   printf("debCloseLink: free memory\n");
-  cfree((char *) theLink->name);
+  free((char *) theLink->name); //sergey: was 'cfree'
   /*cfree((char *) theLink->parent);donotneedit???*/
 
 
@@ -1417,7 +1417,7 @@ debCloseLink(DATA_LINK theLink, MYSQL *dbsock)
      from 'handle_link()' will fail since  'theLink' does not exist any more; this is probably why there
      is check 'if(cbp <(CIRCBUF *)100000)' inside put_cb_data ... */
   /* probably 'handle_link()' must set some flag when done, and we'll wait for that flag here ... */
-  cfree((char *) theLink);
+  free((char *) theLink); //sergey: was 'cfree'
   printf("debCloseLink: done.\n");
   
   return(CODA_OK);

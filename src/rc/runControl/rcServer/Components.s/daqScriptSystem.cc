@@ -78,5 +78,7 @@ daqScriptSystem::script (int action)
   if (action < CODA_CONNECT_ACTION || action > CODA_TERMINATE_ACTION)  
     return 0;
 
+  printf("daqScriptSystem::script(%d)\n",action);fflush(stdout);
+
   return scripts_[action];
 }

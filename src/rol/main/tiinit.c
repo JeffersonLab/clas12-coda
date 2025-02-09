@@ -59,10 +59,13 @@ void tiFirmwareEMload(char *filename);
 static void tiFirmwareUsage();
 #endif
 
+#define TI_ADDR   (21<<19)
+#define TI_READOUT 2
+
 int
 main(int argc, char *argv[])
 {
-  int stat;
+  int stat, ret;
   int BoardNumber;
   char *filename;
   int inputchar=10;
@@ -73,8 +76,24 @@ main(int argc, char *argv[])
   stat = vmeOpenDefaultWindows();
   if(stat != OK) exit(1);
 
-  stat = tiInit(/*0x00A8000*/0,0,0);
+  /*
+  stat = tiInit(0,0,0);
   if(stat != OK) exit(1);
+*/
+
+  ret = tiInit(TI_ADDR,TI_READOUT,0);
+  printf("INFO1: tiInit() returns %d \n",ret);
+  if(ret<0)
+  {
+    ret = tiInit(0,TI_READOUT,0);
+    printf("INFO2: tiInit() returns %d \n",ret);
+  }
+  if(ret<0)
+  {
+    printf("ERROR: tiInit() returns %d \n",ret);
+    exit(1);
+  }
+
   printf("\n-----------------------\n");
   tiGetSerialNumber((char **)&rSN);
   printf("\n-----------------------\n");

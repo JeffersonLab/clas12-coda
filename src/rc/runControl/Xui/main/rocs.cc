@@ -49,7 +49,7 @@
 
 int root_height;
 XtAppContext app_context;
-Widget toplevel;
+static Widget toplevel; //sergey: add 'static'
 
 char *userPath = (char *)"";
 extern "C" int getStartupVisual(Widget shell, Visual **visual, int *depth,
@@ -100,6 +100,7 @@ static char *fallback_res[] =
   */
   (char *)"rocs*.*foreground:                      white",
   (char *)"rocs*.*background:                      gray20",
+
   (char *)"rocs*.rcMsgWindow.background:           lightGray",
   (char *)"rocs*.rcMsgWindow*foreground:           black",
   (char *)"rocs*.XmToggleButtonGadget.selectColor: yellow",
@@ -209,7 +210,9 @@ static char *fallback_res[] =
   (char *)"rocs.*.runInfoPanel*iDataRate.*.foreground:   black",
   (char *)"rocs.*.runInfoPanel*dDataRate.*.background:   lightGrey",
   (char *)"rocs.*.runInfoPanel*dDataRate.*.foreground:   black",
-  (char *)"rocs.*.runInfoPanel.*background:              gray20",
+
+  (char *)"rocs.*.runInfoPanel.*background:              gray20", //???
+
   (char *)"rocs.*.runInfoPanel.*foreground:              white",
   (char *)"rocs.*.runInfoPanel*optionPulldown*foreground:white",
   (char *)"rocs.*.runInfoPanel*runtype*foreground:       white",
@@ -218,9 +221,12 @@ static char *fallback_res[] =
   (char *)"rocs.*.runInfoPanel*eventNumberG.foreground:  RoyalBlue4",
   (char *)"rocs.*.runInfoPanel*eventNumberG.fontList:       -*-times-bold-r-*-*-18-*-*-*-*-*-*-*",
   (char *)"rocs.*.runInfoPanel*eventNumberG.*borderWidth:1",
-  (char *)"rocs.*.runInfoPanel*netstatus.*background:    daykGray",
-  (char *)"rocs.*.rocTab.tabcolor:                    gray20",
-  (char *)"rocs.*.menu_bar.background:                   gray20",
+  (char *)"rocs.*.runInfoPanel*netstatus.*background:    daykGray", // error ?
+
+  (char *)"rocs.*.rocTab.tabcolor:                    gray20", //??? does not do anything
+
+  (char *)"rocs.*.menu_bar.background:                   gray20", // bar above rocs tabs
+
   (char *)"rocs.*.menu_bar.*.foreground:                 white",
   (char *)"rocs.*.XmPushButton*highlightThickness:       0",
   (char *)"rocs.*.XmPushButtonGadget*highlightThickness: 0",
@@ -236,14 +242,23 @@ static char *fallback_res[] =
   (char *)"rocs*.highlightThickness:                     0",
   (char *)"rocs*.XmRowColumn*spacing:                    0",
   (char *)"rocs*.selectColor:                            RoyalBlue4",
+
   (char *)"rocs*.rocTab.shadowThickness:              2",
   (char *)"rocs*.rocTab.tabWidthPercentage:           10",
   (char *)"rocs*.rocTab.cornerwidth:                  2",
   (char *)"rocs*.rocTab.cornerheight:                 2",
   (char *)"rocs*.rocTab.textmargin:                   4",
-  (char *)"rocs*.rocTab.foreground:                   blue",
-  (char *)"rocs*.rocTab.tabcolor:                     lightGrey",
-  
+
+
+  /*sergey: blue is not visible
+  (char *)"rocs*.rocTab.foreground:                   blue",*/
+  (char *)"rocs*.rocTab.foreground:                   red",
+
+
+  /*sergey: following does not effect anything*/
+  //(char *)"rocs*.rocTab.tabcolor:                     lightGrey",
+  (char *)"rocs*.rocTab.tabcolor:                     white",
+ 
 
   /*sergey: testing*/
   (char *)"rocs*.rocFrame.foreground:                   Blue",
@@ -436,7 +451,7 @@ resize (Widget w, XEvent *event, String args[], Cardinal *num_args)
     bla = height;
     sum = 0;
     for(jj=0; jj<nsubchildren; jj++)
-	{
+    {
       XtVaGetValues (subchildren[jj], XmNheight, &height, XmNy, &pos, NULL);
 	  
 #ifdef DEBUG
@@ -445,27 +460,27 @@ resize (Widget w, XEvent *event, String args[], Cardinal *num_args)
 #endif
 	  
       if(XmIsSash(subchildren[jj])) /* sash */
-	  {
+      {
         ;
 #ifdef DEBUG
         printf("rocs:resize> subchild[%d] sash, height=%d\n",jj,height);
 #endif
-	  }
+      }
       else if(XmIsSeparator(subchildren[jj])) /* separator */
-	  {
+      {
         ;
 #ifdef DEBUG
         printf("rocs:resize> subchild[%d] separator, height=%d\n",jj,height);
 #endif
-	  }
+      }
       else /* pane */
-	  {
+      {
         if(height>10) sum += height;
 #ifdef DEBUG
         printf("rocs:resize> subchild[%d] pane, height=%d, sum(so far)=%d\n",jj,height,sum);
 #endif
-	  }
-	}
+      }
+    }
 
 #ifdef DEBUG
     printf("rocs:resize>>>> height=%d, sum=%d, diff=%d\n",bla,sum,bla-sum);
@@ -473,26 +488,26 @@ resize (Widget w, XEvent *event, String args[], Cardinal *num_args)
 
 
 
-	/**********************************************************************************************************/
+    /**********************************************************************************************************/
     /* resize panes, keep them equal size for now, should use sash position in future when resizeSash() fixed */
 
-      /* sergey: it seems changing xterms[] sizes (XmNheight, XmNpreferredPaneSize) does not effect how panes resized,
-      the only way I found is setting XmNpaneMaximum and XmNpaneMinimum for xterms[], setting it to desired xterms[] height */
+    /* sergey: it seems changing xterms[] sizes (XmNheight, XmNpreferredPaneSize) does not effect how panes resized,
+    the only way I found is setting XmNpaneMaximum and XmNpaneMinimum for xterms[], setting it to desired xterms[] height */
 	
-	bla = bla - 38; /* subtract bla-sum, not sure why 38, can be different on another monitor ... !!! */
-	  hmax = (bla/5);
-      hmin = (bla/5)-1;
+    bla = bla - 38; /* subtract bla-sum, not sure why 38, can be different on another monitor ... !!! */
+    hmax = (bla/5);
+    hmin = (bla/5)-1;
 #ifdef DEBUG
-      printf("rocs:resize> xterms[%d]: hmax=%d, hmin=%d\n",jj,hmax,hmin);
+    printf("rocs:resize> xterms[%d]: hmax=%d, hmin=%d\n",jj,hmax,hmin);
 #endif
-	  for(jj=0; jj<menW->nxterms; jj++)
-	  {
-        XtVaSetValues (menW->xterms[jj], XmNpaneMaximum, hmax, XmNpaneMinimum, hmin, NULL);
-        XtVaGetValues (menW->xterms[jj], XmNwidth, &x_width, XmNheight, &x_height, NULL);
+    for(jj=0; jj<menW->nxterms; jj++)
+    {
+      XtVaSetValues (menW->xterms[jj], XmNpaneMaximum, hmax, XmNpaneMinimum, hmin, NULL);
+      XtVaGetValues (menW->xterms[jj], XmNwidth, &x_width, XmNheight, &x_height, NULL);
 #ifdef DEBUG
-        printf("rocs:resize> xterms[%d]: x_width=%d, x_height=%d\n",jj,x_width,x_height); 
+      printf("rocs:resize> xterms[%d]: x_width=%d, x_height=%d\n",jj,x_width,x_height); 
 #endif
-	  }
+    }
 
   }
 
@@ -524,12 +539,20 @@ main(int argc, char** argv)
   logging = 0;
   if(argc==2)
   {
-    if(!strncmp(argv[1],"-embed",6)) embedded = 1;
+    if(!strncmp(argv[1],"-embed",6))
+    {
+      embedded = 1;
+      printf("Embedded mode\n");fflush(stdout);
+    }
   }
   else if(argc==3)
   {
-    if(!strncmp(argv[1],"-embed",6)) embedded = 1;
-
+    if(!strncmp(argv[1],"-embed",6))
+    {
+      embedded = 1;
+      printf("Embedded mode\n");fflush(stdout);
+    }
+    
     if( (!strncmp(argv[2],"-log",4)) || (!strncmp(argv[2],"-logs",5)) ) logging = 1;
   }
 
@@ -562,9 +585,11 @@ main(int argc, char** argv)
 
   /* open a X display ??? */
   app->open (&argc, argv);
+
   
   /* create a network handler which register itself to x window event loop */
   app_context = app->appContext ();
+
   
   rcClientHandler netHandler (app->appContext ());
 
@@ -576,7 +601,6 @@ main(int argc, char** argv)
 
   
   app->initialize (&argc, argv);
-
     
   menW = window->window_;
 
@@ -584,7 +608,9 @@ main(int argc, char** argv)
 
   toplevel = XtParent(XtParent(XtParent(menW->rform_)));
 
+
   MainDisplay = XtDisplay(toplevel);
+
 
 
 #if 1
@@ -627,9 +653,8 @@ main(int argc, char** argv)
   XtSetArg (arg[ac], XmNresizePolicy, XmRESIZE_ANY); ac++;
 
 #ifdef USE_CREG_HIDE /* done inside 'createXterms' for every individual window */
-    printf("CREG 009: ALLROCS\n");
-    codaSendInit(toplevel,"ALLROCS");
-    codaRegisterMsgCallback((void *)messageHandler);
+  codaSendInit(toplevel,"ALLROCS");
+  codaRegisterMsgCallback((void *)messageHandler);
 #endif    
 
 
@@ -643,6 +668,7 @@ main(int argc, char** argv)
 
     width = (width * 4) / 5;
     height = (height * 4) / 5;
+
     XResizeWindow(XtDisplay(XtParent(menW->rform_)),XtWindow(toplevel),width,height);
   }
 
@@ -653,7 +679,7 @@ main(int argc, char** argv)
 
   if(embedded)
   {
-    printf("EMBEDDED !!!!!!!!!!!!!!!!!!!!!!!\n");
+    printf("ROCS IN EMBEDDED MODE !!!!!!!!!!!!!!!!!!!!!!!\n");fflush(stdout);
 
     static char *embedded_name = (char *)"rocs";
 
@@ -663,53 +689,48 @@ main(int argc, char** argv)
     Widget w;
     char name[100];
     char cmd[100];
-    parent = 0;
 
-
-    printf("CREG 1\n");
     parent = 0;
-    if (embedded)
+    if(embedded)
     {
-	  printf("wwwwwwwwwwwwwwwwwwwww CREG wwwwwwwwwwwwwww (-embed)\n");
+      printf("wwwwwwwwwwwwwwwwwwwww CREG wwwwwwwwwwwwwww (-embed)\n");fflush(stdout);
 
       sprintf(name,"%s_WINDOW",embedded_name);
-      printf("name >%s<\n",name);
+      printf("name >%s<\n",name);fflush(stdout);
       
       parent = CODAGetAppWindow(XtDisplay(toplevel),name);
-      printf("parent=0x%08x\n",parent);
+      printf("parent=0x%08x\n",parent);fflush(stdout);
     }
 
-    printf("CREG 2\n");
+
     if (parent)
-    {
-      printf("CREG 3\n");
+    {      
       ac = 0;
       XtSetArg(args[ac], XmNx, 3000); ac++;
+      XtSetArg(args[ac], XmNoverrideRedirect,True); ac++; /*sergey: important ! 'gnome' does not insert without it*/
       XtSetValues (toplevel, args, ac);
       XtRealizeWidget(toplevel);
       XWithdrawWindow(XtDisplay(toplevel), XtWindow(toplevel),0);
 
       sprintf(cmd,"r:0x%08x 0x%08x",XtWindow(toplevel),parent);      
-      printf("cmd >%s<\n",cmd);
-
-      /* second parameter is the same as in parent's call 'codaSendInit(toplevel,"RUNCONTROL")' */
+      printf("cmd >%s<\n",cmd);fflush(stdout);
+     
+      /* actually insert rocs into runcontrol's window;
+         second parameter is the same as in parent's call 'codaSendInit(toplevel,"RUNCONTROL")' */
       coda_Send(XtDisplay(toplevel),(char *)"RUNCONTROL",cmd);
 
-	  /* was in codaedit:*/
+      /* was in codaedit:*/
       codaSendInit(toplevel,(char *)"ALLROCS"); /* does NOT triggers 'motifHandler'->'resizeHandler' calls in codaRegistry */ 
       codaRegisterMsgCallback((void *)messageHandler);
       XtAddEventHandler(toplevel, StructureNotifyMask, False, Xhandler, NULL); /*Xhandler will exit if window was destroyed*/
-
     }
     else
     {
-      printf("CREG 4\n");
-
       ac = 0;
       XtSetArg(args[ac], XmNoverrideRedirect,False); ac++;
       XtSetValues (toplevel, args, ac);
 
-	  /* codaEditor() etc stuff was here */
+      /* codaEditor() etc stuff was here */
     }
 
   }
@@ -718,14 +739,19 @@ main(int argc, char** argv)
 
 
 
-  while (1)
-  {
-	printf("111\n");
-    if (theApplication != NULL) app->execute();
-	printf("222\n");
-    if (theApplication == NULL) return(0);
-	printf("333\n");
-  }
+  printf("111\n");fflush(stdout);
+  XtAppMainLoop(app_context);
 
+
+  
+  /*
+  printf("111\n");fflush(stdout);
+  if (theApplication != NULL) app->execute();
+  printf("222\n");fflush(stdout);
+  if (theApplication == NULL) return(0);
+  printf("333\n");fflush(stdout);
+  */
+
+  
   return(0);
 }

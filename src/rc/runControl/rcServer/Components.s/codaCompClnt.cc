@@ -78,6 +78,7 @@
 #include <string.h>
 #include <daqConst.h>
 #include <daqState.h>
+#include <rcMsgReporter.h>
 
 
 /************************************************/
@@ -150,7 +151,7 @@ tcpClient(char *name, char *message)
   /* create client's socket */ 
   if((sFd = socket(AF_INET, SOCK_STREAM, 0)) == ERROR)
   {
-    perror("socket"); 
+    perror("socket");
     return(ERROR); 
   } 
 
@@ -169,11 +170,16 @@ tcpClient(char *name, char *message)
 #ifdef DEBUG_MSGS
   printf("tcpClient: DB select: >%s<\n",tmp);
 #endif
-  if(dbGetInt(dbsock, tmp, &portnum)==ERROR) return(ERROR);
+  if(dbGetInt(dbsock, tmp, &portnum)==ERROR)
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"tcpClient('%s','%s'): calling dbGetInt\n",name,message);
+    return(ERROR);
+  }
 
   if(portnum==0)
   {
     printf("tcpClient: Component %s has zero 'inuse' field in process table, probably not ready\n",name);
+    reporter->cmsglog (CMSGLOG_ERROR,"tcpClient('%s','%s'): Component has zero 'inuse' field in process table, probably not ready\n",name,message);
     return(ERROR);
   }
 
@@ -181,7 +187,11 @@ tcpClient(char *name, char *message)
 #ifdef DEBUG_MSGS
   printf("tcpClient: DB select: >%s<\n",tmp);
 #endif
-  if(dbGetStr(dbsock, tmp, hostname)==ERROR) return(ERROR);
+  if(dbGetStr(dbsock, tmp, hostname)==ERROR)
+  {
+    reporter->cmsglog (CMSGLOG_ERROR,"tcpClient('%s','%s'): calling dbGetStr\n",name,message);
+    return(ERROR);
+  }
 
   /* disconnect from database */
   dbDisconnect(dbsock);
@@ -214,6 +224,7 @@ tcpClient(char *name, char *message)
   if(connect (sFd, (struct sockaddr *) &serverAddr, sockAddrSize) != 0)
   {
     perror("tcpClient::connect"); 
+    reporter->cmsglog (CMSGLOG_ERROR,"tcpClient('%s','%s'): calling connect\n",name,message);
     close(sFd); 
     return(ERROR); 
   }
@@ -240,14 +251,17 @@ tcpClient(char *name, char *message)
   if(write(sFd, (char *) &myRequest, sizeof (myRequest)) == ERROR)
   {
     perror("write"); 
+    reporter->cmsglog (CMSGLOG_ERROR,"tcpClient('%s','%s'): calling write\n",name,message);
     close(sFd); 
     return(ERROR);
   } 
 
   close(sFd); 
 
+  reporter->cmsglog (CMSGLOG_INFO,"tcpClient('%s','%s') succeeded\n",name,message);
+
   return(OK); 
-} 
+}
 
 
 

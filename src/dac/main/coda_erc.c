@@ -121,6 +121,7 @@ extern char *session; /* coda_component.c */
 
 static int mbytes_in_current_run;
 static int nevents_in_current_run;
+static int ievent_old;
 
 #define ER_ERROR 1
 #define ER_OK 0
@@ -265,13 +266,13 @@ update_database(ERp erp)
     char db_value[NDBVALS][80];
 
     sprintf(db_value[0],"%d",erp->splitnb+1);
-	sprintf(db_value[1],"%d",nevents_in_current_run);
-	sprintf(db_value[2],"%d",mbytes_in_current_run);
-	sprintf(db_value[3],"%d",rawtime);
-	sprintf(db_value[4],"%d",object->runNumber);
+    sprintf(db_value[1],"%d",nevents_in_current_run);
+    sprintf(db_value[2],"%d",mbytes_in_current_run);
+    sprintf(db_value[3],"%d",rawtime);
+    sprintf(db_value[4],"%d",object->runNumber);
 
     for(iii=0; iii<NDBVALS; iii++)
-	{
+    {
       sprintf(tmpp,"SELECT name,value FROM %s_option WHERE name='%s'",configname,db_field[iii]);
       if(mysql_query(dbsocket, tmpp) != 0)
       {
@@ -581,17 +582,17 @@ if(pe[i]->control[0] & 0x40) printf("coda_ebc: syncFlag detected, control[0]=0x%
 int 
 outputEvents(ERp erp, et_event **pe, int start, int stop)
 {
-  int handle1, i, buflen, len, tmp, status=0;
+  int handle1, i, ii, buflen, len, tmp, ievent, status=0;
   unsigned int *buffer, *ptr;
   size_t size;
 
   /* evio file output */
-  for (i=start; i <= stop; i++)
+  for (i=start; i<=stop; i++)
   {
     len = pe[i]->length>>2;
     /*printf("Got event of length %d bytes.\n", len);*/
 
-	erp->object->nlongs += len;
+    erp->object->nlongs += len;
     erp->nlongs += len;
     erp->object->nevents++;
     erp->nevents++;
@@ -605,7 +606,17 @@ outputEvents(ERp erp, et_event **pe, int start, int stop)
     ptr += 8;
     len -= 32;
 
-	
+    //for(ii=0; ii<5; ii++) printf("   [%2d] 0x%08x %8d\n",ii,ptr[ii],ptr[ii]);
+
+    if(ptr[3]==0xc0000100) /*physics event (?)*/
+    {
+      ievent = ptr[4];
+      if(ievent!=(ievent_old+1)) printf("ERROR: ievent_old=%d, ievent=%d (nevents=%d %d)\n",ievent_old,ievent,nevents_in_current_run+erp->nevents,erp->object->nevents);
+      ievent_old = ievent;
+    }
+
+    //printf("calling evWrite\n");fflush(stdout);
+
     status = evWrite(erp->fd, ptr);
     if(status!=0) {printf("evWrite returns %d\n",status);return(status);}
 	
@@ -632,37 +643,37 @@ outputEvents(ERp erp, et_event **pe, int start, int stop)
 
 
 
-	/*SPLIT !!!!!!!!!!!!!!!!!!!!!!! */
-	if(erp->split && (erp->nlongs >= (erp->split)>>2 ))
+    /*SPLIT !!!!!!!!!!!!!!!!!!!!!!! */
+    if(erp->split && (erp->nlongs >= (erp->split)>>2 ))
     {
-	  evClose(erp->fd);
+      evClose(erp->fd);
 
-	  update_database(erp);
+      update_database(erp);
 
       erp->splitnb ++;
       erp->nevents = 0;
-	  erp->nlongs  = 0;
+      erp->nlongs  = 0;
 
 
       if(erp->usesubdir)
-	  {
+      {
         sprintf(erp->current_file, "%s_%06d/%s_%06d.evio.%05d", erp->subdirname, erp->object->runNumber, erp->subfilename, erp->object->runNumber, erp->splitnb);
-	  }
-	  else
-	  {
+      }
+      else
+      {
         sprintf(erp->current_file, "%s_%06d.evio.%05d", erp->filename, erp->object->runNumber, erp->splitnb);
-	  }
+      }
 
-	  printf("coda_er(outputEvents): Opening file : %s\n",erp->current_file);
+      printf("coda_er(outputEvents): Opening file : %s\n",erp->current_file);
       erp->fd = 0;
-	  evOpen(erp->current_file,"w",&erp->fd);
-	  /*sergey: my stuff
+      evOpen(erp->current_file,"w",&erp->fd);
+      /*sergey: my stuff
       tmp = 2047;
       evIoctl(erp->fd,"s",&tmp);
       */
       tmp = BUFFERSIZE;
       evIoctl(erp->fd,"B",&tmp);
-	}
+    }
 
   }
 
@@ -741,34 +752,35 @@ CODA_write_event(ERp erp, int flag)
         /* scan for prestart and end events */
         for (i=0; i<nevents; i++)
         {
-	      if (pe[i]->control[0] == prestartEvent)
+	  if (pe[i]->control[0] == prestartEvent)
           {
-	        printf("Got Prestart Event!!\n");
-			mbytes_in_current_run = 0;
+	    printf("Got Prestart Event!!\n");
+	    mbytes_in_current_run = 0;
             nevents_in_current_run = 0;
-	        /* look for first prestart */
-	        if (PrestartCount == 0)
+            ievent_old = 0;
+	    /* look for first prestart */
+	    if (PrestartCount == 0)
             {
-	          /* ignore events before first prestart */
-	          start = i;
-	          if (i != 0)
+	      /* ignore events before first prestart */
+	      start = i;
+	      if (i != 0)
               {
-	            printf("CODA_write_event: ignoring %d events before prestart\n",i);
-	          }
-	        }
+	        printf("CODA_write_event: ignoring %d events before prestart\n",i);
+	      }
+	    }
             PrestartCount++;
-	      }
-	      else if (pe[i]->control[0] == endEvent)
-         {
+	  }
+	  else if (pe[i]->control[0] == endEvent)
+          {
             erp->nend--;
-	        /* ignore events after last end event & quit */
-	        if (erp->nend <= 0)
+	    /* ignore events after last end event & quit */
+	    if (erp->nend <= 0)
             {
-	          stop = i;
-	          done = true;
-	        }
+	      stop = i;
+	      done = true;
+	    }
             printf("Got End event, Need %d more\n",erp->nend);
-	      }
+	  }
         }
       } 
       
@@ -777,8 +789,8 @@ CODA_write_event(ERp erp, int flag)
       {
         if (outputEvents(erp, pe, start, stop) != 0)
         {
-	      /* error writing coda file so quit */
-	      printf("ERROR: Error writing events... Cancel ET read loop!\n");
+	  /* error writing coda file so quit */
+	  printf("ERROR: Error writing events... Cancel ET read loop!\n");
           done = true;
         }
       }
@@ -807,8 +819,8 @@ CODA_write_event(ERp erp, int flag)
       if( ((stop_ticks-start_ticks)/CLK_TCK) > ER_WRITE_LOOP_TIMEOUT)
       {
 #endif
-	    printf("CODA_write_event: WARN: ER is backed up! This may be causing system deadtime\n");
-	    done = true;
+	printf("CODA_write_event: WARN: ER is backed up! This may be causing system deadtime\n");
+	done = true;
       }
     }
 
@@ -1147,10 +1159,10 @@ erDaqCmd(char *param)
       printf("waiting for write thread 2 .. erp->write_thread=0x%08x\n",erp->write_thread);fflush(stdout);
 
       /* if thread was started, cancel it */
-	  if(erp->write_thread > 0)
-	  {
+      if(erp->write_thread > 0)
+      {
         printf("update_database called ..\n");
-	    update_database(erp);
+        update_database(erp);
         printf(".. update_database done\n");
 
         /*pthread_cancel(erp->write_thread);*/
@@ -1159,13 +1171,13 @@ erDaqCmd(char *param)
 
         /* set force_exit=1 to tell writer that it has to exit 
         force_exit = 1; - not used in CODA_write_event yet, may not need it ...
-*/
+        */
 
         pthread_join(erp->write_thread, &status);
 
         erp->write_thread = 0; /*sergey: will check it*/
         printf("write thread is done\n");fflush(stdout);
-	  }
+      }
 
       if(erp->close_proc)
       {

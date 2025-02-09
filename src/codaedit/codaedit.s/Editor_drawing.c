@@ -73,6 +73,7 @@
 
 void setCompState(char *name, int state);
 
+/* sergey: add/modify for new component here */
 static char *names[] = {
   "TS",
   "ROC",
@@ -83,8 +84,8 @@ static char *names[] = {
   "ER",
   "LOG",
   "SC",
-  "UC",
-  "RCS",
+  "SPR", /* sergey: was 'UC' */
+  "SRO", /* sergey: was 'RCS' */
   "Binary file",
   "Coda file",
   "Debug",

@@ -2640,9 +2640,9 @@ get_pty(int *pty, char *from GCC_UNUSED)
 
     result = pty_search(pty);
 
-#else
-#if defined(USE_ISPTS_FLAG)
+#else /*sergey: here*/
 
+#if defined(USE_ISPTS_FLAG) /*sergey: NOT here*/
     /*
        The order of this code is *important*.  On SYSV/386 we want to open
        a /dev/ttyp? first if at all possible.  If none are available, then
@@ -2669,17 +2669,21 @@ get_pty(int *pty, char *from GCC_UNUSED)
     result = pty_search(pty);
 
 #endif
-#if defined(USE_USG_PTYS) || defined(__CYGWIN__)
 
-#ifdef __GLIBC__		/* if __GLIBC__ and USE_USG_PTYS, we know glibc >= 2.1 */
+#if defined(USE_USG_PTYS) || defined(__CYGWIN__) /*sergey: here*/
+
+#ifdef __GLIBC__ /*sergey: here*/
+	/* if __GLIBC__ and USE_USG_PTYS, we know glibc >= 2.1 */
     /* GNU libc 2 allows us to abstract away from having to know the
        master pty device name. */
-    if ((*pty = getpt()) >= 0) {
-	char *name = ptsname(*pty);
-	if (name != 0) {	/* if filesystem is trashed, this may be null */
+    if ((*pty = getpt()) >= 0) /*opens a pseudoterminal master and returns its file descriptor*/
+    {
+	  char *name = ptsname(*pty);
+	  if (name != 0)
+      {	/* if filesystem is trashed, this may be null */
 	    strcpy(ttydev, name);
 	    result = 0;
-	}
+	  }
     }
 #elif defined(__MVS__)
     result = pty_search(pty);

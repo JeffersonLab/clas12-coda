@@ -27,8 +27,12 @@ unsigned int *buf;
 int
 main(int argc, char *argv[])
 {
+  int hostport, len, i, ii, ret, slot, chan, partype;
+
+  int scaler1_nslots = 1;
+  int scaler1_slots[4] = {9,11,12,15};
+
   char hostname[256];
-  int hostport, len, ii, ret, slot, chan, partype;
   unsigned int buffer[100];
 
   printf("argc=%d\n",argc);fflush(stdout);
@@ -46,7 +50,7 @@ main(int argc, char *argv[])
   }
 
   tcp = new CrateMsgClient(hostname,hostport);
-exit(0);
+//exit(0);
 
   if(tcp->IsValid())
   {
@@ -58,8 +62,8 @@ exit(0);
     exit(0);
   }
 
-sleep(10);
-exit(0);
+  //sleep(10);
+  //exit(0);
 
 
 
@@ -67,6 +71,52 @@ exit(0);
   ret = tcp->GetCrateMap(&buf, &len);
   printf("222: len=%d\n",len);fflush(stdout);
   for(ii=0; ii<len; ii++) {printf("slot %2d, boardID 0x%08x\n",ii,buf[ii]);fflush(stdout);}
+
+
+  //sleep(10);
+  //exit(0);
+
+
+
+
+
+  /*scaler1 test*/
+
+  len = 80;
+  while(1)
+  {
+    for(i=0; i<scaler1_nslots; i++)
+    {
+      slot = scaler1_slots[i];
+      ret = tcp->GetScalers(slot, buffer, &len);
+      if(ret == kTRUE)
+      {
+	;
+        for(ii=0; ii<len; ii++) printf("slot=%02d:  [%2d] %7d 0x%08x (swap 0x%08x)\n",slot,ii,buffer[ii],buffer[ii],LSWAP(buffer[ii]));fflush(stdout);
+      }
+      else
+      {
+        printf("ERROR in slot=%d - exit\n",slot);
+        exit(0);
+      }
+      sleep(1);
+    }
+  }
+
+  sleep(1);
+  exit(0);
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   /*  
@@ -134,6 +184,14 @@ exit(0);
 	  printf(".. slept\n");fflush(stdout);
 	  */
     }
+
+
+
+    /*scaler1 dsc2 readout*/
+
+
+
+
 
 
     slot = 4;

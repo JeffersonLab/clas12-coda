@@ -1,3 +1,4 @@
+roc_reboot trig2
 roc_reboot adcecal1
 roc_reboot adcecal2
 roc_reboot adcecal3
@@ -16,11 +17,10 @@ roc_reboot adcftof3
 roc_reboot adcftof4
 roc_reboot adcftof5
 roc_reboot adcftof6
-roc_reboot adcft1
-roc_reboot adcft2
-roc_reboot adcft3
+#roc_reboot adcft1
+#roc_reboot adcft2
+#roc_reboot adcft3
 roc_reboot adcctof1
-roc_reboot trig2
 roc_reboot adccnd1
 roc_reboot dc11
 roc_reboot dc12
@@ -40,4 +40,3 @@ roc_reboot dc53
 roc_reboot dc61
 roc_reboot dc62
 roc_reboot dc63
-

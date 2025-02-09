@@ -207,6 +207,7 @@ typedef struct ncommon
  
 /* prototypes */
 #include "biofun.h" 
+#include "bosfun.h" 
 
 /* backward compatibility */
 #include "bosfor.h"

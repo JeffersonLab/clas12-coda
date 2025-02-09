@@ -254,6 +254,22 @@ static char ssname[80];
 #endif
 #endif
 
+#elif USE_SAMPA
+
+#define ROL_NAME__ "SAMPA1"
+#ifdef TI_MASTER
+#define INIT_NAME sampa1_master__init
+#define TIP_READOUT TIPUS_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
+#else
+#ifdef TI_SLAVE
+#define INIT_NAME sampa1_slave__init
+#define TIP_READOUT TIPUS_READOUT_TS_POLL /* Poll for available data, triggers from master over fiber */
+#else
+#define INIT_NAME sampa1__init
+#define TIP_READOUT TIPUS_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
+#endif
+#endif
+
 #else
 
 #define ROL_NAME__ "TIPCI1"
@@ -283,76 +299,16 @@ static char ssname[80];
 
 
 
-
 #include "rol.h"
 
 void usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE);
 void usrtrig_done();
 
 
-
-
-
-
-#define BLOCKLEVEL 1
-#define BUFFERLEVEL  8
-
-
 /* TRIG_MODE = TIP_READOUT_EXT_POLL for polling mode (External front panel input) */
 /*           = TIP_READOUT_TS_POLL  for polling mode (Fiber input from TS) */
 /* Fix from Bryan 17may16 */
 #define TRIG_MODE TIP_READOUT
-
-
-
-
-/*  SOFTTRIG - define internal TI pulser if needed */
-/* undef to use Front Panel inputs or TS Fiber Connection (TRIG_MODE above)*/
-
-#ifdef USE_VMM
-//#define SOFTTRIG /*enable for internal pulser*/
-#endif
-
-#ifdef USE_MAROC
-#ifndef TI_SLAVE
-//#define SOFTTRIG /*enable for internal pulser*/
-#endif
-#endif
-
-#ifdef USE_HPS
-#ifndef TI_SLAVE
-#define SOFTTRIG /*enable for internal pulser*/
-#endif
-#endif
-
-//#ifndef TI_SLAVE
-//#define SOFTTRIG /*enable for internal pulser*/
-//#endif
-
-#if USE_PETIROC
-#ifndef TI_SLAVE
-#undef BUFFERLEVEL
-#define BUFFERLEVEL 1
-//#define SOFTTRIG /*enable for internal pulser*/
-#define DEBUG
-#endif
-#endif
-
-#ifdef SOFTTRIG
-/* PULSER_TYPE   0 - Fixed   1 - Random*/
-#define PULSER_TYPE          1
-/* PULSER_FIXED  */
-#define PULSER_FIXED_NUMBER  BLOCKLEVEL
-#define PULSER_FIXED_PERIOD  2
-#define PULSER_FIXED_LONG    1
-
-/* PULSER_RANDOM_FREQ where arg sets frequency to 500kHz/(2^(arg-1))*/
-#define PULSER_RANDOM_FREQ   5 /* 15-15Hz,.., 10-500Hz,.., 8-2kHz, 7-6kHz, 6 ~15kHz */
-#endif
-
-
-
-
 
 
 
@@ -635,36 +591,6 @@ __download()
 vmeBusLock();
 
   tipusLoadTriggerTable(0);
-
-
-
-/*in GEN_source.h ??????????
-  tipusSetTriggerHoldoff(1,1,2);
-  tipusSetTriggerHoldoff(2,4,0);
-
-  tipusSetEventFormat(3);
-  tipusSetFPInputReadout(1);
-
-  tipusSetPrescale(0);
-
-#ifdef TI_MASTER
-#ifdef SOFTTRIG
-  tipusSetTriggerSource(TIPUS_TRIGGER_PULSER);
-#else
-  tipusSetTriggerSource(TIPUS_TRIGGER_TSINPUTS);
-#endif
-#endif
-  tipusEnableTSInput(0xf);
-
-  tipusSetBlockBufferLevel(10);
-
-  tipusSetSyncEventInterval(1000);
-  tipusSetBlockLevel(blockLevel);
-
-  tipusTrigLinkReset();
-  usleep(10000);
-*/
-
 
 vmeBusUnlock();
 #endif
@@ -952,16 +878,33 @@ tipusSetTriggerSource: INFO: tipusTriggerSource = 0x410
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+#if 0 /*ALL THAT MUST BE IN CONFIG FILE !!! */
+
+
 /*sergey: following will disable fiber trigger source and enable front panel ts#5 */
 
 /*master only*/
 #ifndef TI_SLAVE
 
 #ifdef SOFTTRIG
+
   /*pulser*/
   tipusSetTriggerSourceMask(TIPUS_TRIGSRC_LOOPBACK | TIPUS_TRIGSRC_PULSER);
   tipusSetBusySource(TIPUS_BUSY_LOOPBACK | TIPUS_BUSY_FP, 1);
   tipusSetSyncEventInterval(0);
+
 #else
 
 #if 1
@@ -991,10 +934,38 @@ tipusSetTriggerSource: INFO: tipusTriggerSource = 0x410
   tipusSetTriggerHoldoff(1,4,1);
 #endif
 
-#endif
+#endif /*#ifdef SOFTTRIG*/
 
 
 #endif /*ifndef TI_SLAVE*/
+
+
+
+#endif /* #if 0*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   logMsg("INFO: User Download Executed\n",1,2,3,4,5,6);
@@ -1334,13 +1305,6 @@ __go()
 
 
 #ifndef TI_SLAVE
-#ifdef SOFTTRIG
-  tipusSetRandomTrigger(1,PULSER_RANDOM_FREQ);
-#endif
-#endif
-
-
-#ifndef TI_SLAVE
 vmeBusLock();
   /* set sync event interval (in blocks) */
   tipusSetSyncEventInterval(0/*10000*//*block_level*/);
@@ -1427,12 +1391,6 @@ __end()
   int ifec=0;
 
   printf("\n\nINFO: End1 Reached\n");fflush(stdout);
-
-  //#ifdef TI_MASTER
-#ifdef SOFTTRIG
-  tipusDisableRandomTrigger();
-#endif
-  //#endif
 
   CDODISABLE(GEN,TIR_SOURCE,0);
 
@@ -2248,15 +2206,6 @@ __done()
 
   /* Acknowledge tir register */
   CDOACK(GEN,TIR_SOURCE,0);
-
-  //#ifdef TI_MASTER
-#ifdef SOFTTRIG
-  if(PULSER_TYPE==0)
-  {
-    tipusSoftTrig(1,PULSER_FIXED_NUMBER,PULSER_FIXED_PERIOD,PULSER_FIXED_LONG);
-  }
-#endif
-  //#endif
 
   return;
 }

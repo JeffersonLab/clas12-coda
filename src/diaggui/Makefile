@@ -14,6 +14,12 @@ MAIN = diaggui
 include $(CODA)/src/Makefile.include
 ###include $(CODA)/src/Makefile.arch
 
+# ROOT definitions
+ROOTCFLAGS   := $(shell root-config --cflags)
+ROOTLIBS     := $(shell root-config --libs)
+ROOTGLIBS    := $(shell root-config --glibs)
+
+
 #-----------------------
 # customize definitions
 #-----------------------
@@ -26,8 +32,10 @@ endif
 
 CLON_FLAGS = -std=c++11
 
+CLON_FLAGS += $(ROOTCFLAGS)
+
 CLON_FLAGS += -I./src.s \
-				-I$(ROOTSYS)/include \
+				-I./inc/ALERTFEB \
 				-I./inc/CTP \
 				-I./inc/DCRB \
 				-I./inc/DCRBScalers \
@@ -58,7 +66,8 @@ else
   CLON_FLAGS += -I/usr/include/apr-1
 endif
 
-LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
+
+LIBNAMES += $(CODA)/src/ipc/$(OSTYPE_MACHINE)/lib/libipc.a
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
   LIBNAMES += /usr/local/lib/libapr-1.so
@@ -77,8 +86,7 @@ ifneq ("$(OSTYPE)","VXWORKS")
 #  LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libmysql4.1.20.a
 #  LIBNAMES += $(CODA)/src/rol/jvme/libjvme.so
 
-##  LIBNAMES += $(ROOTGLIBS)
-  LIBNAMES += $(shell root-config --glibs)
+LIBNAMES += $(ROOTLIBS) $(ROOTGLIBS)
 
 ##  LIBNAMES += $(SYSLIBS)
 endif

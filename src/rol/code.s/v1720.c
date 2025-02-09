@@ -1563,7 +1563,7 @@ logMsg("[%d] ask=%d (%d bytes), got=%d (0x%08x to 0x%08x)\n",
 
   /* set DMA list */
   {
-    unsigned long adcadr[21];
+    unsigned int adcadr[21];
     for(ii=0; ii<Nc1720; ii++) adcadr[ii] = (unsigned long)c1720p[ii];
     usrVme2MemDmaListSet(adcadr, destination, nbytes_save, Nc1720);
   }

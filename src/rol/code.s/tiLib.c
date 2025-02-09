@@ -278,10 +278,9 @@ printf("%s:  INFO1: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
 
   /* Check VME address */
   if(tAddr<0 || tAddr>0xffffff)
-    {
-      printf("%s: ERROR: Invalid VME Address (%d)\n",__FUNCTION__,
-	     tAddr);
-    }
+  {
+    printf("%s: ERROR: Invalid VME Address (%d)\n",__FUNCTION__,tAddr);
+  }
   if(tAddr==0)
     {
       printf("%s: Scanning for TI...\n",__FUNCTION__);
@@ -298,8 +297,7 @@ printf("%s:  INFO1: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
     {
       /* User enter slot number, shift it to VME A24 address */
       printf("%s: Initializing using slot number %d (VME address 0x%x)\n",
-	     __FUNCTION__,
-	     tAddr, tAddr<<19);
+	     __FUNCTION__,tAddr, tAddr<<19);
       tAddr = tAddr<<19;
     }
 
@@ -321,8 +319,8 @@ printf("%s:  INFO2: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
 #ifdef VXWORKS
   stat = sysBusToLocalAdrs(0x39,(char *)tAddr,(char **)&laddr);
   if (stat != 0)
-    {
-      printf("%s: ERROR: Error in sysBusToLocalAdrs res=%d \n",__FUNCTION__,stat);
+  {
+    printf("%s: ERROR: Error in sysBusToLocalAdrs res=%d \n",__FUNCTION__,stat);
       return ERROR;
     }
   else
@@ -332,17 +330,21 @@ printf("%s:  INFO2: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
 #else
   stat = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)tAddr,(char **)&laddr);
   if (stat != 0)
-    {
-      printf("%s: ERROR: Error in vmeBusToLocalAdrs res=%d \n",__FUNCTION__,stat);
-      return ERROR;
-    }
+  {
+    printf("%s: ERROR: Error in vmeBusToLocalAdrs res=%d \n",__FUNCTION__,stat);
+    return ERROR;
+  }
   else
-    {
-      if(!noBoardInit)
-	printf("TI VME (Local) address = 0x%.8x (0x%.8lx)\n",tAddr,laddr);
-    }
+  {
+    if(!noBoardInit) printf("TI VME (Local) address = 0x%.8x (0x%.8lx)\n",tAddr,laddr);
+  }
 #endif
   tiA24Offset = laddr-tAddr;
+
+
+
+
+
 
   /* Set Up pointer */
   TIp = (struct TI_A24RegStruct *)laddr;
@@ -353,73 +355,103 @@ printf("%s:  INFO2: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
 #else
   stat = vmeMemProbe((char *)(&TIp->boardID),4,(char *)&rval);
 #endif
+  printf("%s: stat=%d, rval=0x%08x\n",__FUNCTION__,stat,rval);fflush(stdout);
 
 printf("%s:  INFO3: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
 
   if (stat != 0)
-    {
-      printf("%s: ERROR: TI card not addressable\n",__FUNCTION__);
-      TIp=NULL;
-      return(-1);
-    }
+  {
+    printf("%s: ERROR: TI card not addressable: vmeMemProbe() returned %d\n",__FUNCTION__,stat);fflush(stdout);
+    TIp = NULL;
+    return(-1);
+  }
   else
+  {
+    /* Check that it is a TI */
+    if(((rval&TI_BOARDID_TYPE_MASK)>>16) != TI_BOARDID_TYPE_TI)
     {
-      /* Check that it is a TI */
-      if(((rval&TI_BOARDID_TYPE_MASK)>>16) != TI_BOARDID_TYPE_TI)
-	{
-	  printf("%s: ERROR: Invalid Board ID: 0x%x (rval = 0x%08x)\n",
-		 __FUNCTION__,
-		 (rval&TI_BOARDID_TYPE_MASK)>>16,rval);
-	  TIp=NULL;
-	  return(ERROR);
-	}
-      /* Check if this is board has a valid slot number */
-      boardID =  (rval&TI_BOARDID_GEOADR_MASK)>>8;
-      if((boardID <= 0)||(boardID >21))
-	{
-	  printf("%s: ERROR: Board Slot ID is not in range: %d\n",
-		 __FUNCTION__,boardID);
-	  TIp=NULL;
-	  return(ERROR);
-	}
-      tiSlotNumber = boardID;
-
-      /* Get the "production" type bits.  2=modTI, 1=production, 0=prototype */
-      prodID = (rval&TI_BOARDID_PROD_MASK)>>16;
-
-      /* Determine whether or not we'll need to swap the trigger block endianess */
-      if( ((TIp->boardID & TI_BOARDID_TYPE_MASK)>>16) != TI_BOARDID_TYPE_TI)
-	tiSwapTriggerBlock=1;
-      else
-	tiSwapTriggerBlock=0;
-
+      printf("%s: ERROR: Invalid Board ID: 0x%x (rval = 0x%08x)\n",
+	     __FUNCTION__,(rval&TI_BOARDID_TYPE_MASK)>>16,rval);fflush(stdout);
+      TIp = NULL;
+      return(ERROR);
     }
+    else
+    {
+      printf("%s: it IS TI board !!!\n",__FUNCTION__);fflush(stdout);
+    }
+
+    /* Check if this is board has a valid slot number */
+    boardID =  (rval&TI_BOARDID_GEOADR_MASK)>>8;
+    if((boardID <= 0)||(boardID >21))
+    {
+      printf("%s: ERROR: Board Slot ID is not in range: %d\n",
+	     __FUNCTION__,boardID);
+      TIp=NULL;
+      return(ERROR);
+    }
+    tiSlotNumber = boardID;
+    printf("%s: tiSlotNumber=%d\n",__FUNCTION__,tiSlotNumber);fflush(stdout);
+
+    /* Get the "production" type bits.  2=modTI, 1=production, 0=prototype */
+    prodID = (rval&TI_BOARDID_PROD_MASK)>>16;
+    printf("%s: prodID=%d\n",__FUNCTION__,prodID);fflush(stdout);
+
+    /* Determine whether or not we'll need to swap the trigger block endianess */
+    if( ((TIp->boardID & TI_BOARDID_TYPE_MASK)>>16) != TI_BOARDID_TYPE_TI)
+    {
+      printf("%s: will need to swap data\n",__FUNCTION__);fflush(stdout);
+      tiSwapTriggerBlock=1;
+    }
+    else
+    {
+      printf("%s: will NOT need to swap data\n",__FUNCTION__);fflush(stdout);
+      tiSwapTriggerBlock=0;
+    }
+  }
 
 printf("%s:  INFO4: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
 
+
+
+#if 0
   /* Check to see if we're in a VXS Crate */
   if((boardID==20) || (boardID==21))
-    {
-      /* Try reading the 'version' register in the SD */
-      i2cread = vmeRead32(&TIp->SWB[(0x3C7C)/4]) & 0xFFFF; /* Device 1, Address 0x1F */
+  {
+    /* Try reading the 'version' register in the SD */
+    i2cread = vmeRead32(&TIp->SWB[(0x3C7C)/4]) & 0xFFFF; /* Device 1, Address 0x1F */
 
-      if((i2cread!=0) && (i2cread!=0xffff))
-	{ /* Valid response */
-	  vmeSetMaximumVMESlots(boardID);
-	  tiNoVXS=0;
-	}
-      else
-	{
-	  tiNoVXS=1;
-	}
+    if((i2cread!=0) && (i2cread!=0xffff))
+    { /* Valid response */
+      vmeSetMaximumVMESlots(boardID);
+      tiNoVXS=0;
     }
+    else
+    {
+      tiNoVXS=1;
+    }
+  }
   else
+  {
     tiNoVXS=1;
+  }
+#endif
+
+
+
 
 printf("%s:  INFO5: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
 
+
+
+
+
+
   /* Get the Firmware Information and print out some details */
-  firmwareInfo = tiGetFirmwareVersion();
+
+  //firmwareInfo = tiGetFirmwareVersion(); //sergey: crash here if valgrind is used
+  firmwareInfo = 0x71013081;
+
+  printf("%s: firmwareInfo=0x%08x\n",__FUNCTION__,firmwareInfo);
   if(firmwareInfo>0)
     {
       int supportedVersion = TI_SUPPORTED_FIRMWARE;
@@ -610,7 +642,7 @@ printf("%s:  INFO6: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
   tiSetEventFormat(3);
 
   /* Set Default Trig1 and Trig2 delay=16ns (0+1)*16ns, width=64ns (15+1)*4ns */
-  tiSetTriggerPulse(1,0,15,0);
+  tiSetTriggerPulse(1,0,7/*15*/,0); //(1,delay,width,0)
   tiSetTriggerPulse(2,0,15,0);
 
   /* Set the default prescale factor to 0 for rate/(0+1) */
@@ -640,7 +672,7 @@ printf("%s:  INFO6: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
 	{
 	  printf("%s: Fiber Measurement failure.  Check fiber and/or fiber port,\n",
 		 __FUNCTION__);
-	  return -2;
+	  /*return(-2);sergey*/
 	}
     }
   else
@@ -1582,20 +1614,29 @@ tiGetFirmwareVersion()
     }
 
   TILOCK;
+
+  printf("block_level0=%d\n",vmeRead32(&TIp->blocklevel));fflush(stdout);
+
   /* reset the VME_to_JTAG engine logic */
   vmeWrite32(&TIp->reset,TI_RESET_JTAG);
+  printf("block_level1=%d\n",vmeRead32(&TIp->blocklevel));fflush(stdout);
 
   /* Reset FPGA JTAG to "reset_idle" state */
   vmeWrite32(&TIp->JTAGFPGABase[(0x003C)>>2],0);
+  printf("block_level2=%d\n",vmeRead32(&TIp->blocklevel));fflush(stdout);
 
   /* enable the user_code readback */
   vmeWrite32(&TIp->JTAGFPGABase[(0x092C)>>2],0x3c8);
+  printf("block_level3=%d\n",vmeRead32(&TIp->blocklevel));fflush(stdout);
 
   /* shift in 32-bit to FPGA JTAG */
   vmeWrite32(&TIp->JTAGFPGABase[(0x1F1C)>>2],0);
+  printf("block_level4=%d\n",vmeRead32(&TIp->blocklevel));fflush(stdout);
 
   /* Readback the firmware version */
   rval = vmeRead32(&TIp->JTAGFPGABase[(0x1F1C)>>2]);
+  printf("block_level5=%d\n",vmeRead32(&TIp->blocklevel));fflush(stdout);
+
   TIUNLOCK;
 
   return rval;
@@ -1825,10 +1866,12 @@ tiGetCrateID(int port)
   if(port==0)
     {
       rval = (vmeRead32(&TIp->master_tiID) & TI_ID_CRATEID_MASK)>>8;
+	  printf("tiGetCrateID(self)=%d\n",rval);
     }
   else
     {
       rval = (vmeRead32(&TIp->hfbr_tiID[port-1]) & TI_ID_CRATEID_MASK)>>8;
+	  printf("tiGetCrateID(port=%d)=%d\n",port,rval);
     }
   TIUNLOCK;
 
@@ -2839,134 +2882,132 @@ tiReadBlock(volatile unsigned int *data, int nwrds, int rflag)
   int ntrig=0, itrig = 0, trigwords = 0;
 
   if(TIp==NULL)
-    {
-      logMsg("\ntiReadBlock: ERROR: TI not initialized\n",1,2,3,4,5,6);
-      return ERROR;
-    }
+  {
+    logMsg("\ntiReadBlock: ERROR: TI not initialized\n",1,2,3,4,5,6);
+    return ERROR;
+  }
 
   if(TIpd==NULL)
-    {
-      logMsg("\ntiReadBlock: ERROR: TI A32 not initialized\n",1,2,3,4,5,6);
-      return ERROR;
-    }
+  {
+    logMsg("\ntiReadBlock: ERROR: TI A32 not initialized\n",1,2,3,4,5,6);
+    return ERROR;
+  }
 
   if(data==NULL)
-    {
-      logMsg("\ntiReadBlock: ERROR: Invalid Destination address\n",0,0,0,0,0,0);
-      return(ERROR);
-    }
+  {
+    logMsg("\ntiReadBlock: ERROR: Invalid Destination address\n",0,0,0,0,0,0);
+    return(ERROR);
+  }
 
   TILOCK;
   if(rflag >= 1)
-    { /* Block transfer */
-      if(tiBusError==0)
-	{
-	  logMsg("tiReadBlock: WARN: Bus Error Block Termination was disabled.  Re-enabling\n",
+  { /* Block transfer */
+    if(tiBusError==0)
+    {
+      logMsg("tiReadBlock: WARN: Bus Error Block Termination was disabled.  Re-enabling\n",
 		 1,2,3,4,5,6);
-	  TIUNLOCK;
-	  tiEnableBusError();
-	  TILOCK;
-	}
-      /* Assume that the DMA programming is already setup.
-	 Don't Bother checking if there is valid data - that should be done prior
-	 to calling the read routine */
+      TIUNLOCK;
+      tiEnableBusError();
+      TILOCK;
+    }
+    /* Assume that the DMA programming is already setup.
+       Don't Bother checking if there is valid data - that should be done prior
+       to calling the read routine */
 
-      /* Check for 8 byte boundary for address - insert dummy word (Slot 0 FADC Dummy DATA)*/
-      if((unsigned long) (data)&0x7)
-	{
+    /* Check for 8 byte boundary for address - insert dummy word (Slot 0 FADC Dummy DATA)*/
+    if((unsigned long) (data)&0x7)
+    {
 #ifdef VXWORKS
-	  *data = (TI_DATA_TYPE_DEFINE_MASK) | (TI_FILLER_WORD_TYPE) | (tiSlotNumber<<22);
+      *data = (TI_DATA_TYPE_DEFINE_MASK) | (TI_FILLER_WORD_TYPE) | (tiSlotNumber<<22);
 #else
-	  *data = LSWAP((TI_DATA_TYPE_DEFINE_MASK) | (TI_FILLER_WORD_TYPE) | (tiSlotNumber<<22));
+      *data = LSWAP((TI_DATA_TYPE_DEFINE_MASK) | (TI_FILLER_WORD_TYPE) | (tiSlotNumber<<22));
 #endif
-	  dummy = 1;
-	  laddr = (data + 1);
-	}
-      else
-	{
-	  dummy = 0;
-	  laddr = data;
-	}
+      dummy = 1;
+      laddr = (data + 1);
+    }
+    else
+    {
+      dummy = 0;
+      laddr = data;
+    }
 
-      vmeAdr = (unsigned long)TIpd - tiA32Offset;
-	  /*sergey
+    vmeAdr = (unsigned long)TIpd - tiA32Offset;
+    /*sergey
 #ifdef VXWORKS
       retVal = sysVmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2), 0);
 #else
       retVal = vmeDmaSend((unsigned long)laddr, vmeAdr, (nwrds<<2));
 #endif
-	  */
+    */
 /*printf("11 vmeAdr=0x%x laddr=0x%x (0x%lx)\n",vmeAdr,laddr,(unsigned long)laddr);fflush(stdout);*/
     retVal = usrVme2MemDmaStart(vmeAdr, (unsigned long)laddr, (nwrds<<2));
 /*printf("12\n");fflush(stdout);*/
 
-      if(retVal != 0)
-	{
-	  logMsg("\ntiReadBlock: ERROR in DMA transfer Initialization 0x%x\n",retVal,0,0,0,0,0);
-	  TIUNLOCK;
-	  return(retVal);
-	}
+    if(retVal != 0)
+    {
+      logMsg("\ntiReadBlock: ERROR in DMA transfer Initialization 0x%x\n",retVal,0,0,0,0,0);
+      TIUNLOCK;
+      return(retVal);
+    }
 
-      /* Wait until Done or Error */
-	  /*sergey
+    /* Wait until Done or Error */
+    /*sergey
 #ifdef VXWORKS
-      retVal = sysVmeDmaDone(10000,1);
+    retVal = sysVmeDmaDone(10000,1);
 #else
-      retVal = vmeDmaDone();
+    retVal = vmeDmaDone();
 #endif
-	  */
-      retVal = usrVme2MemDmaDone();
+    */
+    retVal = usrVme2MemDmaDone();
 
-      if(retVal > 0)
-	{
+    if(retVal > 0)
+    {
 #ifdef VXWORKS
-	  xferCount = (/*sergey nwrds -*/ (retVal>>2) + dummy); /* Number of longwords transfered */
+      xferCount = (/*sergey nwrds -*/ (retVal>>2) + dummy); /* Number of longwords transfered */
 #else
-	  xferCount = ((retVal>>2) + dummy); /* Number of longwords transfered */
+      xferCount = ((retVal>>2) + dummy); /* Number of longwords transfered */
 #endif
-	  if(tiUseEvTypeScalers)
-	    tiScanAndFillEvTypeScalers(data, xferCount);
+      if(tiUseEvTypeScalers) tiScanAndFillEvTypeScalers(data, xferCount);
 
-	  TIUNLOCK;
-	  return(xferCount);
-	}
-      else if (retVal == 0)
-	{
+      TIUNLOCK;
+      return(xferCount);
+    }
+    else if (retVal == 0)
+    {
 #ifdef VXWORKS
-	  logMsg("\ntiReadBlock: WARN: DMA transfer terminated by word count 0x%x\n",
+      logMsg("\ntiReadBlock: WARN: DMA transfer terminated by word count 0x%x\n",
 		 nwrds,0,0,0,0,0);
 #else
-	  logMsg("\ntiReadBlock: WARN: DMA transfer returned zero word count 0x%x\n",
+      logMsg("\ntiReadBlock: WARN: DMA transfer returned zero word count 0x%x\n",
 		 nwrds,0,0,0,0,0,0);
 #endif
-	  TIUNLOCK;
-	  return(nwrds);
-	}
-      else
-	{  /* Error in DMA */
+      TIUNLOCK;
+      return(nwrds);
+    }
+    else
+    {  /* Error in DMA */
 #ifdef VXWORKS
-	  logMsg("\ntiReadBlock: ERROR: sysVmeDmaDone returned an Error\n",
+      logMsg("\ntiReadBlock: ERROR: sysVmeDmaDone returned an Error\n",
 		 0,0,0,0,0,0);
 #else
-	  logMsg("\ntiReadBlock: ERROR: vmeDmaDone returned an Error\n",
+      logMsg("\ntiReadBlock: ERROR: vmeDmaDone returned an Error\n",
 		 0,0,0,0,0,0);
 #endif
-	  TIUNLOCK;
-	  return(retVal>>2);
-
-	}
+      TIUNLOCK;
+      return(retVal>>2);
+    }
   }
   else
   { /* Programmed IO */
 
     if(tiBusError==1)
-	{
-	  logMsg("tiReadBlock: WARN: Bus Error Block Termination was enabled.  Disabling\n",
+    {
+      logMsg("tiReadBlock: WARN: Bus Error Block Termination was enabled.  Disabling\n",
 		 1,2,3,4,5,6);
-	  TIUNLOCK;
-	  tiDisableBusError();
-	  TILOCK;
-	}
+      TIUNLOCK;
+      tiDisableBusError();
+      TILOCK;
+    }
 
     dCnt = 0;
     ii=0;
@@ -2979,92 +3020,92 @@ tiReadBlock(volatile unsigned int *data, int nwrds, int rflag)
 #endif
     if((val & 0xffc00000) == (TI_DATA_TYPE_DEFINE_MASK | TI_BLOCK_HEADER_WORD_TYPE
 		 | (tiSlotNumber<<22) ) )
-	{
-	  ntrig = val & TI_DATA_BLKLEVEL_MASK;
+    {
+      ntrig = val & TI_DATA_BLKLEVEL_MASK;
 
-	  /* Next word is the CODA 3.0 header */
+      /* Next word is the CODA 3.0 header */
+      val = (unsigned int) *TIpd;
+      data[ii++] = val;
+#ifndef VXWORKS
+      val = LSWAP(val);
+#endif
+      if((val & 0xFF102000) == 0xFF102000)
+      {
+	if((val & 0xff) != ntrig)
+	{
+	  logMsg("\ntiReadBlock: ERROR: TI Blocklevel %d inconsistent with TI Trigger Bank Header (0x%08x)",ntrig, val, 3, 4, 5, 6);
+	  // return?
+	}
+
+	/* Loop over triggers in block */
+	for(itrig = 0; itrig < ntrig; itrig++)
+	{
+	  /* Trigger type word contains number of words to follow */
 	  val = (unsigned int) *TIpd;
 	  data[ii++] = val;
+
 #ifndef VXWORKS
 	  val = LSWAP(val);
 #endif
-	  if((val & 0xFF102000) == 0xFF102000)
+	  trigwords = val & 0xFFFF;
+	  for(iword = 0; iword < trigwords; iword++)
 	  {
-	    if((val & 0xff) != ntrig)
-		{
-		  logMsg("\ntiReadBlock: ERROR: TI Blocklevel %d inconsistent with TI Trigger Bank Header (0x%08x)",ntrig, val, 3, 4, 5, 6);
-		  // return?
-		}
-
-	    /* Loop over triggers in block */
-	    for(itrig = 0; itrig < ntrig; itrig++)
-		{
-		  /* Trigger type word contains number of words to follow */
-		  val = (unsigned int) *TIpd;
-		  data[ii++] = val;
-
-#ifndef VXWORKS
-		  val = LSWAP(val);
-#endif
-		  trigwords = val & 0xFFFF;
-		  for(iword = 0; iword < trigwords; iword++)
-		  {
-		    val = (unsigned int) *TIpd;
-		    data[ii++] = val;
-		  }
-		}
-
-	    /* Next word should be block trailer */
 	    val = (unsigned int) *TIpd;
 	    data[ii++] = val;
+	  }
+	}
+
+	/* Next word should be block trailer */
+	val = (unsigned int) *TIpd;
+	data[ii++] = val;
+#ifndef VXWORKS
+	val = LSWAP(val);
+#endif
+	if(val == (TI_DATA_TYPE_DEFINE_MASK | TI_BLOCK_TRAILER_WORD_TYPE
+			 | (tiSlotNumber<<22) | ii) )
+	{
+	  if((ii%2)!=0)
+	  {
+	    /* Read out an extra word (filler) in the fifo */
+	    val = (unsigned int) *TIpd;
 #ifndef VXWORKS
 	    val = LSWAP(val);
 #endif
-	    if(val == (TI_DATA_TYPE_DEFINE_MASK | TI_BLOCK_TRAILER_WORD_TYPE
-			 | (tiSlotNumber<<22) | ii) )
-		{
-		  if((ii%2)!=0)
-		  {
-		    /* Read out an extra word (filler) in the fifo */
-		    val = (unsigned int) *TIpd;
-#ifndef VXWORKS
-		    val = LSWAP(val);
-#endif
-		    if(((val & TI_DATA_TYPE_DEFINE_MASK) != TI_DATA_TYPE_DEFINE_MASK) ||
-			 ((val & TI_WORD_TYPE_MASK) != TI_FILLER_WORD_TYPE))
-			{
-			  logMsg("\ntiReadBlock: ERROR: Unexpected word after block trailer (0x%08x)\n",
+	    if(((val & TI_DATA_TYPE_DEFINE_MASK) != TI_DATA_TYPE_DEFINE_MASK) ||
+	       ((val & TI_WORD_TYPE_MASK) != TI_FILLER_WORD_TYPE))
+	    {
+	      logMsg("\ntiReadBlock: ERROR: Unexpected word after block trailer (0x%08x)\n",
 				 val,2,3,4,5,6);
-			}
-		  }
-
-		  dCnt = ii;
-		}
-	    else
-		{
-		  logMsg("\ntiReadBlock: ERROR: Invalid TI block trailer 0x%08x\n",
-			 val, 2, 3, 4, 5, 6);
-		  dCnt = ii;
-		}
-	  }
-	  else
-	  {
-	    logMsg("\ntiReadBlock: ERROR: Invalid Trigger bank header from TI 0x%08x\n",val, 2, 3, 4, 5, 6);
-	    dCnt = ii;
+	    }
 	  }
 
-	}
-    else
-	{
-	  logMsg("\ntiReadBlock: ERROR: Invalid block header from TI 0x%08x\n",
-		 val, 2, 3, 4, 5, 6);
 	  dCnt = ii;
 	}
+	else
+	{
+	  logMsg("\ntiReadBlock: ERROR: Invalid TI block trailer 0x%08x\n",
+			 val, 2, 3, 4, 5, 6);
+	  dCnt = ii;
+	}
+      }
+      else
+      {
+	logMsg("\ntiReadBlock: ERROR: Invalid Trigger bank header from TI 0x%08x\n",val, 2, 3, 4, 5, 6);
+	dCnt = ii;
+      }
+
+    }
+    else
+    {
+      logMsg("\ntiReadBlock: ERROR: Invalid block header from TI 0x%08x\n",
+		 val, 2, 3, 4, 5, 6);
+      dCnt = ii;
+    }
 
     if(tiUseEvTypeScalers) tiScanAndFillEvTypeScalers(data, dCnt);
 
-      TIUNLOCK;
-      return dCnt;
+    TIUNLOCK;
+    return dCnt;
   }
 
   TIUNLOCK;
@@ -5144,6 +5185,9 @@ tiSetClockSource(unsigned int source)
   printf("%s: Setting clock source to %s\n",__FUNCTION__,sClock);fflush(stdout);
 
 
+  /*sergey: like tipcie */
+  tiSetSyncSource(0);
+
   TILOCK;
 #ifdef DEBUG
   printf("tiSetClockSource: writing clkset=%d to TIp->clock=0x%08x\n",clkset,(unsigned long)&TIp->clock - TIBase);fflush(stdout);
@@ -5162,6 +5206,13 @@ tiSetClockSource(unsigned int source)
   /* Reset DCM (Digital Clock Manager) - 125MHz */
   vmeWrite32(&TIp->reset,TI_RESET_CLK125);
   taskDelay(10);
+
+
+/*sergey*/
+vmeWrite32(&TIp->reset,TI_RESET_IODELAY);
+taskDelay(20);
+/*sergey*/
+
 
 #ifdef DEBUG
   printf("tiSetClockSource: waiting for FPGA Ready / Clock DCM locked\n");fflush(stdout);
@@ -5243,6 +5294,7 @@ tiGetClockSource()
 
   return rval;
 }
+
 
 /**
  * @ingroup Config
@@ -7739,10 +7791,14 @@ tiResetMGT()
     }
   */
 
+  printf("RESETMGTRESETMGTRESETMGTRESETMGTRESETMGT ...\n");
+
   TILOCK;
   vmeWrite32(&TIp->reset, TI_RESET_MGT);
   TIUNLOCK;
   taskDelay(1);
+
+  printf("RESETMGTRESETMGTRESETMGTRESETMGTRESETMGT !!!\n");
 
   return OK;
 }
@@ -7760,10 +7816,14 @@ tiResetMGTRx()
       return ERROR;
     }
 
+  printf("RESETMGTRXRESETMGTRXRESETMGTRXRESETMGTRXRESETMGTRX ...\n");
+
   TILOCK;
   vmeWrite32(&TIp->reset, TI_RESET_MGT_RX_RESET);
   TIUNLOCK;
   taskDelay(1);
+
+  printf("RESETMGTRXRESETMGTRXRESETMGTRXRESETMGTRXRESETMGTRX !!!\n");
 
   return OK;
 }
@@ -8437,6 +8497,9 @@ void
 tiIntAck()
 {
   int resetbits=0;
+
+  //printf("tiIntAck reached !!!\n");fflush(stdout);
+
   if(TIp == NULL) {
     logMsg("tiIntAck: ERROR: TI not initialized\n",0,0,0,0,0,0);
     return;
@@ -8444,7 +8507,8 @@ tiIntAck()
 
   if (tiAckRoutine != NULL)
     {
-      /* Execute user defined Acknowlege, if it was defined */
+      //printf("tiIntAck: Execute user defined Acknowlege\n");fflush(stdout);
+     /* Execute user defined Acknowlege, if it was defined */
       TILOCK;
       (*tiAckRoutine) (tiAckArg);
       TIUNLOCK;
@@ -8746,12 +8810,10 @@ tiPrintBusyCounters()
   /*sergey*/
 
   for(icnt=0; icnt<16; icnt++)
-    {
-      if(icnt<7)
-	counter[icnt] = vmeRead32(&TIp->busy_scaler1[icnt]);
-      else
-	counter[icnt] = vmeRead32(&TIp->busy_scaler2[icnt-7]);
-    }
+  {
+    if(icnt<7) counter[icnt] = vmeRead32(&TIp->busy_scaler1[icnt]);
+    else       counter[icnt] = vmeRead32(&TIp->busy_scaler2[icnt-7]);
+  }
   TIUNLOCK;
 
   /*sergey*/
@@ -8761,8 +8823,15 @@ tiPrintBusyCounters()
   busytime_old = busytime_new;
   totaltime = livetime+busytime;
   printf("\n\n");
-  printf(" Livetime           0x%08x (%10d) [livetime %3d percent]\n",livetime,livetime,(livetime*100)/totaltime);
-  printf(" Total busy counter 0x%08x (%10d) [deadtime %3d percent]\n",busytime,busytime,(busytime*100)/totaltime);
+  if(totaltime>0)
+  {
+    printf(" Livetime           0x%08x (%10d) [livetime %3d percent]\n",livetime,livetime,(livetime*100)/totaltime);
+    printf(" Total busy counter 0x%08x (%10d) [deadtime %3d percent]\n",busytime,busytime,(busytime*100)/totaltime);
+  }
+  else
+  {
+    printf(" No data yet ..\n");
+  }
   printf("-------------------------------------------------------------------\n");
   /*sergey*/
 
@@ -8770,14 +8839,13 @@ tiPrintBusyCounters()
   printf(" Busy Counters \n");
   printf("--------------------------------------------------------------------------------\n");
   for(icnt=0; icnt<16; icnt++)
-    {
-      printf("%s   0x%08x (%10d)\n",
-	     scounter[icnt], counter[icnt], counter[icnt]);
-    }
+  {
+    printf("%s   0x%08x (%10d)\n",scounter[icnt], counter[icnt], counter[icnt]);
+  }
   printf("--------------------------------------------------------------------------------\n");
   printf("\n\n");
 
-  return OK;
+  return(OK);
 }
 
 
@@ -8785,7 +8853,7 @@ tiPrintBusyCounters()
 int
 tiBusy()
 {
-  if(tiMaster) tiPrintBusyCounters();
+  /*if(tiMaster)*/ tiPrintBusyCounters();
 }
 
 

@@ -38,6 +38,7 @@ main()
 #include "LINK_support.h"
 #include "CODA_format.h"
 
+
 /************/
 /* ET stuff */
 
@@ -55,6 +56,7 @@ void *handle_build();
 /* NOTE: nthreads*chunk MUST BE LESS then total number of events in ET */
 static int nthreads = 1;
 static int chunk = 100; /* 100; MUST BE LESS THEN NCHUNKMAX !!! */
+static int ievent_old;
 
 /* defined in et_private.h
 #define CODA_ERROR 1
@@ -496,6 +498,7 @@ handle_build(ebArg arg)
   et_att_id	et_attach;
   et_event **etevents = NULL;
   int *ethandles = NULL;
+  int ievent;
 
   unsigned int total_length; /* full event length in bytes */
 
@@ -583,7 +586,7 @@ handle_build(ebArg arg)
   node_ix = 0;
 
   /* desc2 initialization */
-  desc2.time = time(NULL);
+  desc2.time_ = time(NULL);
   desc2.runty = object->runType;
   desc2.runnb = object->runNumber;
 
@@ -665,7 +668,7 @@ start2 = gethrtime();
       neventsfree--;
 
       desc2.type = EV_END;
-      desc2.time = time(NULL);
+      desc2.time_ = time(NULL);
       desc2.rocs[0] = 0;
       desc2.evnb = object->nevents;
       desc2.runty = object->runType;
@@ -831,7 +834,7 @@ data_unlock(ebp);
 
 
 
-	  /*********************************************************/
+      /*********************************************************/
       /* if we've run out of empty ET events, get more from ET */
       if(neventsfree < 1)
       {
@@ -872,6 +875,7 @@ data_unlock(ebp);
         {
           printf("ERROR: rocid=%d\n",desc1->rocid);
           fflush(stdout);
+	  exit(0);
         }
 
         desc1->soe = (unsigned int *)evptr[roc][0]; /* start of first event */
@@ -906,12 +910,11 @@ printf("!!!coda_ebc: desc1=0x%08x\n",desc1);
       word AFTER the header, note also that if there is no data from this ROC
       EVENT_DECODE_FRAG should still behave itself and return a descriptor */
       temp = data = desc1->soe;
-		/*
-printf("!!!coda_ebc: data=0x%08x\n",data);
-		*/
+      /*printf("!!!coda_ebc: data=0x%08x\n",data);*/
       typ = (data[1] >> 16) & 0xff;       /* Temp storage of type info */
       SOFT_TRIG_FIX_EB;
       issync = (data[1] >> 24) & 0x01;    /* Temp storage of sync info */
+      /*printf("== roc=%2d, typ=%3d(0x%4x), issync=%d\n",roc,typ,typ,issync);*/
       if( (typ < EV_SYNC) || (typ >= (EV_SYNC+16)) ) /* physics event */
       {
         CODA_decode_frag(&temp,desc1);
@@ -981,6 +984,26 @@ printf("!!!coda_ebc: roc=%d desc1->evnb=%d\n",roc,desc1->evnb);
       {
         current_evty = typ;
         current_evnb = desc1->evnb;
+
+
+
+
+        ievent = current_evnb;
+
+	/* ievent can be -1 for Prestart event for example (?), we are checking only Physics events */
+	if(ievent>=0)
+	{
+	  /*event number must be incremented by 1*/
+	  //printf(">>> ievent=%d, ievent_old=%d\n",ievent,ievent_old);
+          if(ievent_old==255) ievent_old = -1;
+          if(ievent!=(ievent_old+1)) printf("ERROR: ievent_old=%d, ievent=%d\n",ievent_old,ievent);
+          ievent_old = ievent;
+	}
+
+
+
+
+
 #ifdef DEBUG
         printf("[%1d] INFO: Event (Num %d type %d) from FIRST rocid=%d\n",
 			   id,current_evnb,current_evty,desc1->rocid);
@@ -1011,7 +1034,7 @@ exit(0);
         else if((current_evty != desc1->type) && (in_error == 0))
         {
 #ifdef DEBUG
-		  printf("[%1d] INFO: event type ???\n",id);
+	  printf("[%1d] INFO: event type ???\n",id);
 #endif
           current_evtyerr ++;   /* Count type mismatches from first fragment */
 
@@ -1074,7 +1097,7 @@ exit(0);
     /* if we get here we have one fragment for
        each ROC and fragment_mask == ebp->roc_mask */
 
-
+#if 1
     /***********************************/
     /* check for Event Type mismatches */
     if(current_evtyerr)
@@ -1091,18 +1114,19 @@ exit(0);
       printf("  Event Type Mismatch info:\n"); fflush(stdout);
       for(ix=0; ix<MAX_ROCS; ix++)
       {
+	//printf("ebp->roc_id[%d]=%d\n",ix,ebp->roc_id[ix]);
         if(ebp->roc_id[ix]>=0)
-		{
-          if( CheckBit128(&type_mask,ix) != 0)
-	      /*if(type_mask&(1<<ix))*/
+	{
+          if( CheckBit128(&type_mask,ebp->roc_id[ix]) != 0)
           {
-            printf("    ROC ID = %d   Type = %d\n",ix,types[ix]);
+            printf("    ROC ID = %d   Type = %d\n",ebp->roc_id[ix],types[ebp->roc_id[ix]]);
             fflush(stdout);
           }
-		}
+	}
       }
 	  
     }
+#endif
 
 
     /*****************************/
@@ -1125,9 +1149,10 @@ exit(0);
       for(i=0; i<MAX_ROCS; i++)
       {
         if(ebp->roc_id[i]>=0)
-		{
+	{
+          /* i -> ebp->roc_id[i] ??? */
           if( CheckBit128(&fragment_mask,i) != 0 && CheckBit128(&sync_mask,i) == 0 ) printf(" %2d",i);
-		}
+	}
       }
       printf("\n\n");
 
@@ -1257,7 +1282,7 @@ exit(0); /* should we ignore and try to recover ??? */
             printf(")\n-- Got all fragments of %s\n",ctype);
             Clear128(&ebp->ctl_mask);
             /* if thread did not get control event, we still need it !!! */
-            desc1->time = time(NULL);
+            desc1->time_ = time(NULL);
 
             /*desc1->rocs[0] = ebp->roc_mask; need it for 128 bit ???*/
 
@@ -1680,7 +1705,7 @@ Segmentation fault
     printf("INFO: ended31 (0x%08x)\n",object);fflush(stdout);
     printf("INFO: ended32 (0x%08x)\n",object->state);fflush(stdout);
 	/*sergey*/
-    cfree(object->state);
+    free(object->state); //sergey: was 'cfree'
     printf("INFO: ended2 (0x%08x)\n",object->state);fflush(stdout);
     object->state = calloc(12,1);
     printf("INFO: ended1\n");fflush(stdout);
@@ -2365,15 +2390,41 @@ static ebArg args[NTHREADMAX];
   }
   else
   {
+#if 0
+    FILE *fd;
+    char *clonparms = getenv("CLON_PARMS");
+    char foutname[256];
+#endif
+
     numRows = mysql_num_rows(result);
     printf("nrow=%d\n",numRows);
 
     Clear128(&roc_mask_local);
-	for(ix=0; ix<numRows; ix++)
+
+#if 0
+    /* open 'current_daq_config.txt' for writing */
+    sprintf(foutname, "%s/trigger/current_daq_config.txt",clonparms);
+    if((fd=fopen(foutname,"w")) == NULL)
+    {
+      printf("\nWARN: Can't open file >%s< to upload current daq configuration\n",foutname);
+    }
+    else
+    {
+      printf("Writing file >%s<\n",foutname);
+    }
+#endif
+
+    for(ix=0; ix<numRows; ix++)
     {
       row = mysql_fetch_row(result);
-      printf("[%1d] received from DB >%s< >%s< >%s<\n",ix,
-        row[0],row[1],row[2]);
+      printf("[%1d] received from DB >%s< >%s< >%s<\n",ix,row[0],row[1],row[2]);
+
+#if 0
+      if(fd != NULL) /* write to 'current_daq_config.txt' */
+      {
+        fprintf(fd,"%s %s",row[0],row[2]);
+      }
+#endif
 
       if( strncmp(row[2],"no",2) != 0 ) /* 'inuse' != 'no' */
       {
@@ -2384,6 +2435,10 @@ static ebArg args[NTHREADMAX];
         }
       }
     }
+
+#if 0
+    if(fd!=NULL) fclose(fd); /* close 'current_daq_config.txt' */
+#endif
 
     mysql_free_result(result);
   }
@@ -2486,6 +2541,8 @@ printf("mysql request >%s< (temp>%s<)\n",tmpp,temp);fflush(stdout);
     printf("--> return ERROR\n"); fflush(stdout);
     return(CODA_ERROR); 
   }
+
+  ievent_old = 0;
 
   printf("--> codaPrestart returns OK\n"); fflush(stdout);
 

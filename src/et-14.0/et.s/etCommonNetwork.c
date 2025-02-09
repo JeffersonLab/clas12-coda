@@ -3704,6 +3704,7 @@ int codanetUdpReceive(unsigned short port, const char *address, int multicast, i
         if (codanetDebug >= CODA_DEBUG_ERROR) fprintf(stderr, "%sUdpReceive: socket error\n", codanetStr);
         return CODA_SOCKET_ERROR;
     }
+    else printf("%sUdpReceive: socket() returned sockfd=%d\n",codanetStr,sockfd);
   
     /* allow multiple copies of this to run on same host */
     err = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (void *) &on, sizeof(on));
@@ -3711,6 +3712,7 @@ int codanetUdpReceive(unsigned short port, const char *address, int multicast, i
         if (codanetDebug >= CODA_DEBUG_ERROR) fprintf(stderr, "%sUdpReceive: setsockopt error\n", codanetStr);
         return CODA_SOCKET_ERROR;
     }
+    else printf("%sUdpReceive: setsockopt succeded\n",codanetStr);
   
     /* add to multicast group */
     if (multicast) {
@@ -3744,6 +3746,7 @@ int codanetUdpReceive(unsigned short port, const char *address, int multicast, i
                             &((struct sockaddr_in *) sa)->sin_addr,
                             sizeof(struct in_addr));
 
+                    printf("Calling setsockopt(sockfd=%d,...)\n",sockfd);
                     err = setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void *) &mreq, sizeof(mreq));
                     if (err < 0) {
                         perror("codaNetUdpReceive: ");

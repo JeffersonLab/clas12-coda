@@ -1,4 +1,5 @@
 
+
 /* DiagGuiServer.c */
 
 #include <stdio.h>
@@ -20,6 +21,8 @@
 
 #include "ipc.h"
 
+#include "libdb.h"
+
 #ifdef Linux_vme
 #include "jvme.h"
 #include "daqLib.h"
@@ -36,6 +39,7 @@
 #include "tsLib.h"
 #include "tsConfig.h"
 #include "moLib.h"
+#include "vfTDCLib.h"
 #endif
 
 #ifdef Linux_armv7l
@@ -160,8 +164,9 @@ static pthread_mutex_t vmescalers_lock;
 #endif
 
 
-static int nfadc, ndsc2_tcp, nvscm, nssp, nts, ntd, nmo, rflag, rmode;
+static int nfadc, ndsc2_tcp, nvscm, nssp, nvftdc, nts, ntd, nmo, rflag, rmode;
 static int mssp, mvscm;
+static int mfiber;
 
 static unsigned int  vmescalersmap[MAXBOARDS+1];  /* crate map */
 
@@ -177,6 +182,7 @@ static unsigned int *tdcbuf;
 static unsigned int adcbuf[400];
 static unsigned int vscmbuf[MAXWORDS];
 static unsigned int sspbuf[MAXWORDS];
+static unsigned int vftdcbuf[MAXWORDS];
 
 #ifdef Linux_armv7l
 #define MAXVTPWORDS 4096
@@ -186,6 +192,7 @@ static unsigned int vtpbuf[MAXVTPWORDS];
 static int init_boards;
 
 static char hostname[128];
+static int run_is_active;
 
 
 /* parameter 'time' in seconds */
@@ -196,7 +203,7 @@ vmeSetScalersReadInterval(int time)
   else if(time > 10) vmeScalersReadInterval = 10;
   else               vmeScalersReadInterval = time;
 
-  printf("vmeSetScalersReadInterval: vmeScalersReadInterval set to %d\n",vmeScalersReadInterval);
+  printf("vmeSetScalersReadInterval: vmeScalersReadInterval set to %d\n",vmeScalersReadInterval);fflush(stdout);
 
   return(vmeScalersReadInterval);
 }
@@ -233,7 +240,7 @@ vmeScalersRead()
   {
 
     if(itype == SCALER_TYPE_DSC2)    /* dsc2 scalers */
-	{
+    {
       char name[100];
       float ref, data[16*72]; /* 72 scalers per slot, maximum can be 16 DSC2s */
       int jj;
@@ -241,8 +248,8 @@ vmeScalersRead()
       for(id=0; id<ndsc2_tcp; id++)
       {
         slot = dsc2Slot_tcp(id);
-		rflag = 0xFF;
-		/*printf("reading DSC2 slot %d\n",slot);fflush(stdout);*/
+	rflag = 0xFF;
+	/*printf("reading DSC2 slot %d\n",slot);fflush(stdout);*/
 vmeBusLock();
         nw = dsc2ReadScalers(slot, tdcbuf, MAXWORDS, rflag, 1/*rmode*/);
 /*vmeBusUnlock(); move below trying to debug problem 'in FADC data: trailer #words 58 != actual #words 54'*/
@@ -255,8 +262,8 @@ vmeBusUnlock();
         for(ii=0; ii<nw; ii++) 
         {
           data[jj++] = ((float)(tdcbuf[ii]));
-		}
-		sprintf(name,"%s_DSC2SLOT%d",hostname,slot);
+	}
+	sprintf(name,"%s_DSC2SLOT%d",hostname,slot);
         epics_json_msg_send(name, "float", nw, data);
 */
 
@@ -265,35 +272,59 @@ vmeBusUnlock();
         for(ii=3; ii<19; ii++) 
         {
           data[jj++] = ((float)(tdcbuf[ii]));
-		}
-		sprintf(name,"%s_DSC2SLOT%d_TRG_GATED",hostname,slot);
+	}
+	sprintf(name,"%s_DSC2SLOT%d_TRG_GATED",hostname,slot);
         epics_json_msg_send(name, "float", 16, data);
         jj=0;
         for(ii=19; ii<35; ii++) 
         {
           data[jj++] = ((float)(tdcbuf[ii]));
-		}
-		sprintf(name,"%s_DSC2SLOT%d_TDC_GATED",hostname,slot);
+	}
+	sprintf(name,"%s_DSC2SLOT%d_TDC_GATED",hostname,slot);
         epics_json_msg_send(name, "float", 16, data);
         jj=0;
         for(ii=35; ii<51; ii++) 
         {
           data[jj++] = ((float)(tdcbuf[ii]));
-		}
-		sprintf(name,"%s_DSC2SLOT%d_TRG_UNGATED",hostname,slot);
+	}
+	sprintf(name,"%s_DSC2SLOT%d_TRG_UNGATED",hostname,slot);
         epics_json_msg_send(name, "float", 16, data);
         jj=0;
         for(ii=51; ii<67; ii++) 
         {
           data[jj++] = ((float)(tdcbuf[ii]));
-		}
-		sprintf(name,"%s_DSC2SLOT%d_TRG_UNGATED",hostname,slot);
+	}
+	sprintf(name,"%s_DSC2SLOT%d_TDC_UNGATED",hostname,slot);
         epics_json_msg_send(name, "float", 16, data);
       }
+
+
+      /*special case for scaler1 */
+      if( (!strncmp(hostname,"SCALER1",7)) )
+      {
+        if(run_is_active == 0) /* if run is NOT active, reset EPICS scalers */
+	{
+          for(id=0; id<ndsc2_tcp; id++)
+          {
+            slot = dsc2Slot_tcp(id);
+            if(slot==9)
+	    {
+              //printf("hostname >%s<, run_is_active = %d - reseting slot 9\n",hostname,run_is_active);fflush(stdout);
+vmeBusLock();
+              dsc2ResetScalersGroupA(slot);
+              dsc2ResetScalersGroupB(slot);
+vmeBusUnlock();
+	    }
+	  }
 	}
+	//else printf("hostname >%s<, run_is_active = %d - NOT reseting anything\n",hostname,run_is_active);fflush(stdout);
+      }
+
+
+    }
 
     else if(itype == SCALER_TYPE_FADC250)    /* fadc250 scalers */
-	{
+    {
       char name[100];
       float ref, data[16*17]; /* 17 scalers per slot, maximum can be 16 FADCs */
       unsigned long long lldata[16];
@@ -313,9 +344,9 @@ vmeBusUnlock();
         for(ii=0; ii<nw; ii++) 
         {
           data[jj++] = ((float)(adcbuf[ii]));
-		    }
+	}
 
-		    sprintf(name,"%s_FADC250SLOT%d",hostname,slot);
+	  sprintf(name,"%s_FADC250SLOT%d",hostname,slot);
           epics_json_msg_send(name, "float", 16/*nw*/, data);
 
 //        if(!strcmp(hostname,"adcecal2") ||
@@ -337,7 +368,7 @@ vmeBusUnlock();
     }
 
     else if(itype == SCALER_TYPE_VSCM)    /* vscm scalers */
-	{
+    {
 #if 0
       for(id=0; id<nvscm; id++)
       {
@@ -347,40 +378,42 @@ vmeBusLock();
 vmeBusUnlock();
         vmescalerslen[slot] = nw;
         for(ii=0; ii<nw; ii++) vmescalers[slot][ii] = vscmbuf[ii];
-		/*printf("vmeScalersRead: nw=%d, vmescalers[slot][nw-2]=%d, vmescalers[slot][nw-1]=%d\n",nw,vmescalers[slot][nw-2],vmescalers[slot][nw-1]);*/
+	/*printf("vmeScalersRead: nw=%d, vmescalers[slot][nw-2]=%d, vmescalers[slot][nw-1]=%d\n",nw,vmescalers[slot][nw-2],vmescalers[slot][nw-1]);*/
       }
 #endif
     }
     else if(itype == SCALER_TYPE_SSP)    /* ssp scalers */
-	{
-
+    {
 
       /*for(id=0; id<nssp; id++)*/
       if(nssp>0)
-	  {
+      {
       for(id=mssp; id<=mssp; id++)
       {
         unsigned int fibermask;
         slot = sspSlot(id);
-		/*printf("slot=%d\n",slot);*/
+	/*printf("slot=%d\n",slot);*/
+
+        nw = 0; // sergey: must be set to zero if we are not RICH SSPs !!!
 
         if(sspGetFirmwareType(slot) == SSP_CFG_SSPTYPE_HALLBRICH)
-		{
+	{
 vmeBusLock();
-		sspRich_ScanFibers_NoInit(slot);
+	  sspRich_ScanFibers_NoInit(slot);
 vmeBusUnlock();
 
           sspRich_GetConnectedFibers(slot, &fibermask);
-          printf("fibermask=0x%08x\n",fibermask);
+          printf("fibermask=0x%08x\n",fibermask);fflush(stdout);
           /* loop over fibers */
           nw = 0;
-          for(fiber=0; fiber<32; fiber++)
-	      {
+          //for(fiber=mfiber; fiber<=mfiber; fiber++)
+          for(fiber=0; fiber<=31; fiber++)
+	  {
             unsigned int ref;
-		    unsigned int maroc[RICH_CHAN_NUM];
+	    unsigned int maroc[RICH_CHAN_NUM];
 
-		    if(fibermask & (1<<fiber))
-		    {
+	    if(fibermask & (1<<fiber))
+	    {
 /*printf("befor lock\n");fflush(stdout);*/
 vmeBusLock();
 /*printf("in lock\n");fflush(stdout);*/
@@ -395,32 +428,38 @@ vmeBusUnlock();
 			  
               memcpy(&sspbuf[nw], maroc, RICH_CHAN_NUM*sizeof(int)); nw += RICH_CHAN_NUM;
               sspbuf[nw_len] = nw - nw_len; /*inclusive length in words*/
-		    }
-			/*sleep(1);*/
-	      }
-		}
+	    }
+	    /*sleep(1);*/
+	  }
+	}
 
         vmescalerslen[slot] = nw;
         for(ii=0; ii<nw; ii++) vmescalers[slot][ii] = sspbuf[ii];
-		/*printf("vmeScalersRead: nw=%d, vmescalers[slot][nw-2]=%d, vmescalers[slot][nw-1]=%d\n",nw,vmescalers[slot][nw-2],vmescalers[slot][nw-1]);*/
+	/*printf("vmeScalersRead: nw=%d, vmescalers[slot][nw-2]=%d, vmescalers[slot][nw-1]=%d\n",nw,vmescalers[slot][nw-2],vmescalers[slot][nw-1]);*/
       }
 
-	  /* set board id to be read on next itteration */
-      mssp++;
-      if(mssp>=nssp) mssp = 0;
-	  }
+      /* set board id to be read on next itteration */
+
+      //mfiber++;
+      //if(mfiber>=32)
+      {
+        //mfiber = 0;
+        mssp++;
+        if(mssp>=nssp) mssp = 0;
+      }
+    }
 
     }
     else if(itype == SCALER_TYPE_TD)    /* td scalers */
-	{
+    {
       char name[100];
       float ref, data[16*8]; /* 8 scalers per slot, maximum can be 16 TDs */
       int jj;
       unsigned int tdbuf[20];
       static unsigned int buf[16][11], bufold[16][11];
 
-	  if(ntd>0)
-	  {
+      if(ntd>0)
+      {
         jj = 0;
         for(id=0; id<ntd; id++)
         {
@@ -446,7 +485,7 @@ vmeBusUnlock();
           }
           for(ii=0; ii<11; ii++) bufold[id][ii] = buf[id][ii];
           /*printf("td id %d\n",id);fflush(stdout);*/
-		}
+	}
 
 		/*
         ttt = ttt + 1.0;
@@ -458,7 +497,7 @@ vmeBusUnlock();
 		/*
         printf("td: message sent\n",id);fflush(stdout);
 		*/
-	  }
+      }
     }
 #if 1
     else if(itype == SCALER_TYPE_TS)    /* ts scalers */
@@ -530,31 +569,33 @@ vmeBusUnlock();
 static int
 vmeDataRead()
 {
-  int itype, id, ii, nw, nw_len, slot, fiber;
+  int itype, id, ii, nw=0, nw_len, slot, fiber;
 
   SCALER_LOCK;
+
   for(itype=0; itype<SCALER_TYPE_MAX; itype++)
   {
     if(itype == SCALER_TYPE_SSP)    /* ssp board */
-	{
+    {
       for(id=0; id<nssp; id++)
       {
         unsigned int fibermask;
         slot = sspSlot(id);
         if(sspGetFirmwareType(slot) == SSP_CFG_SSPTYPE_HALLBRICH)
-		{
+	{
           sspRich_GetConnectedFibers(slot, &fibermask);
-		  /*printf("data fibermask=0x%08x\n",fibermask);*/
+	  /*printf("data fibermask=0x%08x\n",fibermask);*/
           /* loop over fibers */
           nw = 0;
           for(fiber=0; fiber<32; fiber++)
-	      {
+	  {
             sspRich_Monitor mon;
-		    if(fibermask & (1<<fiber))
-		    {
+	    if(fibermask & (1<<fiber))
+	    {
 vmeBusLock();
               sspRich_ReadMonitor(slot, fiber, &mon);
 vmeBusUnlock();
+//printf("mon.temps.fpga=%d,%d,%d\n", mon.temps.fpga, mon.temps.regulator[0], mon.temps.regulator[1]);
               /*printf("fiber=%d nw=%d (%d)\n",fiber,nw,nw/11);*/
               nw_len = nw;
               sspbuf[nw++] = 0; /*reserve space for length*/
@@ -568,13 +609,16 @@ vmeBusUnlock();
               sspbuf[nw++] = mon.voltages.fpga_vccaux_1_8v;
               sspbuf[nw++] = mon.voltages.fpga_mgt_1v;
               sspbuf[nw++] = mon.voltages.fpga_mgt_1_2v;
+              sspbuf[nw++] = mon.sem.heartbeat;
+              sspbuf[nw++] = mon.sem.seu_cnt;
+              sspbuf[nw++] = mon.eb_status;
               sspbuf[nw_len] = nw - nw_len; /*inclusive length in words*/
-
-		    }
-	      }
-        vmedatalen[slot] = nw;
-        for(ii=0; ii<nw; ii++) vmedata[slot][ii] = sspbuf[ii];
-		}
+          //    printf("fiber=%d nw=%d (%d)\n",fiber,nw,nw/13);
+	    }
+	  }
+          vmedatalen[slot] = nw;
+          for(ii=0; ii<nw; ii++) vmedata[slot][ii] = sspbuf[ii];
+	}
       }
     }
   }
@@ -756,6 +800,17 @@ vmeReadTask()
 
   unsigned int fadcA32Address = 0x09000000;
   unsigned int sspA32Address = 0x08800000;
+  unsigned int vfTDCA32Address = 0x09000000;
+
+  char *mysql_host = getenv("MYSQL_HOST");
+  char *mysql_database = getenv("EXPID");
+  char *session        = (char *)"clasprod"; //getenv("SESSION");
+  MYSQL *connNum;
+  MYSQL_RES *result;
+  MYSQL_ROW row_out;
+  int numRows;
+  static char runconfig[1000], query[1000];
+
 
 #ifdef VXWORKS
   extern unsigned long sysClkRateGet();
@@ -765,23 +820,23 @@ vmeReadTask()
   interval = daqGetExternalVmeReadoutInterval();
   vmeSetScalersReadInterval(interval);
   interval = vmeGetScalersReadInterval();
-  printf("Set scalers readout interval to %d seconds\n\n",interval);
+  printf("Set scalers readout interval to %d seconds\n\n",interval);fflush(stdout);
 
   for(ii=0; ii<MAXBOARDS; ii++)
   {
     if( (vmescalers[ii] = (unsigned int *) calloc(MAXWORDS,4)) <= 0)
     {
-      printf("ERROR in ScalerThread: cannot allocate memory for vmescalers[]\n");
+      printf("ERROR in ScalerThread: cannot allocate memory for vmescalers[]\n");fflush(stdout);
       return;
     }
-    printf("ScalerThread: Allocated vmescalers[]: 0x%08x words for slot %d at address 0x%08x\n",MAXWORDS,ii,vmescalers[ii]);
+    printf("ScalerThread: Allocated vmescalers[]: 0x%08x words for slot %d at address 0x%08x\n",MAXWORDS,ii,vmescalers[ii]);fflush(stdout);
 
     if( (vmedata[ii] = (unsigned int *) calloc(MAXWORDS,4)) <= 0)
     {
-      printf("ERROR in ScalerThread: cannot allocate memory for vmedata[]\n");
+      printf("ERROR in ScalerThread: cannot allocate memory for vmedata[]\n");fflush(stdout);
       return;
     }
-    printf("ScalerThread: Allocated vmedata[]: 0x%08x words for slot %d at address 0x%08x\n",MAXWORDS,ii,vmedata[ii]);
+    printf("ScalerThread: Allocated vmedata[]: 0x%08x words for slot %d at address 0x%08x\n",MAXWORDS,ii,vmedata[ii]);fflush(stdout);
   }
 
   for(ii=0; ii<(MAXBOARDS+1); ii++)
@@ -812,12 +867,17 @@ vmeReadTask()
   dsc2Init(0x100000,0x80000,20,iFlag);
 
   dsc2Config("");
+
 maxA32Address = dsc2GetA32MaxAddress();
-printf("dsc2GetA32MaxAddress returned 0x%08x\n",maxA32Address);
-fadcA32Address = maxA32Address + FA_MAX_A32_MEM;
-sspA32Address = maxA32Address + FA_MAX_A32_MEM;
+printf("dsc2GetA32MaxAddress returned 0x%08x\n",maxA32Address);fflush(stdout);
+
+/* assume that only one type of the fillowing boards can be in the same VME crate */
+fadcA32Address = maxA32Address + DSC_MAX_A32_MEM;
+sspA32Address = maxA32Address + DSC_MAX_A32_MEM;
+vfTDCA32Address = maxA32Address + DSC_MAX_A32_MEM;
+
   ndsc2_tcp = dsc2GetNdsc_tcp();
-  printf("vmeReadTask: found %d dsc2 boards\n",ndsc2_tcp);
+  printf("vmeReadTask: found %d dsc2 boards\n",ndsc2_tcp);fflush(stdout);
 
   /* fill map array with DSC2's found */
   for(ii=0; ii<ndsc2_tcp; ii++) if( (slot=dsc2Slot_tcp(ii)) > 0) vmescalersmap[slot] = SCALER_TYPE_DSC2;
@@ -879,13 +939,14 @@ faSetA32BaseAddress(fadcA32Address);
   /************/
   /* SSP INIT */
 
-  printf("Start SSP initialization\n");
+  printf("Start SSP initialization\n");fflush(stdout);
 
   iFlag  = SSP_INIT_MODE_DISABLED; /* Disabled, initially */
   iFlag |= SSP_INIT_SKIP_FIRMWARE_CHECK;
   iFlag |= SSP_INIT_MODE_VXS;
   nssp = 0;
   mssp = 0; /* board to read */
+  mfiber = 0; /*fibers to read*/
 
   /*
 sspSetA32BaseAddress(sspA32Address);
@@ -900,6 +961,27 @@ sspSetA32BaseAddress(sspA32Address);
 
 
 
+  /**************/
+  /* vfTDC INIT */
+
+  printf("Start vfTDC initialization\n");fflush(stdout);
+
+  iFlag  = VFTDC_INIT_VXS_SYNCRESET;
+  iFlag |= VFTDC_INIT_VXS_TRIG;
+  iFlag |= VFTDC_INIT_VXS_CLKSRC;
+  nvftdc = 0;
+
+  vfTDCSetA32BaseAddress(vfTDCA32Address);
+  nvftdc = vfTDCInit(3<<19, 1<<19, 20, iFlag);
+  //vfTDCConfig ("");
+
+  /* fill map array with FADC's found */
+  //for(ii=0; ii<nvftdc; ii++) if( (slot=vfTDCSlot(ii)) > 0) vmescalersmap[slot] = SCALER_TYPE_VFTDC;
+
+  printf("Finished vfTDC initialization, nvftdc=%d\n",nvftdc);fflush(stdout);
+
+
+
 
   /***********/
   /* TS INIT */
@@ -909,11 +991,11 @@ sspSetA32BaseAddress(sspA32Address);
   if(ret<0) ret = tsInit(0,2,0);
   if(ret<0)
   {
-    printf("cannot find TS, ret=%d\n",ret);
+    printf("cannot find TS, ret=%d\n",ret);fflush(stdout);
   }
   else
   {
-    printf("foung TS\n");
+    printf("foung TS\n");fflush(stdout);
     nts = 1;
     tsSetBusySource(0,1); /* remove all busy conditions */
     tsIntDisable();
@@ -945,11 +1027,45 @@ sspSetA32BaseAddress(sspA32Address);
   init_boards = 0;
 
 
-  printf("\n=============================================================\n");
+  printf("\n=============================================================\n");fflush(stdout);
   printf("Starting readout loop, vmeScalersReadInterval=%d\n",vmeScalersReadInterval);fflush(stdout);
 
   while(1)
   {
+
+    /* get run status from database (download/prestart/active/etc) */
+    connNum = dbConnect(mysql_host, mysql_database);
+    strcpy(runconfig,"unknown");
+    // form mysql query, execute, then close mysql connection
+    sprintf(query,"SELECT log_name FROM sessions WHERE name='%s'",session);
+    mysql_query(connNum,query);
+    result = mysql_store_result(connNum);
+    if(result)
+    {
+      numRows = mysql_num_rows(result);
+      if(numRows == 1)
+      {
+        row_out = mysql_fetch_row(result);
+        // get run status 
+        if(row_out[0] == NULL)
+        {
+          mysql_free_result(result);
+        }
+        else
+        {
+          strcpy(runconfig,row_out[0]);
+          mysql_free_result(result);
+        }
+      }
+    }
+    //printf("run_status is >%s<\n",runconfig);fflush(stdout);
+    dbDisconnect(connNum);
+    if(!strcmp(runconfig,"active")) run_is_active = 1;
+    else                            run_is_active = 0;
+
+
+
+
     if(vmeScalersReadInterval==0) /* if interval==0, wait 1 sec and check again if interval changed on flight - not implemented yet !!*/
     {
 #ifdef VXWORKS
@@ -960,36 +1076,25 @@ sspSetA32BaseAddress(sspA32Address);
     }
     else
     {
-
-
-	  /* should do it on timer, right now it is interval+readout time */
+      /* should do it on timer, right now it is interval+readout time */
 #ifdef VXWORKS
       taskDelay(sysClkRateGet()*vmeScalersReadInterval);
 #else
       sleep(vmeScalersReadInterval);
 #endif
 
+      /* send trigger scalers from SSPs */
+      if(nssp>0) sspGSendScalers();
 
+      if(nvscm>0) vscmGSendScalers();
 
-
-#if 1
-/* send trigger scalers from SSPs */
-if(nssp>0) sspGSendScalers();
-/* send trigger scalers from SSPs */
-#endif
-
-#if 1
-if(nvscm>0) vscmGSendScalers();
-#endif
-
-
-	  //printf("vmeReadTask: reading scalers ...\n");
+      //printf("vmeReadTask: reading scalers ...\n");
       vmeScalersRead();
-	  //printf("vmeReadTask: ... scalers read\n");
+      //printf("vmeReadTask: ... scalers read\n");
 
-	  //printf("vmeReadTask: reading data ...\n");
+      //printf("vmeReadTask: reading data ...\n");
       vmeDataRead();
-	  //printf("vmeReadTask: ... data read\n");
+      //printf("vmeReadTask: ... data read\n");
     }
   }
 
@@ -1020,10 +1125,10 @@ vtpReadTask()
   {
     if( (vmescalers[ii] = (unsigned int *) calloc(MAXWORDS,4)) <= 0)
     {
-      printf("ERROR in ScalerThread: cannot allocate memory\n");
+      printf("ERROR in ScalerThread: cannot allocate memory\n");fflush(stdout);
       return;
     }
-    printf("ScalerThread: Allocated 0x%08x words for slot %d at address 0x%08x\n",MAXWORDS,ii,vmescalers[ii]);
+    printf("ScalerThread: Allocated 0x%08x words for slot %d at address 0x%08x\n",MAXWORDS,ii,vmescalers[ii]);fflush(stdout);
   }
 
   for(ii=0; ii<(MAXBOARDS+1); ii++)
@@ -1064,7 +1169,7 @@ vtpReadTask()
 #else
       sleep(vmeScalersReadInterval);
 #endif
-printf("vtpSendScalers()\n");      
+//printf("vtpSendScalers()\n");      
       SCALER_LOCK;
 	  /* actual scales readout */
       slot = 11; /* VTP always in slot 11 */
@@ -1131,7 +1236,7 @@ ScalersReadoutStart()
   vmescalers_lock = semBCreate(SEM_Q_FIFO, SEM_FULL);
   if(vmescalers_lock == NULL)
   {
-    printf("ScalersReadoutStart ERROR: could not allocate a semaphore\n");
+    printf("ScalersReadoutStart ERROR: could not allocate a semaphore\n");fflush(stdout);
     return(-1);
   }
 #else
@@ -1141,13 +1246,13 @@ ScalersReadoutStart()
 #ifdef VXWORKS
   if(taskSpawn("vmeREAD", 250, 0, 100000,(FUNCPTR)vmeReadTask,0,0,0,0,0,0,0,0,0,0) == ERROR)
   {
-    printf("ERROR ScalersReadoutStart: cannot start thread\n");
+    printf("ERROR ScalersReadoutStart: cannot start thread\n");fflush(stdout);
     perror("taskSpawn"); 
     return(-2);
   }
   else
   {
-    printf("ScalersReadoutStart: 'vmeREAD' task started\n");
+    printf("ScalersReadoutStart: 'vmeREAD' task started\n");fflush(stdout);
   }
 #else
   {
@@ -1522,7 +1627,7 @@ Vme_GetCrateMap(Cmd_GetCrateMap *pCmd, Cmd_GetCrateMap_Rsp *pCmd_Rsp)
   GetCrateMap(pWr, &pCmd_Rsp->nslots);
   pCmd_Rsp->cnt = pCmd_Rsp->nslots;
   
-  for(ii=0; ii<pCmd_Rsp->nslots; ii++) printf("Vme_GetCrateMap: [%2d] 0x%08x\n",ii,pWr[ii]);
+  for(ii=0; ii<pCmd_Rsp->nslots; ii++) printf("Vme_GetCrateMap: [%2d] 0x%08x\n",ii,pWr[ii]);fflush(stdout);
   
   size = pCmd_Rsp->nslots*4 + 8; /* +8 because have to count 'cnt' and 'nslots' in outgoing message */
 
@@ -1585,11 +1690,11 @@ main(int argc, char *argv[])
     if(!strncmp(argv[1],"init",4))
 	{
       init_boards = 1;
-      printf("NOTE: boards initialization will be performed and mutex cleared, can be a problem if DAQ is running !!!\n");
+      printf("NOTE: boards initialization will be performed and mutex cleared, can be a problem if DAQ is running !!!\n");fflush(stdout);
 	}
     else
 	{
-      printf("NOTE: boards initialization will NOT be performed\n");
+      printf("NOTE: boards initialization will NOT be performed\n");fflush(stdout);
 	}
   }
 
@@ -1627,22 +1732,22 @@ main(int argc, char *argv[])
 
 #ifdef Linux_vme
   {
-    unsigned long i1, i2, i3;
+    unsigned int i1, i2, i3;
 
     usrVmeDmaInit();
 
     usrVmeDmaMemory(&i1, &i2, &i3);
     i2_from_rol1 = i2;
-    printf("tiprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);
+    printf("tiprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);fflush(stdout);
     i2_from_rol1 = (i2_from_rol1 & 0xFFFFFFFFFFFFFFF0LL);
-    printf("tiprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);
+    printf("tiprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);fflush(stdout);
     i2_from_rol1 = i2_from_rol1 + 0x10;
-    printf("tiprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);
+    printf("tiprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);fflush(stdout);
   }
 #endif
 
   /* connect to IPC server */
-  printf("Connect to IPC server...\n");
+  printf("Connect to IPC server...\n");fflush(stdout);
   /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
 
 #if 1
@@ -1657,17 +1762,21 @@ main(int argc, char *argv[])
   {
     epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "fadc");
   }
+  else if( (!strncmp(hostname,"SCALER1",7)) )
+  {
+    epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "dsc2");
+  }
   else /* default topic */
 #endif
   {
     epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
   }
-  printf("done.\n");
+  printf("done.\n");fflush(stdout);
 
 
-  printf("Start scaler readout thread...\n");
+  printf("Start scaler readout thread...\n");fflush(stdout);
   ScalersReadoutStart(); /* pthread_create inside */
-  printf("done.\n");
+  printf("done.\n");fflush(stdout);
 
   sleep(2);
 #endif
@@ -1741,13 +1850,13 @@ closeup()
   vtpClose(VTP_FPGA_OPEN);
 #endif
 
-  printf("DiagGUI server closed...\n");
+  printf("DiagGUI server closed...\n");fflush(stdout);
 }
 
 void
 sig_handler(int signo)
 {
-	printf("%s: signo = %d\n",__FUNCTION__,signo);
+	printf("%s: signo = %d\n",__FUNCTION__,signo);fflush(stdout);
 	switch(signo)
 	{
 		case SIGINT:
@@ -1756,11 +1865,315 @@ sig_handler(int signo)
 	}
 }
 
-#else
+
+
+
+
+
+#else /* UNIX section (not VME or VTP) */
+
+
+
+
+#include "daqLib.h"
+
+#include "CrateMsgTypes.h"
+#include "ipc.h"
+#include "libdb.h"
+
+
+#define USE_PETIROC
+
+
+
+#ifdef USE_PETIROC
+
+#include "petirocLib.h"
+#include "petirocConfig.h"
+
+#define EVENT_BUFFER_NWORDS       1024
+
+#define MAXBOARDS  22   /* max number od boards per crate */
+#define MAXWORDS  /*256*//*4096*/8192   /* max number of scaler words per board */
+
+static int npetiroc = 0;
+
+#endif
+
+#define SCALER_LOCK   pthread_mutex_lock(&scalers_lock)
+#define SCALER_UNLOCK pthread_mutex_unlock(&scalers_lock)
+static pthread_mutex_t scalers_lock;
+
+static unsigned int  scalersmap[MAXBOARDS+1];  /* crate map */
+static unsigned int  scalerslen[MAXBOARDS];  /*scalers space (the number of words) */
+static unsigned int *scalers[MAXBOARDS];     /*scalers memory space address*/
+
+static int ScalersReadInterval = 1;
+
+static int init_boards;
+
+static char hostname[128];
+static int run_is_active;
+
+void
+closeup()
+{
+#ifdef Linux_vme
+  vmeCloseDefaultWindows();
+#endif
+#ifdef Linux_armv7l
+  vtpClose(VTP_FPGA_OPEN);
+#endif
+
+  printf("DiagGUI server closed...\n");fflush(stdout);
+}
+
+void
+sig_handler(int signo)
+{
+  printf("%s: signo = %d\n",__FUNCTION__,signo);fflush(stdout);
+  switch(signo)
+  {
+    case SIGINT:
+      closeup();
+      exit(1);  /* exit if CRTL/C is issued */
+  }
+}
+
+static int
+ScalersReadoutStop()
+{
+  /* TODO: END TASK HERE !!!!!!!!!!!!!!!!!!!!!!!! */
+  int ii;
+
+  //for(ii=0; ii<MAXBOARDS; ii++) free(vmescalers[ii]);
+  //for(ii=0; ii<MAXBOARDS; ii++) free(vmedata[ii]);
+  /*error
+  free(vmescalers);
+  free(vmedata);
+  */
+
+  pthread_mutex_unlock(&scalers_lock);
+  pthread_mutex_destroy(&scalers_lock);
+
+  return(0);
+}
+
+static void
+scalersReadTask()
+{
+  int id, iFlag, ret;
+  int ii, jj, slot, interval;
+
+
+  char *mysql_host = getenv("MYSQL_HOST");
+  char *mysql_database = getenv("EXPID");
+  char *session        = (char *)"clasprod"; //getenv("SESSION");
+  MYSQL *connNum;
+  MYSQL_RES *result;
+  MYSQL_ROW row_out;
+  int numRows;
+  static char runconfig[1000], query[1000];
+
+
+
+  daqConfig("");
+  //interval = daqGetExternalVmeReadoutInterval();
+  //vmeSetScalersReadInterval(interval);
+  //interval = vmeGetScalersReadInterval();
+  //printf("Set scalers readout interval to %d seconds\n\n",interval);fflush(stdout);
+
+  for(ii=0; ii<MAXBOARDS; ii++)
+  {
+    if( (scalers[ii] = (unsigned int *) calloc(MAXWORDS,4)) <= 0)
+    {
+      printf("ERROR in ScalerThread: cannot allocate memory for scalers[]\n");fflush(stdout);
+      return;
+    }
+    printf("ScalerThread: Allocated scalers[]: 0x%08x words for slot %d at address 0x%08x\n",MAXWORDS,ii,scalers[ii]);fflush(stdout);
+  }
+
+  for(ii=0; ii<(MAXBOARDS+1); ii++)
+  {
+    scalersmap[ii] = -1;
+  }
+
+
+
+
+
+
+  /****************/
+  /* PETIROC INIT */
+
+
+#ifdef USE_PETIROC
+
+  if(init_boards)
+  {
+    npetiroc = petirocInit(0, PETIROC_MAX_NUM, PETIROC_INIT_SLOWCONSOCKET);
+    if(npetiroc<0) exit(0);
+    printf("npetiroc=%d\n",npetiroc);
+    petirocInitGlobals();
+    petirocConfig("");
+  }
+  for(ii=0; ii<npetiroc; ii++) scalersmap[slot] = SCALER_TYPE_PETIROC;
+
+#endif
+
+
+
+
+
+  /* always clean up init flag at that point ! */
+  init_boards = 0;
+
+
+  printf("\n=============================================================\n");fflush(stdout);
+  printf("Starting readout loop, ScalersReadInterval=%d\n",ScalersReadInterval);fflush(stdout);
+
+  while(1)
+  {
+
+    /* get run status from database (download/prestart/active/etc) */
+    connNum = dbConnect(mysql_host, mysql_database);
+    strcpy(runconfig,"unknown");
+    // form mysql query, execute, then close mysql connection
+    sprintf(query,"SELECT log_name FROM sessions WHERE name='%s'",session);
+    mysql_query(connNum,query);
+    result = mysql_store_result(connNum);
+    if(result)
+    {
+      numRows = mysql_num_rows(result);
+      if(numRows == 1)
+      {
+        row_out = mysql_fetch_row(result);
+        // get run status 
+        if(row_out[0] == NULL)
+        {
+          mysql_free_result(result);
+        }
+        else
+        {
+          strcpy(runconfig,row_out[0]);
+          mysql_free_result(result);
+        }
+      }
+    }
+    //printf("run_status is >%s<\n",runconfig);fflush(stdout);
+    dbDisconnect(connNum);
+    if(!strcmp(runconfig,"active")) run_is_active = 1;
+    else                            run_is_active = 0;
+
+    /* should do it on timer, right now it is interval+readout time */
+    sleep(ScalersReadInterval);
+
+//    printf("scalersReadTask(%s): sending scalers ...\n",hostname);
+    petiroc_sendscalers(hostname);
+//    printf("scalersReadTask(%s): ... scalers sent\n",hostname);
+
+  }
+
+
+
+  ScalersReadoutStop();
+
+  return;
+}
+
+
+
+
+
+static int
+ScalersReadoutStart()
+{
+  pthread_t id;
+  pthread_attr_t attr;
+
+  pthread_mutex_init(&scalers_lock, NULL);
+  pthread_attr_init(&attr); /* initialize attr with default attributes */
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+  pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
+
+  pthread_create(&id, &attr, (void *)scalersReadTask, NULL);
+
+  return(0);
+}
+
+
+
+
 
 int
-main()
+main(int argc, char *argv[])
 {
+  int stat;
+
+  /* get hostname and convert to upper case */
+  char *s;
+  /*strcpy(hostname,getenv("HOST"));*/
+  gethostname(hostname,127);
+  s = hostname;
+  hostname[strlen(hostname)] = 0;
+  while(*s)
+  {
+    if(*s == '.')
+    {
+      *s = 0x00;
+      break;
+    }
+    *s = toupper((unsigned char) *s);
+    s++;
+  }
+  printf("INFO: using host name >%s<\n",hostname);
+
+
+  /*check if 'init' flag specified; if so, will init all boards found*/
+  init_boards = 0;
+  if(argc==2)
+  {
+    if(!strncmp(argv[1],"init",4))
+    {
+      init_boards = 1;
+    }
+  }
+  if(init_boards) printf("NOTE: boards initialization will be performed, can be a problem if DAQ is running !!!\n");
+  else            printf("INFO: boards initialization will NOT be performed\n");
+
+  if(signal(SIGINT, sig_handler) == SIG_ERR)
+  {
+    perror("signal");
+    exit(0);
+  }
+
+  /* connect to IPC server */
+  printf("Connect to IPC server...\n");fflush(stdout);
+  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
+
+  if( (!strncmp(hostname,"CLONDAQ11",9)) )
+  {
+    epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "HallB_DAQ");
+  }
+  else
+  {
+    printf("Nothing to report for that host\n");fflush(stdout);
+  }
+
+  printf("Start scaler readout thread...\n");fflush(stdout);
+  ScalersReadoutStart(); /* pthread_create inside */
+  printf("done.\n");fflush(stdout);
+
+  while(1) sleep(1);
+	
+CLOSE:
+
+  /* disconnect from IPC server */
+  epics_json_msg_close();
+	
+  exit(0);
 }
+
+
 
 #endif

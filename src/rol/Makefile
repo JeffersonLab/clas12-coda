@@ -14,11 +14,10 @@ MAIN = rol
 include $(CODA)/src/Makefile.include
 
 
-#------------------------
-# special building cases
-#------------------------
+#----------------------------------------
+# special building cases - readout lists
+#----------------------------------------
 
-#ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
 
 $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/rol1_master.so \
 	./$(OSTYPE_MACHINE)/rol/rol1_slave.so \
@@ -26,13 +25,27 @@ $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/rol1_master.so \
 	./$(OSTYPE_MACHINE)/rol/scaler1_slave.so \
 	./$(OSTYPE_MACHINE)/rol/fbrol1_master.so \
 	./$(OSTYPE_MACHINE)/rol/fbrol1_slave.so \
+	./$(OSTYPE_MACHINE)/rol/tipci1_master.so \
+	./$(OSTYPE_MACHINE)/rol/tipci1_slave.so \
+	./$(OSTYPE_MACHINE)/rol/sampa1_master.so \
+	./$(OSTYPE_MACHINE)/rol/sampa1_slave.so \
+	./$(OSTYPE_MACHINE)/rol/maroc1_master.so \
+	./$(OSTYPE_MACHINE)/rol/maroc1_slave.so \
+	./$(OSTYPE_MACHINE)/rol/petiroc1_master.so \
+	./$(OSTYPE_MACHINE)/rol/petiroc1_slave.so \
+	./$(OSTYPE_MACHINE)/rol/rol1mvt_master.so \
+	./$(OSTYPE_MACHINE)/rol/rol1mvt_slave.so \
 	./$(OSTYPE_MACHINE)/rol/srs1_master.so \
 	./$(OSTYPE_MACHINE)/rol/srs1_slave.so \
-	./$(OSTYPE_MACHINE)/rol/rol1mvt_master.so \
-	./$(OSTYPE_MACHINE)/rol/rol1mvt_slave.so
+	./$(OSTYPE_MACHINE)/rol/urwell1_master.so \
+	./$(OSTYPE_MACHINE)/rol/urwell1_slave.so
 
+#	./$(OSTYPE_MACHINE)/rol/vmm1_master.so \
+#	./$(OSTYPE_MACHINE)/rol/vmm1_slave.so \
+
+# <RogueCoda.h> must be moved from clonfarm1:/data to $CODA, or to $CLAS !!!
 #	./$(OSTYPE_MACHINE)/rol/hpssvt1_master.so \
-#	./$(OSTYPE_MACHINE)/rol/hpssvt1_slave.so \
+#	./$(OSTYPE_MACHINE)/rol/hpssvt1_slave.so
 
 ./$(OSTYPE_MACHINE)/rol/rol1mvt_master.o : rols/rol1mvt.c
 	$(MKROLDIR)
@@ -66,6 +79,8 @@ $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/rol1_master.so \
 	$(MKROLDIR)
 	$(CC) -DTI_SLAVE $(CCROLOPT)
 
+
+
 ./$(OSTYPE_MACHINE)/rol/srs1_master.o : rols/srs1.c
 	$(MKROLDIR)
 	$(CC) -DTI_MASTER $(CCROLOPT)
@@ -74,15 +89,84 @@ $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/rol1_master.so \
 	$(MKROLDIR)
 	$(CC) -DTI_SLAVE $(CCROLOPT)
 
-./$(OSTYPE_MACHINE)/rol/hpssvt1_master.o : rols/hpssvt1.c
+
+
+./$(OSTYPE_MACHINE)/rol/tipci1_master.o : rols/tipci1.c
 	$(MKROLDIR)
 	$(CC) -DTI_MASTER $(CCROLOPT)
 
-./$(OSTYPE_MACHINE)/rol/hpssvt1_slave.o : rols/hpssvt1.c
+./$(OSTYPE_MACHINE)/rol/tipci1_slave.o : rols/tipci1.c
 	$(MKROLDIR)
 	$(CC) -DTI_SLAVE $(CCROLOPT)
 
-#endif
+
+#./$(OSTYPE_MACHINE)/rol/vmm1_master.o : rols/tipci1.c
+#	$(MKROLDIR)
+#	$(CC) -DTI_MASTER -DUSE_VMM $(CCROLOPT)
+
+#./$(OSTYPE_MACHINE)/rol/vmm1_slave.o : rols/tipci1.c
+#	$(MKROLDIR)
+#	$(CC) -DTI_SLAVE -DUSE_VMM $(CCROLOPT)
+
+
+./$(OSTYPE_MACHINE)/rol/sampa1_master.o : rols/tipci1.c
+	$(MKROLDIR)
+	$(CC) -DTI_MASTER -DUSE_SAMPA $(CCROLOPT)
+
+./$(OSTYPE_MACHINE)/rol/sampa1_slave.o : rols/tipci1.c
+	$(MKROLDIR)
+	$(CC) -DTI_SLAVE -DUSE_SAMPA $(CCROLOPT)
+
+
+./$(OSTYPE_MACHINE)/rol/maroc1_master.o : rols/tipci1.c
+	$(MKROLDIR)
+	$(CC) -DTI_MASTER -DUSE_MAROC $(CCROLOPT)
+
+./$(OSTYPE_MACHINE)/rol/maroc1_slave.o : rols/tipci1.c
+	$(MKROLDIR)
+	$(CC) -DTI_SLAVE -DUSE_MAROC $(CCROLOPT)
+
+
+./$(OSTYPE_MACHINE)/rol/petiroc1_master.o : rols/tipci1.c
+	$(MKROLDIR)
+	$(CC) -DTI_MASTER -DUSE_PETIROC $(CCROLOPT)
+
+./$(OSTYPE_MACHINE)/rol/petiroc1_slave.o : rols/tipci1.c
+	$(MKROLDIR)
+	$(CC) -DTI_SLAVE -DUSE_PETIROC $(CCROLOPT)
+
+
+./$(OSTYPE_MACHINE)/rol/urwell1_master.o : rols/tipci1.c
+	$(MKROLDIR)
+	$(CC) -DTI_MASTER -DUSE_URWELL $(CCROLOPT)
+
+./$(OSTYPE_MACHINE)/rol/urwell1_slave.o : rols/tipci1.c
+	$(MKROLDIR)
+	$(CC) -DTI_SLAVE -DUSE_URWELL $(CCROLOPT)
+
+
+#./$(OSTYPE_MACHINE)/rol/srs1_master.o : rols/tipci1.c
+#	$(MKROLDIR)
+#	$(CC) -DTI_MASTER -DUSE_SRS $(CCROLOPT)
+#
+#./$(OSTYPE_MACHINE)/rol/srs1_slave.o : rols/tipci1.c
+#	$(MKROLDIR)
+#	$(CC) -DTI_SLAVE -DUSE_SRS $(CCROLOPT)
+
+
+./$(OSTYPE_MACHINE)/rol/hpssvt1_master.o : rols/tipci1.c
+	$(MKROLDIR)
+	$(CC) -DTI_MASTER -DUSE_HPS -I/data/hps/slac_svt/server/heavy-photon-daq/software/event_builder/include/hps/builder/client/ $(CCROLOPT)
+
+./$(OSTYPE_MACHINE)/rol/hpssvt1_slave.o : rols/tipci1.c
+	$(MKROLDIR)
+	$(CC) -DTI_SLAVE -DUSE_HPS -I/data/hps/slac_svt/server/heavy-photon-daq/software/event_builder/include/hps/builder/client/ $(CCROLOPT)
+
+./$(OSTYPE_MACHINE)/rol/hpssvt1_master.so : ./$(OSTYPE_MACHINE)/rol/hpssvt1_master.o
+	$(SHLD) $(LDFLAGS) ./$< $(LIBS_DIRS) $(HPSLIBNAMES) $(LIBNAMES) -o ./$@
+
+./$(OSTYPE_MACHINE)/rol/hpssvt1_slave.so : ./$(OSTYPE_MACHINE)/rol/hpssvt1_slave.o
+	$(SHLD) $(LDFLAGS) ./$< $(LIBS_DIRS) $(HPSLIBNAMES) $(LIBNAMES) -o ./$@
 
 
 #-----------------------
@@ -94,6 +178,9 @@ $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/rol1_master.so \
 LDCC = $(LDCXX)
 LDFC = $(LDCXX)
 
+#for debugging
+###CFLAGS = -g -fPIC -DLinux -DLINUX -DLinux_vme -I$(CODA)/src/rol/jvme
+
 ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
   CLON_FLAGS +=  -DLinux_x86_64_vme -I$(CODA)/src/jvme/src.s
 endif
@@ -101,8 +188,6 @@ CLON_FLAGS += -I./inc -I./code.s -I./mvt.s -I./sfi.s -I../vtp -I$(CODA)/common/i
 
 CLON_FLAGS += -DIPC
 
-# hps run
-##############CLON_FLAGS += -I$(CLAS)/slac_svt/heavy-photon-daq/software/rogue_coda/include/hps/builder/client/
 
 ifeq ("$(OSTYPE)","Linux")
   CLON_FLAGS += -I/usr/local/src/tirpci/tirpci_installation/include
@@ -111,6 +196,7 @@ ifeq ("$(OSTYPE)","Linux")
 
 # evio
   CLON_FLAGS += -I$(CODA)/src/evio-4.3/src.s
+#  CLON_FLAGS += -I$(CODA)/src/evio-5.3/src.s
 
 endif
 
@@ -124,10 +210,8 @@ else ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
   CLON_FLAGS += -I$(CODA)/Linux_armv7l/include
   LIBNAMES += $(CODA)/src/codautil/$(OSTYPE_MACHINE)/lib/libcodautil.a
   LIBNAMES += /usr/lib/libmysqlclient.so
-  LIBNAMES += -lvtp
 
-
-
+  LIBNAMES += $(CODA)/src/vtp/libvtp.a
 
   LIBNAMES += $(CODA)/src/codautil/$(OSTYPE_MACHINE)/lib/libcodautil.a
 
@@ -137,37 +221,34 @@ else ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
   LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
   LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
 
-
-
-
   LIBNAMES += /usr/local/lib/libi2c.a
   LIBNAMES += -lpthread
   LIBNAMES += -lrt
+
 else ifeq ("$(OSTYPE_MACHINE)","Linux_nios2")
+
   CLON_FLAGS += -I$(CODA)/Linux_nios2/include
   LIBNAMES +=
+
 else
 
-
-### for hps run
-  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
-#    LIBNAMES += $(CLAS)/slac_svt/heavy-photon-daq/software/rogue_coda/install/lib/libhps-builder-client-real.so
-########    LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libhps-builder-client-real.so
-  endif
-
-### 
-#################  LIBNAMES += $(CODA)/src/gem/$(OSTYPE_MACHINE)/lib/libgem.a
-
-
+  HPSLIBNAMES = $(CODA)/$(OSTYPE_MACHINE)/lib/libhps-builder-client-real.so
 
 ###  LIBNAMES += $(CODA)/src/dac/$(OSTYPE_MACHINE)/lib/libdac.a
 
   LIBNAMES += $(CODA)/src/evio-4.3/$(OSTYPE_MACHINE)/lib/libevio.a
+#  LIBNAMES += $(CODA)/src/evio-5.3/$(OSTYPE_MACHINE)/lib/libevio.a
+
   LIBNAMES += $(CODA)/src/codautil/$(OSTYPE_MACHINE)/lib/libcodautil.a
 
   ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
     LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
   endif
+  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
+    LIBNAMES += /usr/lib64/libmariadb.so
+  endif
+
+
 
   ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
     LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
@@ -180,6 +261,19 @@ else
     LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
   endif
 
+
+  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+    LIBNAMES += $(CODA)/src/ipc/$(OSTYPE_MACHINE)/lib/libipc.a
+    LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
+    LIBNAMES += -lapr-1
+    LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
+    LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
+  endif
+
+
+
+
+
   ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
     LIBNAMES += /usr/lib/mysql/libmysqlclient.so
   endif
@@ -188,12 +282,21 @@ else
     LIBNAMES += /usr/lib/mysql/libmysqlclient.so
   endif
 
+
+
+
 #cern root
+
+# root's uses -std=c++17, we do not want that
   ROOTCFLAGS   := $(shell root-config --cflags)
+#  ROOTCFLAGS   := -pthread -m64 -I/apps/root/root-6.24.08/include
+
   ROOTLIBS     := $(shell root-config --libs) 
   ROOTGLIBS    := $(shell root-config --glibs)
-  CLON_FLAGS += $(ROOTCFLAGS)
-  LIBNAMES += $(ROOTLIBS) $(ROOTGLIBS)
+
+###  CLON_FLAGS += $(ROOTCFLAGS)
+###  LIBNAMES += $(ROOTLIBS) $(ROOTGLIBS)
+
 
   LIBNAMES += -lpthread
   LIBNAMES += -lexpat

@@ -1,3 +1,6 @@
+
+/* DiagGUI.cc */
+
 #include <stdio.h>
 #include "TClass.h"
 #include "THashList.h"
@@ -19,6 +22,7 @@
 #include "V1495PulserModule.h"
 #include "FADCScalers_HPSModule.h"
 #include "vetroc_module.h"
+#include "ALERTFEB_Module.h"
 
 #define TIMER_CAPTURE_POLLRATE  100
 
@@ -42,7 +46,7 @@ DiagGUI::DiagGUI(const TGWindow *p, unsigned int w, unsigned int h, const char *
   SetLayoutManager(new TGHorizontalLayout(this));
 
   gStyle->SetPalette(1, NULL);
-  gStyle->SetCanvasPreferGL(true);
+  //gStyle->SetCanvasPreferGL(true);
 
   iEventBufferCount = EVENT_BUFFER_COUNT;
 
@@ -55,6 +59,7 @@ DiagGUI::DiagGUI(const TGWindow *p, unsigned int w, unsigned int h, const char *
     pCrateMsgClient[i] = NULL;
 
   AddFrame(pFrameRight = new TGVerticalFrame(this), new TGLayoutHints(kLHintsTop | kLHintsExpandX | kLHintsExpandY | kLHintsRight));
+
 /*
     pFrameRight->AddFrame(pFrameButtons = new TGHorizontalFrame(pFrameRight), new TGLayoutHints(kLHintsTop | kLHintsExpandX));
         pFrameButtons->AddFrame(pCaptureEvent = new TGTextButton(pFrameButtons, new TGHotString("Capture Event"), BTN_CAPTUREEVENT), new TGLayoutHints(kLHintsCenterX));
@@ -74,6 +79,7 @@ DiagGUI::DiagGUI(const TGWindow *p, unsigned int w, unsigned int h, const char *
     DiagLoadConfigFile(configFile);
     pFrameLeft->AddFrame(pShutter, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
     pFrameLeft->Resize(150,300);
+
 /*
   pCaptureEvent->Associate(this);
   pStopCaptureEvent->Associate(this);
@@ -81,15 +87,26 @@ DiagGUI::DiagGUI(const TGWindow *p, unsigned int w, unsigned int h, const char *
   pPrevEvent->Associate(this);
   pPrintScreen->Associate(this);
 */
+
   pTimerCapture = new TTimer(this, TIMER_CAPTURE_POLLRATE, kTRUE);
 
   SetWindowName("DIAG GUI");
+printf("1\n");fflush(stdout);
 
   MapSubwindows();
+printf("2\n");fflush(stdout);
+
   Resize();
+printf("3\n");fflush(stdout);
+
   ChangeFrame(0);
+printf("4\n");fflush(stdout);
+
   Resize(w, h);
+printf("5\n");fflush(stdout);
+
   MapWindow();
+printf("6\n");fflush(stdout);
 
 }
 
@@ -169,7 +186,7 @@ void DiagGUI::DiagLoadConfigFile(const char *configFile)
     return;
   }
 
-  char paramA[100], paramB[100], paramC[100], buf[200];
+	char paramA[100], paramB[100], paramC[100], paramD[100], buf[200];
   int line = 0;
   while(!feof(f))
   {
@@ -190,9 +207,10 @@ void DiagGUI::DiagLoadConfigFile(const char *configFile)
       paramA[0] = 0;
       paramB[0] = 0;
       paramC[0] = 0;
-      int count = sscanf(buf, "%100s%100s%100s", paramA, paramB, paramC);
+      paramD[0] = 0;
+			int count = sscanf(buf, "%100s%100s%100s%100s", paramA, paramB, paramC, paramD);
       if(count && (count != EOF))
-        ProcessParam(paramA, paramB, paramC, count);
+				ProcessParam(paramA, paramB, paramC, paramD, count);
       else if(count && (count != EOF))
         printf("Error processing line %d: %s\n", line, buf);
     }
@@ -212,7 +230,7 @@ Bool_t DiagGUI::GetInt(char *str, int *pInt)
   return kTRUE;
 }
 
-void DiagGUI::ProcessParam(char *paramA, char *paramB, char *paramC, int count)
+void DiagGUI::ProcessParam(char *paramA, char *paramB, char *paramC, char *paramD, int count)
 {
   static TGShutterItem *item;
   static TGCompositeFrame *container;
@@ -228,11 +246,11 @@ void DiagGUI::ProcessParam(char *paramA, char *paramB, char *paramC, int count)
       item = new TGShutterItem(pShutter, new TGHotString(paramB), SHUTTER_MSG_ITEM + iHostCount);
       container = (TGCompositeFrame *)item->GetContainer();
 
-      int port = CRATEMSG_LISTEN_PORT;
-      if(count == 3)
-        GetInt(paramC, &port);
+			int port = CRATEMSG_LISTEN_PORT, tcp64bit = 0;
+			if(count >= 3) GetInt(paramC, &port);
+      if(count >= 4) GetInt(paramD, &tcp64bit);
 
-      pCrateMsgClient[iHostCount] = new CrateMsgClient(paramB, port);
+			pCrateMsgClient[iHostCount] = new CrateMsgClient(paramB, port, tcp64bit ? true : false);
       
       if(!pCrateMsgClient[iHostCount]->IsValid())
       {
@@ -311,6 +329,8 @@ void DiagGUI::ProcessParam(char *paramA, char *paramB, char *paramC, int count)
         pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new V1495PulserModule(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
       else if(!stricmp("MOD_TYPE_VETROC", paramB))
         pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new vetroc_module(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+      else if(!stricmp("MOD_TYPE_ALERTFEB", paramB))
+        pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new ALERTFEB_Module(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
       else
       {
         printf("Error: Unknown module type: %s\n", paramB);

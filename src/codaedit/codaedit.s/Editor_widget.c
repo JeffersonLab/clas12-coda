@@ -49,6 +49,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
@@ -133,6 +134,30 @@ Widget graph;
 
 int hide_controls = 0;
 
+
+Widget
+CodaEditor1(Widget toplevel)
+{
+  Arg    args[10];
+  int    ac;
+
+  ac = 0;
+  XtSetArg (args[ac], XmNshadowThickness, 2); ac++;
+  XtSetArg (args[ac], XmNshadowType, XmSHADOW_ETCHED_OUT); ac++;
+  printf("CodaEditor 3: toplevel=0x%x\n",toplevel);fflush(stdout);
+  top_form = XtCreateWidget("top_form", xmFormWidgetClass, toplevel, args, ac);
+
+  printf("11\n");fflush(stdout);
+  XtManageChild(top_form);
+  printf("12\n");fflush(stdout);
+ 
+  return(top_form);
+}
+
+
+
+
+  
 Widget
 CodaEditor(Widget toplevel, int withExit)
 {
@@ -140,6 +165,9 @@ CodaEditor(Widget toplevel, int withExit)
   Arg    args[10];
   int    ac;
   Pixel  bg, fg;
+  char *exp = getenv("EXPID");
+
+  //printf("CodaEditor 0\n");fflush(stdout);
 
   /*dbasehost = 0;*/
   dbasehost = getenv("MYSQL_HOST");
@@ -151,26 +179,35 @@ CodaEditor(Widget toplevel, int withExit)
     exit(0);/*return;*/
   }
 
+  //printf("CodaEditor 1\n");fflush(stdout);
 
   /* initialize widgets poll */
   init_widget_poll();
+
+  //printf("CodaEditor 2\n");fflush(stdout);
 
   ac = 0;
 
   XtSetArg (args[ac], XmNshadowThickness, 2); ac++;
   XtSetArg (args[ac], XmNshadowType, XmSHADOW_ETCHED_OUT); ac++;
+XtSetArg(args[ac], XmNsliderSize, 1); ac++;
+  //printf("CodaEditor 3\n");fflush(stdout);
+  printf("CodaEditor 3: toplevel=0x%x\n",toplevel);fflush(stdout);
   top_form = XtCreateWidget("top_form",xmFormWidgetClass,
 			    toplevel, args, ac);
 
-/* create all necessary pixmaps */
+  //printf("CodaEditor 4\n");fflush(stdout);
+
+  /* create all necessary pixmaps */
   ac = 0;
   XtSetArg(args[ac], XmNbackground, &bg); ac++;
   XtSetArg(args[ac], XmNforeground, &fg); ac++;
+XtSetArg(args[ac], XmNsliderSize, 1); ac++;
   XtGetValues(top_form, args, ac); 
   XcodaEditorCreatePixmaps(top_form, bg, fg);
   ac = 0;
 
-/* Create Icon Pixmap for application */
+  /* Create Icon Pixmap for application */
   XtSetArg (args[ac], XmNiconPixmap, btn_pixmaps.icon); ac++;
   XtSetValues (toplevel, args, ac);
   ac = 0;
@@ -180,6 +217,7 @@ CodaEditor(Widget toplevel, int withExit)
     XtSetArg(args[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
     XtSetArg(args[ac], XmNleftAttachment, XmATTACH_FORM); ac++;
     XtSetArg(args[ac], XmNrightAttachment, XmATTACH_FORM); ac++;
+XtSetArg(args[ac], XmNsliderSize, 1); ac++;
     menu_bar = XmCreateMenuBar(top_form, "menu_bar", args, ac);
     ac = 0;
     XcodaEditorCreateMenus(menu_bar,withExit);
@@ -266,6 +304,7 @@ CodaEditor(Widget toplevel, int withExit)
   XtSetArg(args[ac], XmNrightOffset, 3); ac++;
   XtSetArg(args[ac], XmNbottomAttachment, XmATTACH_FORM); ac++;
   XtSetArg(args[ac], XmNbottomOffset, 3); ac++;
+XtSetArg(args[ac], XmNsliderSize, 1); ac++;
   right_form = XtCreateWidget("right_form", xmFormWidgetClass, top_form, args, ac);
 
   ac = 0;
@@ -279,9 +318,9 @@ CodaEditor(Widget toplevel, int withExit)
 
   ac = 0;
 
-printf("1\n");
+  //printf("1 (befor XcodaEditorIconBox)\n");fflush(stdout);
   icon_box = XcodaEditorIconBox(right_form);
-printf("2\n");
+  //printf("2 (after XcodaEditorIconBox)\n");fflush(stdout);
 
   if (!hide_controls)
   {
@@ -310,24 +349,23 @@ printf("2\n");
   XtSetArg(args[ac], XmNrightAttachment, XmATTACH_FORM); ac++;
   XtSetArg(args[ac], XmNbottomAttachment, XmATTACH_WIDGET); ac++;
   XtSetArg(args[ac], XmNbottomWidget, miscinfo); ac++;
+XtSetArg(args[ac], XmNsliderSize, 1); ac++;
   XtSetValues(graph, args, ac);
   ac = 0;
 
-
   XtManageChild(right_form);
-/*end bottom form*/
-  
+
+  /*end bottom form*/
+  //sleep(1);
+  //printf("11\n");fflush(stdout);
   XtManageChild(top_form);
-  
+  //printf("12\n");fflush(stdout);
+  //sleep(1);
+
   /* initially set whole panel locked */
   XcodaEditorDisableInput ();
-  {
-    char *exp = getenv("EXPID");
-    if (exp)
-    {
-      EditorSelectExp(top_form,exp);
-    }
-  }
+
+  if(exp) EditorSelectExp(top_form,exp);
 
   return(top_form);
 }

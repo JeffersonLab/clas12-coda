@@ -271,7 +271,7 @@ rcConnect::startRcServer (void)
     if(option->logRocs_)
 	{
 #endif
-	if(log_dir_exists)
+	  if(0/*log_dir_exists*/)
 	{
       printf("Log dir exists, will place rcServer log file into it\n");
 	  ::sprintf(msg,"%s/rcServer -m %s -d %s -s %s >> /data/log/rcServer.log &\n",

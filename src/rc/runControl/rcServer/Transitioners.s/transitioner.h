@@ -127,7 +127,8 @@ protected:
   // send transition result back to the run object
   virtual void sendTransitionResult (int success);
 
-  virtual void runUserSuccessScript (void);
+  //sergey: make it to return int
+  virtual int/*void*/ runUserSuccessScript (void);
 
   // clean up all children transitioner list in the case of failure
   void    cleanupChildren (void);

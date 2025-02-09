@@ -912,19 +912,13 @@ coda_destructor()
   {
     printf("WARN: delete called in object '%s'\n",localobject->name);
 
-	/*
-	("database query \"UPDATE process SET inuse='no',state='down' WHERE name='",localobject->name)
-	*/
+    /*
+    ("database query \"UPDATE process SET inuse='no',state='down' WHERE name='",localobject->name)
+    */
   }
 
   /* disconnect from IPC server */
-#ifdef Linux_vme
-  epics_json_msg_close();
-#endif
-#ifdef Linux_x86_64
-  epics_json_msg_close();
-#endif
-#ifdef Linux_armv7l
+#if defined(Linux_vme) || defined(Linux_x86_64) || defined(Linux_armv7l)
   epics_json_msg_close();
 #endif
 
@@ -949,10 +943,10 @@ listSplit2(char *list, char *separator, int *argc, char argv[LISTARGV1][LISTARGV
     /*printf("2[%d]: >%s< (%d)\n",*argc,(char *)&argv[*argc][0],strlen((char *)&argv[*argc][0]));*/
     (*argc) ++;
     if( (*argc) >= LISTARGV1)
-	{
+    {
       printf("listSplit2 ERROR: too many args\n");
       return(0);
-	}
+    }
     p = strtok(NULL,separator);
   }
 
@@ -1083,24 +1077,14 @@ printf("1\n");fflush(stdout);
 
 printf("2\n");fflush(stdout);
 
-#ifdef Linux_vme
+
+#if defined(Linux_vme) || defined(Linux_x86_64) || defined(Linux_armv7l)
   printf("CODA_Init: Connecting to IPC server ..\n");
   /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
   epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
   printf(".. done connecting to IPC server.\n");
 #endif
-#ifdef Linux_x86_64
-  printf("CODA_Init: Connecting to IPC server ..\n");
-  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
-  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
-  printf(".. done connecting to IPC server.\n");
-#endif
-#ifdef Linux_armv7l
-  printf("CODA_Init: Connecting to IPC server ..\n");
-  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
-  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
-  printf(".. done connecting to IPC server.\n");
-#endif
+
 
 printf("3\n");fflush(stdout);
 
@@ -1303,6 +1287,7 @@ CODA_bswap(int32_t *cbuf, int32_t ndata)
     char *cp;
     short *sp;
     int *lp;
+    int64_t *llp;
 
     ii = 0;
     while (ii<ndata) {
@@ -1339,7 +1324,7 @@ CODA_bswap(int32_t *cbuf, int32_t ndata)
 	  ii += blen;
 	  break;
 	case 3:
-	  /* double swap - Sergey: WRONG */
+	  /* double swap - Sergey: WRONG, use lpp... */
 	  lp = (long *)&cbuf[ii];
 	  for(jj=0; jj<blen; jj++) {
 	    lwd = LSWAP(*lp);
@@ -1427,7 +1412,7 @@ typedef struct udpstruct
 
 } UDPSTRUCT;
 
-#define MAXUDPS 2
+#define MAXUDPS 4
 static UDPSTRUCT udpstr[MAXUDPS];
 
 
@@ -1628,12 +1613,17 @@ UDP_user_request(int msgclass, char *name, char *message)
 
   printf("UDP_user_request >%s<",tmp);
   printf("\n");
-
+ 
+  /* start message sending, will be send once per second, see UDP_loop() */
   UDP_request(tmp);
 
-  sleep(2);
-
-  UDP_cancel(tmp);
+  /* stop message sending after 2 seconds, if it is NOT error message
+    (error message will be stopped by calling UDP_cancel_errors()) */
+  if(msgclass != MSGERR)
+  {  
+    sleep(2);
+    UDP_cancel(tmp);
+  }
 
   return(0);
 }
@@ -1664,6 +1654,31 @@ UDP_reset()
     printf("UDP_cancel: cancel >%s<\n",udpstr[i].message);
     udpstr[i].active = 0;
     udpstr[i].message[0] = '\0'; /* just in case */
+  }
+
+  pthread_mutex_unlock(&udp_lock);
+
+  return(0);
+}
+
+/* cancel all ERRORS UDP message */
+int
+UDP_cancel_errors()
+{
+  int i;
+
+  pthread_mutex_lock(&udp_lock);
+
+  /* cancel all error messages */
+  for(i=0; i<MAXUDPS; i++)
+  {
+    if(!strncmp(udpstr[i].message, "err:", 4))
+    {
+      printf("UDP_cancel: cancel >%s<\n",udpstr[i].message);
+      udpstr[i].active = 0;
+      udpstr[i].message[0] = '\0'; /* just in case */
+      /*break;*/ /*scan whole structure in case if more then one message*/
+    }
   }
 
   pthread_mutex_unlock(&udp_lock);
@@ -1735,7 +1750,7 @@ UDP_send(int socket)
 {
   char tmp[1000], tmpp[1000];
   char name[100];
-  int i, nevents, eventdiff;
+  int i, nevents, len, eventdiff;
   int64_t nlongs;
   time_t newtime, timediff;
   float event_rate, data_rate;
@@ -1743,8 +1758,12 @@ UDP_send(int socket)
   static int oldevents;
   static int64_t oldlongs;
   static time_t oldtime;
+  static int iteration;
   int nbytes, cc, rembytes;
-  char *buffer2;
+  char *buffer2, *ch;
+  char *mmm[1];
+
+  iteration ++;
 
   if(oldtime==0) oldtime=time(0);
 
@@ -1752,7 +1771,7 @@ UDP_send(int socket)
 
   for(i=0; i<MAXUDPS; i++)
   {
-	/*printf("UDP_send[%d]: active=%d\n",i,udpstr[i].active);*/
+    /*printf("UDP_send[%d]: active=%d\n",i,udpstr[i].active);*/
     if(udpstr[i].active==0) continue;
 
     /* for the message started from 'sta:' update statistic info */
@@ -1760,7 +1779,7 @@ UDP_send(int socket)
     {
       nevents = *eventNumber;
       nlongs = *dataSent;
-	  /*printf("*dataSent = %lld\n",*dataSent);*/
+      /*printf("*dataSent = %lld\n",*dataSent);*/
 
       newtime = time(0); /* time in seconds */
 
@@ -1768,43 +1787,44 @@ UDP_send(int socket)
 
       timediff = newtime - oldtime;
       eventdiff = nevents - oldevents;
-	  /*printf("timediff: %u (%u - %u)\n",timediff,newtime,oldtime);*/
+      /*printf("timediff: %u (%u - %u)\n",timediff,newtime,oldtime);*/
       if(timediff != 0)
       {
-		if(eventdiff != 0)
-	    {
+        if(eventdiff != 0)
+	{
           event_rate = eventdiff/timediff;
-  	      /*printf("event_rate: %f (%u - %u)\n",event_rate,nevents,oldevents);*/
+  	  /*printf("event_rate: %f (%u - %u)\n",event_rate,nevents,oldevents);*/
           data_rate = 4.0*(((float)nlongs) - ((float)oldlongs)) / ((float)timediff);
-		  /*printf("RATE1 data_rate=%f (timediff=%d)\n",data_rate,timediff);*/
+	  /*printf("RATE1 data_rate=%f (timediff=%d)\n",data_rate,timediff);*/
 
           oldlongs = nlongs;
           oldevents = nevents;
           oldtime = newtime;
 
-	      strcpy(tmp,udpstr[i].message);
+	  strcpy(tmp,udpstr[i].message);
           sprintf(tmpp," %d %9.3f %lld %12.3f",nevents,event_rate,nlongs,data_rate);
           strcat(tmp,tmpp);
-	      /*printf("tmp1=>%s<=\n",tmp);*/
-		}
+	  /*printf("tmp1=>%s<=\n",tmp);*/
+	}
         else if(timediff>=3) /* if 3 seconds without rate, send message with zero rates: */
-		{                    /* have to send something to make runcontrol happy          */
-	      strcpy(tmp,udpstr[i].message);
+	{                    /* have to send something to make runcontrol happy          */
+	  strcpy(tmp,udpstr[i].message);
           sprintf(tmpp," %d %9.3f %lld %12.3f",nevents,event_rate,nlongs,data_rate);
           strcat(tmp,tmpp);
-	      /*printf("tmp2=>%s<=\n",tmp);*/
-		}
+	  /*printf("tmp2=>%s<=\n",tmp);*/
+	}
         else
-		{
+	{
           tmp[0] = '\0'; /* do not send anything */
-		}
+	}
       }
       else
-	  {
+      {
         tmp[0] = '\0'; /* do not send anything */
-	  }
+      }
 
-#ifdef Linux_vme
+
+#if defined(Linux_vme) || defined(Linux_x86_64) || defined(Linux_armv7l)
       /* send AMQ message */
       sprintf(name,"STA:%s",localobject->name);
       data[0] = (float)nevents;
@@ -1814,25 +1834,6 @@ UDP_send(int socket)
       epics_json_msg_send(name, "float", 4, data);
 #endif
 
-#ifdef Linux_x86_64
-      /* send AMQ message */
-      sprintf(name,"STA:%s",localobject->name);
-      data[0] = (float)nevents;
-      data[1] = event_rate;
-      data[2] = (float)((nlongs*4)/1048576);
-      data[3] = data_rate/1048576;
-      epics_json_msg_send(name, "float", 4, data);
-#endif
-
-#ifdef Linux_armv7l
-      /* send AMQ message */
-      sprintf(name,"STA:%s",localobject->name);
-      data[0] = (float)nevents;
-      data[1] = event_rate;
-      data[2] = (float)((nlongs*4)/1048576);
-      data[3] = data_rate/1048576;
-      epics_json_msg_send(name, "float", 4, data);
-#endif
 
     }
     else
@@ -1840,10 +1841,10 @@ UDP_send(int socket)
       strcpy(tmp,udpstr[i].message); /* not 'sta:' messages */
     }
 
-	/*
+    /*
     printf("UDP_send[%d] >%s<\n",i,tmp);
     printf(" udpport=%d\n",udpport);
-	*/
+    */
 
     nbytes = strlen(tmp);
     if(nbytes == 0)
@@ -1855,7 +1856,7 @@ UDP_send(int socket)
     nbytes++; /* add one char for the end of string sign */
     rembytes = nbytes;
     buffer2 = tmp;
-	/*printf("UDP_send: rembytes=%d\n",rembytes);*/
+    /*printf("UDP_send: rembytes=%d\n",rembytes);*/
     while(rembytes)
     {
 retry3:
@@ -1890,11 +1891,11 @@ retry3:
           ;
         }
         else
-		{
+	{
           perror("UDP_send error");
           printf("Useful command to check port remotely: 'nping --udp -p 37209 129.57.167.227'\n");
           printf("Useful command to check port locally:  'netstat -anp | grep 5001'\n");
-		}
+	}
 
 
 
@@ -1909,7 +1910,7 @@ netStackSysPoolShow
         nbytes = -1;
         goto exit3;
       }
-	  /*else printf("UDP_send: sent !!!\n");*/
+      /*else printf("UDP_send: sent !!!\n");*/
 
       buffer2 += cc;
       rembytes -= cc;
@@ -1918,6 +1919,33 @@ netStackSysPoolShow
 
 exit3:
     ;
+
+
+#if defined(Linux_vme) || defined(Linux_x86_64) || defined(Linux_armv7l)
+    if((iteration%10)==0) /*send message on every 10th iteration*/
+    {
+      /*if error message, send it to IPC*/
+      if(!strncmp(tmp, "err:", 4))
+      {
+        /*parse message, separating name and message body*/
+        len = strlen(tmp);
+        //printf("orig: >%s< len=%d\n",tmp,len);
+        i = 0;
+        ch = tmp;
+        while( ch[i]!=' ' && i<len) i++; /*search for the first ' '*/
+        //printf("  i=%d\n",i);
+	ch[i] = '\0';
+        ch = (char *)&ch[i+1];
+	//printf("parsed: >%s< >%s<\n",tmp,ch);
+
+        sprintf(tmpp,"\"%s\"",ch);
+        mmm[0] = tmpp;
+        //printf("UDP_send \">%s<\"\n",tmpp);
+        epics_json_msg_send(tmp, "string", 1, (char **)mmm);
+      }
+    }
+#endif
+
 
   } /* for() */
 
@@ -2074,7 +2102,7 @@ UDP_start()
   if(dbGetInt(dbsock, tmpp, &udpport)==CODA_ERROR) return(CODA_ERROR);
 
   printf("114\n");fflush(stdout);
-  printf("download: UDP host is >%s< port id %d\n",udphost,udpport);fflush(stdout);
+  printf("UDP_start: UDP host is >%s< port id %d\n",udphost,udpport);fflush(stdout);
 
   dbDisconnect(dbsock);
 
@@ -2137,22 +2165,22 @@ UDP_start()
 
 
     while((udp_loop_ready==0) && (iii>0))
-	{
+    {
       printf("UDP_start: waiting for udp_loop to start %d sec ...\n",iii);
       sleep(1);
       iii --;
-	}
+    }
 
     if(udp_loop_ready) printf("UDP_start: udp_loop started\n");
     else
-	{
+    {
       printf("FATAL ERROR: UDP_start: udp_loop could not start !!!!!!!!!!!!\n");
       printf("FATAL ERROR: UDP_start: udp_loop could not start !!!!!!!!!!!!\n");
       printf("FATAL ERROR: UDP_start: udp_loop could not start !!!!!!!!!!!!\n");
       printf("FATAL ERROR: UDP_start: udp_loop could not start !!!!!!!!!!!!\n");
       printf("FATAL ERROR: UDP_start: udp_loop could not start !!!!!!!!!!!!\n");
       return(-1);
-	}
+    }
 
   }
 
@@ -2211,7 +2239,7 @@ CODAtcpServer(void)
   int sockAddrSize;              /* size of socket address structure */ 
   int sFd;                       /* socket file descriptor */ 
   int ix = 0;                    /* counter for work task names */
-  int portnum = SERVER_PORT_NUM; /* desired port number; can be changed if that number in use enc */
+  int portnum = SERVER_PORT_NUM; /* desired port number; can be changed if that number in use etc */
   char workName[16];             /* name of work task */ 
   static TWORK targ;
   MYSQL *dbsock;
@@ -2239,6 +2267,11 @@ CODAtcpServer(void)
   serverAddr.sin_addr.s_addr = htonl(INADDR_ANY); /* create a TCP-based socket (???) */ 
 
 
+  /*NOTE: Another option is to specify port 0 to bind(). That will allow you to bind to a specific IP address
+          (in case you have multiple installed) while still binding to a random port. If you need to know which
+           port was picked, you can use getsockname() after the binding has been performed.
+  */
+
   /* bind socket to local address */
   while(bind(sFd, (struct sockaddr *)&serverAddr, sockAddrSize) == ERROR)
   {
@@ -2249,13 +2282,14 @@ CODAtcpServer(void)
     printf(" ... trying port %d\n",portnum);
     if((portnum-SERVER_PORT_NUM) > 200)
     {
+      printf("CODAtcpServer: Tried 200 ports - gave up and returned\n");fflush(stdout);
       close(sFd); 
       return(ERROR);
     }
 
     serverAddr.sin_port = htons(portnum);
   }
-  printf("CODAtcpServer: bind on port %d\n",portnum);
+  printf("CODAtcpServer: bind on port %d\n",portnum);fflush(stdout);
 
   /* create queue for client connection requests */ 
   if(listen(sFd, SERVER_MAX_CONNECTIONS) == ERROR)
@@ -2264,21 +2298,22 @@ CODAtcpServer(void)
     close(sFd); 
     return(ERROR); 
   }
+  printf("CODAtcpServer: listening on port %d\n",portnum);fflush(stdout);
 
   /* update database with port number */
   dbsock = dbConnect(mysql_host, expid);
   sprintf(temp,"%d",portnum);
 
   /* use 'inuse' field; replace 'inuse' by 'port' when DP_ask not in use !!! */
-  sprintf(tmp,"UPDATE process SET inuse='%s' WHERE name='%s'",
-    temp,localobject->name);
+  sprintf(tmp,"UPDATE process SET inuse='%s' WHERE name='%s'",temp,localobject->name);
 
   printf("CODAtcpServer: DB update: >%s<\n",tmp);
   if(mysql_query(dbsock, tmp) != 0)
   {
-    printf("CODAtcpServer: DB update: ERROR\n");
+    printf("CODAtcpServer: DB update: ERROR\n");fflush(stdout);
     return(ERROR);
   }
+  printf("CODAtcpServer: DB updated\n");fflush(stdout);
   dbDisconnect(dbsock);
 
   coda_request_in_progress = 0;
@@ -2748,6 +2783,8 @@ codaExecute(char *command)
     len = strlen(confname);
     printf("--> confname >%s<, len=%d\n",confname,len);
 
+    UDP_cancel_errors(); /*clean all error messages*/
+
     codaDownload(confname);
   }
   else if( !strncmp(message, "prestart", 8) )
@@ -2794,6 +2831,7 @@ codaExecute(char *command)
 
 #define MY_INT_BIT 32
 
+/*print highest bit on the right !*/
 static void
 Print32(unsigned int k)
 {
@@ -2816,6 +2854,7 @@ Print32(unsigned int k)
   return;
 }
 
+/*print highest bit on the right !*/
 void
 Print128(WORD128 *hw)
 {

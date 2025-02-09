@@ -554,35 +554,6 @@ rcRunDInfoPanel::config (int state)
 #endif
 
 
-
-/*sergey*/
-#if 0
-      {
-        char cmd[1000];
-
-        /* send to current component only; want to send to all active components so they can draw status */
-        sprintf(cmd,"s:%d %s",state,compOption_->currentComponent());
-
-		/*
-        for(ii=0; ii<compOption_->numComp_; ii++)
-		{
-          printf("33: [%d] >%s<\n",ii,compOption_->components_[ii]);
-        }
-		*/
-
-		/* will do it in other place every time component report it's status */
-printf("CEDIT 33: rcRunDInfoPanel::config: cmd >%s<\n",cmd);fflush(stdout);
-#ifdef USE_CREG
-        coda_Send(MainDisplay,"CEDIT",cmd);
-#endif
-      }
-#endif	  
-/*sergey*/
-
-
-
-
-
       if (!monitorOn_)
       {
 #ifdef _TRACE_OBJECTS
@@ -861,7 +832,7 @@ rcRunDInfoPanel::attr2Callback (int status, void* arg, daqNetData* data)
         char cmd[1000];
         sprintf(cmd,"s:%d %s",tevn,data->name());
 #ifdef _TRACE_OBJECTS
-        printf("CEDIT 3: rcRunDInfoPanel::attr2Callback: cmd >%s<\n",cmd);fflush(stdout);
+        printf("rcRunDInfoPanel::attr2Callback: cmd >%s<\n",cmd);fflush(stdout);
 #endif
 #ifdef USE_CREG
         coda_Send(XtDisplay(obj->baseWidget()),(char *)"CEDIT",cmd);

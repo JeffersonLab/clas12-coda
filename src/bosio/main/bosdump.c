@@ -2,6 +2,8 @@
 /* bosdump.c - dump BOS file */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "bosio.h"
 

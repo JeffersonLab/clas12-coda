@@ -63,10 +63,12 @@
 #define ADD_DBG_ACTION                110
 #define ADD_NONE_ACTION               111
 
-/* you may put more new component type here */
+/* sergey: you may put more new component type here */
 #define ADD_ET_ACTION                 112
 #define ADD_ETT_ACTION                113
 #define ADD_L3_ACTION                 114
+#define ADD_SRO_ACTION                115
+#define ADD_SPR_ACTION                116
 
 
 #define DELETE_NODE_ACTION            120

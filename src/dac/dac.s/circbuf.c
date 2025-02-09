@@ -171,7 +171,7 @@ put_cb_data(int fd, CIRCBUF **cbh, void *data)
     printf("[%2d] PUT: release [%1d] 0x%08x\n",fd,icb,cbp->data[icb]);
     fflush(stdout);
 #endif
-    cfree(cbp->data[icb]);
+    free(cbp->data[icb]); //sergey: was 'cfree'
   }
 #endif
 

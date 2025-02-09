@@ -953,7 +953,7 @@ tsStatus(int pflag)
     printf(" Bus Errors Disabled\n");
 
   printf("\n");
-  printf(" Blocks ready for readout: %d\n",(blockBuffer&TS_BLOCKBUFFER_BLOCKS_READY_MASK)>>24);
+  printf(" Blocks ready for readout: %d\n",(blockBuffer&TS_BLOCKBUFFER_BLOCKS_READY_MASK)>>24); //sergey: must be '>>8' ???
 
   /* Slave block status */
   fibermask = tsSlaveMask;
@@ -8189,6 +8189,16 @@ tsDuplPrintBusyStatus()
   return OK;
 }
 
+/*sergey: add function*/
+int
+tsGetNumberOfBlocksInBuffer()
+{
+  int blockBuffer;
+  int nblocks;
+  blockBuffer  = vmeRead32(&TSp->blockBuffer);
+  nblocks = (blockBuffer&TS_BLOCKBUFFER_BLOCKS_READY_MASK)>>8;
+  return(nblocks);
+}
 
 /*sergey: easy to remember, used as often as tsStatus */
 int

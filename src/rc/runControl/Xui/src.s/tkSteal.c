@@ -446,10 +446,19 @@ static char initCmd[] =
 /* Init routine to drag this code into our program...*/
 int tkSteal_Init (Tcl_Interp *interp)
 {
+  /*sergey
     if (Tcl_Eval(interp,initCmd) != 0) {
        printf("tcl error : %s\n",interp->result);
        return TCL_ERROR;
     }
+  */
+  char *trace;
+    if (Tcl_Eval(interp,initCmd) != 0) {
+       trace = Tcl_GetStringResult(interp);
+       printf("tcl error : line: %d, error: %s\n",Tcl_GetErrorLine(interp), trace);
+       return TCL_ERROR;
+    }
+
     return TCL_OK;
 }
 /* End of C code */

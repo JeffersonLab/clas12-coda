@@ -14,8 +14,8 @@
 #include "jvme.h"
 
 // 0x00000000 = primary/failsafe image, 0x01000100 = run image
-//#define SSPRICH_FIRMWARE_ADDR           0x01000100
-#define SSPRICH_FIRMWARE_ADDR		0x00000000
+#define SSPRICH_FIRMWARE_ADDR           0x01000100
+//#define SSPRICH_FIRMWARE_ADDR		0x00000000
 
 extern volatile SSP_regs *pSSP[MAX_VME_SLOTS+1];        /* pointers to SSP memory map */
 int sspRichConnectedFibers[MAX_VME_SLOTS+1];            /* array of SSPs valid fiber connections */
@@ -24,6 +24,22 @@ MAROC_Regs sspRich_MAROC_Regs_Rd[MAX_VME_SLOTS+1][RICH_FIBER_NUM][3]; /* array o
 int sspRichConnectedAsic[MAX_VME_SLOTS+1][RICH_FIBER_NUM];   /* array of valid MAROC ASIC */
 int sspRichFiberDisableMask[MAX_VME_SLOTS+1] = {0};
 int sspRichFiberEbDisableMask[MAX_VME_SLOTS+1] = {0};
+
+int sspRich_ExpectedFiberMasks[MAX_VME_SLOTS+1] = {
+    0,0,0,      // slot 0,1,2
+    0xFFFFF7FF, // slot 3
+    0xFFFDFFFF, // slot 4
+    0xFFFF7FFF, // slot 5
+    0xFDFFFFFF, // slot 6
+    0x00007BFF, // slot 7
+    0,0,0,0,0,  // slot 8,9,10,11,12
+    0xFFBFFFFF, // slot 13
+    0xFFFFFFFF, // slot 14
+    0xFFFF7F7F, // slot 15
+    0xFFFF7FFF, // slot 16
+    0x000073FF, // slot 17
+    0,0,0,0     // slot 18,19,20,21
+  };
 
 int sspRich_SaveConfig(const char * filename){
   printf("%s\n",__FUNCTION__);
@@ -168,7 +184,7 @@ int sspRich_GetCTestSource(int id, int fiber, int *src)
 int sspRich_ReadMonitor(int id, int fiber, sspRich_Monitor *mon)
 {
   unsigned int val[32];
-  int addr;
+  int addr, gtxstatus, ebctrl;
   float v;
 
   memset(mon, 0, sizeof(sspRich_Monitor));
@@ -183,6 +199,12 @@ int sspRich_ReadMonitor(int id, int fiber, sspRich_Monitor *mon)
     sspWriteReg(&pSSP[id]->rich.fiber[fiber].Testing.XAdcCtrl, 0x01000000 | (addr<<16));
     val[addr] = sspReadReg(&pSSP[id]->rich.fiber[fiber].Testing.XAdcStatus);
   }
+  mon->sem.heartbeat = sspReadReg(&pSSP[id]->rich.fiber[fiber].Testing.HeartBeatCnt);
+  mon->sem.seu_cnt = sspReadReg(&pSSP[id]->rich.fiber[fiber].Testing.CorrectionCnt);
+
+  gtxstatus = sspReadReg(&pSSP[id]->rich.fiber[fiber].GtxStatus);
+  ebctrl = sspReadReg(&pSSP[id]->rich.fiber[fiber].EbCtrl);
+
   SSPUNLOCK();
 
   // Temperature registers/scaling
@@ -220,13 +242,21 @@ int sspRich_ReadMonitor(int id, int fiber, sspRich_Monitor *mon)
   v = (double)(val[22] & 0xFFFF) * 1.0 / 65536.0;
   v = 1000.0f * (v + (v / 604.0f) * 301.0f);
   mon->voltages.fpga_mgt_1_2v = (int)v;
-  
+
+  if((ebctrl & 0x1) && (gtxstatus & 0x10000))
+    mon->eb_status = 3;
+  else if(ebctrl & 0x1)
+    mon->eb_status = 1;
+  else
+    mon->eb_status = 0;
+ 
   return OK;
 }
 
 int sspRich_PrintMonitor(int id, int fiber)
 {
   sspRich_Monitor mon;
+  unsigned int hb_cnt, seu_cnt;
 
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH) ||
      sspRich_IsFiberInvalid(id, fiber, __func__))
@@ -246,6 +276,25 @@ int sspRich_PrintMonitor(int id, int fiber)
   printf("    VccAux(+1.8V) %.3fV\n", (float)mon.voltages.fpga_vccaux_1_8v / 1000.0f);
   printf("    Mgt(+1.0V)    %.3fV\n", (float)mon.voltages.fpga_mgt_1v / 1000.0f);
   printf("    Mgt(+1.2V)    %.3fV\n", (float)mon.voltages.fpga_mgt_1_2v / 1000.0f);
+  
+  printf("  SEM Monitor:\n");
+  printf("    Heartbeat     %d\n", mon.sem.heartbeat);
+  printf("    Errors        %d\n", mon.sem.seu_cnt);
+
+  return OK;
+}
+
+int sspRich_SEM_InjectError(int id, int fiber)
+{
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH) ||
+     sspRich_IsFiberInvalid(id, fiber, __func__))
+    return ERROR;
+
+  SSPLOCK();
+  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Testing.ErrAddrL, 0x00000000);
+  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Testing.ErrAddrH, 0x000000C0);
+  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Testing.ErrCtrl, 0x00000002);
+  SSPUNLOCK();
 
   return OK;
 }
@@ -355,7 +404,7 @@ int sspRich_GetBoardId(int id, int fiber, int *boardId)
 
 int sspRich_PrintFiberStatus(int id)
 {
-  unsigned int Ctrl[RICH_FIBER_NUM], Status[RICH_FIBER_NUM], EvtEnable[RICH_FIBER_NUM], fwRev[RICH_FIBER_NUM];
+  unsigned int Ctrl[RICH_FIBER_NUM], Status[RICH_FIBER_NUM], EvtEnable[RICH_FIBER_NUM], fwRev[RICH_FIBER_NUM], fwTimestamp[RICH_FIBER_NUM], fwAddr[RICH_FIBER_NUM];
   int i;
 
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
@@ -368,16 +417,18 @@ int sspRich_PrintFiberStatus(int id)
     Status[i] = sspReadReg(&pSSP[id]->rich.fiber[i].GtxStatus);
     EvtEnable[i] = sspReadReg(&pSSP[id]->rich.fiber[i].EbCtrl);
     fwRev[i] = sspReadReg(&pSSP[id]->rich.fiber[i].Clk.FWRev);
+    fwTimestamp[i] = sspReadReg(&pSSP[id]->rich.fiber[i].Clk.FWTime);
+    fwAddr[i] = sspReadReg(&pSSP[id]->rich.fiber[i].Testing.FpgaRebootStatus);
   }
   SSPUNLOCK();
   
-  printf("SSP RICH Fiber Status (slot=%d):\n", id);
-  printf("------------------------------------------------------------------------\n");
-  printf("     Fiber  Rst    ChUp   HrdErr FrmErr ErrCnt EvtEn  Valid #ASIC FWRev \n");
-  printf("------------------------------------------------------------------------\n");
+  printf("SSP RICH Fiber Status (slot=%d, FiberEBDisableMask=%08X):\n", id, sspRichFiberEbDisableMask[id]);
+  printf("---------------------------------------------------------------------------------\n");
+  printf(" Fiber  Rst    ChUp   HrdErr FrmErr ErrCnt EvtEn  Valid #ASIC FWRev FWTime FWAddr\n");
+  printf("---------------------------------------------------------------------------------\n");
   for(i = 0; i < RICH_FIBER_NUM; i++)
   {
-    printf("%6d ", i);
+    printf("%2d ", i);
     printf("%6d ", (Ctrl[i] & (SSP_RICH_GTXCTRL_FIBER_RESET |SSP_RICH_GTXCTRL_FIBER_GT_RESET)) ? 1 : 0);
     printf("%6d ", (Status[i] & SSP_RICH_GTXSTATUS_CHANNELUP) ? 1 : 0);
     printf("%6d ", (Status[i] & SSP_RICH_GTXSTATUS_HARDERR) ? 1 : 0);
@@ -386,7 +437,12 @@ int sspRich_PrintFiberStatus(int id)
     printf("%6d ", (EvtEnable[i] & SSP_RICH_EVT_ENABLE) ? 1 : 0);
     printf("%6d ", (sspRichConnectedFibers[id] & (1<<i)) ? 1 : 0);
     printf("%6d ", sspRichConnectedAsic[id][i]);
-    printf("%08X\n", fwRev[i]);
+    printf("   %08X", fwRev[i]);
+    printf(" %08X", fwTimestamp[i]);
+    printf(" %08X", fwAddr[i]);
+    if( (EvtEnable[i] & SSP_RICH_EVT_ENABLE) && (Status[i] & 0x10000) )
+      printf("Error: EB Auto DISABLED");
+    printf("\n");
   }
   
   return OK;
@@ -428,71 +484,155 @@ int sspRich_ScanFibers_NoInit(int id)
 
 int sspRich_Reboot(int id, int fiber, int image)
 {
+  unsigned int ctrl = 0x80000000;
+  /* Note mask: 0xFFFFFF00 intended to start boot 256 bytes before real image since lower 8bits of boot address may be unknown per Xilinx spec in 32bit SPI mode */
+  unsigned int addr = SSPRICH_FIRMWARE_ADDR & 0xFFFFFF00;
+
+  ctrl |= image ? (addr>>8) : 0;
+
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
     return ERROR;
 
   printf("%s: Rebooting SSP Slot %d, Fiber %d\n", __func__, id, fiber);
 
   SSPLOCK();
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0xFFFFFFFF); usleep(10);
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0xAA995566); usleep(10);
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0x20000000); usleep(10);
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0x30020001); usleep(10);
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, image ? SSPRICH_FIRMWARE_ADDR : 0); usleep(10);
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0x30008001); usleep(10);
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0x0000000F); usleep(10);
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Clk.ICAP, 0x20000000); usleep(10);
+  sspWriteReg(&pSSP[id]->rich.fiber[fiber].Testing.FpgaRebootCtrl, ctrl);
   SSPUNLOCK();
+}
+
+int sspRich_RebootSlot(int id, int image)
+{
+  for(int fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+  {
+    if(sspRichConnectedFibers[id] & (1<<fiber))
+      sspRich_Reboot(id, fiber, image);
+  }
+  usleep(1000000);
+  return OK;
+}
+
+int sspRich_GReboot(int image)
+{
+  int id, i, nssp = sspGetNssp();
+  for(i=0;i<nssp;i++)
+  {
+    id = sspSlot(i);
+    if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
+      continue;
+
+    for(int fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+    {
+      if(sspRichConnectedFibers[id] & (1<<fiber))
+        sspRich_Reboot(id, fiber, image);
+    }
+  }
+  usleep(1000000);
+  return OK;
 }
 
 int sspRich_ScanFibers(int id)
 {
+  int printFlag = 0, tries = 0;
 
-  int printFlag = 0;
-
-  unsigned int fiber, tries, channelsUp = 0xFFFFFFFF;
+  unsigned int fiber, channelsUp = 0xFFFFFFFF;
   int status, boardid, failed;
   
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
     return ERROR;
+    
+//sspRichFiberEbDisableMask[7]|= 0x0000F000; // fails
+//sspRichFiberEbDisableMask[7]|= 0x00000F00; // fails
+//sspRichFiberEbDisableMask[7]|= 0x000000F0; // fails 
+//sspRichFiberEbDisableMask[7]|= 0x000000C0; // fails
+//sspRichFiberEbDisableMask[7]|= 0x00000080; // fails
+//sspRichFiberEbDisableMask[7]|= 0x00000040; // fails
+//sspRichFiberEbDisableMask[7]|= 0x00000030; // fails
+//sspRichFiberEbDisableMask[7]|= 0x0000000F; // works
+//sspRichFiberEbDisableMask[7]|= 0x0000000C; // fails 
+//sspRichFiberEbDisableMask[7]|= 0x00000001; // works (bad tile ssp slot 7, fiber 0)
+//sspRichFiberEbDisableMask[7]|= 0x00000002; // fails  
+
+sspRichFiberEbDisableMask[13]|= 0x00400000;
   
   if(printFlag)printf("ScanFibers with init(dis fiber=%08X,dis eb=%08X): fiber=0x%08x 0x%08x\n",sspRichFiberDisableMask[id],sspRichFiberEbDisableMask[id],&pSSP[id]->rich.fiber[0],pSSP[id]);
+/*
+// Done 1 time for all slots together in sspLib.c: sspInit() to speed up
   SSPLOCK();
-
-  for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
-    sspWriteReg(&pSSP[id]->rich.fiber[fiber].GtxCtrl, 0x7);
-
-  usleep(1000);
-
   for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
     sspWriteReg(&pSSP[id]->rich.fiber[fiber].GtxCtrl, 0x0);
   SSPUNLOCK();
-
-
   usleep(2000000);
-
+*/
+#define SSP_RICH_MAX_TRIES 5
   SSPLOCK();
-  for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+  for(tries=0; tries<SSP_RICH_MAX_TRIES; tries++)
   {
-    status = sspReadReg(&pSSP[id]->rich.fiber[fiber].GtxStatus);
-    if(!(status & SSP_RICH_GTXSTATUS_CHANNELUP))
-    {
-      channelsUp &= ~(1<<fiber);
-      continue;
-    }
+    printf("%s: try %d\n", __func__, tries);
 
-    boardid = sspReadReg(&pSSP[id]->rich.fiber[fiber].Clk.BoardId);
-    if(printFlag)printf("%s: BoardId = 0x%08X\n", __func__, boardid);
-    if(boardid != RICH_CLK_BOARDID)
+    channelsUp = 0xFFFFFFFF;
+    failed = 0;
+    for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
     {
-      channelsUp &= ~(1<<fiber);
-      continue;
+/*
+      status = sspReadReg(&pSSP[id]->rich.fiber[fiber].GtxStatus);
+      if(!(status & SSP_RICH_GTXSTATUS_CHANNELUP))
+      {
+        channelsUp &= ~(1<<fiber);
+        continue;
+      }
+
+      boardid = sspReadReg(&pSSP[id]->rich.fiber[fiber].Clk.BoardId);
+      //if(printFlag)
+      printf("%s: BoardId(%d,%d) = 0x%08X\n", __func__, id, fiber, boardid);
+      if(boardid != RICH_CLK_BOARDID)
+        boardid = sspReadReg(&pSSP[id]->rich.fiber[fiber].Clk.BoardId);
+
+      if(boardid != RICH_CLK_BOARDID)
+        channelsUp &= ~(1<<fiber);
+*/
+      boardid = 0;
+      status = sspReadReg(&pSSP[id]->rich.fiber[fiber].GtxStatus);
+      if(status & SSP_RICH_GTXSTATUS_CHANNELUP)
+      {
+        boardid = sspReadReg(&pSSP[id]->rich.fiber[fiber].Clk.BoardId);
+        if(boardid != RICH_CLK_BOARDID)
+          boardid = sspReadReg(&pSSP[id]->rich.fiber[fiber].Clk.BoardId);
+        printf("%s: BoardId(%d,%d) = 0x%08X\n", __func__, id, fiber, boardid);
+      }
+
+      if(boardid != RICH_CLK_BOARDID)
+      {
+        channelsUp &= ~(1<<fiber);
+        if(sspRich_ExpectedFiberMasks[id] & (1<<fiber))
+        {
+          if(tries<SSP_RICH_MAX_TRIES-1)
+            sspWriteReg(&pSSP[id]->rich.fiber[fiber].GtxCtrl, 0x7);
+           
+          failed = 1;
+        }
+      }
+    }
+    if(!failed)
+      break;
+    else
+    {
+      usleep(1000000);
+////      usleep(100);
+      for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+        sspWriteReg(&pSSP[id]->rich.fiber[fiber].GtxCtrl, 0x0);
+      usleep(2000000);
+////      usleep(500000);
     }
   }
+
+  if(!failed)
+    printf("Succesfully found all expected tiles\n");
+  else
+    printf("Failed to find all expected tiles (expected %08X, found %08X)\n", sspRich_ExpectedFiberMasks[id], channelsUp);
  
   for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
   {
-    if(!(channelsUp & (1<<fiber)))
+    if(!(channelsUp & (1<<fiber)) || (sspRichFiberEbDisableMask[id] & (1<<fiber)))
     {
 //      sspWriteReg(&pSSP[id]->rich.fiber[fiber].GtxCtrl, 0x3);
       sspWriteReg(&pSSP[id]->rich.fiber[fiber].EbCtrl, 0x0);
@@ -505,6 +645,104 @@ int sspRich_ScanFibers(int id)
   sspRichConnectedFibers[id] = channelsUp;
   
   printf("%s: Slot %d, connected fibers: 0x%08X\n", __func__, id, channelsUp);
+  return OK;
+}
+
+int sspRich_GScanFibers()
+{
+  int status, failed, boardid, id, nssp = sspGetNssp();
+  int channelsUp[MAX_VME_SLOTS+1];
+
+  //manual disable unstable tile (slot 13, fiber 22)
+  sspRichFiberEbDisableMask[13]|= 0x00400000;
+
+#define SSP_RICH_MAX_TRIES 5
+  SSPLOCK();
+  for(int tries=0; tries<SSP_RICH_MAX_TRIES; tries++)
+  {
+    printf("%s: try %d\n", __func__, tries);
+
+    failed = 0;
+    for(int i=0; i<nssp; i++)
+    {
+      id = sspSlot(i);
+      if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
+        continue;
+
+      channelsUp[id] = 0xFFFFFFFF;
+      for(int fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+      {
+        boardid = 0;
+        status = sspReadReg(&pSSP[id]->rich.fiber[fiber].GtxStatus);
+        if(status & SSP_RICH_GTXSTATUS_CHANNELUP)
+        {
+          boardid = sspReadReg(&pSSP[id]->rich.fiber[fiber].Clk.BoardId);
+          if(boardid != RICH_CLK_BOARDID)
+            boardid = sspReadReg(&pSSP[id]->rich.fiber[fiber].Clk.BoardId);
+          printf("%s: BoardId(%d,%d) = 0x%08X\n", __func__, id, fiber, boardid);
+        }
+
+        if(boardid != RICH_CLK_BOARDID)
+        {
+          channelsUp[id] &= ~(1<<fiber);
+          if(sspRich_ExpectedFiberMasks[id] & (1<<fiber))
+          {
+            if(tries<SSP_RICH_MAX_TRIES-1)
+              sspWriteReg(&pSSP[id]->rich.fiber[fiber].GtxCtrl, 0x7);
+         
+            failed = 1;
+          }
+        }
+      }
+    }
+    if(!failed)
+      break;
+    else
+    {
+      usleep(1000000);
+      for(int i=0; i<nssp; i++)
+      {
+        id = sspSlot(i);
+        if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
+          continue;
+        for(int fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+          sspWriteReg(&pSSP[id]->rich.fiber[fiber].GtxCtrl, 0x0);
+      }
+      usleep(2000000);
+    }
+  }
+
+  if(!failed)
+    printf("Succesfully found all expected tiles\n");
+  else
+  {
+    for(int i=0; i<nssp; i++)
+    {
+      id = sspSlot(i);
+      if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
+        continue;
+      if(sspRich_ExpectedFiberMasks[id] != channelsUp[id])
+        printf("Failed to find all expected tiles slot=%d (expected %08X, found %08X)\n", id, sspRich_ExpectedFiberMasks[id], channelsUp[id]);
+    }
+  }
+
+  for(int i=0; i<nssp; i++)
+  {
+    id = sspSlot(i);
+    if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
+      continue;
+    for(int fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+    {
+      if(!(channelsUp[id] & (1<<fiber)) || (sspRichFiberEbDisableMask[id] & (1<<fiber)))
+        sspWriteReg(&pSSP[id]->rich.fiber[fiber].EbCtrl, 0x0);
+      else
+        sspWriteReg(&pSSP[id]->rich.fiber[fiber].EbCtrl, 0x1); //enable this to readout RICH
+    }
+    sspRichConnectedFibers[id] = channelsUp[id];
+    printf("%s: Slot %d, connected fibers: 0x%08X\n", __func__, id, channelsUp[id]);
+  }
+  SSPUNLOCK();
+
   return OK;
 }
 
@@ -833,6 +1071,74 @@ int sspRich_PrintMarocRegs(int id, int fiber, int chip, int type)
   return OK;
 }
 
+int sspRich_ShiftMarocRegs_Write(int id, int fiber, MAROC_Regs *regs_in)
+{
+  int i, val;
+
+  // Write 1 set of MAROC registers into shift register
+  sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.Global0.val, regs_in->Global0.val);
+  sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.Global1.val, regs_in->Global1.val);
+  sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.DAC.val, regs_in->DAC.val);
+
+  for(i = 0; i < 32; i++)
+    sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.CH[i].val, regs_in->CH[i].val);
+
+  // Perform shift operation for 1 set of MAROC registers
+  val = sspReadReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.SerCtrl);
+  val |= 0x00000002;
+  sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.SerCtrl, val);
+}
+
+int sspRich_ShiftMarocRegs_Wait(int id, int fiber)
+{
+  int i, val;
+
+  // Check for shift register transfer completion
+  for(i = 10; i > 0; i--)
+  {
+    val = sspReadReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.SerStatus);
+    
+    if(!(val & 0x00000001))
+      break;
+    
+    usleep(100);
+    
+    if(!i)
+    {
+      printf("%s: SSP Slot %d, Fiber %d - timeout on serial transfer\n", __func__, id, fiber);
+      return ERROR;
+    }
+  }
+
+  return OK;
+}
+
+int sspRich_ShiftMarocRegs_Read(int id, int fiber, MAROC_Regs *regs_out)
+{
+  int i;
+  regs_out->Global0.val = sspReadReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.Global0.val);
+  regs_out->Global1.val = sspReadReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.Global1.val);
+  regs_out->DAC.val = sspReadReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.DAC.val);
+
+  for(i = 0; i < 32; i++)
+    regs_out->CH[i].val = sspReadReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.CH[i].val);
+
+  return OK;
+}
+
+int sspRich_ShiftMarocRegs(int id, int fiber, MAROC_Regs *regs_in, MAROC_Regs *regs_out)
+{
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH) ||
+     sspRich_IsFiberInvalid(id, fiber, __func__))
+    return ERROR;
+
+  sspRich_ShiftMarocRegs_Write(id, fiber ,regs_in);
+  sspRich_ShiftMarocRegs_Wait(id, fiber);
+  sspRich_ShiftMarocRegs_Read(id, fiber, regs_out);
+
+  return OK;
+}
+
 int sspRich_UpdateMarocRegs(int id, int fiber)
 {
   int boardId, type;
@@ -860,58 +1166,75 @@ int sspRich_UpdateMarocRegs(int id, int fiber)
   return OK;
 }
 
-int sspRich_ShiftMarocRegs(int id, int fiber, MAROC_Regs *regs_in, MAROC_Regs *regs_out)
+int sspRich_UpdateMarocRegsAllFibers(int id)
 {
-  int i, val;
-int boardId;
-
+  int boardId, type, fiber;
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH) ||
      sspRich_IsFiberInvalid(id, fiber, __func__))
     return ERROR;
-  
-//  SSPLOCK();
-  // Write 1 set of MAROC registers into shift register
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.Global0.val, regs_in->Global0.val);
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.Global1.val, regs_in->Global1.val);
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.DAC.val, regs_in->DAC.val);
-
-  for(i = 0; i < 32; i++)
-    sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.CH[i].val, regs_in->CH[i].val);
-
-  // Perform shift operation for 1 set of MAROC registers
-  val = sspReadReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.SerCtrl);
-  val |= 0x00000002;
-  sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.SerCtrl, val);
-
-//  SSPUNLOCK();
-  
-  // Check for shift register transfer completion
-  for(i = 10; i > 0; i--)
-  {
-//    SSPLOCK();
-    val = sspReadReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.SerStatus);
-    usleep(1000);
-//    SSPUNLOCK();
-    
-    if(!(val & 0x00000001))
-      break;
-    
-    if(!i)
+ 
+  // Write
+  for(int i=2; i>=0; i--)
+  { 
+    SSPLOCK();
+    for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
     {
-      printf("%s: SSP Slot %d, Fiber %d - timeout on serial transfer\n", __func__, id, fiber);
-      return ERROR;
+      if(sspRichConnectedFibers[id] & (1<<fiber))
+      {
+        type = sspRichConnectedAsic[id][fiber];
+        if(type==SSP_RICH_ASIC_TYPE_2MAROC)
+        {
+          if(i!=1)
+            sspRich_ShiftMarocRegs_Write(id, fiber, &sspRich_MAROC_Regs[id][fiber][i]);
+        }
+        else if(type == SSP_RICH_ASIC_TYPE_3MAROC)
+          sspRich_ShiftMarocRegs_Write(id, fiber, &sspRich_MAROC_Regs[id][fiber][i]);
+        else
+        {
+          printf("%s: ERROR - unknown type specified %d\n", __func__, type);
+          continue;
+        }
+      }
     }
-    usleep(100);
+    
+    // Wait
+    for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+      if(sspRichConnectedFibers[id] & (1<<fiber))
+        sspRich_ShiftMarocRegs_Wait(id, fiber);
+    SSPUNLOCK();
   }
-//  SSPLOCK();
-  regs_out->Global0.val = sspReadReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.Global0.val);
-  regs_out->Global1.val = sspReadReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.Global1.val);
-  regs_out->DAC.val = sspReadReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.DAC.val);
 
-  for(i = 0; i < 32; i++)
-    regs_out->CH[i].val = sspReadReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.Regs.CH[i].val);
-//  SSPUNLOCK();
-  
+  // Read 
+  for(int i=2; i>=0; i--)
+  { 
+    SSPLOCK();
+    for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+    {
+      if(sspRichConnectedFibers[id] & (1<<fiber))
+      {
+        type = sspRichConnectedAsic[id][fiber];
+        if(type==SSP_RICH_ASIC_TYPE_2MAROC)
+        {
+          if(i!=1)
+            sspRich_ShiftMarocRegs_Read(id, fiber, &sspRich_MAROC_Regs_Rd[id][fiber][i]);
+        }
+        else if(type == SSP_RICH_ASIC_TYPE_3MAROC)
+          sspRich_ShiftMarocRegs_Read(id, fiber, &sspRich_MAROC_Regs_Rd[id][fiber][i]);
+        else
+        {
+          printf("%s: ERROR - unknown type specified %d\n", __func__, type);
+          continue;
+        }
+      }
+    }
+    
+    // Wait
+    for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+      if(sspRichConnectedFibers[id] & (1<<fiber))
+        sspRich_ShiftMarocRegs_Wait(id, fiber);
+    SSPUNLOCK();
+  }
+
   return OK;
 }
 
@@ -1741,6 +2064,7 @@ int sspRich_FirmwareUpdateVerifyAll(int id, const char *filename)
     addr+= 256;
   }
   fclose(f);
+//printf("VERIFY SKIPPED - VERIFY BEFORE POWER CYCLE\n");
 
   for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
   {
@@ -2084,6 +2408,8 @@ int sspRich_Init(int id)
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
     return ERROR;
 
+  printf("%s(%d) - START\n", __func__, id);
+
   for(fiber=0; fiber<32; fiber++)
   {
     for(asic=0; asic<3; asic++)
@@ -2097,6 +2423,7 @@ int sspRich_Init(int id)
   sspSetIOSrc(id, SD_SRC_TRIG2, SD_SRC_SEL_0);
 
   sspRich_ScanFibers(id);
+
   for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
   {
     if(sspRichConnectedFibers[id] & (1<<fiber))
@@ -2122,5 +2449,72 @@ int sspRich_Init(int id)
       }
     }
   }
+  printf("%s(%d) - END\n", __func__, id);
 }
+
+int sspRich_GInit()
+{
+  int fiber, asic, tries,success, id;
+  int nssp = sspGetNssp();
+
+  printf("%s(all) - START\n", __func__);
+  for(int i=0; i<nssp; i++)
+  {
+    id = sspSlot(i);
+    if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
+      continue;
+
+    for(fiber=0; fiber<32; fiber++)
+    {
+      for(asic=0; asic<3; asic++)
+      {
+        memset(&sspRich_MAROC_Regs[id][fiber][asic], 0, sizeof(MAROC_Regs));
+        memset(&sspRich_MAROC_Regs_Rd[id][fiber][asic], 0, sizeof(MAROC_Regs));
+      }
+      sspRichConnectedAsic[id][fiber] = 0;
+    }
+
+    sspSetIOSrc(id, SD_SRC_TRIG2, SD_SRC_SEL_0);
+  }
+
+  sspRich_GScanFibers();
+
+  for(int i=0; i<nssp; i++)
+  {
+    id = sspSlot(i);
+    if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBRICH))
+      continue;
+
+    for(fiber=0; fiber<RICH_FIBER_NUM; fiber++)
+    {
+      if(sspRichConnectedFibers[id] & (1<<fiber))
+      {
+        sspRich_SetDeviceId(id, fiber, fiber);
+        sspRich_SetSoftReset(id, fiber, 1);
+        sspRich_SetSoftReset(id, fiber, 0);
+        sspRich_SetCTestSource(id, fiber, RICH_SD_CTEST_SRC_SEL_0);
+
+        // Reset slow control and dynamic register contents
+        SSPLOCK();
+        sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.SerCtrl, 0);
+        usleep(10);
+        sspWriteReg(&pSSP[id]->rich.fiber[fiber].MAROC_Cfg.SerCtrl, 5);
+        usleep(10);
+        SSPUNLOCK();
+
+        for(tries=1;tries<=5;tries++)
+        {
+          success = sspRich_DiscoveryAsic(id,fiber);
+          //printf("ASIC discovery %d %d repetition %d\n",id,fiber,tries);
+          if(success==OK) break;
+        }
+      }
+    }
+  }
+  printf("%s(all) - END\n", __func__);
+
+  return OK;
+}
+
 #endif
+

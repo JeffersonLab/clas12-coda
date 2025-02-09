@@ -242,6 +242,12 @@ int   evGenerateBaseFileName(char *origName, char **baseName, int *count);
 char *evGenerateFileName(EVFILE *a, int specifierCount, int runNumber,
                          int split, int splitNumber, char *runType);
 
+/*sergey*/
+void     evioswap(uint32_t *buffer, int tolocal, uint32_t*dest);
+int32_t  swap_int32_t_value(int32_t val);
+uint32_t *swap_int32_t(uint32_t *data, unsigned int length, uint32_t *dest);
+/*sergey*/
+
 #ifdef __cplusplus
 }
 

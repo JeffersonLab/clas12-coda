@@ -17,7 +17,7 @@ DSC2_SLOT  2   <- slot#
 
 DSC2_WIDTH  20  40   <- TDC width (ns), TRG width (ns)
 
-DSC2_TEST_INPUT 0
+DSC2_TEST_INPUT 0 <- 0: all disables; 1,2,3: bit0=IN1, bit1=IN2; 4: ???
 
 DSC2_PULSER F  <- internal pulser frequency (0.01 to 25E6 pulser frequency in Hz)
 
@@ -561,7 +561,7 @@ for(jj=0;jj<NCHAN;jj++) printf("!!!      chan=%2d, TDCThreshold=%d, TRGThreshold
 
   printf("dsc2ReadConfigFile !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
-#ifdef DEBUG
+#ifdef DEBUG_HIDE
   Ndsc = dsc2GetNdsc();
   for(ii=0; ii<Ndsc; ii++)
   {

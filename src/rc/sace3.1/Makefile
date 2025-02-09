@@ -15,6 +15,10 @@ include $(CODA)/src/Makefile.include
 #-----------------------
 # customize definitions
 #-----------------------
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
+  CLON_FLAGS += -DLinux_x86_64_RHEL9
+endif
+
 CLON_FLAGS += -I./include $(X11INCDIR)
 
 LIBNAMES += $(SYSLIBS)
@@ -22,6 +26,7 @@ LIBNAMES += $(SYSLIBS)
 ifeq ("$(OSTYPE)","SunOS")
   CLON_FLAGS += -DSVR4 -DSYSV
 endif
+
 
 #ifeq ("$(OSTYPE)","Linux")
 #  CLON_FLAGS += 

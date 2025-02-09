@@ -269,7 +269,9 @@ int beusspSelfTrigEnable(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg);
 int beusspSelfTrigDisable(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg);
 int beusspSelfTrigEnableLinks(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg, unsigned int selftrigenabledlinks );
 int beusspSelfTrigSetWindow(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  int selftrigwindow );
-//int beusspSelfTrigSetPulseWidth(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  int selftrigpulsewidth );
+
+//sergey: was commented out
+int beusspSelfTrigSetPulseWidth(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  int selftrigpulsewidth );
 
 
 

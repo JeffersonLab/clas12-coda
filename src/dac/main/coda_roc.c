@@ -353,7 +353,6 @@ roc_constructor()
   /*vmeCloseA32Slave();*/
   vmeCloseDefaultWindows();
 
-
   printf("\n\n coda_roc: ======= Open the default VME windows =========\n\n");
   vmeOpenDefaultWindows();
   /*sergey: NO MORE SFIs         vmeOpenSlaveA32(0x18000000,0x00400000);*/ /* Open Slave Window for SFI Initiated Block transfers */

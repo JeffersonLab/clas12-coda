@@ -904,6 +904,7 @@ int DreamConfig( DreamParams dream_params[D_FeuPar_NumOfDreams], int feu_id, int
 	/*
 	 * Dream configuration: dream specific parameters if any
 	 */
+
 	for( dream=0; dream<D_FeuPar_NumOfDreams-1; dream++ )
 	{
 		if( (msk & (1 << dream)) == 0 )

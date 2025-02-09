@@ -35,12 +35,14 @@ else
 endif
 
 
-LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libipc.a
+LIBNAMES += $(CODA)/src/ipc/$(OSTYPE_MACHINE)/lib/libipc.a
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
   LIBNAMES += /usr/lib/libmysqlclient.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
+  LIBNAMES += /usr/lib64/libmariadb.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
@@ -49,8 +51,8 @@ else ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
     LIBNAMES += /usr/lib/mysql/libmysqlclient.so
 endif
 
-LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libet.a
-LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libevio.a
+LIBNAMES += $(CODA)/src/et-14.0/$(OSTYPE_MACHINE)/lib/libet.a
+LIBNAMES += $(CODA)/src/evio-4.3/$(OSTYPE_MACHINE)/lib/libevio.a
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so

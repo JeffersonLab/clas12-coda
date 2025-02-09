@@ -21,7 +21,7 @@ int GetThreshold(int slot,int fiber,int asic);
 int ResetGains();
 int LoadGains();
 
-int gmap[8][32][3][64];// slot, fiber, asic, channel
+int gmap[MAX_VME_SLOTS+1][RICH_FIBER_NUM][3][64];// slot, fiber, asic, channel
 
 
 //----------------------------------------
@@ -160,7 +160,7 @@ int main(int argc, char *argv[]){
 
 
 
-  printf("Configuring MAROC boards ");
+  printf("Configuring MAROC boards \n");
   ResetGains();
   LoadGains();
 
@@ -311,8 +311,8 @@ int ResetGains(){
 
  int slot, fiber, asic, channel;
  int gain_default=64;
- for(slot=3;slot<=7;slot++)
-   for(fiber=0;fiber<=31;fiber++)
+ for(slot=0;slot<MAX_VME_SLOTS+1;slot++)
+   for(fiber=0;fiber<RICH_FIBER_NUM;fiber++)
      for(asic=0;asic<=2;asic++)
        for(channel=0;channel<=63;channel++)
          gmap[slot][fiber][asic][channel]= gain_default;
@@ -340,13 +340,13 @@ int LoadGains(){
   {
     while(fscanf(fin,"%d %d %d %d\n",var,var+1,var+2,var+3)!=EOF)  // slot, fiber, channel [0,191], gain
     {
-  //    printf("%d %3d %d %4d\n",var[0],var[1],var[2],var[3]);
       slot   = var[0];
       fiber  = var[1];
       asic   = var[2]/64;
       channel= var[2]%64;
       gain   = var[3];
       gmap[slot][fiber][asic][channel]= gain;
+      //printf("%3d %3d %2d %4d --> %4d \n",slot,fiber,asic,channel,gmap[slot][fiber][asic][channel]);
     }
     fclose(fin);
   }

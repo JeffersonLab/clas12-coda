@@ -115,7 +115,7 @@ atomtype (Atom x)
 Window *
 winlist (Display *disp, unsigned long *len)
 {
-  /*Atom prop = XInternAtom(disp,"_NET_CLIENT_LIST",False);*/
+  //Atom prop = XInternAtom(disp,"_NET_CLIENT_LIST",False);
   Atom prop = XInternAtom(disp,"CODARegistry",False);
   Atom type;
   int form;
@@ -123,31 +123,32 @@ winlist (Display *disp, unsigned long *len)
   unsigned char *list;
  
   errno = 0;
-  if (XGetWindowProperty(disp,XDefaultRootWindow(disp),prop,0,10000/*1024*/,False,XA_STRING/*XA_WINDOW*/,
-                &type,&form,len,&remain,&list) != Success)
+  if (XGetWindowProperty(disp,XDefaultRootWindow(disp),prop,0,10000/*1024*/,False,XA_STRING/*XA_WINDOW*/,&type,&form,len,&remain,&list) != Success)
   {
-    perror("winlist() -- GetWinProp");
-    return 0;
+    perror("winlist(): -- GetWinProp");
+    return(0);
   }
-  printf("len=%d\n",*len);
+  printf("winlist: len=%d\n",*len);
      
-  return (Window*)list;
+  return( (Window*)list);
 }
  
  
 char *
 winame (Display *disp, Window win)
 {
-  /*Atom prop = XInternAtom(disp,"WM_NAME",False);*/
+  //Atom prop = XInternAtom(disp,"WM_NAME",False);
   Atom prop = XInternAtom(disp,"CODARegistry",False);
   Atom type;
   int form;
   unsigned long remain, len;
   unsigned char *list;
  
+  printf("winame reached\n");fflush(stdout);
+
   errno = 0;
-  if (XGetWindowProperty(disp,win,prop,0,10000/*1024*/,False,XA_STRING,
-                &type,&form,&len,&remain,&list) != Success)
+  printf("calling XGetWindowProperty() ..\n");fflush(stdout);
+  if(XGetWindowProperty(disp, win, prop, 0, 10000/*1024*/, False, XA_STRING, &type, &form, &len, &remain, &list) != Success)
   {
     perror("winlist() -- GetWinProp");
     return NULL;
@@ -173,21 +174,21 @@ main(int argc, char *argv[])
   if (!disp)
   {
     puts("no display!");
-    return -1;
+    return(-1);
   }
  
   list = (Window*)winlist(disp,&len);
- 
+  printf("len=%d\n",len);
   
-  for (i=0;i<(int)len;i++)
+  for(i=0; i<(int)len; i++)
   {
     name = winame(disp,list[i]);
-    printf("-->%s<--\n",name);
+    printf("[%4d] -->%s<--\n",i,name);
     free(name);
   }
   
   XFree(list);
  
   XCloseDisplay(disp);
-  return 0;
+  return(0);
 }

@@ -24,6 +24,9 @@ CLON_FLAGS += -I./include -I../Variables/src.s -I../Common/src.s -I../rcClient/s
 
 ##CLON_FLAGS += -D_TRACE_OBJECTS
 
+#RHEL8
+#CLON_FLAGS += -DUSE_INTERP_RESULT
+
 # rocs
 CLON_FLAGS += -I$(CODA)/src/cterm/src.s -I$(CODA)/src/codaedit/codaedit.s
 
@@ -38,10 +41,14 @@ LIBNAMES += ../../sace3.1/$(OSTYPE_MACHINE)/lib/libsace3.1.a
 LIBNAMES += ../../motif/$(OSTYPE_MACHINE)/lib/libmotif.a
 LIBNAMES += ../../cg/$(OSTYPE_MACHINE)/lib/libcg.a
 
-LIBNAMES += $(globallib)/libcodautil.a
+LIBNAMES += $(CODA)/src/codautil/$(OSTYPE_MACHINE)/lib/libcodautil.a
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+endif
+ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+#  LIBNAMES += /usr/lib64/libmariadb.so
 endif
 ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
@@ -55,12 +62,12 @@ endif
 
 
 CLON_FLAGS += -DUSE_CREG
-LIBNAMES += $(globallib)/libcreg.a
+LIBNAMES += $(CODA)/src/creg/$(OSTYPE_MACHINE)/lib/libcreg.a
 
-LIBNAMES += $(globallib)/libcodaedit.a
+LIBNAMES += $(CODA)/src/codaedit/$(OSTYPE_MACHINE)/lib/libcodaedit.a
 
 #specific for cterm
-LIBNAMES += $(globallib)/libcterm.a
+LIBNAMES += $(CODA)/src/cterm/$(OSTYPE_MACHINE)/lib/libcterm.a
 
 LIBNAMES += $(TERMCAPLIBS)
 

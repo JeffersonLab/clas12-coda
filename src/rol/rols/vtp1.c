@@ -156,9 +156,11 @@ __download()
 static void
 __prestart()
 {
-  int i;
+  int i, ret;
   unsigned long jj, adc_id, sl;
   char *env;
+  char *myhost = getenv("HOST");
+  char tmp[256];
 
   *(rol->nevents) = 0;
 
@@ -184,7 +186,15 @@ __prestart()
   vtpDmaInit(VTP_DMA_VTP);
 #endif
   
-  vtpSerdesCheckLinks();
+  ret = vtpSerdesCheckLinks();
+  if(ret==0) /*at least on link is down*/
+  {
+    sprintf(tmp,"%s",myhost);
+    printf("ERROR: Prestart 1: SERDES LINK(S) DOWN, REBOOT ROC AND START NEW RUN FROM 'CONFIGURE !!!\n");
+    printf("ERROR: Prestart 1: SERDES LINK(S) DOWN, REBOOT ROC AND START NEW RUN FROM 'CONFIGURE !!!\n");
+    printf("ERROR: Prestart 1: SERDES LINK(S) DOWN, REBOOT ROC AND START NEW RUN FROM 'CONFIGURE !!!\n");
+    UDP_user_request(MSGERR, tmp, "SERDES LINK(S) DOWN, REBOOT ROC AND START NEW RUN FROM 'CONFIGURE !!!");
+  }
 
   printf("INFO: User Prestart 1 executed\n");
 

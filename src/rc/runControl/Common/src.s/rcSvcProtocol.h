@@ -108,7 +108,10 @@
 #define DACREATESES    ((u_long)53)  /* create a new session        */
 #define DAUNKNOWN      ((u_long)100) /* unknown type for empty data */
 #define DATEST         ((u_long)200) /* test server                 */
-#define DAZAP          ((u_long)-1)  /* kill all processes          */
+
+//sergey
+//#define DAZAP          ((u_long)-1)  /* kill all processes          */
+#define DAZAP          ((u_long)999)  /* kill all processes          */
 
 /* all monitor on/off operations                                             */
 #define DAGET_VAL         ((u_long)2000)      /* get value                   */

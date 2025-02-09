@@ -49,7 +49,7 @@
 #include <signal.h>
 #include "srsLib.h"
 
-#define SOCKET_TIMEOUT 500000
+#define SOCKET_TIMEOUT 700000 //was 500000
 
 static int srsDebugMode=0; 
 static int srsSockFD[MAX_FEC];
@@ -377,7 +377,7 @@ srsReadBlock(int sockfd, volatile unsigned int* buf_in, int nwrds, int blockleve
 	    *frameCnt = l_frameCnt++;
 
 	    /* SRSUNLOCK; */
-	    return nwords;
+	  return -999; /*nwords; sergey: force rol to ignore 'incomplete' events */
 	}
 
       if (n>=4)
@@ -526,10 +526,14 @@ srsSetDAQIP(char *ip, char *daq_ip, int port)
   unsigned int data[nregs];
   
   if(inet_pton(AF_INET, daq_ip, &sa)!=1)
-    {
-      perror("inet_pton");
-      return -1;
-    }
+  {
+    perror("inet_pton");
+    return -1;
+  }
+  else
+  {
+    printf("inet_pton successfully converted daq ip >%< into network address structure\n",daq_ip);
+  }
 
   reg[0]  = 0x4;
   data[0] = port;
@@ -537,7 +541,9 @@ srsSetDAQIP(char *ip, char *daq_ip, int port)
   reg[1]  = 0xa;
   data[1] = bswap_32(sa.s_addr);
 
+  printf("======================= srsSetDAQIP: befor srsWritePairs()\n");
   stat = srsWritePairs(ip, SRS_SYS_PORT, 0, reg, nregs, data,nregs);
+  printf("======================= srsSetDAQIP: after srsWritePairs()\n");
 
   return stat;
 }

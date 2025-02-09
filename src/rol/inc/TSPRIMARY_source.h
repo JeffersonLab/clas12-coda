@@ -268,7 +268,7 @@ vmeBusUnlock();
 static void
 tsprimarytriglink(int code, VOIDFUNCPTR isr)
 {
-  int itd, numRows, ix, port, roc_id_db, roc_id_fiber[21][9];
+  int itd, numRows, ix, port, roc_id_db, connectedfibermask, roc_id_fiber[21][9];
   char tmp[1000];
   MYSQL *dbsocket;
   MYSQL_RES *result;
@@ -286,9 +286,9 @@ tsprimarytriglink(int code, VOIDFUNCPTR isr)
   {
     for(port=1; port<=8; port++)
     {
-	  /*SERGEY: IGNORE CRATES WHICH ARE NOT IN CONFIG - will NOT help: sometimes TD can return some junk number
-        for fibers connected to roc NOT in config, and it can coincide with rocid for roc IN config, it 
-        confuses everything; should return 0 or real ID for rocs NOT in config */
+      /*SERGEY: IGNORE CRATES WHICH ARE NOT IN CONFIG - will NOT help: sometimes TD can return some junk number
+      for fibers connected to roc NOT in config, and it can coincide with rocid for roc IN config, it 
+      confuses everything; should return 0 or real ID for rocs NOT in config */
 vmeBusLock();
       roc_id_fiber[itd][port] = tdGetCrateID(tdSlot(itd),port);
 vmeBusUnlock();
@@ -330,6 +330,7 @@ vmeBusUnlock();
       printf("TSPRIMARY: [%1d] received from DB >%s< >%s< >%s<\n",ix,row[0],row[1],row[2]);
 
       if( strncmp(row[2],"no",2) != 0 ) /* 'inuse' != 'no' */
+	//if( strncmp(row[0],"dc42vtp",7) != 0 ) /* TEMPORARY !!! */
       {
         roc_id_db = atoi(row[2]);
         printf("TSPRIMARY: roc_id_db = %d\n",roc_id_db);
@@ -339,20 +340,21 @@ vmeBusUnlock();
         {
           for(port=1; port<=8; port++)
           {
+            if(tdPortIsUp(tdSlot(itd),port)==1)
             if(roc_id_db == roc_id_fiber[itd][port])
-		    {
+	    {
               if(roc_id_db == rol->pid) /* never here ? */
-		      {
+	      {
                 printf("TSPRIMARY: rocid=%d - do nothing (cannot be myself's slave)\n",roc_id_db);
-		      }
-		      else
-		      {
+	      }
+	      else
+	      {
                 printf("TSPRIMARY: added slave connected to fiber %d of the TD slot %d, rocid=%d\n",
                   port,tdSlot(itd),roc_id_db);
 vmeBusLock();
                 tdAddSlave(tdSlot(itd),port);
 vmeBusUnlock();
-		      }
+	      }
               break;
             }
           }

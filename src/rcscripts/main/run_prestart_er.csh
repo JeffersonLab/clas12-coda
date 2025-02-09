@@ -21,6 +21,21 @@ endif
 set runnum=`run_number`
 
 
+
+
+#RICH recycle script
+#####$EPICS/css_share/detectors/RICH/scripts/rich-lvcycle-0
+#/home/clasrun/rich-lvcycle-0
+#if( "$?" == 1 ) then
+#    echo "RICH recovery script failed - exit"
+#    exit(1)
+#else
+#    echo "RICH recovery script succeeded"
+#endif
+
+
+
+
 # set trigger configuration file for prestart
 #######################download_trig_config -mode prestart
 
@@ -30,6 +45,9 @@ set runnum=`run_number`
 
 
 run_log_comment -a clasrun >>& $CLON_LOG/run_log/run_log_comment.log
+
+#for runs with BAND only
+band_latency >>& $CLON_LOG/run_log/band_latency.log
 
 ##############set rlc_status = $status
 ##############(echo ending `date`; echo " ";) >>& $CLON_LOG/run_log/run_log_comment.log

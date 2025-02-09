@@ -46,3 +46,12 @@ src/rol/Camac_c111c/
 src/rol/compensation_tables/
 src/vtp/
 src/vtpnew/
+**.evio
+**.pdf
+**.png
+**_old
+**.old
+**.txt
+**.swp
+**.swo
+**_new 

@@ -50,12 +50,7 @@
 #include <TText.h>
 #include <TGStatusBar.h>
 
-#include "ECALTriggerBoardRegs.h"
-
-#include "guiecal.h"
-
 #include "cratemsgclient.h"
-
 #include "scope.h"
 
 /*NEW*/
@@ -108,7 +103,7 @@ Bool_t ScopeTimer::Notify()
 {
   Bool_t repeat;
 
-  printf("ScopeTimer::Notify() reached\n");fflush(stdout);
+  //printf("ScopeTimer::Notify() reached\n");fflush(stdout);
   repeat = fScopeDlg->OnTimer();
 
   // reset timer only if we are in continuous mode or if did not get anything in single trigger mode, otherwise stop it
@@ -217,7 +212,7 @@ ScopeDlg::ScopeDlg(const TGWindow *p, TGMainFrame *main, UInt_t w, UInt_t h, UIn
       printf("[%3d] >%s<\n",i,fStr[i]);
       fListBox->AddEntry(fStr[i], i);
     }
-    fListBox->Resize(1200, 580);
+    fListBox->Resize(1200, 680/*580*/); // actual size of the main frame
 
 
     // set dialog box title
@@ -687,7 +682,7 @@ void ScopeDlg::OnVScroll(UInt_t nSBCode, UInt_t nPos, /*CScrollBar*/TGScrollBar*
 // reads vme on timer (about 100ms)
 Bool_t ScopeDlg::OnTimer() 
 {
-  printf("ScopeDlg::OnTimer() reached\n");fflush(stdout);
+  //printf("ScopeDlg::OnTimer() reached\n");fflush(stdout);
 
   unsigned int status1, status2, tmp;
 
@@ -745,9 +740,9 @@ Bool_t ScopeDlg::OnTimer()
     {
       ;
     }
-	printf("-------> 4\n");fflush(stdout);
+    //printf("-------> 4\n");fflush(stdout);
     DrawScope();
-	printf("-------> 5\n");fflush(stdout);
+    //printf("-------> 5\n");fflush(stdout);
   }
   else
   {
@@ -845,7 +840,7 @@ unsigned int ScopeDlg::GetColor(unsigned int intensity, unsigned int odd)
 */
 void ScopeDlg::DrawScope()
 {
-  printf("ScopeDlg::DrawScope reached\n");fflush(stdout);
+  //printf("ScopeDlg::DrawScope reached\n");fflush(stdout);
 
   int ii, i, j, icursor, y = 50;
   char ch;
@@ -863,7 +858,7 @@ void ScopeDlg::DrawScope()
   // for graphic mode, draw background boxes and handle persistency
   if(!use_ascii)
   {
-	printf("fCanvas=%d\n",fCanvas);fflush(stdout);
+    //printf("fCanvas=%d\n",fCanvas);fflush(stdout);
     if (fCanvas->GetCanvasImp()==NULL) {printf("fCancas window has been closed\n");fflush(stdout);};
 
     fCanvas->SetEditable(TRUE);
@@ -1127,7 +1122,6 @@ BOOL ScopeDlg::UpdateTriggerMasks()
     else if(m_iTriggerPattern[i] == TRIGPATTERN_1) bit_masks[word] |= 1<<bit;
   }
 
-
   /*if(tcp->m_bConnected)*/
   {
     if(!tcp->Write32(board_address[0] + ECAL_TRIG_VALUE7, &bit_masks[7])) return FALSE;
@@ -1175,8 +1169,7 @@ BOOL ScopeDlg::UpdateTriggerMasks()
 
 BOOL ScopeDlg::ReadScope(UInt_t addr, UInt_t *buf, Int_t len)
 {
-
-  printf("ScopeDlg::ReadScope reached\n");fflush(stdout);
+  //printf("ScopeDlg::ReadScope reached\n");fflush(stdout);
   //printf("ScopeDlg::ReadScope reached, len=%d\n",len);
   unsigned int val;
   tcp->Read32(addr + 0x2000, &val);
@@ -1204,7 +1197,7 @@ BOOL ScopeDlg::ReadoutScope()
   int i,j,k,m,n;
   int i1,i2,j1,j2;
 
-  printf("ScopeDlg::ReadoutScope reached\n");fflush(stdout);
+  //printf("ScopeDlg::ReadoutScope reached\n");fflush(stdout);
 
   memset(ScopeTraces, 0xAA, sizeof(ScopeTraces));
   memset(ScopeTracesTmp, 0xAA, sizeof(ScopeTracesTmp));

@@ -107,16 +107,17 @@ typedef struct
   /* 0x0004-0x0007 */ volatile unsigned int FirmwareRev;
   /* 0x0008-0x000B */ volatile unsigned int SpiCtrl;
   /* 0x000C-0x000F */ volatile unsigned int SpiStatus;
-  /* 0x0010-0x0013 */ volatile unsigned int ICapCtrl;
-  /* 0x0014-0x0017 */ volatile unsigned int ICapDataWr;
-  /* 0x0018-0x001B */ volatile unsigned int ICapDataRd;
-  /* 0x001C-0x001F */ volatile unsigned int ICapStatus;
+  /* 0x0010-0x001F */          unsigned int Reserved0[(0x0020-0x0010)/4];
   /* 0x0020-0x0023 */ volatile unsigned int Reset;
   /* 0x0024-0x0027 */ volatile unsigned int DacThreshold;
   /* 0x0028-0x002B */ volatile unsigned int DacLow;
   /* 0x002C-0x002F */ volatile unsigned int DacHigh;
   /* 0x0030-0x0033 */ volatile unsigned int DacOffset;
-  /* 0x0034-0x00FF */          unsigned int Reserved0[(0x0100-0x0034)/4];
+  /* 0x0034-0x003F */          unsigned int Reserved1[(0x0040-0x0034)/4];
+  /* 0x0040-0x0043 */ volatile unsigned int Reboot;
+  /* 0x0044-0x0047 */ volatile unsigned int HeartbeatCnt;
+  /* 0x0048-0x004B */ volatile unsigned int SEUCnt;
+  /* 0x004C-0x00FF */          unsigned int Reserved2[(0x0100-0x004C)/4];
 } dcrbCfg_regs;
 
 /* Clock Peripheral: Clock configuration interface */

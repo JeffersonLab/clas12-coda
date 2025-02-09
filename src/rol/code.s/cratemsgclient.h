@@ -58,6 +58,7 @@ public:
   bool  Read32(unsigned int addr, unsigned int *val, int cnt = 1, int flags = CRATE_MSG_FLAGS_ADRINC);
 
   bool  ReadScalers(int slot, unsigned int **val, int *len);
+  bool  GetScalers(int slot, unsigned int *val, int *len);
   bool  ReadData(int slot, unsigned int **val, int *len);
   bool  GetCrateMap(unsigned int **val, int *len);
   bool  GetBoardParams(int slot, int partype, unsigned int **val, int *len);

@@ -40,13 +40,16 @@ CLON_FLAGS += -I./$(MAIN).s -I$(CODA)/common/include $(X11INCDIR)
 CLON_FLAGS += -I/usr/include/mysql
 
 CLON_FLAGS += -DUSE_CREG
-LIBNAMES += $(globallib)/libcreg.a
-LIBNAMES += $(globallib)/libcodautil.a
+LIBNAMES += $(CODA)/src/creg/$(OSTYPE_MACHINE)/lib/libcreg.a
+LIBNAMES += $(CODA)/src/codautil/$(OSTYPE_MACHINE)/lib/libcodautil.a
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
   LIBNAMES += /usr/lib/libmysqlclient.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+#  LIBNAMES += /usr/lib64/libmariadb.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
