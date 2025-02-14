@@ -6489,6 +6489,8 @@ tsGetTrigCoinWindow()
   rval = vmeRead32(&TSp->triggerWindow) & TS_TRIGGERWINDOW_COINC_MASK;
   TSUNLOCK;
 
+  printf("tsGetTrigCoinWindow(): %d ns\n",rval*4);
+
   return rval;
 
 }

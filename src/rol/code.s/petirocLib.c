@@ -291,7 +291,11 @@ int petiroc_read_event_socket(int slot, unsigned int *buf, int nwords_max)
     nwords = nwords_max;
   }
 
-  if(nwords) read(sockfd_event[slot], buf, nwords*4);
+  if(nwords)
+  {
+    result = read(sockfd_event[slot], buf, nwords*4);
+    //printf("%s: INFO: slot=%2d: read() returned %d words\n", __func__, slot, result/4);
+  }
 
   return(nwords);
 }

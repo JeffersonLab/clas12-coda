@@ -579,6 +579,12 @@ __download()
 
   CDOINIT(GEN,TIR_SOURCE);
 
+  /************/
+  /* init daq */
+
+  daqInit();
+  DAQ_READ_CONF_FILE;
+
   printf("STATUS2:\n");
   tipusStatus(1);
 
@@ -1758,7 +1764,6 @@ skip_hps:
 
 
 #ifdef USE_PETIROC
-#if 1
   len = petirocReadBlock(tdcbuf, EVENT_BUFFER_NWORDS);
   if(len > 0)
   {
@@ -1771,10 +1776,9 @@ skip_hps:
   }
   else
   {
-    printf("ERROR: petirocReadBlock() returned %d\n",len);fflush(stdout);
+    printf("ERROR in tipci1: petirocReadBlock() returned %d\n",len);fflush(stdout);
     exit(-1);
   }
-#endif
 #endif /*USE_PETIROC*/
 
 

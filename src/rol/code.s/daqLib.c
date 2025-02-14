@@ -81,6 +81,7 @@ daqConfig(char *fname)
   int res;
   char *string; /*dummy, will not be used*/
 
+  printf("daqConfig() reached, fname='%s'\n",fname);
   if(strlen(fname) > 0) /* filename specified  - upload initial settings from the hardware */
   {
     daqUploadAll(string, 0);
