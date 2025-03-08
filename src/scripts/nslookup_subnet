@@ -1,0 +1,24 @@
+#!/bin/bash
+## nslookup an entire subnet
+
+## It's possible to add more networks separated with space
+
+if [ ! $1 ]; then
+    echo "Missing parameter"
+    echo "Usage: To scan 129.57.69.0/24, type:"
+    echo "subnet-scan 1"
+    exit 1
+else
+    NETS=129.57.$1  ## edit this line to match the scanned network
+    IPRange="1 254"
+    for NET in $NETS; do
+        for n in $(seq $IPRange); do
+            ADDR=${NET}.${n}
+            DOM=$(nslookup ${ADDR} | awk -F "=" '{ print $2 }'|sed 's/^[ t]*//' | sed '/^$/d' | sed 's/.$//')
+            if [ -n "$DOM" ]; then
+                echo "$ADDR, $DOM"
+            fi
+        done
+     done
+fi
+exit 0
