@@ -15,7 +15,7 @@ main()
 #else
 
 
-/*#define DEBUG*/
+//#define DEBUG
 
 #define MAX_NODES 300
 
@@ -142,6 +142,11 @@ extern char    *expid; /* coda_component.c */
 extern char    *session; /* coda_component.c */
 
 static int ended_loop_exit = 0;
+static int first_roc_id; /*for debugging purposes - contains first arrived roc_id in every event*/
+static int remember_roc_ids[256];
+static int remember_event_numbers[256];
+static int remember_nrocs_so_far;
+
 
 int listSplit1(char *list, int flag, int *argc, char argv[LISTARGV1][LISTARGV2]);
 
@@ -1003,6 +1008,12 @@ printf("!!!coda_ebc: roc=%d desc1->evnb=%d\n",roc,desc1->evnb);
 
 
 
+        first_roc_id = desc1->rocid;
+
+remember_roc_ids[0] = desc1->rocid;
+remember_event_numbers[0] = desc1->evnb;
+remember_nrocs_so_far = 1;
+
 
 #ifdef DEBUG
         printf("[%1d] INFO: Event (Num %d type %d) from FIRST rocid=%d\n",
@@ -1015,6 +1026,14 @@ printf("!!!coda_ebc: roc=%d desc1->evnb=%d\n",roc,desc1->evnb);
         printf("[%1d] INFO: Event (Num %d type %d) from rocid=%d\n",
 			   id,desc1->evnb,typ,desc1->rocid);
 #endif
+
+
+remember_roc_ids[remember_nrocs_so_far] = desc1->rocid;
+remember_event_numbers[remember_nrocs_so_far] = desc1->evnb;
+remember_nrocs_so_far++;
+
+
+
         /* we are already building so we can check some things... */
         if((current_evnb != desc1->evnb) && (in_error == 0))
         {
@@ -1022,13 +1041,31 @@ printf("!!!coda_ebc: roc=%d desc1->evnb=%d\n",roc,desc1->evnb);
           printf("[%1d] FATAL: Event (Num %d type %d) NUMBER mismatch",
                  id,current_evnb,current_evty);
           fflush(stdout);
-          printf(" -- %s (rocid %d) sent %d (type %d)\n",
+          printf(" -- %s (rocid %d) sent %d (type %d) - first reported roc_id was %d\n",
                   (get_cb_name(&roc_queues[ebp->roc_nb[desc1->rocid]])), 
-                  desc1->rocid,desc1->evnb,desc1->type);
+		 desc1->rocid,desc1->evnb,desc1->type,first_roc_id);
           fflush(stdout);
           printf("[%1d] ERROR: Discard data until next control event\n",id);
           fflush(stdout);
           /*fragment_mask = 0;*/
+
+
+
+printf("\n\nHAVE SO FAR FOR THE CURRENT EVENT:\n");
+for(i=0; i<remember_nrocs_so_far; i++)
+{
+  printf("roc_id = %2d, event = %6d\n",remember_roc_ids[i],remember_event_numbers[i]);
+}
+printf("\n");
+
+
+
+
+
+
+
+
+
 exit(0);
         }
         else if((current_evty != desc1->type) && (in_error == 0))

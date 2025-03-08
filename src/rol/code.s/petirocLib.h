@@ -390,6 +390,8 @@ typedef struct
 #define PETIROC_INIT_REGSOCKET        0x00000000
 #define PETIROC_INIT_SLOWCONSOCKET    0x00000001
 
+int petiroc_read_ip(int slot);
+int petiroc_program_ip(int slot, unsigned int ip, unsigned int mac0, unsigned int mac1);
 int petiroc_check_open_register_socket(int slot);
 int petiroc_open_socket(char *ip, int port);
 int petiroc_open_register_socket(int slot, int type);
@@ -405,7 +407,8 @@ int petirocSlot(int n);
 int petirocInit(int devid_start, int n, int iFlag);
 void petirocEnable();
 void petirocEnd();
-int petiroc_clear_scalers();
+int petiroc_clear_scalers(int slot);
+int petiroc_get_scaler(int slot, int ch);
 int petiroc_status_all();
 int petiroc_gstatus();
 int petiroc_startb_adc(int slot, int val);

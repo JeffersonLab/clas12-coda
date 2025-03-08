@@ -202,20 +202,20 @@ fadc250InitGlobals()
 }
 
 void
-fadc250GetParamsForOffline(float ped[6][22][16], int tet[6][22][16], float gain[6][22][16], int nsa[6][22], int nsb[6][22])
+fadc250GetParamsForOffline(float ped[22][16], int tet[22][16], float gain[22][16], int nsa[22], int nsb[22])
 {
   int ii,jj;
 
   for(jj=0; jj<NBOARD; jj++)
   {
-    nsa[0][jj] = fa250[jj].nsa;
-    nsb[0][jj] = fa250[jj].nsb;
+    nsa[jj] = fa250[jj].nsa;
+    nsb[jj] = fa250[jj].nsb;
 
     for(ii=0; ii<NCHAN; ii++)
     {
-     ped[0][jj][ii]  = fa250[jj].ped[ii];
-     tet[0][jj][ii]  = fa250[jj].thr[ii];
-     gain[0][jj][ii] = fa250[jj].gain[ii];
+     ped[jj][ii]  = fa250[jj].ped[ii];
+     tet[jj][ii]  = fa250[jj].thr[ii];
+     gain[jj][ii] = fa250[jj].gain[ii];
     }
   }
 }

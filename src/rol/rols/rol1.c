@@ -1551,6 +1551,9 @@ vmeBusUnlock();
   printf("DSC2 Prestart() ends =========================\n\n");
 #endif
 
+
+
+
   /* master and standalone crates, NOT slave */
 #ifndef TI_SLAVE
 
@@ -2263,6 +2266,7 @@ vmeBusUnlock();
   }
 
 #endif
+
 
 
 

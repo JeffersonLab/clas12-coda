@@ -282,7 +282,7 @@ int petiroc_read_event_socket(int slot, unsigned int *buf, int nwords_max)
     printf("%s: ERROR in ioctl for slot %d\n", __func__, slot);
     return(ERROR);
   }
-  printf("%s: INFO: slot=%2d: nbytes=%d\n", __func__, slot, nbytes);
+//  printf("%s: INFO: slot=%2d: nbytes=%d\n", __func__, slot, nbytes);
 
   nwords = nbytes/4;
   if(nwords > nwords_max)
@@ -294,7 +294,7 @@ int petiroc_read_event_socket(int slot, unsigned int *buf, int nwords_max)
   if(nwords)
   {
     result = read(sockfd_event[slot], buf, nwords*4);
-    //printf("%s: INFO: slot=%2d: read() returned %d words\n", __func__, slot, result/4);
+//    printf("%s: INFO: slot=%2d: read() returned %d words\n", __func__, slot, result/4);
   }
 
   return(nwords);
@@ -371,7 +371,7 @@ int petirocReadBlock(unsigned int *buf, int nwords_max)
     slot = devids[i];
     tries = 0;
 
-//    printf("petirocReadBlock: reading slot=%d\n",slot);fflush(stdout);
+ //   printf("petirocReadBlock: reading slot=%d\n",slot);fflush(stdout);
     while(1)
     {
       if(petirocEventBufferNBlocks[slot])
@@ -379,24 +379,29 @@ int petirocReadBlock(unsigned int *buf, int nwords_max)
         result = petirocEventBufferRead(slot, buf, nwords_max-nwords);
         nwords+= result;
         buf+= result;
-	if(tries>0) printf("2: slot=%d (result=%d, nwords=%d\n",slot,result,nwords);fflush(stdout);
+//	      if(tries>0) printf("2: slot=%d (result=%d, nwords=%d\n",slot,result,nwords);fflush(stdout);
         break;
       }
-      else if(tries < 100)
+      else if(tries < 100000) // 100000=> 1sec timeout
       {
-	printf("1: slot=%d, tries=%d\n",slot,tries);fflush(stdout);
+//	      printf("1: slot=%d, tries=%d\n",slot,tries);fflush(stdout);
         tries++;
         result = petiroc_read_event_socket(slot, petirocEventBufferWork, PETIROC_EVENT_BUF_LEN-petirocEventBufferSize[slot]);
-        if(result>0)
-	{
-	  printf("3: slot=%d, petirocEventBufferSize=%d\n",slot,petirocEventBufferSize[slot]);fflush(stdout);
+        if(result == ERROR)
+        {
+          printf("%s: ERROR - slot %d disconnected\n", __func__, slot);
+          break;
+        }
+        else if(result>0)
+        {
+//	        printf("3: slot=%d, petirocEventBufferSize=%d\n",slot,petirocEventBufferSize[slot]);fflush(stdout);
           petirocEventBufferWrite(slot, petirocEventBufferWork, result);
-	}
+	      }
         else
-	{
-	  printf("4: slot=%d\n",slot);fflush(stdout);
+	      {
+//	        printf("4: slot=%d\n",slot);fflush(stdout);
           usleep(10);
-	}
+	      }
       }
       else
       {
@@ -456,7 +461,6 @@ int petirocInit(int slot_start, int n, int iFlag)
       continue;
     }
     printf("%s: slot=%d opened !\n",__func__,slot);fflush(stdout);
-      
     int boardid      = petiroc_read32(slot, &pPETIROC_regs->Clk.BoardId);
     printf("Board=%08X\n", boardid);
     devids[npetiroc++] = slot;
@@ -482,14 +486,28 @@ void petirocEnable()
 void petirocEnd()
 {
   int i;
+
+  printf("petirocEnd reached\n");fflush(stdout);
   for(i=0;i<npetiroc;i++)
   {
 //    int slot = devids[i];
 //    petiroc_trig_setup(slot, 0, 1);  // disable TRIG, enable SYNC
 
-    if(sockfd_reg[i]) petiroc_close_register_socket(i);
-    if(sockfd_event[i]) petiroc_close_event_socket(i);
+    printf("petirocEnd: checking socket %d\n",i);fflush(stdout);
+
+    if(sockfd_reg[i])
+    {
+      printf("petirocEnd: closing register socket %d\n",i);fflush(stdout);
+      petiroc_close_register_socket(i);
+    }
+
+    if(sockfd_event[i])
+    {
+      printf("petirocEnd: closing event socket %d\n",i);fflush(stdout);
+      petiroc_close_event_socket(i);
+    }
   }
+  printf("petirocEnd done\n");fflush(stdout);
 }
 
 int petiroc_startb_adc(int slot, int val)
@@ -729,6 +747,7 @@ int petiroc_set_blocksize(int slot, int blocksize)
 int petiroc_set_blocksize_all(int blocksize)
 {
   int i, slot;
+  printf("%s(%d)\n", __func__, blocksize);
   for(i=0;i<npetiroc;i++)
   {
     slot = devids[i];
@@ -838,7 +857,7 @@ int petiroc_cfg_pwr(int slot, int en_d, int en_a, int en_adc, int en_dac, int ga
   unsigned int val;
 
   val = petiroc_read32(slot, &pPETIROC_regs->PetirocCfg.Ctrl);
-  val &= 0xFFFFFF0F;
+  val &= 0xFFFFFC0F;
   petiroc_write32(slot, &pPETIROC_regs->PetirocCfg.Ctrl, val);
   usleep(100);
   if(en_d)    val |= 0x10;
@@ -864,27 +883,53 @@ int petiroc_trig_setup(int slot, int trig, int sync)
   petiroc_write32(slot, &pPETIROC_regs->Sd.LedY, 4);  // LED1: sync
 
   petiroc_write32(slot, &pPETIROC_regs->Sd.Trig, trig ? 3 : 0);  // SD_TRIG or 0
+  
+  //Assert SYNC before switch to external (effective local software SYNC)
+  petiroc_write32(slot, &pPETIROC_regs->Sd.Sync, 1); // SYNC=1
+  petiroc_read32(slot, &pPETIROC_regs->Sd.Sync);
+  
   petiroc_write32(slot, &pPETIROC_regs->Sd.Sync, 4); // SD SYNC
   petiroc_write32(slot, &pPETIROC_regs->Sd.Busy, 5); // SD BUSY
   petiroc_read32(slot, &pPETIROC_regs->Sd.Sync);
   return OK;
 }
 
-int petiroc_clear_scalers()
+int petiroc_clear_scalers(int slot)
 {
-  int i, slot;
-  for(i=0;i<npetiroc;i++)
+  if((slot >= PETIROC_MAX_NUM) || !sockfd_reg[slot])
   {
-    slot = devids[i];
-    petiroc_write32(slot, &pPETIROC_regs->Sd.Latch, 1);
+    printf("%s: ERROR invalid slot %d\n", __func__, slot);
+    return ERROR;
   }
-  for(i=0;i<npetiroc;i++)
-  {
-    slot = devids[i];
-    petiroc_write32(slot, &pPETIROC_regs->Sd.Latch, 0);
-  }
+  petiroc_write32(slot, &pPETIROC_regs->Sd.Latch, 1);
+  petiroc_write32(slot, &pPETIROC_regs->Sd.Latch, 0);
   petiroc_read32(slot, &pPETIROC_regs->PetirocCfg.Ctrl);
   return OK;
+}
+
+int petiroc_get_scaler(int slot, int ch)
+{
+  unsigned int ref, val;
+  float result;
+  if((slot >= PETIROC_MAX_NUM) || !sockfd_reg[slot])
+  {
+    printf("%s: ERROR invalid slot %d\n", __func__, slot);
+    return ERROR;
+  }
+  petiroc_write32(slot, &pPETIROC_regs->Sd.Latch, 1);
+  
+  ref = petiroc_read32(slot, &pPETIROC_regs->Sd.Scalers[1]); // reference clock (250MHz)
+  val = petiroc_read32(slot, &pPETIROC_regs->Tdc.Scalers[ch]);
+  result = (float)val;
+  if(ref)
+  {
+    result*= 250.0E6;
+    result/=(float)ref;
+  }
+
+  petiroc_write32(slot, &pPETIROC_regs->Sd.Latch, 0);
+  petiroc_read32(slot, &pPETIROC_regs->PetirocCfg.Ctrl);
+  return (int)result;
 }
 
 int petiroc_status_all()
@@ -1776,6 +1821,124 @@ int petiroc_flash_GFirmwareVerify(char *filename)
   return OK;
 }
 
+int petiroc_read_ip(int slot)
+{
+  unsigned char buf[256], val;
+  unsigned int addr = 0x1FF0000;
+
+  if((slot >= PETIROC_MAX_NUM) || !sockfd_reg[slot])
+  {
+    printf("%s: ERROR invalid slot %d\n", __func__, slot);
+    return ERROR;
+  }
+  petiroc_flash_Cmd(slot, PETIROC_FLASH_CMD_WREN);
+  petiroc_flash_Cmd(slot, PETIROC_FLASH_CMD_4BYTE_EN);
+
+  petiroc_flash_SelectSpi(slot, 1);
+  petiroc_flash_TransferSpi(slot, PETIROC_FLASH_CMD_RD, NULL);  // continuous array read
+  petiroc_flash_TransferSpi(slot, (addr>>24)&0xFF, NULL);
+  petiroc_flash_TransferSpi(slot, (addr>>16)&0xFF, NULL);
+  petiroc_flash_TransferSpi(slot, (addr>> 8)&0xFF, NULL);
+  petiroc_flash_TransferSpi(slot, (addr>> 0)&0xFF, NULL);
+
+  printf("CFG:");
+  for(int i=0; i<15; i++)
+  {
+    petiroc_flash_TransferSpi(slot, 0xFF, &val);
+    printf(" %02X", val);
+  }
+  printf("\n");
+  return OK;
+}
+
+int petiroc_program_ip(int slot, unsigned int ip, unsigned int mac0, unsigned int mac1)
+{
+  unsigned char buf[256], status;
+  unsigned int addr = 0x1FF0000;
+  int i;
+  
+  if((slot >= PETIROC_MAX_NUM) || !sockfd_reg[slot])
+  {
+    printf("%s: ERROR invalid slot %d\n", __func__, slot);
+    return ERROR;
+  }
+
+  memset(buf, 0xFF, sizeof(buf));
+  buf[0] = 0xA5;
+  // IP address
+  buf[1]  = (ip>>24) & 0xFF;
+  buf[2]  = (ip>>16) & 0xFF;
+  buf[3]  = (ip>> 8) & 0xFF;
+  buf[4]  = (ip>> 0) & 0xFF;
+  // IP mask
+  buf[1]  = 0;
+  buf[2]  = 255;
+  buf[3]  = 255;
+  buf[4]  = 255;
+  // Gateway address
+  buf[5]  = 0;
+  buf[6]  = (ip>>16) & 0xFF;
+  buf[7]  = (ip>> 8) & 0xFF;
+  buf[8]  = (ip>> 0) & 0xFF;
+  // MAC address
+  buf[9]  = (mac0>> 0) & 0xFF;
+  buf[10] = (mac0>> 8) & 0xFF;
+  buf[11] = (mac0>>16) & 0xFF;
+  buf[12] = (mac0>>24) & 0xFF;
+  buf[13] = (mac1>> 0) & 0xFF;
+  buf[14] = (mac1>> 8) & 0xFF;
+  
+  if(petiroc_flash_IsValid(slot) != OK)
+  {
+    printf("%s: ERROR - invalid flash on slot %d\n", __func__, slot);
+    return ERROR;
+  }
+  petiroc_flash_Cmd(slot, PETIROC_FLASH_CMD_WREN);
+  petiroc_flash_Cmd(slot, PETIROC_FLASH_CMD_4BYTE_EN);
+  petiroc_flash_Cmd(slot, PETIROC_FLASH_CMD_WREN);
+  petiroc_flash_CmdAddr(slot, PETIROC_FLASH_CMD_ERASE64K, addr);
+
+  i = 0;
+  while(1)
+  {
+    petiroc_flash_GetStatus(slot, &status);
+    if(!(status & 0x1))
+      break;
+    usleep(16000);
+    if(i == 60+6) /* 1000ms maximum sector erase time */
+    {
+      printf("%s: ERROR: failed to erase flash on slot=%d, address=%d\n", __func__, slot, addr);
+      break;
+    }
+    i++;
+  }
+
+  // Program 256 byte page
+  petiroc_flash_Cmd(slot, PETIROC_FLASH_CMD_WREN);
+  petiroc_flash_CmdAddrData(slot, PETIROC_FLASH_CMD_WRPAGE, addr, buf, 256);
+
+  // Wait for page program to complete
+  i = 0;
+  while(1)
+  {
+    petiroc_flash_GetStatus(slot, &status);
+    if(!(status & 0x1))
+      break;
+    if(i == 300) /* 3ms maximum page program time  */
+    {
+      printf("%s: ERROR: failed to program flash page on slot=%d, address=%d\n", __func__, slot, addr);
+      break;
+    }
+    i++;
+  }
+
+  petiroc_flash_Cmd(slot, PETIROC_FLASH_CMD_WREN);
+  petiroc_flash_Cmd(slot, PETIROC_FLASH_CMD_4BYTE_DIS);
+
+  return OK;
+}
+
+
 int petiroc_set_idelay(
     int slot,
     int delay_trig1_p, int delay_trig1_n,
@@ -1970,6 +2133,8 @@ int petiroc_sendscalers(char *host)
       petiroc_write32(slot, &pPETIROC_regs->Sd.Latch, 1);
       for(int i=0;i<52;i++)
         idata[i] = petiroc_read32(slot, &pPETIROC_regs->Tdc.Scalers[i]);
+printf("sync[%d] = %d\n", slot, petiroc_read32(slot, &pPETIROC_regs->Sd.Scalers[2]));
+printf("trig[%d] = %d\n", slot, petiroc_read32(slot, &pPETIROC_regs->Sd.Scalers[3]));
 /*
       trig[slot] = petiroc_read32(slot, &pPETIROC_regs->Sd.Scalers[3]);
       sync[slot] = petiroc_read32(slot, &pPETIROC_regs->Sd.Scalers[2]);

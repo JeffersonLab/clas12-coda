@@ -604,7 +604,7 @@ dabufp[0] = 0; /*cleanup first word (will be CODA fragment length), otherwise fo
   } \
   else /*enable interrupts*/ \
   { \
-	/*printf("%s calls __done()\n",__FUNCTION__);*/	\
+    /*printf("%s calls __done()\n",__FUNCTION__);*/	\
     __done(); \
     rol->doDone = 0; \
   }
@@ -759,6 +759,8 @@ static int
 theIntHandler(int theSource)
 {
   unsigned int theType;
+
+  printf("theIntHandler reached\n");
 
   if(theSource == 0) return(0);
 

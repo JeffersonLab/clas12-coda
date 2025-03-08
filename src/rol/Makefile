@@ -245,7 +245,8 @@ else
     LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
   endif
   ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
-    LIBNAMES += /usr/lib64/libmariadb.so
+    LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+    #LIBNAMES += /usr/lib64/libmariadb.so
   endif
 
 
@@ -263,6 +264,14 @@ else
 
 
   ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+    LIBNAMES += $(CODA)/src/ipc/$(OSTYPE_MACHINE)/lib/libipc.a
+    LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
+    LIBNAMES += -lapr-1
+    LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
+    LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
+  endif
+
+  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
     LIBNAMES += $(CODA)/src/ipc/$(OSTYPE_MACHINE)/lib/libipc.a
     LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
     LIBNAMES += -lapr-1

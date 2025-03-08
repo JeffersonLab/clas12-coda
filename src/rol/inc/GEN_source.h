@@ -135,13 +135,23 @@ gentriglink(int code, VOIDFUNCPTR isr)
   tipusSetCrateID(rol->pid); /* set TI boardID equal to rocID, will be used to identify slaves */
   printf("==> reading back roc_id's: self=%d, fiber=%d\n",tipusGetCrateID(0),tipusGetCrateID(1));
 
+
+  /* important: 'block_level' in tipci1.c will be set equal to 'next_block_level' */
+  next_block_level = tipusGetNextBlockLevel();
+  printf("GEN: next_block_level = %d\n",next_block_level);
+
+
   tipusIntConnect(0,isr,0);
   tipusTrigLinkReset();
+
   /* Fix from Bryan 17may16 */
 #ifndef TI_SLAVE
   usleep(10000);
   tipusSyncReset(1);
 #endif
+
+
+
 
 }
 
@@ -173,13 +183,16 @@ gentdisable(int code, int card)
     GENflag = 0;
     tipusDoLibraryPollingThread(0); /* Turn off library polling */	
   }
+
   tipusIntDisable();
   tipusIntDisconnect();
   /*
   tsLiveCalc=0;
   tsLiveFunc = NULL;
   */
+  printf("\ngentdisable 1\n\n");
   tipusStatus(1);
+  printf("\ngentdisable 2\n\n");
 
 }
 
@@ -201,9 +214,10 @@ genttest(int code)
   /*printf("genttest\n");*/
   usleep(1);
   ret = tipusBReady();
+  //if(ret<0)
   if(ret==-1)
   {
-    printf("%s: ERROR: tipBReady returned ERROR\n",__FUNCTION__);
+    printf("%s: ERROR: tipusBReady returned ERROR\n",__FUNCTION__);
   }
   if(ret)
   {

@@ -42,7 +42,8 @@ ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
 else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
-  LIBNAMES += /usr/lib64/libmariadb.so
+  #LIBNAMES += /usr/lib64/libmariadb.so
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")

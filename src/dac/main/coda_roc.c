@@ -1837,7 +1837,7 @@ codaEnd()
       rolP->daproc = DA_END_PROC;
       printf("codaEnd: calling ROL1's end (0x%08x)\n",(*rolP->rol_code));fflush(stdout);
       (*rolP->rol_code) (rolP);
-      printf("codaEnd: finished ROL1's end\n");fflush(stdout);
+      printf("codaEnd: finished ROL1's end\n\n");fflush(stdout);
     }
   }
 
@@ -1859,7 +1859,7 @@ codaEnd()
     {
       TRANSITION_UNLOCK;
       return(CODA_ERROR);
-	}
+    }
     tcpState = rocp->state = DA_DOWNLOADED;
     rocp->active = 1;
   }
@@ -1879,7 +1879,7 @@ printf("ERROR_ENDING ...\n");fflush(stdout);
 
       TRANSITION_UNLOCK;
       return(CODA_ERROR);
-	}
+    }
 
     printf("codaEnd: NOW !!!!!!!!!!!!!!!!!!!\n");
     printf("codaEnd: NOW !!!!!!!!!!!!!!!!!!!\n");
@@ -2397,7 +2397,7 @@ UDP_cancel: cancel >inf:adcecal5 sys 0, mask 22<
           printf("3: ROLS_LOOP LOCKed, buffer sent\n");fflush(stdout);
           SENDBUFFER_UNLOCK;
           printf("3: ROLS_LOOP UNLOCKed\n");fflush(stdout);
-		  /* call done only if writing was successful !!!???*/
+	  /* call done only if writing was successful !!!???*/
           setHeartBeat(HB_ROL,23,5);
 TRANSITION_LOCK;
           rolP->daproc = DA_DONE_PROC;
@@ -2405,7 +2405,7 @@ TRANSITION_LOCK;
           (*rolP->rol_code) (rolP);
 TRANSITION_UNLOCK;
           setHeartBeat(HB_ROL,24,5);
-		}
+	}
       }
 
       setHeartBeat(HB_ROL,25,5);

@@ -355,18 +355,17 @@ public:
 		if(!CheckConnection(__FUNCTION__))
 			return kFALSE;
 
+    if(tcp64bit_mode)
+    {
+      int val = 0;
+      SendRaw(&val, 4);
+    }
 		Msg.len = 12;
 		Msg.type = CRATEMSG_TYPE_READ32;
     Msg.msg.m_Cmd_Read32.cnt = cnt;
     Msg.msg.m_Cmd_Read32.addr = addr;
     Msg.msg.m_Cmd_Read32.flags = flags;
 		SendRaw(&Msg, Msg.len+8);
-
-    if(tcp64bit_mode)
-    {
-      int val = 0;
-      SendRaw(&val, 4);
-    }
 
 #if DEBUG_PRINT
 		printf("Read32 @ 0x%08X, Count = %d, Flag = %d, Vals = ", addr, cnt, flags);

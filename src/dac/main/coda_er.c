@@ -1025,9 +1025,9 @@ TIMERL_START;
 int 
 CODA_write_event(ERp erp)
 {
-  const int prestartEvent=EV_ER_PRESTART, endEvent=EV_ER_END, true=1, false=0;
+  const int prestartEvent=EV_ER_PRESTART, endEvent=EV_ER_END;
   int status1, status2;
-  int i, ii, status, len, done=false, start, stop;
+  int i, ii, status, len, done=FALSE, start, stop;
   et_event *pe[ET_EVENT_ARRAY_SIZE];
   struct timespec waitfor;
   struct tms tms_start, tms_end;
@@ -1100,7 +1100,7 @@ try_again:
         printf("CODA_write_event: error in et_events_get, status = ET_ERROR \n");
         et_reinit = 1;
       }
-      done = true;
+      done = TRUE;
     }
     else    /* if we got events ... */
     {
@@ -1151,7 +1151,7 @@ try_again:
             {
               printf("End Event: erp->nend=%d -> ignore events after End !!!!!!!!!!!!!!!!!!!!!!!\n",erp->nend);
 	          stop = i; /* last event to be written */
-	          done = true;
+	          done = TRUE;
               printf("End Event: forcing writing, start=%d, stop=%d\n",start,stop);
               force_write = 1;
 	        }
@@ -1167,7 +1167,7 @@ try_again:
         {
 	      /* error writing coda file so quit */
 	      printf("ERROR: Error writing events... Cancel ET read loop!\n");
-          done = true;
+          done = TRUE;
         }
         else
 		{
@@ -1186,7 +1186,7 @@ try_again:
       {
 	    printf("CODA_write_event: ERROR in et_events_put, status = %i \n",status2);
         et_reinit = 1;
-        done = true;
+        done = TRUE;
       }
 
     }
@@ -1213,12 +1213,12 @@ try_again:
       {
 #endif
 	    printf("CODA_write_event: WARN: ER is backed up! This may be causing system deadtime\n");
-	    done = true;
+	    done = TRUE;
       }
     }
 
 
-  } while(done == false);
+  } while(done == FALSE);
 
 
 

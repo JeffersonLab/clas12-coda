@@ -269,6 +269,12 @@ vmeBusUnlock();
 
 
 
+
+
+
+
+
+
 #ifndef TI_SLAVE /* master and standalone crates, NOT slave */
 
 vmeBusLock();
@@ -348,13 +354,21 @@ vmeBusLock();
 vmeBusUnlock();
   taskDelay(200);
 
-#else
+#else /* #ifndef TI_SLAVE */
+
+
+
+
+
 
 vmeBusLock();
   tiStatus(1);
 vmeBusUnlock();
 
-#endif
+#endif /* #ifndef TI_SLAVE */
+
+
+
 
 
 }
@@ -764,7 +778,7 @@ vmeBusUnlock();
     {
       ttest_ready ++;
 vmeBusLock();
-	  syncFlag = tiGetSyncEventFlag();/*tiGetSyncEventReceived();*/
+      syncFlag = tiGetSyncEventFlag();/*tiGetSyncEventReceived();*/
 vmeBusUnlock();
       return(1);
     }

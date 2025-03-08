@@ -15,6 +15,8 @@ static int active;
 static int npetiroc;
 static PETIROC_CONF petiroc[PETIROC_MAX_NUM];
 
+PETIROC_CONF *petirocConfPtr = petiroc;
+
 #define SCAN_MSK \
   sscanf (str_tmp, "%*s %d %d %d %d %d %d %d %d   \
                         %d %d %d %d %d %d %d %d", \
@@ -218,13 +220,18 @@ petirocReadConfigFile(char *filename_in)
         }
         else if((strcmp(keyword,"PETIROC_W_WIDTH")==0))
         {
-          sscanf (str_tmp, "%*s %d %d", &i1);
+          sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) petiroc[slot].window_width= i1;
         }
         else if((strcmp(keyword,"PETIROC_W_OFFSET")==0))
         {
-          sscanf (str_tmp, "%*s %d %d", &i1);
+          sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++) petiroc[slot].window_offset= i1;
+        }
+        else if((strcmp(keyword,"PETIROC_GAINSEL")==0))
+        {
+          sscanf (str_tmp, "%*s %d", &i1);
+          for(slot=slot1; slot<slot2; slot++) petiroc[slot].gain_sel = i1;
         }
         else if(!strcmp(keyword,"PETIROC_ASIC"))
         {
@@ -917,7 +924,7 @@ petirocDownloadAll()
 
     petiroc_set_clk(slot, petiroc[slot].clk_ext);
 
-    petiroc_cfg_pwr(slot,1,1,0,1,0,0);
+    petiroc_cfg_pwr(slot,1,1,0,1,petiroc[slot].gain_sel ? 1 : 0,0);
       
     petiroc_startb_adc(slot, 1);
     petiroc_raz_chn(slot, 0);
@@ -1061,6 +1068,7 @@ petirocUploadAll(char *string, int length)
       sprintf(sss,"PETIROC_SLOT %d\n",slot); ADD_TO_STRING;
       sprintf(sss, "PETIROC_W_WIDTH %d\n", petiroc[slot].window_width); ADD_TO_STRING;
       sprintf(sss, "PETIROC_W_OFFSET %d\n", petiroc[slot].window_offset); ADD_TO_STRING;
+      sprintf(sss, "PETIROC_GAINSEL %d\n", petiroc[slot].gain_sel); ADD_TO_STRING;
       sprintf(sss, "PETIROC_TRIG_DELAY %d\n", petiroc[slot].trig_delay); ADD_TO_STRING;
       for(asic=0; asic<2; asic++)
       {

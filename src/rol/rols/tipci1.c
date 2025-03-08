@@ -585,8 +585,22 @@ __download()
   daqInit();
   DAQ_READ_CONF_FILE;
 
+
+
+  /*************************************/
+  /* redefine TI settings if neseccary */
+
+  tipusSetUserSyncResetReceive(1);
+
+
+
+
   printf("STATUS2:\n");
   tipusStatus(1);
+
+
+
+
 
 
   /*************************************/
@@ -792,7 +806,7 @@ vmeBusUnlock();
     else /* rol->pid == 85 */
       {
 	srsSetEventBuild(FEC[ifec],
-			 0x300, //0xfff, //0xfffc,//0xfff/*1ff*/, // int chEnable // sergey: mask for front end cards connected
+			 0xfff, //0xfff, //0xfffc,//0xfff/*1ff*/, // int chEnable // sergey: mask for front end cards connected
 			 1550, // int dataLength // the number of 16-bit samples, 12bits used (1 sample=128 - what ???). 3 ts = 550, 6ts = 1000, 15ts=2260, 9ts = 1400,12ts = 2000, 27ts 4000
 			 2, // int mode
 			 0, // int eventInfoType
@@ -1292,6 +1306,7 @@ vmeBusUnlock();
 
 
 
+
 static void
 __pause()
 {
@@ -1299,6 +1314,7 @@ __pause()
   logMsg("INFO: Pause Executed\n",1,2,3,4,5,6);
   
 } /*end pause */
+
 
 
 
@@ -1404,22 +1420,32 @@ __end()
 vmeBusLock();
   blocksLeft = tipusBReady();
 vmeBusUnlock();
+
+
+//printf("11-1\n");tipusStatus(1);printf("11-2\n");
+
   printf(">>>>>>>>>>>>>>>>>>>>>>> %d blocks left on the TI\n",blocksLeft);fflush(stdout);
   if(blocksLeft)
   {
+    //printf("12-1\n");tipusStatus(1);printf("12-2\n");
     printf(">>>>>>>>>>>>>>>>>>>>>>> before while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
     while(iwait < 10)
     {
       sleep(1);
+      //printf("13-1\n");tipusStatus(1);printf("13-2\n");
       if(blocksLeft <= 0) break;
 vmeBusLock();
       blocksLeft = tipusBReady();
       printf(">>>>>>>>>>>>>>>>>>>>>>> inside while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
 vmeBusUnlock();
+//printf("14-1\n");tipusStatus(1);printf("14-2\n");
       iwait++;
     }
     printf(">>>>>>>>>>>>>>>>>>>>>>> after while ... %d blocks left on the TI\n",blocksLeft);fflush(stdout);
+    //printf("15-1\n");tipusStatus(1);printf("15-2\n");
   }
+
+  //printf("99-1\n");tipusStatus(1);printf("99-2\n");
 
 
 #ifdef USE_HPS
@@ -1468,6 +1494,9 @@ vmeBusLock();
   tipusStatus(1);
 vmeBusUnlock();
 #endif
+
+//printf("999\n");
+//tipusStatus(1);
 
   printf("INFO: End1 Executed\n\n\n");fflush(stdout);
 
@@ -1566,8 +1595,8 @@ TIMERL_STOP(5000/block_level,1000+rol->pid);
     {
 
 #ifdef DEBUG
-//      printf("ti: len=%d\n",len);
-//      for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x\n",jj,tdcbuf[jj]);
+      printf("ti: len=%d\n",len);
+      for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x\n",jj,tdcbuf[jj]);
 #endif
 
       BANKOPEN(0xe10A,1,rol->pid);
@@ -1776,8 +1805,9 @@ skip_hps:
   }
   else
   {
-    printf("ERROR in tipci1: petirocReadBlock() returned %d\n",len);fflush(stdout);
-    exit(-1);
+    printf("\nERROR in tipci1: petirocReadBlock() returned %d\n\n",len);fflush(stdout);
+    //exit(-1);
+    sleep(1);
   }
 #endif /*USE_PETIROC*/
 
@@ -2191,20 +2221,22 @@ printf("8\n");
 
 
 
-
 void
 usrtrig_done()
 {
   return;
 }
 
+
+
+
 void
 __done()
 {
-  /*
+  
   ndone ++;
-  printf("_done called %d times\n",ndone);fflush(stdout);
-  */
+  //printf("_done called %d times\n",ndone);fflush(stdout);
+  
   /* from parser */
   poolEmpty = 0; /* global Done, Buffers have been freed */
 
@@ -2258,6 +2290,11 @@ vmeBusLock();
   tipusStatus(1); /*switching TI to internal clock - until fixed in firmware*/
 vmeBusUnlock();
 #endif
+
+
+ printf("rocClose() 1\n");
+  tipusStatus(1);
+ printf("rocClose() 2\n");
 
 }
 

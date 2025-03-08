@@ -24,6 +24,7 @@ typedef struct
   int window_width;
   int window_offset;
   int clk_ext;
+  int gain_sel;
   int fw_rev;
   int fw_timestamp;
 } PETIROC_CONF;

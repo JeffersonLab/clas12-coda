@@ -492,9 +492,9 @@ process_events(ETp etp, et_event **pe, int start, int stop)
 int 
 events_loop(ETp etp, int flag)
 {
-  const int prestartEvent=EV_ER_PRESTART, endEvent=EV_ER_END, true=1, false=0;
+  const int prestartEvent=EV_ER_PRESTART, endEvent=EV_ER_END;
   int status1, status2;
-  int nevents=0, i, ii, status, len, done=false, start, stop;
+  int nevents=0, i, ii, status, len, done=FALSE, start, stop;
   et_event *pe[ET_EVENT_ARRAY_SIZE];
   struct timespec waitfor;
   struct tms tms_start, tms_end;
@@ -541,7 +541,7 @@ events_loop(ETp etp, int flag)
         printf("events_loop: error in et_events_get, status = ET_ERROR \n");
         et_reinit = 1;
       }
-      done = true;
+      done = TRUE;
     }
     else    /* if we got events ... */
     {
@@ -579,7 +579,7 @@ events_loop(ETp etp, int flag)
 	        if (etp->nend <= 0)
             {
 	          stop = i;
-	          done = true;
+	          done = TRUE;
 	        }
             printf("Got End event, Need %d more\n",etp->nend);
 	      }
@@ -593,7 +593,7 @@ events_loop(ETp etp, int flag)
         {
 	      /* error writing coda file so quit */
 	      printf("ERROR: Error writing events... Cancel ET read loop!\n");
-          done = true;
+          done = TRUE;
         }
       }
 
@@ -603,7 +603,7 @@ events_loop(ETp etp, int flag)
       {
 	    printf("events_loop: error in et_events_put, status = %i \n",status2);
         et_reinit = 1;
-        done = true;
+        done = TRUE;
       }
       /*printf("Put %d events to ET\n",nevents);fflush(stdout);*/
     }
@@ -623,11 +623,11 @@ events_loop(ETp etp, int flag)
       {
 #endif
 	    /*printf("events_loop: WARN: L3 is backed up! This may be causing system deadtime\n");*/
-	    done = true;
+	    done = TRUE;
       }
     }
 
-  } while(done == false);
+  } while(done == FALSE);
   
   if(etp->nend <= 0)
   { 

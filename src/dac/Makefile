@@ -154,7 +154,8 @@ else
     LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
   endif
   ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
-    LIBNAMES += /usr/lib64/libmariadb.so
+    #LIBNAMES += /usr/lib64/libmariadb.so
+    LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
   endif
   ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
     LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
