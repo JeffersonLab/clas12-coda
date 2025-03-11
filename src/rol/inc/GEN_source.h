@@ -209,13 +209,13 @@ genttype(int code)
 static int 
 genttest(int code)
 {
-  unsigned int ret=0;
+  /*unsigned*/ int ret = 0;
 
   /*printf("genttest\n");*/
   usleep(1);
   ret = tipusBReady();
-  //if(ret<0)
-  if(ret==-1)
+  if(ret<0)
+  //if(ret==-1)
   {
     printf("%s: ERROR: tipusBReady returned ERROR\n",__FUNCTION__);
   }

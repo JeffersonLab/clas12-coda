@@ -520,8 +520,8 @@ tipusInit(unsigned int mode, int iFlag)
       printf("CLOCK6=%d\n",tipusGetClockSource());
 
 
-      //tipusSetFiberDelay(0x50, 0xcf);/*sergey: for TS as master*/
-      tipusSetFiberDelay(0x70, 0xcf);/*sergey: for SVT1 as master*/
+      tipusSetFiberDelay(0x50, 0xcf);/*sergey: for TS as master*/
+      //tipusSetFiberDelay(0x70, 0xcf);/*sergey: for SVT1 as master*/
 
       /*sergey
       if(FiberMeas() == ERROR)
