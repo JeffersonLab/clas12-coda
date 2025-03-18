@@ -33,6 +33,8 @@ $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/rol1_master.so \
 	./$(OSTYPE_MACHINE)/rol/maroc1_slave.so \
 	./$(OSTYPE_MACHINE)/rol/petiroc1_master.so \
 	./$(OSTYPE_MACHINE)/rol/petiroc1_slave.so \
+	./$(OSTYPE_MACHINE)/rol/nalu1_master.so \
+	./$(OSTYPE_MACHINE)/rol/nalu1_slave.so \
 	./$(OSTYPE_MACHINE)/rol/rol1mvt_master.so \
 	./$(OSTYPE_MACHINE)/rol/rol1mvt_slave.so \
 	./$(OSTYPE_MACHINE)/rol/srs1_master.so \
@@ -134,6 +136,14 @@ $(LIB_FILES_ROL): $(SOURCE_FILES_ROL) ./$(OSTYPE_MACHINE)/rol/rol1_master.so \
 ./$(OSTYPE_MACHINE)/rol/petiroc1_slave.o : rols/tipci1.c
 	$(MKROLDIR)
 	$(CC) -DTI_SLAVE -DUSE_PETIROC $(CCROLOPT)
+
+./$(OSTYPE_MACHINE)/rol/nalu1_master.o : rols/tipci1.c
+	$(MKROLDIR)
+	$(CC) -DTI_MASTER -DUSE_NALU $(CCROLOPT)
+
+./$(OSTYPE_MACHINE)/rol/nalu1_slave.o : rols/tipci1.c
+	$(MKROLDIR)
+	$(CC) -DTI_SLAVE -DUSE_NALU $(CCROLOPT)
 
 
 ./$(OSTYPE_MACHINE)/rol/urwell1_master.o : rols/tipci1.c

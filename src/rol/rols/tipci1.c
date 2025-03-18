@@ -103,6 +103,9 @@ static int nusertrig, ndone;
 /*enable/disable PETIROC readout*/
 //#define USE_PETIROC
 
+/*enable/disable NALU readout*/
+//#define USE_NALU
+
 /*enable/disable HPS readout*/
 //#define USE_HPS
 
@@ -202,6 +205,22 @@ static char ssname[80];
 #define TIP_READOUT TIPUS_READOUT_TS_POLL /* Poll for available data, triggers from master over fiber */
 #else
 #define INIT_NAME petiroc1__init
+#define TIP_READOUT TIPUS_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
+#endif
+#endif
+
+#elif USE_NALU
+
+#define ROL_NAME__ "NALU1"
+#ifdef TI_MASTER
+#define INIT_NAME nalu1_master__init
+#define TIP_READOUT TIPUS_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
+#else
+#ifdef TI_SLAVE
+#define INIT_NAME nalu1_slave__init
+#define TIP_READOUT TIPUS_READOUT_TS_POLL /* Poll for available data, triggers from master over fiber */
+#else
+#define INIT_NAME nalu1__init
 #define TIP_READOUT TIPUS_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
 #endif
 #endif
@@ -376,6 +395,17 @@ static int nmaroc = 0;
 #define EVENT_BUFFER_NWORDS       65536
 
 static int npetiroc = 0;
+
+#endif
+
+#ifdef USE_NALU
+
+//#include "naluLib.h"
+//#include "naluConfig.h"
+
+#define EVENT_BUFFER_NWORDS       65536
+
+static int nnalu = 0;
 
 #endif
 
@@ -1296,6 +1326,20 @@ vmeBusUnlock();
 #endif
 #endif
 
+#ifdef USE_NALU
+#if 0
+  npetiroc = petirocInit(0, PETIROC_MAX_NUM, PETIROC_INIT_REGSOCKET);
+  if(npetiroc<0) exit(0);
+  printf("npetiroc=%d\n",npetiroc);
+  petirocInitGlobals();
+  petirocConfig("");
+vmeBusLock();
+  tipusStatus(1);
+vmeBusUnlock();
+#endif
+#endif
+
+
   printf("INFO: Prestart1 Executed\n");fflush(stdout);
 
   *(rol->nevents) = 0;
@@ -1394,6 +1438,16 @@ vmeBusUnlock();
 #endif
 #endif /*USE_PETIROC*/
 
+#ifdef USE_NALU
+#if 0
+  petiroc_set_blocksize_all(block_level);
+      //faSetBlockLevel(slot, block_level);
+  //set block_level and latency here: petiroc_setup_readout(int devid, int lookback, int window)
+  petirocEnable();
+#endif
+#endif /*USE_NALU*/
+
+
   tipusStatus(1);
 
   nusertrig = 0;
@@ -1486,6 +1540,13 @@ vmeBusUnlock();
   petirocEnd(); //close sockets, opened by petirocInit() in Prestart
 #endif
 #endif /*USE_PETIROC*/
+
+#ifdef USE_NALU
+#if 0
+  petirocEnd(); //close sockets, opened by petirocInit() in Prestart
+#endif
+#endif /*USE_NALU*/
+
 
 #if 0
   printf("SWITCH TIPCI TO INTERNAL CLOCK IN 'END'\n");fflush(stdout);
@@ -1811,6 +1872,25 @@ skip_hps:
   }
 #endif /*USE_PETIROC*/
 
+
+#ifdef USE_NALU
+//  len = petirocReadBlock(tdcbuf, EVENT_BUFFER_NWORDS);
+//  if(len > 0)
+//  {
+////    printf("petiroc: len=%d\n",len);fflush(stdout);
+////    for(jj=0; jj<len; jj++) printf("%d: %08X\n", jj, tdcbuf[jj]);    
+//
+//    BANKOPEN(0xe138,1,rol->pid);
+//    for(jj=0; jj<len; jj++) *rol->dabufp++ = tdcbuf[jj];
+//    BANKCLOSE;    
+//  }
+//  else
+//  {
+//    printf("\nERROR in tipci1: petirocReadBlock() returned %d\n\n",len);fflush(stdout);
+//    //exit(-1);
+//    sleep(1);
+//  }
+#endif /*USE_NALU*/
 
 
 
