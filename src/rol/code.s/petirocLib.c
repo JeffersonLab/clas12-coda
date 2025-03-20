@@ -885,9 +885,11 @@ int petiroc_trig_setup(int slot, int trig, int sync)
   petiroc_write32(slot, &pPETIROC_regs->Sd.Trig, trig ? 3 : 0);  // SD_TRIG or 0
 
   //Assert SYNC before switch to external (effective local software SYNC)
+/*
   petiroc_write32(slot, &pPETIROC_regs->Sd.Sync, 1); // SYNC=1
   petiroc_read32(slot, &pPETIROC_regs->Sd.Sync);
-    
+*/
+  
   petiroc_write32(slot, &pPETIROC_regs->Sd.Sync, 4); // SD SYNC
   petiroc_write32(slot, &pPETIROC_regs->Sd.Busy, 5); // SD BUSY
   petiroc_read32(slot, &pPETIROC_regs->Sd.Sync);
