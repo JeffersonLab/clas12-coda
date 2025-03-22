@@ -909,6 +909,12 @@ int petiroc_clear_scalers(int slot)
   return OK;
 }
 
+/** Returns the *rate*.
+ *
+ * Uses the reference clock to determine the counting time.
+ *
+ * \todo rename or add implmentation of actual scalers
+ */
 int petiroc_get_scaler(int slot, int ch)
 {
   unsigned int ref, val;

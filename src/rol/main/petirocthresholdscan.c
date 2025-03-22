@@ -45,8 +45,8 @@ int parse_args(int argc, char **argv)
       {"output",    required_argument, 0, 'o'},
       {"step",      required_argument, 0, 'S'},
       {"start",     required_argument, 0, 'I'},
-      {"nsteps",     required_argument, 0, 'n'},
-      {"slot",    required_argument, 0, 's'},
+      {"nsteps",    required_argument, 0, 'n'},
+      {"slot",      required_argument, 0, 's'},
       {"debug",     no_argument,       &debug, 1},
       {"verbose",   no_argument,       &verbose_flag, 1},
       {"brief",     no_argument,       &verbose_flag, 0},
@@ -56,7 +56,7 @@ int parse_args(int argc, char **argv)
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "vbS:I:n:s:o:h",
+    c = getopt_long (argc, argv, "o:S:I:n:s:h",
         long_options, &option_index);
 
     /* Detect the end of the options. */
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  if(output_file) fprintf(fileptr, "%10s %10s [atof channels 0-47] [test channels 48-51] \n", "threshold", "slot");
+  //if(output_file) fprintf(fileptr, "%10s %10s [atof channels 0-47] [test channels 48-51] \n", "threshold", "slot");
 
   for(int nthr=0; nthr<THR_NUM; nthr++)
   {
@@ -229,8 +229,8 @@ int main(int argc, char *argv[])
       if(output_file) fprintf(fileptr, "%d %d", thr, slot);
       for(int ch=0; ch<52; ch++)
       {
-        printf(" %d", scalers[slot][ch]);
-        if(output_file) fprintf(fileptr, " %d", scalers[slot][ch]);
+        printf(" %4d", scalers[slot][ch]);
+        if(output_file) fprintf(fileptr, " %5d", scalers[slot][ch]);
       }
       printf("\n");
       if(output_file) fprintf(fileptr,"\n");
