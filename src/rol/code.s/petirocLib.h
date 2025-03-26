@@ -282,7 +282,8 @@ typedef struct
 /* 0x000C-0x000F */ unsigned int    WindowWidth;
 /* 0x0010-0x0013 */ unsigned int    DeviceID;
 /* 0x0014-0x0017 */ unsigned int    TrigDelay;
-/* 0x0018-0x00FF */ unsigned int    Reserved3[(0x0100-0x0018)/4];
+/* 0x0018-0x001B */ unsigned int    Ctrl;
+/* 0x001C-0x00FF */ unsigned int    Reserved3[(0x0100-0x001C)/4];
 } PETIROC_Eb;
 
 typedef struct

@@ -25,8 +25,8 @@
 static PETIROC_regs *pPETIROC_regs = (PETIROC_regs *)0x0;
 
 // 0x00000000 = primary/failsafe image, 0x01000100 = run image
-//#define PETIROC_FIRMWARE_ADDR           0x01000100
-#define PETIROC_FIRMWARE_ADDR           0x00000000
+#define PETIROC_FIRMWARE_ADDR           0x01000100
+//#define PETIROC_FIRMWARE_ADDR           0x00000000
 
 static int npetiroc;
 static int devids[PETIROC_MAX_NUM];
@@ -465,6 +465,7 @@ int petirocInit(int slot_start, int n, int iFlag)
     printf("Board=%08X\n", boardid);
     devids[npetiroc++] = slot;
 
+    petiroc_write32(slot, &pPETIROC_regs->Eb.Ctrl, 0); // disable event builder
     petiroc_trig_setup(slot, 0, 1);  // disable TRIG, enable SYNC
   }
   printf("\n%s: Found/connect to %d devices\n\n",__func__,npetiroc);fflush(stdout);
@@ -480,6 +481,7 @@ void petirocEnable()
   {
     slot = devids[i];
     petiroc_trig_setup(slot, 1, 1);  // enable TRIG, enable SYNC
+    petiroc_write32(slot, &pPETIROC_regs->Eb.Ctrl, 1); // enable event builder
   }
 }
 
@@ -2141,8 +2143,8 @@ int petiroc_sendscalers(char *host)
       petiroc_write32(slot, &pPETIROC_regs->Sd.Latch, 1);
       for(int i=0;i<52;i++)
         idata[i] = petiroc_read32(slot, &pPETIROC_regs->Tdc.Scalers[i]);
-printf("sync[%d] = %d\n", slot, petiroc_read32(slot, &pPETIROC_regs->Sd.Scalers[2]));
-printf("trig[%d] = %d\n", slot, petiroc_read32(slot, &pPETIROC_regs->Sd.Scalers[3]));
+//printf("sync[%d] = %d\n", slot, petiroc_read32(slot, &pPETIROC_regs->Sd.Scalers[2]));
+//printf("trig[%d] = %d\n", slot, petiroc_read32(slot, &pPETIROC_regs->Sd.Scalers[3]));
 /*
       trig[slot] = petiroc_read32(slot, &pPETIROC_regs->Sd.Scalers[3]);
       sync[slot] = petiroc_read32(slot, &pPETIROC_regs->Sd.Scalers[2]);
