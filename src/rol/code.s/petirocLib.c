@@ -725,7 +725,7 @@ int petiroc_set_readout(int slot, int width, int offset, int busythr, int trigde
   if(offset<0)    offset = 0;
   offset/= 4;
 
-  petiroc_write32(slot, &pPETIROC_regs->Sd.Delay, val);
+  petiroc_write32(slot, &pPETIROC_regs->Sd.Delay, (1<<2)|(2<<0)); // trig[1:0]=2=>Q2, sync[3:2]=1=>Q3
   petiroc_write32(slot, &pPETIROC_regs->Eb.DeviceID, slot);
   petiroc_write32(slot, &pPETIROC_regs->Eb.WindowWidth, width);
   petiroc_write32(slot, &pPETIROC_regs->Eb.Lookback, offset);
@@ -1034,6 +1034,7 @@ int petiroc_status(int slot)
   petiroc_write32(slot, &pPETIROC_regs->Sd.Latch, 0);
   
   petiroc_printmonitor(slot);
+  petiroc_get_idelay_status(slot);
   return OK;
 }
 
@@ -1181,6 +1182,7 @@ int petiroc_slow_control(int slot, PETIROC_Regs regs[2])
   petiroc_shift_regs(slot, regs, result);
 
   petiroc_cfg_load(slot);
+  petiroc_clken(slot, 0);
 
   return OK;
 }
@@ -1988,8 +1990,8 @@ int petiroc_get_idelay_status(int slot)
     printf("%s: ERROR invalid slot %d\n", __func__, slot);
     return ERROR;
   }
-  val = petiroc_read32(slot, &pPETIROC_regs->Sd.ErrStatus) & 0xFF;
-  printf("%s(%d) returns 0x%02X\n", __func__, slot, val);
+  val = petiroc_read32(slot, &pPETIROC_regs->Sd.ErrStatus) & 0xFFFF;
+  printf("%s(%d) returns 0x%04X\n", __func__, slot, val);
   return val;
 }
 

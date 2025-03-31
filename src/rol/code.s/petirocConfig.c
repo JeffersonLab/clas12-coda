@@ -926,6 +926,7 @@ petirocDownloadAll()
 
     petiroc_cfg_pwr(slot,1,1,0,1,petiroc[slot].gain_sel ? 1 : 0,0);
       
+    petiroc_clken(slot, 0); // disable PETIROC ASIC clocks in ext TDC mode
     petiroc_startb_adc(slot, 1);
     petiroc_raz_chn(slot, 0);
     petiroc_val_evt(slot, 0, 0, 0);
@@ -953,7 +954,7 @@ petirocDownloadAll()
 */
 
 
-    petiroc_enable(slot, 1);
+//    petiroc_enable(slot, 1);
     petiroc_val_evt(slot, 1, 0, 0);
     petiroc_raz_chn(slot, 1);
 

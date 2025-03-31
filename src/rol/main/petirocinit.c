@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
 {
   printf("\npetirocinit started ..\n\n");fflush(stdout);
 
-  npetiroc = petirocInit(0, PETIROC_MAX_NUM, PETIROC_INIT_REGSOCKET);
+  npetiroc = petirocInit(0, PETIROC_MAX_NUM, PETIROC_INIT_REGSOCKET | PETIROC_INIT_LOAD_FW_IMAGE1);
 
   printf("\npetirocinit: npetiroc=%d\n\n",npetiroc);fflush(stdout);
   if(npetiroc<=0) exit(0);
