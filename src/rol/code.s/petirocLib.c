@@ -34,7 +34,7 @@ static int sockfd_reg[PETIROC_MAX_NUM];
 static int sockfd_event[PETIROC_MAX_NUM];
 
 // Intermediate readout buffers to store left TCP socket data for next event blocks
-#define PETIROC_EVENT_BUF_LEN   10000
+#define PETIROC_EVENT_BUF_LEN   100000
 
 #define PETIROC_HOLD_DELAY      100
 
@@ -426,9 +426,13 @@ int petirocSlot(int n)
   return devids[n];
 }
 
+/*
+ * iFlag bit   0: 0-register socket init, 1-slow control socket init
+ *       bit 5-4: 0-don't reload fw, 1-load fw image 0, 2-load fw image 1
+ */
 int petirocInit(int slot_start, int n, int iFlag)
 {
-  int i, slot;
+  int i, slot, fw_type;
 
   npetiroc = 0;
   for(i=0;i<PETIROC_MAX_NUM;i++)
@@ -441,20 +445,37 @@ int petirocInit(int slot_start, int n, int iFlag)
     petirocEventBufferNBlocks[i] = 0;
   }
 
+
+  if(iFlag & PETIROC_INIT_LOAD_FW_IMAGE0)
+    fw_type = 0;
+  else if(iFlag & PETIROC_INIT_LOAD_FW_IMAGE1)
+    fw_type = 1;
+  else
+    fw_type = -1;
+
+  if(fw_type>=0)
+  {
+    printf("%s: Rebooting PETIROC FEBs\n", __func__);
+    for(slot=slot_start; slot<(slot_start+n); slot++)
+    {
+      printf("\n%s: rebooting slot=%d (image) ..\n",__func__,slot, fw_type);fflush(stdout);
+      if(petiroc_open_register_socket(slot, iFlag & 0x1) != OK)
+      {
+        printf("%s: slot=%d cannot be opened\n",__func__,slot);fflush(stdout);
+        continue;
+      }
+
+      // reboot to run secondary image and clean SEUs
+      petiroc_Reboot(slot, fw_type);
+      petiroc_close_register_socket(slot);
+    }
+    sleep(2);
+  }
+
   for(slot=slot_start; slot<(slot_start+n); slot++)
   {
     printf("\n%s: checking slot=%d ..\n",__func__,slot);fflush(stdout);
-/*
-    if(petiroc_open_register_socket(slot) != OK)
-    {
-      printf("%s: slot=%d cannot be opened\n",__func__,slot);fflush(stdout);
-      continue;
-    }
 
-    // reboot to run secondary image and clean SEUs
-    petiroc_Reboot(slot, 1);
-    petiroc_close_register_socket(slot);
-*/
     if(petiroc_open_register_socket(slot, iFlag & 0x1) != OK)
     {
       printf("%s: slot=%d cannot be opened\n",__func__,slot);fflush(stdout);
@@ -462,7 +483,8 @@ int petirocInit(int slot_start, int n, int iFlag)
     }
     printf("%s: slot=%d opened !\n",__func__,slot);fflush(stdout);
     int boardid      = petiroc_read32(slot, &pPETIROC_regs->Clk.BoardId);
-    printf("Board=%08X\n", boardid);
+    int muxsrc       = petiroc_read32(slot, &pPETIROC_regs->Sd.Status);
+    printf("Board=%08X, MUXSRC=%04X\n", boardid, muxsrc);
     devids[npetiroc++] = slot;
 
     petiroc_write32(slot, &pPETIROC_regs->Eb.Ctrl, 0); // disable event builder
@@ -701,14 +723,27 @@ int petiroc_set_readout(int slot, int width, int offset, int busythr, int trigde
   if(width<=0)    width = 0;
   width/= 4;
 
-  if(offset>8191) offset = 8191;
+  if(offset>16383) offset = 16383;
   if(offset<0)    offset = 0;
   offset/= 4;
 
-  val = ((delay  & 0x3f)<< 0) | 0x00000080;
-  val|= ((delayn & 0x3f)<< 8) | 0x00008000;
-  val|= ((delay  & 0x3f)<<16) | 0x00800000;
-  val|= ((delayn & 0x3f)<<24) | 0x80000000;
+  if(slot != 11)
+  {
+    val = ((delay  & 0x3f)<< 0) | 0x00000080;
+    val|= ((delayn & 0x3f)<< 8) | 0x00008000;
+    val|= ((delay  & 0x3f)<<16) | 0x00800000;
+    val|= ((delayn & 0x3f)<<24) | 0x80000000;
+  }
+  else
+  {
+    val = ((delay  & 0x3f)<< 0) | 0x00000080;
+    val|= ((delayn & 0x3f)<< 8) | 0x00008000;
+    // add 2ns for M11 sync input
+    delay  = 0; 
+    delayn = 4;
+    val|= ((delay  & 0x3f)<<16) | 0x00800000 | 0x00200000;
+    val|= ((delayn & 0x3f)<<24) | 0x80000000 | 0x20000000;
+  }
   petiroc_write32(slot, &pPETIROC_regs->Sd.Delay, val);
   petiroc_write32(slot, &pPETIROC_regs->Eb.DeviceID, slot);
   petiroc_write32(slot, &pPETIROC_regs->Eb.WindowWidth, width);
@@ -881,10 +916,10 @@ int petiroc_trig_setup(int slot, int trig, int sync)
     return ERROR;
   }
 
-  petiroc_write32(slot, &pPETIROC_regs->Sd.LedG, 3);  // LED0: trig
+  petiroc_write32(slot, &pPETIROC_regs->Sd.LedG,14);  // LED0: trig_inverted
   petiroc_write32(slot, &pPETIROC_regs->Sd.LedY, 4);  // LED1: sync
 
-  petiroc_write32(slot, &pPETIROC_regs->Sd.Trig, trig ? 3 : 0);  // SD_TRIG or 0
+  petiroc_write32(slot, &pPETIROC_regs->Sd.Trig, trig ? 14 : 0);  // SD_TRIG or 0 (3=trig, 14=trig_inverted)
 
   //Assert SYNC before switch to external (effective local software SYNC)
 /*

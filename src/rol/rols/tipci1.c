@@ -1584,7 +1584,7 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
   int ifec=0;
   int nframes=0;
   int SRS_FEC_BASE=0;
-
+  static unsigned int event_num = 0, delay = 0;  
   //printf("EVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
 
   // RTH For emulation
@@ -1870,6 +1870,22 @@ skip_hps:
     //exit(-1);
     sleep(1);
   }
+//#if 0
+if(!(event_num % 10))
+{
+printf("event %d, delay=%d\n", event_num, delay);
+  for(jj=0; jj<15; jj++)
+  {
+petiroc_get_idelayerr(jj);
+    petiroc_set_idelay(
+      jj,delay+32,delay,delay+32,delay
+      );
+petiroc_get_idelayerr(jj);
+  }
+  delay = (delay + 1) % 32;
+}
+event_num++;
+//#endif
 #endif /*USE_PETIROC*/
 
 

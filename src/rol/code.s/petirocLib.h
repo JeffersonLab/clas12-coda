@@ -390,6 +390,8 @@ typedef struct
 
 #define PETIROC_INIT_REGSOCKET        0x00000000
 #define PETIROC_INIT_SLOWCONSOCKET    0x00000001
+#define PETIROC_INIT_LOAD_FW_IMAGE0   0x00000010
+#define PETIROC_INIT_LOAD_FW_IMAGE1   0x00000020
 
 int petiroc_read_ip(int slot);
 int petiroc_program_ip(int slot, unsigned int ip, unsigned int mac0, unsigned int mac1);

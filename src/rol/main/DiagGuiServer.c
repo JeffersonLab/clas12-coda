@@ -2011,7 +2011,7 @@ scalersReadTask()
 
   if(init_boards)
   {
-    npetiroc = petirocInit(0, PETIROC_MAX_NUM, PETIROC_INIT_SLOWCONSOCKET);
+    npetiroc = petirocInit(0, PETIROC_MAX_NUM, PETIROC_INIT_SLOWCONSOCKET | PETIROC_INIT_LOAD_FW_IMAGE1);
     if(npetiroc<0) exit(0);
     printf("npetiroc=%d\n",npetiroc);
     petirocInitGlobals();

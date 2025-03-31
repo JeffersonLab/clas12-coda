@@ -532,7 +532,7 @@ srsSetDAQIP(char *ip, char *daq_ip, int port)
   }
   else
   {
-    printf("inet_pton successfully converted daq ip >%< into network address structure\n",daq_ip);
+    printf("inet_pton successfully converted daq ip >%s< into network address structure\n",daq_ip);
   }
 
   reg[0]  = 0x4;
