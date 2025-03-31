@@ -703,9 +703,7 @@ int petiroc_get_fwtimestamp(int slot)
 
 int petiroc_set_readout(int slot, int width, int offset, int busythr, int trigdelay)
 {
-  int val;
-  int delay  = 27; 
-  int delayn = 31;
+  int val = 0;
   if((slot >= PETIROC_MAX_NUM) || !sockfd_reg[slot])
   {
     printf("%s: ERROR invalid slot %d\n", __func__, slot);
@@ -727,23 +725,6 @@ int petiroc_set_readout(int slot, int width, int offset, int busythr, int trigde
   if(offset<0)    offset = 0;
   offset/= 4;
 
-  if(slot != 11)
-  {
-    val = ((delay  & 0x3f)<< 0) | 0x00000080;
-    val|= ((delayn & 0x3f)<< 8) | 0x00008000;
-    val|= ((delay  & 0x3f)<<16) | 0x00800000;
-    val|= ((delayn & 0x3f)<<24) | 0x80000000;
-  }
-  else
-  {
-    val = ((delay  & 0x3f)<< 0) | 0x00000080;
-    val|= ((delayn & 0x3f)<< 8) | 0x00008000;
-    // add 2ns for M11 sync input
-    delay  = 0; 
-    delayn = 4;
-    val|= ((delay  & 0x3f)<<16) | 0x00800000 | 0x00200000;
-    val|= ((delayn & 0x3f)<<24) | 0x80000000 | 0x20000000;
-  }
   petiroc_write32(slot, &pPETIROC_regs->Sd.Delay, val);
   petiroc_write32(slot, &pPETIROC_regs->Eb.DeviceID, slot);
   petiroc_write32(slot, &pPETIROC_regs->Eb.WindowWidth, width);
@@ -1985,9 +1966,7 @@ int petiroc_program_ip(int slot, unsigned int ip, unsigned int mac0, unsigned in
 
 
 int petiroc_set_idelay(
-    int slot,
-    int delay_trig1_p, int delay_trig1_n,
-    int delay_sync_p, int delay_sync_n
+    int slot, int delay_trig, int delay_sync
   )
 {
   int val;
@@ -1996,15 +1975,12 @@ int petiroc_set_idelay(
     printf("%s: ERROR invalid slot %d\n", __func__, slot);
     return ERROR;
   }
-  val = ((delay_trig1_p & 0x3f)<< 0) | 0x00000080;
-  val|= ((delay_trig1_n & 0x3f)<< 8) | 0x00008000;
-  val|= ((delay_sync_p  & 0x3f)<<16) | 0x00800000;
-  val|= ((delay_sync_n  & 0x3f)<<24) | 0x80000000;
+  val = ((delay_trig & 0x3)<<0) | ((delay_sync & 0x3)<<2);
   petiroc_write32(slot, &pPETIROC_regs->Sd.Delay, val);
   return OK;
 }
 
-int petiroc_get_idelayerr(int slot)
+int petiroc_get_idelay_status(int slot)
 {
   int val;
   if((slot >= PETIROC_MAX_NUM) || !sockfd_reg[slot])
@@ -2012,9 +1988,8 @@ int petiroc_get_idelayerr(int slot)
     printf("%s: ERROR invalid slot %d\n", __func__, slot);
     return ERROR;
   }
-  val = petiroc_read32(slot, &pPETIROC_regs->Sd.ErrStatus) & 0x3;
-  petiroc_write32(slot, &pPETIROC_regs->Sd.ErrCtrl, 0x3);
-  printf("%s(%d) returns %d\n", __func__, slot, val);
+  val = petiroc_read32(slot, &pPETIROC_regs->Sd.ErrStatus) & 0xFF;
+  printf("%s(%d) returns 0x%02X\n", __func__, slot, val);
   return val;
 }
 

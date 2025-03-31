@@ -1870,22 +1870,15 @@ skip_hps:
     //exit(-1);
     sleep(1);
   }
-//#if 0
+#if 0
 if(!(event_num % 10))
 {
-printf("event %d, delay=%d\n", event_num, delay);
+  printf("event %d\n", event_num);
   for(jj=0; jj<15; jj++)
-  {
-petiroc_get_idelayerr(jj);
-    petiroc_set_idelay(
-      jj,delay+32,delay,delay+32,delay
-      );
-petiroc_get_idelayerr(jj);
-  }
-  delay = (delay + 1) % 32;
+    petiroc_get_idelay_status(jj);
 }
 event_num++;
-//#endif
+#endif
 #endif /*USE_PETIROC*/
 
 

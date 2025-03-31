@@ -449,8 +449,8 @@ void petiroc_print_regs(PETIROC_Regs regs, int opt);
 int petiroc_set_pulser(int slot, int mask, int ncycles, float freq, float duty, int amp[4]);
 int tdc_calibrate_start(int slot, int auto_cal_en, int min_entries);
 int tdc_calibrate_stop(int slot, int auto_cal_en, int min_entries);
-int petiroc_get_idelayerr(int slot);
-int petiroc_set_idelay(int slot, int delay_trig1_p, int delay_trig1_n, int delay_sync_p, int delay_sync_n);
+int petiroc_get_idelay_status(int slot);
+int petiroc_set_idelay(int slot, int delay_trig, int delay_sync);
 int petiroc_sendscalers(char *host);
 int petiroc_printmonitor(int slot);
 

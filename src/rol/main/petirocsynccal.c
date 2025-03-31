@@ -36,35 +36,22 @@ int main(int argc, char *argv[])
 
   petiroc_status_all(); 
  
-  for(int d=0; d<59; d++)
-  {
-    for(int j=0; j<npetiroc; j++)
-    {
-      int slot = petirocSlot(j);
-      petiroc_set_idelay(slot, d, d+5, d, d+5);
-      petiroc_get_idelayerr(slot);
-      usleep(1000);
-      petiroc_get_idelayerr(slot); // read to clear error status
-    }
-   
-    tipusSoftTrig(1,100,100,0);
-    for(int j=0; j<100; j++)
-    { 
-      tipusSyncReset(1);
-      usleep(50);
-    }
-   
-    usleep(100000);
-    printf("Delay = %2d:", d);
-    for(int j=0; j<npetiroc; j++)
-    {
-      int slot = petirocSlot(j);
-      int status = petiroc_get_idelayerr(slot);
-      printf(" %2d[%d,%d]", slot, (status>>0)&0x1, (status>>1)&0x1);
-    }
-    printf("\n");
-    petiroc_gstatus(); 
+  tipusSoftTrig(1,100,100,0);
+  for(int j=0; j<100; j++)
+  { 
+    tipusSyncReset(1);
+    usleep(50);
   }
+
+  for(int j=0; j<npetiroc; j++)
+  {
+    int slot = petirocSlot(j);
+//      petiroc_set_idelay(slot, d, d+5, d, d+5);
+    petiroc_get_idelay_status(slot);
+  }
+   
+  printf("\n");
+  petiroc_gstatus(); 
   
   petiroc_status_all(); 
 
