@@ -355,7 +355,7 @@ vmeBusUnlock();
     strncpy(FEC[nfec++], "10.0.6.2",100); 
     strncpy(FEC[nfec++], "10.0.7.2",100); 
   }
-  else if (rol->pid == 85) /* clon10new */
+  else if (rol->pid == 85) /* clondaq9, clondaq14 */
   {
     strncpy(FEC[nfec++], "10.0.0.2",100);  /*our IP address*/
   }
@@ -504,7 +504,7 @@ vmeBusUnlock();
     else /* rol->pid == 85 */
       {
 	srsSetEventBuild(FEC[ifec],
-			 0x3fff, //0x3fff,//0xfff/*1ff*/, // int chEnable // sergey: mask for front end cards connected
+			 0xcfff, //0x3fff,//0xfff/*1ff*/, // int chEnable // sergey: mask for front end cards connected
 			 1550, // int dataLength // the number of 16-bit samples, 12bits used (1 sample=128 - what ???). 3 ts = 550, 6ts = 1000, 15ts=2260, 9ts = 1400,12ts = 2000, 27ts 4000
 			 2, // int mode
 			 0, // int eventInfoType
@@ -910,7 +910,9 @@ vmeBusUnlock();
 
   for(ifec=0; ifec<nfec; ifec++)
   {
+    printf("SRS: Enabling SRS Triggers for FEC[ifec=%d]=%d ...\n",ifec,FEC[ifec]);
     srsTrigEnable(FEC[ifec]);
+    printf(" ... Enabling SRS Triggers is done.\n",ifec);
     srsStatus(FEC[ifec],0);
   }
 

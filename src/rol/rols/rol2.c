@@ -1622,13 +1622,14 @@ Error flags:
 		  /*
 #ifdef DEBUG2
 		  */
-	  if( !(error_flag[tdcslot]%100) ) /* do not print for every event */
+	  if( !(error_flag[tdcslot]%1000) ) /* do not print for every event */
           {
             unsigned int ddd, lock, ntdc;
 			
             if(ddd!=0)
 	    {
-              printf(" ERR: event# %7d, slot# %2d, tdc# %02d, error_flags=0x%08x, err=0x%04x, lock=0x%04x\n",
+              if( ((int)tdcerrorflags)==0x4000 && ddd==0 && lock==0 ) ; /*do not report internal chip error*/
+              else printf(" ERR: event# %7d, slot# %2d, tdc# %02d, error_flags=0x%08x, err=0x%04x, lock=0x%04x\n",
                 tdceventcount,tdcslot,(int)tdc14,(int)tdcerrorflags,ddd,lock);
 	    }			
 	  }
@@ -4121,7 +4122,7 @@ Error flags:
 
         else
 		{
-          printf("VFTDC UNKNOWN data: [%3d] 0x%08x\n",ii,datain[ii]);
+          printf("VFTDC UNKNOWN data (rol2, pass 1): [%3d] 0x%08x\n",ii,datain[ii]);
           ii++;
 		}
 
@@ -5561,11 +5562,12 @@ if(a_pulsenumber == 0)
 		  /*
 #ifdef DEBUG2
 		  */
-		      if( !(error_flag[tdcslot]%100) ) /* do not print for every event */
+		      if( !(error_flag[tdcslot]%1000) ) /* do not print for every event */
               {
                 unsigned int ddd, lock, ntdc;
 			
-                printf(" ERR: event# %7d, slot# %2d, tdc# %02d, error_flags=0x%08x, err=0x%04x, lock=0x%04x\n",
+                if( ((int)tdcerrorflags)==0x4000 && ddd==0 && lock==0 ) ; /*do not report internal chip error*/
+                else printf(" ERR: event# %7d, slot# %2d, tdc# %02d, error_flags=0x%08x, err=0x%04x, lock=0x%04x\n",
                   tdceventcount,tdcslot,(int)tdc14,(int)tdcerrorflags,ddd,lock);
 		      }
               error_flag[tdcslot] ++;
@@ -6996,7 +6998,7 @@ if(a_pulsenumber == 0)
             }
             else
 		    {
-              printf("VFTDC UNKNOWN data: [%3d] 0x%08x\n",ii,datain[ii]);
+              printf("VFTDC UNKNOWN data(rol2, pass 2): [%3d] 0x%08x\n",ii,datain[ii]);
               ii++;
 		    }
 

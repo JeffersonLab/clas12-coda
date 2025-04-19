@@ -99,7 +99,8 @@ set roc_name_snmp = ( dc11       dc12       dc13       dc21       \
                       prad3      rich4      mvt2       tdcband1 \
                       classchv1  test0      test2      classc10 \
                       mvt3       svt3       test3      bdx0 \
-                      test4      prad0      alert1     clondaq12 )
+                      test4      prad0      alert1     clondaq12 \
+                      clondaq14  srs1 )
 
 
 #***  Set IP list for ROCs snmp-controlled ***
@@ -130,7 +131,8 @@ set ip_snmp = ( 129.57.68.184   129.57.68.179   129.57.160.200  129.57.68.183  \
                 129.57.160.149  129.57.160.215  129.57.160.216  129.57.160.144 \
                 129.57.160.225  129.57.68.201   129.57.68.249   129.57.167.146 \
                 129.57.160.236  129.57.86.79    129.57.86.144   129.57.86.60 \
-                129.57.68.9     129.57.86.201   129.57.160.236  129.57.69.255 )
+                129.57.68.9     129.57.86.201   129.57.160.236  129.57.69.255 \
+                129.57.69.255   129.57.69.255 )
 
 #***  Set list of soft-IOCS rebooted via service command ***
 #
@@ -209,6 +211,14 @@ if ( $group == $group_snmp ) then
     snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.4 i 1
     sleep 5
     snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.4 i 2
+  else if ( $roc == "clondaq14" ) then  #special case
+    snmpset -v 2c -c tripplite hallb-pdu-3 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 1
+    sleep 10
+    snmpset -v 2c -c tripplite hallb-pdu-3 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 2
+  else if ( $roc == "srs1" ) then  #special case
+    snmpset -v 2c -c tripplite hallb-pdu-3 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.3 i 1
+    sleep 5
+    snmpset -v 2c -c tripplite hallb-pdu-3 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.3 i 2
   else # generic case
     set ip = ${ip_snmp[$ii]}
     snmpset -v 1 -c private $ip enterprises.19947.1.1.1.0 i 0

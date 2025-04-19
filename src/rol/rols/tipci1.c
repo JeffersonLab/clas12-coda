@@ -2144,8 +2144,6 @@ TIMERL_STOP(5000/block_level,1000+rol->pid);
     {
       printf("SYNC: read boards configurations\n");
 
-#if 0
-
       BANKOPEN(0xe10E,3,rol->pid);
       chptr = chptr0 =(char *)rol->dabufp;
       nbytes = 0;
@@ -2154,16 +2152,37 @@ TIMERL_STOP(5000/block_level,1000+rol->pid);
       *chptr++ = '\n';
       nbytes ++;
 
+
+
 #ifdef TIP_UPLOADALL_NOTDEFINED      
 vmeBusLock();
       len = tipusUploadAll(chptr, 10000);
 vmeBusUnlock();
-#endif
 
 /*printf("\nTI len=%d\n",len);
       printf(">%s<\n",chptr);*/
       chptr += len;
       nbytes += len;
+#endif
+
+
+
+
+#ifdef USE_PETIROC
+      if(npetiroc>0)
+      {
+vmeBusLock();
+        len = petirocUploadAll(chptr, 60000);
+vmeBusUnlock();
+        printf("\nPETIROC len=%d\n",len);
+        /*printf("%s\n",chptr);*/
+        chptr += len;
+        nbytes += len;
+      }
+#endif
+
+
+
 
 #ifdef USE_SRS_HIDE
       if(nfec>0)
@@ -2178,6 +2197,9 @@ vmeBusUnlock();
       }
 #endif
 
+
+
+
       /* 'nbytes' does not includes end_of_string ! */
       chptr[0] = '\n';
       chptr[1] = '\n';
@@ -2190,10 +2212,10 @@ vmeBusUnlock();
       rol->dabufp += nwords;
 
       BANKCLOSE;
-#endif
+
 
       printf("SYNC: read boards configurations - done\n");
-	}
+    }
 
     /* read scaler(s) */
     if(syncFlag==1 || EVENT_NUMBER==1)

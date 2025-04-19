@@ -1040,6 +1040,9 @@ petirocUploadAll(char *string, int length)
   for(ii=0; ii<npetiroc; ii++)
   {
     slot = petirocSlot(ii);
+    
+    petiroc[slot].fw_rev = petiroc_get_fwrev(slot);
+    petiroc[slot].fw_timestamp = petiroc_get_fwtimestamp(slot);
 
     petiroc_get_clk(slot, &petiroc[slot].clk_ext);
 
@@ -1067,6 +1070,8 @@ petirocUploadAll(char *string, int length)
       slot = petirocSlot(ii);
 
       sprintf(sss,"PETIROC_SLOT %d\n",slot); ADD_TO_STRING;
+      sprintf(sss, "PETIROC_FW_REV 0x%08X", petiroc[slot].fw_rev); ADD_TO_STRING;
+      sprintf(sss, "PETIROC_FW_TIMESTAMP 0x%08X\n", petiroc[slot].fw_timestamp); ADD_TO_STRING;
       sprintf(sss, "PETIROC_W_WIDTH %d\n", petiroc[slot].window_width); ADD_TO_STRING;
       sprintf(sss, "PETIROC_W_OFFSET %d\n", petiroc[slot].window_offset); ADD_TO_STRING;
       sprintf(sss, "PETIROC_GAINSEL %d\n", petiroc[slot].gain_sel); ADD_TO_STRING;
