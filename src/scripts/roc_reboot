@@ -58,6 +58,7 @@ set roc_name = ( scaler11 scaler2 scaler3 scaler4 \
                  primexts2 primexroc4 primexroc5 primexroc6 primexioc1 primexioc2 \
                  croctest4)
 
+set atof_modules =( 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 )  
 
 #***  Set list of ROCs Power Switch - controlled ***
 #     8 Outlet Remote Power Control Switch
@@ -204,6 +205,14 @@ if ( $group == $group_snmp ) then
 #
 
   if ( $roc == "clondaq11" ) then  #special case
+    # This part turns off the external clock for the FEUs before rebooting
+    # if coda in prestart/go state
+    #foreach mod ($atof_modules)
+    #  tcpClient clondaq11 petiroc_set_clk($mod,0)
+    #endif
+    # if coda is off or in configure/download
+    ssh clondaq11 '/usr/clas12/release/1.4.0/coda/src/rol/Linux_x86_64/bin/petiroc_setclk     0'
+    sleep 3
     snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 1
     sleep 5
     snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 2
