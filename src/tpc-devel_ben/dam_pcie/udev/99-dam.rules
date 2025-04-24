@@ -1,0 +1,3 @@
+#Rules file for the dam device driver
+KERNEL=="dam0", SUBSYSTEM=="dam", MODE="0666"
+KERNEL=="dam1", SUBSYSTEM=="dam", MODE="0666"

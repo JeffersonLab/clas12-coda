@@ -1,0 +1,152 @@
+#!/usr/bin/python3
+
+import time
+import sys
+
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
+import numpy as np
+
+from dam import dam
+from collections import namedtuple
+from scipy.stats import norm
+
+FeeChanData = namedtuple('FeeChanData', ['channel', 'data'])
+
+def fee_reg_write(fee, addr, data):
+    d.fee_request[fee].data_write = data
+    d.fee_request[fee].reg_address = addr
+    d.fee_request[fee].reg_write = 1
+
+def fee_reg_read(fee, addr):
+    d.fee_request[fee].reg_address = addr
+    d.fee_request[fee].reg_read = 1
+    return d.fee_reply[fee].data_read
+
+def strip_dma_header(data):
+    fee_data = {}
+    for i in np.where(data == 0xfeee)[0][:-1]:
+        chunk_len = data[i+2] >> 4
+        n_fees    = data[i+2] & 0b1111
+        links_en  = data[i+3]
+        fee_cnt   = 0
+        print(chunk_len, n_fees, bin(links_en))
+        for fee_id in range(0, 16):
+            if (((links_en & (1 << fee_id)) >> fee_id) == 1): # This FEE is enabled
+                if (fee_id not in fee_data):
+                    print("Adding", fee_id)
+                    fee_data[fee_id] = []
+                fee_cnt += 1
+                #for idx in range(fee_cnt-1, (chunk_len+1)*n_fees, n_fees):
+                for idx in range(fee_cnt-1, (chunk_len*n_fees)+(n_fees), n_fees):
+                    #print(fee_id, idx, i, i+idx+4, hex(data[i+idx+4]))
+                    fee_data[fee_id].append(data[i+idx+4])
+
+    for fee_id in fee_data.keys():
+        fee_data[fee_id] = np.hstack(fee_data[fee_id])
+        #fee_data.append(data[(i+4):(i+((chunk_len*n_fees)+5))])
+    return fee_data
+
+def parse_fee_data(data):
+    i = 0
+    fee_data = {}
+    start_idx = np.where(data == 1007)[0][0]
+    print(start_idx)
+    data = data[start_idx:]
+    last_pkt_len_bad = False
+    while (i < len(data)):
+        print(data[i:i+10])
+        pkt_length = data[i]
+        if (pkt_length != 1007):
+            if (last_pkt_len_bad):
+                break;
+            print("ERROR: wrong packet length")
+            pkt_length = 1007
+            last_pkt_len_bad = True
+        else:
+            last_pkt_len_bad = False
+        channel = data[i+1] & (0b0111111111)
+        bx_count = ((data[i+4] & (0b1111111111)) << 11) | (data[i+3] << 1) | data[i+2] >> 9
+        data_len = data[i+7]
+
+        # Shouldn't need this!!
+        adc = np.array([x & 0x3ff for x in data[i+7 : i+pkt_length-1]])
+
+        if (bx_count not in fee_data):
+            fee_data[bx_count] = []
+        fee_data[bx_count].append(FeeChanData(channel, adc))
+
+        print("i=", i)
+        print("pkt_length = ", pkt_length)
+        print("channel = ", channel)
+        print("bx_count = ", bx_count)
+        print()
+        i += pkt_length
+    return fee_data
+
+def check_packet(data):
+    pkt_start = np.where(data == 1007)[0]
+    for idx, start in enumerate(pkt_start[:-1]):
+        print(idx, start, pkt_start[idx+1] - start)
+
+def hist_fit(data, bins=32):
+    fig, ax = plt.subplots(1,1)
+
+    (mu, sigma) = norm.fit(data)
+    n, bins, patches = ax.hist(data, 32, density=1, alpha=0.5)
+    y = norm.pdf(bins, mu, sigma)
+
+    ax.plot(bins, y, 'r--', linewidth=2)
+    ax.set_title(r'$\mathrm{Stats:}\ \mu=%.3f,\ \sigma=%.3f$' %(mu, sigma))
+    ax.grid(True)
+    plt.tight_layout()
+
+d = dam()
+fee = int(sys.argv[1])
+
+print(fee)
+
+d.reg_write(0x850, 1);
+d.reg_write(0x8C0, 4096);
+#d.reg_write(0x8E0, 0);
+time.sleep(2);
+
+for i in range(0, 8):
+    print(i, hex(fee_reg_read(i, 0x200)));
+
+fee_reg_write(fee, 0x200, 0xffff)
+time.sleep(1)
+fee_reg_write(fee, 0x201, 0)
+
+print(fee, hex(fee_reg_read(fee, 0x0)));
+print(fee, hex(fee_reg_read(fee, 0x1)));
+print(fee, hex(fee_reg_read(fee, 0xa000)));
+print(fee, hex(fee_reg_read(fee, 0xa001)));
+print(fee, hex(fee_reg_read(fee, 0xa002)));
+print(fee, hex(fee_reg_read(fee, 0xa003)));
+
+print("dma_status=", d.dump_dma_status())
+#d.reset()
+#d.__fp__.seek(0)
+#time.sleep(1)
+#d.dump_dma_status()
+
+#d.fee_stream_enable = 1<< fee
+
+fee_reg_write(fee, 0xa001, 0x1)
+time.sleep(1)
+#fee_reg_write(fee, 0xa001, 0x1)
+
+#data = d.read(2000*256*10)
+
+for i in range(0, 10):
+    print(i, ": dma_status=", d.dump_dma_status())
+    data = d.read(256)
+    print(data)
+
+#a = strip_dma_header(data)
+#b = parse_fee_data(a[fee])
+
+#hist_fit(np.hstack([xxx[0].data for key, xxx in b.items()]), bins=24)
+#plt.show()
+#plt.savefig("fee_%i.png" % (fee))

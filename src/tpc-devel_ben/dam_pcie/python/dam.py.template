@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+import mmap
+import struct
+import time
+
+BLOCK_SIZE = (1 << 16)-1
+BAR2_OFFSET = 0
+
+{% for item in nodes['Bar2']|list_nodes_recursively(True) %}
+{% if item.is_register
+  and item.bitfield|count > 1
+  and (not item.parent.is_sequence or item.index == 0)
+  and not (item.parent.is_sequence and item.parent.index > 0) %}
+{% if item.parent.is_sequence %}
+reg_field_{{ item.type_name|lower }} = {
+{% else %}
+reg_field_{{ item.prefix_name|lower }} = {
+{% endif %}
+{% set _count = [0] %}
+{% set _lo = [0] %}
+{% for bf in item.bitfield|reverse %}
+{% set count = _count.pop() %}
+{% set lo = _lo.pop() %}
+{% if bf.hi >= bf.lo %}
+  "{{ "%s"|format(bf.name) }}" : ({{ "%x"|string|prepend("0x")|format((((2 ** (bf.hi - lo+1))-1) * 2**lo)) }}, {{ "%2d"|format(lo) }}),
+{% set lo = bf.hi+1 %}
+{% endif %}
+{% if _count.append(count) %}{% endif %}
+{% if _lo.append(lo) %}{% endif %}
+{% endfor %}
+}
+
+{% endif %}
+{% endfor %}
+
+regs = {
+{% set _count = [0] %}
+{% set _address = [0] %}
+{% for item in nodes['Bar2']|list_nodes_and_sequences %}
+{% set count = _count.pop() %}
+{% set address = _address.pop() %}
+{% if item.is_register %}
+{% if item.bitfield|count > 1 %}
+  "{{ "%s"|format(item.name|lower) }}" : ({{ item.address|c_hex }}, 1, {{item.size}}, {{"%s"|string|prepend("reg_field_")|format(item.name|lower)}}),
+{% else %}
+  "{{ "%s"|format(item.prefix_name|lower) }}" : ({{ item.address|c_hex }}, 1, {{item.size}}, None),
+{% endif %}
+{% set count = count + 1 %}
+{% set address = address + 16 %}
+{% else %}
+{% if item.is_sequence %}
+  "{{ "%s"|format(item.name|lower) }}" : ({{ item.address|c_hex }}, {{item.number}}, {{item.size}}, {{"%s"|string|prepend("reg_field_")|format(item.name|lower)}}),
+{% set address = address + item.size %}
+{% endif %}
+{% set count = count + 1 %}
+{% endif %}
+{% set address = item.address %}
+{% if _count.append(count) %}{% endif %}
+{% if _address.append(address) %}{% endif %}
+{% endfor %}
+}
+
+class reg_field(object):
+    def __init__(self, dam, base_addr, count, size, field):
+        self.__dam__ = dam
+        self.__field__ = field
+        self.base_addr = base_addr
+        self.count = count
+        self.size = size
+
+    def __repr__(self):
+        return f'base_addr:{self.base_addr}, {self.__field__.keys()} , {self.count}'
+
+    def __len__(self):
+        return self.count
+
+    def __iter__(self):
+        self.offset = 0
+        return self
+
+    def __next__(self):
+        if (self.offset <= self.count):
+            self.offset += 1
+            return reg_field(self.__dam__, self.base_addr+(self.offset-1)*(self.size//self.count), 1, 16, self.__field__)
+        else:
+            raise StopIteration
+
+    def __setitem__(self, key, value):
+        if (self.count > 1):
+            return reg_field(self.__dam__, self.base_addr+int(key)*(self.size//self.count), 1, 16, self.__field__)
+        else:
+            mask, shift = self.__field__[key]
+            val = self.__dam__.reg_read(self.base_addr)
+            val = (val & ((1 << shift)-1)) | (value << shift)
+            self.__dam__.reg_write(self.base_addr, val)
+
+    def __getitem__(self, key):
+        if (self.count > 1):
+            return reg_field(self.__dam__, self.base_addr+int(key)*(self.size//self.count), 1, 16, self.__field__)
+        else:
+            mask, shift = self.__field__[key]
+            return (self.__dam__.reg_read(self.base_addr) & mask) >> shift
+
+    def __setattr__(self, key, value):
+        if key.startswith('_'):
+            super().__setattr__(key, value)
+            return
+
+        if (key in self.__field__):
+            self.__setitem__(key, value)
+        else:
+            super().__setattr__(key, value)
+
+    def __getattr__(self, key):
+        if key.startswith('_'):
+            super().__getattr__(key)
+            return
+
+        if (key in self.__field__):
+            return self.__getitem__(key)
+        else:
+            return object.__getattribute__(self, key)
+
+    def __dir__(self):
+        return self.__field__.keys()
+
+
+class dam(object):
+    def __init__(self, dev_name="/dev/dam0"):
+        self.__fp__ = open(dev_name, 'r+b', buffering=0)
+        self.mem = mmap.mmap(self.__fp__.fileno(), BLOCK_SIZE, offset=BAR2_OFFSET)
+
+    def read(self, length):
+        return self.__fp__.read(length)
+
+    def reg_read(self, addr):
+        ''' Read a 64-bit word (8 bytes) '''
+        return struct.unpack("<Q", self.mem[addr:addr+8])[0]
+
+    def reg_write(self, addr, data):
+        ''' Write a 64-bit word into addr '''
+        self.mem[addr:addr+8] = struct.pack("<Q", data)
+
+    def keys(self):
+        return regs.keys()
+
+    def __len__(self):
+        return len(regs)
+
+    def __setitem__(self, key, value):
+        addr, count, size, fields = regs[key]
+        if (fields == None):
+            self.reg_write(addr, value)
+        else:
+            return reg_field(self, addr, count, size, fields)
+
+    def __getitem__(self, key):
+        addr, count, size, fields = regs[key]
+        if (fields == None):
+            return self.reg_read(addr)
+        else:
+            return reg_field(self, addr, count, size, fields)
+
+    def __setattr__(self, key, value):
+        if (key in regs):
+            self.__setitem__(key, value)
+        else:
+            super().__setattr__(key, value)
+
+    def __getattr__(self, key):
+        if (key in regs):
+            return self.__getitem__(key)
+        else:
+            return object.__getattribute__(self, key)
+
+    def __dir__(self):
+        return sorted(list(regs.keys()) + ["keys", "reg_read", "reg_write"])
