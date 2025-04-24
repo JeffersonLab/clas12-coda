@@ -1,1 +1,0 @@
-"""WupperCodeGen init."""

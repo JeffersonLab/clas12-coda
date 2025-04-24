@@ -1,2 +1,0 @@
--- WUPPER: VHDL configuration code
-
