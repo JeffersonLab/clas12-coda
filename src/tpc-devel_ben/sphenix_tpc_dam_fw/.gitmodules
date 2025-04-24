@@ -1,0 +1,6 @@
+[submodule "submodules/dam_wupper"]
+	path = submodules/dam_wupper
+	url = https://git.racf.bnl.gov/gitea/Instrumentation/dam_wupper.git
+[submodule "submodules/dam_gtm"]
+	path = submodules/dam_gtm
+	url = https://git.racf.bnl.gov/gitea/Instrumentation/dam_gtm.git
