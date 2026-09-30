@@ -6,6 +6,9 @@
  *
  */
 
+#ifndef FADC250CONFIG_H
+#define FADC250CONFIG_H
+
 
 #define FNLEN     128       /* length of config. file name */
 #define STRLEN    250       /* length of str_tmp */
@@ -48,7 +51,7 @@ typedef struct {
 extern "C" {
 #endif
 
-  void fadc250SetExpid(char *string);
+void fadc250SetExpid(char *string);
 void fadc250GetParamsForOffline(float ped[22][16], int tet[22][16], float gain[22][16], int nsa[22], int nsb[22]);
 void fadc250Sethost(char *host);
 void fadc250InitGlobals();
@@ -61,3 +64,5 @@ int fadc250UploadAll(char *string, int length);
 #ifdef	__cplusplus
 }
 #endif
+
+#endif /* #ifndef FADC250CONFIG_H */

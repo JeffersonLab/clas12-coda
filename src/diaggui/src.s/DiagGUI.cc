@@ -11,14 +11,17 @@
 #include "DCRBScalersModule.h"
 #include "DSC2Module.h"
 #include "FADC250Module.h"
+#include "FAV3Module.h"
 #include "SDModule.h"
 #include "SSPModule.h"
 #include "SSP_HPSModule.h"
+#include "SSP_PRADModule.h"
 #include "TIDModule.h"
 #include "VSCMModule.h"
 #include "GTPModule.h"
 #include "GTP_HPSModule.h"
 #include "VTP_HPSModule.h"
+#include "VTP_PRADModule.h"
 #include "V1495PulserModule.h"
 #include "FADCScalers_HPSModule.h"
 #include "vetroc_module.h"
@@ -301,10 +304,14 @@ void DiagGUI::ProcessParam(char *paramA, char *paramB, char *paramC, char *param
         pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new SSPModule(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
       else if(!stricmp("MOD_TYPE_SSP_HPS", paramB))
         pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new SSP_HPSModule(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+      else if(!stricmp("MOD_TYPE_SSP_PRAD", paramB))
+        pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new SSP_PRADModule(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
       else if(!stricmp("MOD_TYPE_TID", paramB))
         pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new TIDModule(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
       else if(!stricmp("MOD_TYPE_FADC250", paramB))
         pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new FADC250Module(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+			else if(!stricmp("MOD_TYPE_FAV3", paramB))
+				pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new FAV3Module(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
       else if(!stricmp("MOD_TYPE_DCRB", paramB))
         pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new DCRBModule(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
       else if(!stricmp("MOD_TYPE_DCRBSCALERS", paramB))
@@ -329,6 +336,8 @@ void DiagGUI::ProcessParam(char *paramA, char *paramB, char *paramC, char *param
         pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new V1495PulserModule(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
       else if(!stricmp("MOD_TYPE_VETROC", paramB))
         pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new vetroc_module(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+      else if(!stricmp("MOD_TYPE_VTP_PRAD", paramB))
+        pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new VTP_PRADModule(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
       else if(!stricmp("MOD_TYPE_ALERTFEB", paramB))
         pFrameModule->AddFrame(pModuleFrames[iModuleCount] = new ALERTFEB_Module(pFrameModule, pCrateMsgClientLast, addr), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
       else

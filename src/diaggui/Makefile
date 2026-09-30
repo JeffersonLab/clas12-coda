@@ -46,35 +46,37 @@ CLON_FLAGS += -I./src.s \
 				-I./inc/GTP_HPS \
 				-I./inc/VTP_HPS \
 				-I./inc/VTP_FADCSTREAM \
+				-I./inc/VTP_PRAD \
 				-I./inc/SD \
 				-I./inc/SSP \
 				-I./inc/SSP_HPS \
+				-I./inc/SSP_PRAD \
 				-I./inc/TID \
 				-I./inc/V1495Pulser \
 				-I./inc/VSCM \
 				-I./inc/vetroc \
 				-I$(CODA)/common/include
 
-CLON_FLAGS += -I$(IPC_HOME)/include/activemq-cpp-$(IPC_VER) \
-		   	  -I$(CODA)/src/ipc/ipc.s -w
+CLON_FLAGS += -I$(IPC_INC) -I$(CODA)/src/ipc/ipc.s -w
 
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
   CLON_FLAGS += -I/usr/local/include/apr-1
 else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
   CLON_FLAGS += -I/usr/local/include/apr-1
+else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_RHEL5_vme")
+  CLON_FLAGS += -I/usr/local/include/apr-1
 else
   CLON_FLAGS += -I/usr/include/apr-1
 endif
 
-
 LIBNAMES += $(CODA)/src/ipc/$(OSTYPE_MACHINE)/lib/libipc.a
+LIBNAMES += $(IPC_LIB)
+
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
   LIBNAMES += /usr/local/lib/libapr-1.so
   LIBNAMES += -luuid -lrt -lcrypt -lssl -lcrypto -ldl -lz
   LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
 else
-  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
   LIBNAMES += -lapr-1
   LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
   LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib

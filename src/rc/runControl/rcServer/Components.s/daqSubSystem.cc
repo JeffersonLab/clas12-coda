@@ -47,11 +47,44 @@
 #include <daqRun.h>
 #include "daqSubSystem.h"
 
+
+//#define _TRACE_OBJECTS
+
+
+
+/* in the beginning of Configure:
+.....
+XcodaBasic::unmanage, name >Connect<
+!!!!!!!!!!!!!!! rcsConfFileNameWriter::write >unknown<
+daqRun::updateConfFile: fname >unknown<
+dbaseReader::putConfFileName reached, name >unknown<
+dbaseReader::putConfFileName: ignore 'unknown'
+XcodaBasic::unmanage, name > Download <
+XcodaBasic::unmanage, name > Prestart <
+XcodaBasic::unmanage, name >    Go    <
+XcodaBasic::unmanage, name >End Run<
+XcodaBasic::unmanage, name >   Pause  <
+XcodaBasic::unmanage, name >   Resume  <
+XcodaBasic::unmanage, name >   Abort  <
+XcodaBasic::unmanage, name >Start Run<
++++++ rcRepCompOption::compCallback: obj->numComp_=1
+              Create daqSubSystem Class Object: className >EB<
+              Create daqSubSystem Class Object: className >ER<
+              Create daqSubSystem Class Object: className >ET<
+              Create daqSubSystem Class Object: className >ETT<
+              Create daqSubSystem Class Object: className >L3<
+              Create daqSubSystem Class Object: className >ROC<
+              Create daqSubSystem Class Object: className >TS<
+XcodaBasic::unmanage, name >runTypeDialog<
+.....
+*/
+
+
 daqSubSystem::daqSubSystem (char *className, daqSystem& system)
 :daqComponent (className), system_ (system), compList_ ()
 {
 #ifdef _TRACE_OBJECTS
-  printf ("              Create daqSubSystem Class Object\n");
+  printf ("daqSubSystem::daqSubSystem: create daqSubSystem Class Object: className >%s<\n",className);
 #endif
   // add this subsystem into system
   system_.addSubSystem (this);
@@ -251,6 +284,9 @@ daqSubSystem::priorityByAction (int action)
   else
   {
     priority_ = priorities_[action];
+#ifdef _TRACE_OBJECTS
+    printf("daqSubSystem::priorityByAction: priority_ = %d (action=%d)\n",priority_,action);
+#endif
     status_ = CODA_SUCCESS;
   }
 }
@@ -258,6 +294,9 @@ daqSubSystem::priorityByAction (int action)
 int
 daqSubSystem::attach (void)
 {
+#ifdef _TRACE_OBJECTS
+  printf ("daqSubSystem::attach: calls system_.addSubSystem(), this->title()=%s\n",this->title());
+#endif
   return system_.addSubSystem (this);
 }
 
@@ -479,8 +518,7 @@ daqSubSystem::state(void)
           // be booted which means it should be up some where.
           status_ = CODA_ERROR;
           state_ = summaryState_;
-          reporter->cmsglog(CMSGLOG_WARN,"lost contact with %s, can't read status.\n",
-                            comp->title ());
+          reporter->cmsglog(CMSGLOG_WARN,"lost contact with %s, can't read status.\n",comp->title());
           return compState;
         }
 

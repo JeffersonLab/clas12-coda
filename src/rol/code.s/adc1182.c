@@ -115,15 +115,15 @@ typedef struct LeCroy1182CSR
 
 
 static int n1182;
-static unsigned int vmeaddress[22];
+static unsigned long int vmeaddress[22];
 
 
 /* init: just calculate address offset */
 int
-adc1182init(unsigned int *addr, int nboards)
+adc1182init(unsigned long int *addr, int nboards)
 {
   int ii, res;
-  unsigned int laddr;
+  unsigned long int laddr;
 
   n1182 = 0;
   for(ii=0; ii<nboards; ii++)
@@ -190,7 +190,7 @@ adc1182ready(int id)
 unsigned int
 adc1182read(int id, int chan)
 {
-  int adrtmp;
+  unsigned long int adrtmp;
   short buf;
   short *address;
   unsigned int ret;

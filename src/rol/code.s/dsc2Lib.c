@@ -29,6 +29,7 @@
 #include <logLib.h>
 #else
 #include "jvme.h"
+#include "usrvme.h"
 #endif
 
 #include <stdio.h>
@@ -369,7 +370,7 @@ dsc2Init(unsigned int addr, unsigned int addr_inc, int ndsc, int iFlag)
 
   printf("%s: Found and configured %d dsc2 modules\n",__FUNCTION__,Ndsc);
 
-  return(OK);
+  return(Ndsc);
 }
 
 unsigned int

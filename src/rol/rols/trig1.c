@@ -354,8 +354,8 @@ vmeBusUnlock();
   for(id=0; id<ntd; id++) 
   {
     slot = tdSlot(id);
-    tdResetMGTRx(id);
-    tdResetSlaveConfig(id); /*sergey: remove busy's from all 8 fibers, may be left from previous runs*/
+    tdResetMGTRx(slot/*??? id*/);
+    tdResetSlaveConfig(slot/*??? id*/); /*sergey: remove busy's from all 8 fibers, may be left from previous runs*/
   }
 
 
@@ -764,7 +764,7 @@ vmeBusUnlock();
 #endif
 
   /* always clear exceptions */
-  jlabgefClearException(1);
+  vmeClearException(1);
 
   nusertrig = 0;
   ndone = 0;
@@ -984,7 +984,7 @@ TIMERL_START;
       /* END OF DATA WORDS */
 	}
 
-    nwords = ((int)rol->dabufp-(int)dabufp1)/4 + 1;
+    nwords = ((long int)rol->dabufp-(long int)dabufp1)/4 + 1;
     trailer = (0x11<<27)+nwords;
     /*printf("ROL1: nwords=%d, block trailer = %d (0x%08x)\n",nwords,trailer,trailer);*/
     *rol->dabufp ++ = LSWAP(trailer); /*block trailer*/

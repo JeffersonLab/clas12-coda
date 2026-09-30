@@ -16,23 +16,29 @@ include $(CODA)/src/Makefile.include
 
 
 # uncomment following piece for debugging ###
-CFLAGS = -g -fPIC -DLinux -DLINUX
-ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
-  CFLAGS += -DLinux_vme -I$(CODA)/src/rol/jvme
-endif
-ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+##CFLAGS = -g -fPIC -DLinux -DLINUX
+
+
+ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
   CFLAGS += -DLinux_x86_64
+  CFLAGS += -D$(OSTYPE_MACHINE)
 endif
-ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
   CFLAGS += -DLinux_armv7l
 endif
-#############################################
 
 
 
+ifneq ("$(VMETYPE)","")
+ifeq ("$(VMETYPE)","fanuc")
+  LIBNAMES += $(CODA)/src/jvme_fanuc/libjvme.so
+else
+  LIBNAMES += $(CODA)/src/jvme/$(OSTYPE_MACHINE)/lib/libjvme.so
+endif
+endif
 
-
-ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+#???
+ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
   LDCC = $(LDCXX)
 endif
 
@@ -48,7 +54,24 @@ endif
 # special building cases
 #------------------------
 
-ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
+
+bin: $(BIN_FILES_PROG) ./$(OSTYPE_MACHINE)/bin/coda_sro_dummy
+
+  ./$(OSTYPE_MACHINE)/bin/coda_sro_dummy : main/coda_sro.c $(LIBNAMES)
+	$(MKBINDIR)
+	$(CC) -DDUMMY_BACKEND $(CCBINOPT)
+	$(CCLINKBIN)
+
+
+bin: $(BIN_FILES_PROG) ./$(OSTYPE_MACHINE)/bin/coda_roc_sro
+
+  ./$(OSTYPE_MACHINE)/bin/coda_roc_sro : main/coda_roc.c $(LIBNAMES)
+	$(MKBINDIR)
+	$(CC) -DUSE_SRO $(CCBINOPT)
+	$(CCLINKBIN)
+
+
+ifneq ("$(VMETYPE)","")
 
 bin: $(BIN_FILES_PROG) ./$(OSTYPE_MACHINE)/bin/coda_roc_gef
 
@@ -60,20 +83,6 @@ bin: $(BIN_FILES_PROG) ./$(OSTYPE_MACHINE)/bin/coda_roc_gef
 ###	$(CC) -DNEW_ROC $(CCBINOPT)
 
 endif
-
-ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
-
-bin: $(BIN_FILES_PROG) ./$(OSTYPE_MACHINE)/bin/coda_roc_gef
-
-  ./$(OSTYPE_MACHINE)/bin/coda_roc_gef : main/coda_roc.c $(LIBNAMES)
-	$(MKBINDIR)
-	$(CC) $(CCBINOPT)
-	$(CCLINKBIN)
-
-###	$(CC) -DNEW_ROC $(CCBINOPT)
-
-endif
-
 
 
 
@@ -83,7 +92,6 @@ endif
 #-----------------------
 
 CLON_FLAGS += -I./$(MAIN).s \
-	-I$(CODA)/common/include \
 	-D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS \
 	-DHAVE_GETCWD=1 -DHAVE_OPENDIR=1 -DHAVE_STRERROR=1 \
 	-DHAVE_STRSTR=1 -DHAVE_STRTOL=1 -DHAVE_TMPNAM=1 \
@@ -104,6 +112,8 @@ CLON_FLAGS += -I./$(MAIN).s \
 		-DDAYTIME="\"`date`\""
 CLON_FLAGS += -DNO_X11
 
+#CLON_FLAGS += -I$(CODA)/common/include
+CLON_FLAGS += -I$(CODA)/src/ipc/ipc.s -I$(CODA)/src/evio-4.3/src.s -I$(CODA)/src/et-14.0/et.s -I$(CODA)/src/codautil/codautil.s 
 
 
 
@@ -114,23 +124,32 @@ CLON_FLAGS += -DNO_X11
 ####################
 
 
+ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l_RHEL7")
+  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
+  LIBNAMES += /usr/lib/libmysqlclient.so
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
+  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
+  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+endif
+
+
 ifeq ("$(OSTYPE)","VXWORKS")
 
   LIBNAMES += ./VXWORKS_ppc/lib/libdac.so
 
-else ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
 
-  LIBNAMES += ./Linux_armv7l/lib/libdac.a
+  LIBNAMES += ./$(OSTYPE_MACHINE)/lib/libdac.a
   LIBNAMES += $(globallib)/libcodautil.a
 
-  LIBNAMES += /usr/lib/libmysqlclient.so
-
-  LIBNAMES += $(CODA)/Linux_armv7l/lib/libet.a
-  LIBNAMES += $(CODA)/Linux_armv7l/lib/libevio.a
-  LIBNAMES += $(CODA)/Linux_armv7l/lib/libcodautil.a
+  LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libet.a
+  LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libevio.a
+  LIBNAMES += $(CODA)/$(OSTYPE_MACHINE)/lib/libcodautil.a
 
   LIBNAMES += $(CODA)/src/ipc/$(OSTYPE_MACHINE)/lib/libipc.a
-  LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
+  LIBNAMES += $(IPC_LIB)
   LIBNAMES += -lapr-1
   LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
   LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
@@ -147,43 +166,9 @@ else ifeq ("$(OSTYPE_MACHINE)","Linux_nios2")
 
 else
 
-  LIBNAMES += $(CODA)/src/creg/$(OSTYPE_MACHINE)/lib/libcreg.a
   LIBNAMES += $(CODA)/src/codautil/$(OSTYPE_MACHINE)/lib/libcodautil.a
-
-  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
-    LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-  endif
-  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
-    #LIBNAMES += /usr/lib64/libmariadb.so
-    LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-  endif
-  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
-    LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-  endif
-  ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
-    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
-  endif
-  ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
-  endif
-
-
-
-
-  ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
-    LIBNAMES += $(CODA)/src/rol/jvme/libjvme.so
-    LIBNAMES += /usr/lib/gef/libvme.a
-  endif
-  ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
-    LIBNAMES += $(CODA)/src/jvme/$(OSTYPE_MACHINE)/lib/libjvme.so
-    LIBNAMES += /usr/lib64/gef/libvme.a
-  endif
-
-
   LIBNAMES += $(CODA)/src/evio-4.3/$(OSTYPE_MACHINE)/lib/libevio.a
-
   LIBNAMES += $(CODA)/src/et-14.0/$(OSTYPE_MACHINE)/lib/libet.a
-
 
 
 #
@@ -191,18 +176,13 @@ else
 #
   LIBNAMES += -L/usr/lib64 -lstdc++
   LIBNAMES += $(CODA)/src/ipc/$(OSTYPE_MACHINE)/lib/libipc.a
+  LIBNAMES += $(IPC_LIB)
 
   ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-
-    LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
-
     LIBNAMES += /usr/local/lib/libapr-1.so
     LIBNAMES += -luuid -lrt -lcrypt -lssl -lcrypto -ldl -lz
     LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
   else
-
-    LIBNAMES += $(IPC_HOME)/lib/libactivemq-cpp.so
-
     LIBNAMES += -lapr-1
     LIBNAMES += -lrt -lcrypt -lssl -lcrypto -ldl -lz
     LIBNAMES += -L/usr/kerberos/lib -lpthread -pthread -Wl,-rpath -Wl,/usr/local/lib
@@ -266,8 +246,8 @@ ifeq ("$(OSTYPE)","VXWORKS")
 	-DHAVE_UNISTD_H=1  -D_LANGUAGE_C -DDAYTIME="\"`date`\""
 endif
 
-ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
-  CLON_FLAGS += -I$(CODA)/Linux_armv7l/include
+ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
+  CLON_FLAGS += -I$(CODA)/$(OSTYPE_MACHINE)/include
   LIBNAMES += $(SYSLIBS)
 # Sergey: -rdynamic needed by Linux, it allows to search for global
 #   symbols in main program by dlopen/dlsym

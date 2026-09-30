@@ -96,7 +96,7 @@ int CBus_CommonCsr_Init( CBus_CommonCsr *csr )
 
 	csr->Command      = 0;
 	csr->Config       = D_Def_Main_Conf;
-	csr->TrigConfig   = D_Def_Main_Trig;
+	csr->TrigConfig   = D_Def_Main_Trig;  //sergey???
 	csr->FwRev        = 0;
 	csr->SwRev        = 0;
 	csr->TrigActpCntr = 0;

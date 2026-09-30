@@ -245,7 +245,7 @@ transitionGraph::listRef (graphNode* node)
       return  adjLists_[i];
   }
 
-  //printf("transitionGraph::listRef: NEVER HERE !!!\n");fflush(stdout); /*sergey*/
+  printf("transitionGraph::listRef: NEVER HERE !!!\n");fflush(stdout); /*sergey*/
   //return adjLists_[0]; /*sergey*/
 }
 

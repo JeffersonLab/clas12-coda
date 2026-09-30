@@ -22,14 +22,17 @@
  *----------------------------------------------------------------------------*/
 #define _GNU_SOURCE
 
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+#include <unistd.h>
 #include <stdlib.h> 
 #include <string.h>
+
+#ifndef Linux_armv7l
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <fcntl.h>
 #include <errno.h>  
 #include <sys/stat.h>  
@@ -1558,7 +1561,6 @@ srsReadFile(char *path, char *ip, int *port, unsigned int *obuffer)
   return nwords;
 }
 
-#ifndef Linux_armv7l
 static unsigned long long int 
 rdtsc(void)
 {
@@ -1569,4 +1571,14 @@ rdtsc(void)
 
   return ((unsigned long long)a) | (((unsigned long long)d) << 32);
 }
+
+#else
+
+int
+srsLib_dummy()
+{
+  exit(0);
+}
+
 #endif
+

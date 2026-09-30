@@ -9,28 +9,21 @@
 
 /* circbuf.h */
 
-/* uncomment following line if do NOT want to send data from ROC to EB 
-#define ROC_DOES_NOT_SEND
-*/
+/* uncomment following line if do NOT want to send data from ROC to EB */
+//#define ROC_DOES_NOT_SEND
 
-/* uncomment following line if do NOT want to send data to Building Thread 
-#define DO_NOT_PUT
-*/
 
-/* uncomment following line if do NOT want to actually build 
-#define DO_NOT_BUILD 1
-*/
+/* uncomment following line if do NOT want to send data to Building Thread */
+//#define DO_NOT_PUT
 
-/* uncomment following line if do not want to malloc for every buffer */
-/* KEEP 'NOALLOC 1' !!! OTHERWISE DOES NOT WORK ANYMORE, EB crashes on event number mismatch !!!*/
-#define NOALLOC 1
+
+/* uncomment following line if do NOT want to actually build */
+//#define DO_NOT_BUILD 1
 
 
 
 
-#ifdef DO_NOT_PUT
-#define NOALLOC
-#endif
+
 
 
 /****************************************************************************/
@@ -42,15 +35,25 @@
 #define NWBOS (524288/4) /*(MAX_EVENT_LENGTH/4)*/
 #endif
 
+
+/* the number of buffers in EB, normally 8 */
+#ifdef Linux_x86_64_RHEL9
+#define QSIZE 32
+#else
+#define QSIZE 8
+#endif
+
+
 #ifdef Linux
 
 #define MAX_EVENT_LENGTH (NWBOS*4)
 #define MAX_EVENT_POOL   400
 
-#ifdef Linux_x86_64
-#define SEND_BUF_SIZE  (8 * 1024 * 1024)
+/*buffer size in bytes*/
+#ifdef Linux_x86_64_RHEL9
+#define SEND_BUF_SIZE  (32 * 1024 * 1024)
 #else
-#define SEND_BUF_SIZE  (4 * 1024 * 1024) /*sergey: use 3 for CLAS !!!!!*/
+#define SEND_BUF_SIZE  (8 * 1024 * 1024)
 #endif
 
 #define TOTAL_RECEIVE_BUF_SIZE  SEND_BUF_SIZE
@@ -60,19 +63,21 @@
 /* ROL1 buffers */
 #define MAX_EVENT_LENGTH (NWBOS*4) /* event buffer length in bytes */
 #define MAX_EVENT_POOL   /*400*/200       /* the number of event buffers */
-
-#define SEND_BUF_SIZE  (4 * 1024 * 1024) /*sergey: use 3 for CLAS !!!!!*/
+#define SEND_BUF_SIZE  (4 * 1024 * 1024)
 #define TOTAL_RECEIVE_BUF_SIZE  SEND_BUF_SIZE
 
 #endif
 
-#ifdef Linux_x86_64
-#define MAX_ROCS 128 /* must accomodate biggest roc_id, not the number of rocs !!! biggest roc_id must be <MAX_ROCS*/
+
+
+
+/* MAX_ROCS must accomodate biggest roc_id, not the number of rocs !!! biggest roc_id must be <MAX_ROCS*/
+#ifdef USE_128
+#define MAX_ROCS 128
 #else
-#define MAX_ROCS 128/*77*//*85*/
+#define MAX_ROCS 256
 #endif
 
-#define QSIZE 8 /* the number of buffers in EB, normally 8, was set to 6 trying to decrease memory usage on clondaq5 */
 
 
 #define NTHREADMAX 7
@@ -81,15 +86,23 @@
 #define NCHUNKMAX  110
 
 
+
+
+
 /* big buffer defines */
 #define BBIWORDS   0  /* index of buffer length in words */
 #define BBIBUFNUM  1  /* index of buffer number */
-#define BBIROCID   2  /* index of ROC id */
+#define BBIHEAD    2  /* the number of words in big buffer header = 8 */
 #define BBIEVENTS  3  /* index of the number of events in buffer */
-#define BBIFD      4  /* index of socket descriptor, also used to store 'magic'  */
-#define BBIEND     5  /* index of 'end' condition */
-#define BBHEAD     6  /* the number of words in big buffer header */
+#define BBIROCID   4  /* index of ROC id */
+#define BBVERSION  5  /* version(4), is last block (1), payload bank type (0), has first event (0) */
+#define BBIEND     6  /* index of 'end' condition */ 
+#define BBIFD      7  /* index of socket descriptor, also used to store 'magic'  */
+#define BBHEAD     8  /* the number of words in big buffer header = 8 */
 #define BBHEAD_BYTES (BBHEAD*4) /* the number of bytes in big buffer header */
+
+
+
 
 
 /* minimum number of network buffers required to proceed; if it fells below
@@ -145,7 +158,7 @@ int      put_cb_data(int fd, CIRCBUF **cbh, void *data);
 int      get_cb_data(CIRCBUF **cbh, int id, int chunk, unsigned int *evptr[NCHUNKMAX], int *buflen, int *rocid);
 char    *get_cb_name(CIRCBUF **cbh);
 int      get_cb_count(CIRCBUF **cbp);
-int      cb_events_get(CIRCBUF *cba[32], int id, int nrocs, int chunk, unsigned int *buf[32][NCHUNKMAX], int *nphys);
+int      cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk, unsigned int *evptrr[MAX_ROCS][NCHUNKMAX], int *nphys);
 
 #ifdef  __cplusplus
 }

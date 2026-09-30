@@ -3,84 +3,37 @@
 #
 SHELL = /bin/sh
 
-# second target name is used to force cross-compiling
-ifeq ("$(filter VXWORKS,$(MAKECMDGOALS))","VXWORKS")
-  OSTYPE    = VXWORKS
-  MACHINE   = ppc
-else ifeq ("$(filter ARM,$(MAKECMDGOALS))","ARM")
-  OSTYPE    = Linux
-  MACHINE   = armv7l
-  PLATFORM  = $(MACHINE)
-else ifeq ("$(filter NIOS,$(MAKECMDGOALS))","NIOS")
-  OSTYPE    = Linux
-  MACHINE   = nios2
-else
-  OSTYPE    = $(shell uname)
-  MACHINE   = $(shell uname -m)
-  PLATFORM  = $(shell uname -p)
-endif
+## second target name is used to force cross-compiling
+#ifeq ("$(filter VXWORKS,$(MAKECMDGOALS))","VXWORKS")
+#  OSTYPE    = VXWORKS
+#  MACHINE   = ppc
+#else ifeq ("$(filter ARM,$(MAKECMDGOALS))","ARM")
+#  OSTYPE    = Linux
+#  MACHINE   = armv7l
+#  PLATFORM  = $(MACHINE)
+#else ifeq ("$(filter NIOS,$(MAKECMDGOALS))","NIOS")
+#  OSTYPE    = Linux
+#  MACHINE   = nios2
+#else
+#  OSTYPE    = $(shell uname)
+#  MACHINE   = $(shell uname -m)
+#  PLATFORM  = $(shell uname -p)
+#endif
 
-# arm has 'uname -p'='unknown', set it the same as 'uname -m'
-ifeq ("$(MACHINE)","armv7l")
-  PLATFORM  = $(MACHINE)
-endif
+## arm has 'uname -p'='unknown', set it the same as 'uname -m'
+#ifeq ("$(MACHINE)","armv7l")
+#  PLATFORM  = $(MACHINE)
+#endif
 
-OSTYPE_PLATFORM = $(OSTYPE)_$(PLATFORM)
-
-
-# Darwin has funny -m, use -p instead
-ifeq ("$(OSTYPE)","Darwin")
-  MACHINE   = $(shell uname -p)
-endif
+#OSTYPE_PLATFORM = $(OSTYPE)_$(PLATFORM)
 
 
-
-
-
-#obtain Linux release number (works on RHEL and CentOS at least ..)
-
-ifeq ("$(OSTYPE)","Linux")
-  OSRELEASE = $(shell cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 7)
-  ifeq ("$(OSRELEASE)","7")
-  else
-    OSRELEASE = $(shell cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 6)
-  endif
-endif
-
-#ifeq ("$(OSTYPE)","Linux")
-#	FILE=centos-release
-#	ifeq ($(findstring ${FILE},$(wildcard /etc/*)),) # RHEL
-#		OSRELEASE = $(shell cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 6)
-#	else #CentOS
-#		OSRELEASE = $(shell cat /etc/centos-release | cut -d "." -f 1 | cut -d " " -f 4)
-#	endif
+## Darwin has funny -m, use -p instead
+#ifeq ("$(OSTYPE)","Darwin")
+#  MACHINE   = $(shell uname -p)
 #endif
 
 
-
-
-
-
-#redefine MACHINE for 64bit RHEL9, use different naming scheme
-ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-ifeq ("$(OSRELEASE)","9")
-  MACHINE = x86_64_RHEL9
-endif
-endif
-
-
-OSTYPE_MACHINE = $(OSTYPE)_$(MACHINE)
-
-
-#check if we are on VME controller; if so, use extra 'vme' addition
-ifeq ("$(OSTYPE)","Linux")
-	FILE=vmeinfo
-	ifeq ($(findstring ${FILE},$(wildcard /proc/*)),)
-		OSTYPE_MACHINE = $(OSTYPE)_$(MACHINE)
-	else
-		OSTYPE_MACHINE = $(OSTYPE)_$(MACHINE)_vme
-	endif
-endif
 
 
 localobj = ./$(OSTYPE_MACHINE)/obj
@@ -193,6 +146,9 @@ ifeq ("$(OSTYPE_MACHINE)","SunOS_sun4u")
 endif
 
 
+
+
+
 #=============
 #=== Linux ===
 #=============
@@ -212,57 +168,47 @@ endif
 FFLAGS = -O2
 CFLAGS = -O2
 
+# generate file .su (stack usage)
+CFLAGS += -fstack-usage
+
 # disable warnings about deprecated stuff
 CFLAGS += -Wno-deprecated
 
-    FC = g77
-ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-    FC = gfortran
+
+CFLAGS += -fPIC -DLinux -DLINUX
+CXXFLAGS = $(CFLAGS) -std=c++11
+FFLAGS += -fno-automatic -finit-local-zero -ffixed-line-length-none -fno-second-underscore -DLinux
+
+
+ifeq ("$(GCC_DIR)","default")
+  CC = gcc
+  CXX = g++
+  FC = gfortran
+else
+  CC = $(GCC_DIR)/gcc/$(GCC_VER)/bin/gcc
+  CXX = $(GCC_DIR)/gcc/$(GCC_VER)/bin/g++
+  FC = $(GCC_DIR)/gcc/$(GCC_VER)/bin/gfortran
 endif
 
-    CFLAGS += -fPIC -DLinux -DLINUX
-### -D_CODA_DEBUG
 
-    CXXFLAGS = $(CFLAGS) -std=c++11
 
-    FFLAGS += -fno-automatic -finit-local-zero \
-			-ffixed-line-length-none -fno-second-underscore -DLinux
-
-#CC = gcc -rdynamic
-    CC = gcc
-    CXX = g++ -g
-    
-ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
-  ifeq ("$(MACHINE)","x86_64_RHEL9")
-    CC = gcc
-    CXX = g++
-  else
-    ##CC = /apps/gcc/4.9.4/bin/gcc 
-    ##CXX = /apps/gcc/4.9.4/bin/g++ 
-    ##CC = /apps/gcc/8.3.0/bin/gcc 
-    ##CXX = /apps/gcc/8.3.0/bin/g++
-    CC = /apps/gcc/9.3.0/bin/gcc
-    CXX = /apps/gcc/9.3.0/bin/g++
-  endif
-endif
-
-ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
-    ##CC = /apps/gcc/4.9.4/bin/gcc
-    ##CXX = /apps/gcc/4.9.4/bin/g++ 
-    CC = /apps/gcc/8.3.0/bin/gcc
-    CXX = /apps/gcc/8.3.0/bin/g++ 
+ifeq ("$(OSTYPE_MACHINE)","Linux_i686_RHEL5_vme")
     CFLAGS += -gdwarf-2
     CXXFLAGS += -gdwarf-2
 endif
-ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
-    ##CC = /apps/gcc/4.9.4/bin/gcc 
-    ##CXX = /apps/gcc/4.9.4/bin/g++ 
-    CC = /apps/gcc/8.3.0/bin/gcc 
-    CXX = /apps/gcc/8.3.0/bin/g++ 
+
+ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
+    CFLAGS += -gdwarf-4
+    CXXFLAGS += -gdwarf-4
 endif
 
-    CPP = $(CC) -E
+ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
+    CFLAGS += -gdwarf-4
+    CXXFLAGS += -gdwarf-4
+endif
 
+
+    CPP = $(CC) -E
 
     LD = ld
     LDCXX = $(CXX)
@@ -271,16 +217,6 @@ endif
     LDCC = $(CC)
 ###    LDCC = $(FC)
     LDFC = $(FC)
-
-#ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
-#    LDCC = gcc
-#    LDFC = gcc
-#endif
-
-#ifeq ("$(OSTYPE_MACHINE)","Linux_nios2")
-#    LDCC = gcc
-#    LDFC = gcc
-#endif
 
 
 #
@@ -299,10 +235,14 @@ endif
     NM = nm
 
     RANLIB   = ranlib
+
+
 # rpc generator
     RPCGEN = rpcgen
 
     RM       = rm -f
+
+
 # include directories
     X11INCDIR = -I/usr/X11R6/include
     TCLINCDIR = -I/usr/local/src/tcl8.4.13/generic \
@@ -311,10 +251,34 @@ endif
 ##    TCLINCDIR = -I/usr/include/tcl-private/generic \
 ##		-I/usr/include/itcl \
 ##		-I/usr/include/tk-private/generic
+
+
+#
+# some commonly used libs
+#
+MYSQL_INC = /usr/include/mysql
+ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l_RHEL7")
+  MYSQL_LIB = /usr/lib/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
+  MYSQL_LIB = /usr/lib/libmysqlclient.so
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
+  MYSQL_LIB = /usr/lib64/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
+  MYSQL_LIB = /usr/lib/mysql/libmysqlclient.so
+else
+  MYSQL_LIB = /usr/lib/mysql/libmysqlclient.so
+endif
+
+IPC_INC = $(IPC_HOME)/include/activemq-cpp-$(IPC_VER)
+IPC_LIB = $(IPC_HOME)/lib/libactivemq-cpp.so
+
+
+#
 # CLON flags
-    AC_FLAGS = -DHAVE_UNISTD_H=1 -DSTDC_HEADERS=1 -DTK_FILE_READ_PTR=1 -DHAVE_LIMITS_H=1 \
+#
+  AC_FLAGS = -DHAVE_UNISTD_H=1 -DSTDC_HEADERS=1 -DTK_FILE_READ_PTR=1 -DHAVE_LIMITS_H=1 \
 		-DTK_FILE_READ_PTR=1
-    CLON_FLAGS = 
+  CLON_FLAGS = 
 # library directories and libraries
     X11LIBDIRS = /usr/X11R6/lib
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
@@ -339,13 +303,6 @@ ifeq ("$(OSRELEASE)","9")
     TERMCAPLIBS += -lXft -lfontconfig
 endif
 endif
-ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64_vme")
-ifeq ("$(OSRELEASE)","7")
-    TERMCAPLIBS += -lXft -lfontconfig
-endif
-endif
-
-
 
     SYSLIBDIRS = /usr/lib
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
@@ -359,29 +316,34 @@ endif
 
 endif
 
+
+
 ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
     CFLAGS += -DLinux_i686
-endif
-
-ifeq ("$(OSTYPE_MACHINE)","Linux_ppc")
-    CFLAGS += -DLinux_ppc
 endif
 
 ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
     CFLAGS += -DLinux_x86_64
 endif
 
-#check if we are on VME controller; if so, define Linux_vme flag
-FILE=vmeinfo
-ifeq ($(findstring ${FILE},$(wildcard /proc/*)),)
-	CFLAGS +=
+ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
+    CFLAGS += -DLinux_armv7l
+endif
+
+
+#until we are using old version ...
+ifneq ("$(VMETYPE)","")
+ifeq ("$(VMETYPE)","fanuc")
+  CFLAGS += -DLinux_vme -I$(CODA)/src/jvme_fanuc
 else
-ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
-	CFLAGS += -DLinux_vme
-else
-	CFLAGS += -DLinux_vme -I$(CODA)/src/rol/jvme
+  CFLAGS += -DLinux_vme -I$(CODA)/src/jvme/src.s
 endif
 endif
+
+
+
+
+
 
 #==============
 #=== Darwin ===
@@ -470,7 +432,8 @@ endif
 #=== VXWORKS ===
 #===============
 
-ifeq ("$(OSTYPE)","VXWORKS")
+#ifeq ("$(OSTYPE)","VXWORKS")
+ifeq ("$(MACHINE)","ppc")
 
 # fortran compiler
     FC = 
@@ -893,12 +856,14 @@ JAR = clonjava/$(MAIN).jar
 #--------------
 
 #print:
-#	echo ">$(OSTYPE)<"
-#	echo ">$(MACHINE)<"
-#	echo ">$(PLATFORM)<"
-#	echo ">$(OSTYPE_MACHINE)<"
-#	echo ">$(OSTYPE_PLATFORM)<"
-#	echo ">$(OSRELEASE)<"
+#	echo "PROJECT >$(PROJECT)<"
+#	echo "OSTYPE >$(OSTYPE)<"
+#	echo "MACHINE >$(MACHINE)<"
+#	echo "PLATFORM >$(PLATFORM)<"
+#	echo "OSTYPE_MACHINE >$(OSTYPE_MACHINE)<"
+#	echo "OSTYPE_PLATFORM >$(OSTYPE_PLATFORM)<"
+#	echo "OSRELEASE >$(OSRELEASE)<"
+#	echo "VMETYPE >$(VMETYPE)<"
 #	echo ">$(MAKECMDGOALS)<"
 #	echo "VPATH_DIR3 >$(VPATH_DIR3)<"
 #	echo "VPATH_DIR2 >$(VPATH_DIR2)<"

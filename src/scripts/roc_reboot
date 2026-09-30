@@ -1,281 +1,290 @@
 #!/bin/csh -f
 
 
-#***  Print help message if -h or -help specified ***
-if ($#argv != 0 ) then 
-# echo $#argv
-  if (($argv[1] == "-h") || ($argv[1] == "-help")) then 
-    echo ""
-    echo "  Usage: roc_reboot roc_name"
-    echo "  ---------------------------"
-    echo "  List of possible ROC names:"
-    echo "    dc5 dc6 dc11 dc12"
-    echo "    lac1 cc1 cc2 ec1 ec2 sc1 tage3 pcalfb"
-    echo "    scaler1 scaler2 scaler3 scaler4"
-    echo "    pretrig1 pretrig2 camac1 sc-laser1"
-    echo "    dccntrl ioctorus1 iocptarg clasgas"
-    echo "    classc1 classc2 classc3 classc4 classc5 classc6 classc7 classc8 classc12"
-    echo "    primexts2 primexroc4 primexroc5 primexroc6 primexioc1 primexioc2"
-    echo "    croctest4"
-    echo "  -------------------------------------------"
-    echo "  List of possible snmp-controlled ROC names:"
-    echo "    dc1 dc2 dc3 dc4 dc7 dc8 dc9 dc10 tage tage2 polar taggermac"
-    echo "    clastrig2 sc2 ec3 ec4 lac2 ctof1 pretrig3 pretrig4"
-    echo "    croctest1 croctest2 hps2 croctest10"
-    echo "    roc1 halldtrg3 jlab12vme adcctof1 tdcctof1 hpsioc1 svt1"
-    echo "    wolfram1 ftof0 ftof1 cnd1 trig1 trig2 dcrb2"
-    echo "  --------------------------------------------------"
-    echo "  List of possible PowerSwitch-controlled ROC names:"
-    echo "    hpstracker hpsatca"
-###    echo "    classc0 croctest333"
-    echo "  --------------------------------------------------"
-    echo "  List of possible software IOC names:"
-    echo "    clonpc1 clonpc2 clonpc3"
-    echo ""
-    exit(0)
+#
+#                taggermac  svt333                      
+#                adcpcal1
+#                pgem       prad1      prad2    prad3
+#                mvt2
+#                svt3
+#                test6      test5  test7
+#
+#                129.57.160.138  129.57.86.47
+#                129.57.167.81
+#                129.57.160.146  129.57.160.147  129.57.160.148  129.57.160.149
+#                129.57.160.216
+#                129.57.86.79
+#                129.57.86.79    129.57.86.144    129.57.86.122
+#
+
+
+set ch       = " "
+set rocs     = ""
+set crates   = ""
+set vme      = "-crate"
+##set hostname = `hostname -s`
+set NN=0
+set flag = 0
+
+# WIENER VME/VME64/VXS crates
+set wiener_snmp =   ( dc11       dc12       dc13       dc21       dc22       dc23       dc31       dc32       \
+                      dc33       dc41       dc42       dc43       dc51       dc52       dc53       dc61       \
+                      dc62       dc63       tage1      taggermac  adccnd1    ioctest0   scaler1    pcal0      \
+                      test1      tdcctof1   adcecal1   svt1       adcband1   hps1       hps2       tdcecal1   \
+                      tdcpcal1   tdcftof1   adcpcal1   adcftof1   adcecal1   adcftof6   tdcftof6   adcpcal6   \
+                      tdcpcal6   adcecal6   tdcecal6   adcecal5   tdcecal5   adcpcal5   tdcpcal5   adcftof5   \
+                      tdcftof5   adcecal4   tdcecal4   adcpcal4   tdcpcal4   adcftof4   tdcftof4   adcecal2   \
+                      tdcecal2   adcpcal2   tdcpcal2   adcftof2   tdcftof2   adcecal3   tdcecal3   adcpcal3   \
+                      tdcpcal3   adcftof3   tdcftof3   hps11      highbtest3 dcrb2      trig1      trig2      \
+                      svt2       adcctof1   mvt1       mmft1      adcft1     adcft2     adcft3     pgem       \
+                      prad1      prad2      prad3      rich4      mvt2       tdcband1   test0      test2      \
+                      classc10   mvt3       svt3       test3      bdx0       test4      prad0      test6      \
+                      test5      test7      adchycal1  adchycal2  adchycal3  adchycal4  adchycal5  adchycal6  \
+                      adchycal7  gem0       gem1       gem2       mpd1       trig0      mpd2       mpd3 )
+
+# TRIPPLITE-powered devices
+set tripplite_snmp = ( clondaq11 clondaq12 clondaq14 srs1 classchv atca1 clondaq10 clondaq9)
+
+
+
+
+#*** print help message if -h or -help specified ***
+if ($#argv == 0 ) then
+  set flag = 1
+endif
+if ($flag == 0 ) then
+  if (($argv[1] == "h") || ($argv[1] == "-h") || ($argv[1] == "--h") || \
+      ($argv[1] == "help") || ($argv[1] == "-help") || ($argv[1] == "--help")) then
+    set flag = 2
   endif
+endif
+if ($flag != 0 ) then
+  set elements_per_line = 8
+  echo ""
+  echo "  Usage: roc_reboot ROC_name [or ROCs_list]"
+  echo "  -----------------------------------------"
+  echo "  Example: list of possible ROC names:"
+  echo "    tdctof1 - tdctof6  tdcecal1 - tdcecal6  tdcpcal1 - tdcpcal6"
+  echo "    adctof1 - adctof6  adcecal1 - adcecal6  adcpcal1 - adcpcal6"
+  echo "  --------------------------------------------"
+  echo "  Example: ROCs_list could be any string with ROC names"
+  echo "    with commas: tdctof1, adcecal1, .. , tdcpcal6"
+  echo "    with dashes: adctof1 - adctof6, tdcpcal1 - tdcpcal6"
+  echo "    and mixture: adctof1 - adctof6  tdctof6, , adcecal6, tdcpcal1 - tdcpcal6"
+  echo ""
+  echo "=== List of currently registered WIENER VME/VME64/VXS crates:"
+  set count = 0
+  foreach name ($wiener_snmp)
+    echo -n "$name   "
+    @ count++
+    if ($count % $elements_per_line == 0) then
+        echo "" # Print a newline
+    endif
+  end
+  echo ""
+  echo ""
+  echo "=== List of currently registered TRIPPLITE-powered devices:"
+  set count = 0
+  foreach name ($tripplite_snmp)
+    echo -n "$name   "
+    @ count++
+    if ($count % $elements_per_line == 0) then
+        echo "" # Print a newline
+    endif
+  end
+  echo ""
+  echo ""
+
+  exit(0)
 endif
 
 
-# group definitions
-set group=1
-set group_snmp=2
-set group_PwSw=3
-set group_softioc=4
-set group_canbus=5
+
+#*** remove extra spaces and commas from input string ***
+set spstr = `echo $argv  | perl -ple 's/\s+-\s+/-/g' | perl -ple 's/-\s+/-/g' | perl -ple 's/\s+-/-/g' | perl -ple 's/,/ /g' | perl -ple 's/\s+/ /g' `
+#echo "spstr >$spstr<"; echo "N_spstr = $#spstr   spstr[1]=$spstr[1]"
 
 
-#***  Transliterate input argv to lower-case characters ***
-set roc = `echo $1 | tr '[A-Z]' '[a-z]' `
+foreach pre_roc ($spstr)
+#echo ".... top_of_foreach:  pre_roc  >$pre_roc<"
 
 
-#***  Set list of ROCs ***
-#
-set roc_name = ( scaler11 scaler2 scaler3 scaler4 \
-                 pretrig1 pretrig2 camac1old camac2old sc-laser1 \
-                 dccntrl ioctorus1 iocptarg clasgas \
-                 classc1 classc2 classc3 classc4 classc5 classc6 classc7 classc8 classc12 \
-                 primexts2 primexroc4 primexroc5 primexroc6 primexioc1 primexioc2 \
-                 croctest4)
-
-set atof_modules =( 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 )  
-
-#***  Set list of ROCs Power Switch - controlled ***
-#     8 Outlet Remote Power Control Switch
-#       - installed in Hall-B CH
-#       - has RS232 Interface
-#       - manufactured by StarTech.com
-#       - model: PCM815SHNA  SN: 0545000080
-#
-###set roc_name_PwSw = ( classc0 croctest333 )
-set roc_name_PwSw = ( hpstracker hpsatca )
+#*** check if dash exist, and get number of words separated by dash ***
+  set rr = `echo $pre_roc | grep -- '-' | awk -F- '{print $1" "$2" "$3" "$4 }' | wc | awk '{print $2}'`
+#echo "rr = $rr"
 
 
-#***  Set list of ROCs snmp-controlled ***
-#
-set roc_name_snmp = ( dc11       dc12       dc13       dc21       \
-                      dc22       dc23       dc31       dc32       \
-                      dc33       dc41       dc42       dc43       \
-                      dc51       dc52       dc53       dc61       \
-                      dc62       dc63       tage       polar      \
-                      taggermac  adccnd1    svt333     ioctest0   \
-                      scaler1    pcal0      clondaq11  pretrig4   \
-                      croctest1  croctest2  hps2       test1      \
-                      roc1       halldtrg3  jlab12vme  tdcctof1   \
-                      adcecal1   svt1       xxxxx      adcband1   \
-                      hps1       hps2       cnd1       tdcecal1   \
-                      tdcpcal1   tdcftof1   adcpcal1   adcftof1   \
-                      adcecal1   adcftof6   tdcftof6   adcpcal6   \
-                      tdcpcal6   adcecal6   tdcecal6   adcecal5   \
-                      tdcecal5   adcpcal5   tdcpcal5   adcftof5   \
-                      tdcftof5   adcecal4   tdcecal4   adcpcal4   \
-                      tdcpcal4   adcftof4   tdcftof4   adcecal2   \
-                      tdcecal2   adcpcal2   tdcpcal2   adcftof2   \
-                      tdcftof2   adcecal3   tdcecal3   adcpcal3   \
-                      tdcpcal3   adcftof3   tdcftof3   hps11 \
-                      highbtest3 dcrb2      trig1      trig2 \
-                      svt4       svt33      svt2       adcctof1 \
-                      mvt1       mmft1      adcft1     adcft2 \
-                      adcft3     pgem       prad1      prad2 \
-                      prad3      rich4      mvt2       tdcband1 \
-                      classchv1  test0      test2      classc10 \
-                      mvt3       svt3       test3      bdx0 \
-                      test4      prad0      alert1     clondaq12 \
-                      clondaq14  srs1 )
+# if no dash, then check existance of roc name $pre_roc
+  if ( $rr == 0 ) then
+
+    set ns_rr = `nslookup $pre_roc | grep -i "can't"`
+    if ( $#ns_rr > 0 ) then
+      echo ""
+      echo " ERROR1: nslookup did not find IP name '$pre_roc'"
+      echo ""
+      exit(1)
+    endif
+    @ NN++
+    set rocs = `echo "$rocs$ch$pre_roc" `
+    set crates = `echo "$crates$ch$pre_roc$vme" `
+    #echo "rocs    >$rocs<";   echo "rocs[$NN]  >$rocs[$NN]<"
+    #echo "crates  >$crates<"; echo "crates[$NN]  >$crates[$NN]<"
+
+#*** if dash found, then check existance of roc list in $pre_roc ***
+  else if ( $rr == 2 ) then
+
+    set roc_n = `echo $pre_roc | perl -ple 's/[^\d.]+/ /g'`
+    #echo "roc_n  >$roc_n<"; echo "numb.roc_n = $#roc_n"
+    if ( $#roc_n != 2 ) then
+      echo ""
+      echo " Wrong decimals in roc names : $pre_roc"
+      echo ""
+      exit(2)
+    endif
+
+    set ro = `echo $pre_roc | perl -ple 's/\d+-\S+/ /g'`
+    set jj = $roc_n[1]
+
+    while ( $jj <= $roc_n[2] )
+      set roc =  `echo "$ro$jj" `
+      set ns_rr = `nslookup $roc | grep -i "can't"`
+      if ( $#ns_rr > 0 ) then
+        echo ""
+        echo " ERROR2: nslookup did not find IP name '$roc'"
+        echo ""
+        exit(3)
+      endif
+      @ NN++
+      set rocs = `echo "$rocs$ch$roc" `
+      set crates = `echo "$crates$ch$roc$vme" `
+      #echo "rocs    >$rocs<";   echo "rocs[$NN]  >$rocs[$NN]<"
+      #echo "crates  >$crates<"; echo "crates[$NN]  >$crates[$NN]<"
+
+      @ jj++
+    end
+
+#*** dash found, but single or in wrong place ***
+  else
+    echo ""
+    echo " Wrong input string : $pre_roc"
+    echo ""
+    exit(4)
+  endif
+
+end   # of foreach pre_roc ($spstr)
 
 
-#***  Set IP list for ROCs snmp-controlled ***
-set ip_snmp = ( 129.57.68.184   129.57.68.179   129.57.160.200  129.57.68.183  \
-                129.57.68.178   129.57.68.168   129.57.68.169   129.57.68.175  \
-                129.57.68.172   129.57.68.170   129.57.68.176   129.57.68.173  \
-                129.57.68.171   129.57.68.177   129.57.68.174   129.57.160.202 \
-                129.57.68.180   129.57.160.201  129.57.160.137  129.57.69.33  \
-                129.57.160.138  129.57.160.151  129.57.86.47    129.57.167.83  \
-                129.57.167.85   129.57.86.175   129.57.69.255   129.57.69.47   \
-                129.57.69.30    129.57.69.28    129.57.69.40    129.57.86.122   \
-                129.57.167.104  129.57.167.47   129.57.167.56   129.57.160.158   \
-                129.57.167.80   129.57.160.197  129.57.86.174   129.57.68.229  \
-                129.57.167.164  129.57.167.165  129.57.86.53    129.57.167.52  \
-                129.57.167.54   129.57.167.73   129.57.167.81   129.57.167.156 \
-                129.57.167.80   129.57.167.157  129.57.167.158  129.57.167.39  \
-                129.57.167.163  129.57.167.38   129.57.167.40   129.57.167.169 \
-                129.57.167.170  129.57.167.171  129.57.167.176  129.57.167.177 \
-                129.57.167.178  129.57.167.189  129.57.167.186  129.57.167.188 \
-                129.57.167.185  129.57.167.187  129.57.167.183  129.57.167.212 \
-                129.57.167.192  129.57.167.216  129.57.167.211  129.57.167.251 \
-                129.57.167.21   129.57.167.32   129.57.167.22   129.57.167.97  \
-                129.57.167.19   129.57.167.37   129.57.167.27   129.57.167.93 \
-                129.57.86.40    129.57.86.67    129.57.167.196  129.57.167.199 \
-                129.57.86.71    129.57.86.140   129.57.160.198  129.57.160.60 \
-                129.57.160.184  129.57.68.198   129.57.68.192   129.57.68.194 \
-                129.57.68.196   129.57.160.146  129.57.160.147  129.57.160.148 \
-                129.57.160.149  129.57.160.215  129.57.160.216  129.57.160.144 \
-                129.57.160.225  129.57.68.201   129.57.68.249   129.57.167.146 \
-                129.57.160.236  129.57.86.79    129.57.86.144   129.57.86.60 \
-                129.57.68.9     129.57.86.201   129.57.160.236  129.57.69.255 \
-                129.57.69.255   129.57.69.255 )
-
-#***  Set list of soft-IOCS rebooted via service command ***
-#
-set roc_name_softioc = ( clonpc1 clonpc2 clonpc3 )
-
-#***  Set list of crates rebooted via canbus ***
-#
-set roc_name_canbus = ( camac1 )
 
 
-#*** Check ROC name ***
-set ii = -1
-set ii_PwSw = 0
-set ii_snmp = 0
-set ii_softioc = 0
-set ii_canbus = 0
 
-foreach word ($roc_name)
-  if ( $roc == $word ) set ii = 0
+
+# check if name is listed in any of the lists above
+foreach roc ($rocs)
+  set ii = 0
+  foreach wiener ($wiener_snmp)
+    if ($roc == $wiener ) set ii = 1
+  end
+  foreach tripplite ($tripplite_snmp)
+    if ($roc == $tripplite ) set ii = 2
+  end
+  ##echo "ii=$ii"
+
+  if ( $ii == 0 ) then
+    echo ""
+    echo " Unknown name. Please check the name, use -h for help."
+    echo ""
+    exit (-1)
+  endif
 end
-#echo ii = $ii
 
-if ( $ii == -1 ) then
-  foreach word ($roc_name_PwSw)
-    @ ii_PwSw++
-    if ( $roc == $word ) set ii = $ii_PwSw ; set group = $group_PwSw
-#    echo ii = $ii ii_PwSw = $ii_PwSw roc = $roc word = $word
+
+
+
+# reboot for wiener
+
+if ( $ii == 1 ) then
+
+  set jj = 1
+  foreach roc ($rocs)
+
+    set cmd   = `echo "snmpset -v 1 -c private $crates[$jj] enterprises.19947.1.1.1.0 i 0" `
+    #echo $cmd
+    echo "... $roc power turned OFF"
+##    set stat = `ssh $hostname $cmd >& /dev/null & `
+    snmpset -v 1 -c private $crates[$jj] enterprises.19947.1.1.1.0 i 0
+    @ jj++
   end
-endif
 
-if ( $ii == -1 ) then
-  foreach word ($roc_name_snmp)
-    @ ii_snmp++
-    if ( $roc == $word ) set ii = $ii_snmp ; set group = $group_snmp
-#    echo ii = $ii ii_snmp = $ii_snmp roc = $roc word = $word
+  echo "... wait 5 seconds for power to be turned ON"
+  sleep 5
+
+  #*** finish reboot processes ***
+  set jj = 1
+  foreach roc ($rocs)
+    set cmd   = `echo "snmpset -v 1 -c private $crates[$jj] enterprises.19947.1.1.1.0 i 1" `
+    #echo $cmd
+##    set stat = `ssh $hostname $cmd >& /dev/null & `
+    snmpset -v 1 -c private $crates[$jj] enterprises.19947.1.1.1.0 i 1
+    @ jj++
   end
+
 endif
 
-if ( $ii == -1 ) then
-  foreach word ($roc_name_softioc)
-    @ ii_softioc++
-    if ( $roc == $word ) set ii = $ii_softioc ; set group = $group_softioc
-#    echo ii = $ii ii_softioc = $ii_softioc roc = $roc word = $word
+
+
+# reboot for tripplite
+
+if ( $ii == 2 ) then
+
+  foreach device ($rocs)
+    echo "rebooting $device"
+
+    if ( $roc == "clondaq11" ) then  #special case
+      ## This part turns off the external clock for the FEUs before rebooting
+      ## if coda in prestart/go state
+      ##foreach mod ($atof_modules)
+      ##  tcpClient clondaq11 petiroc_set_clk($mod,0)
+      ##endif
+      ## if coda is off or in configure/download
+      #ssh clondaq11 '/usr/clas12/release/1.4.0/coda/src/rol/Linux_x86_64/bin/petiroc_setclk     0'
+      #sleep 3
+      snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 1
+      sleep 5
+      snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 2
+    else if ( $roc == "clondaq12" ) then  #special case
+      snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.4 i 1
+      sleep 5
+      snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.4 i 2
+    else if ( $roc == "clondaq14" ) then  #special case
+      snmpset -v 2c -c tripplite hallb-pdu-3 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 1
+      sleep 10
+      snmpset -v 2c -c tripplite hallb-pdu-3 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 2
+    else if ( $roc == "srs1" ) then  #special case
+      snmpset -v 2c -c tripplite hallb-pdu-3 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.3 i 1
+      sleep 5
+      snmpset -v 2c -c tripplite hallb-pdu-3 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.3 i 2
+    else if ( $roc == "classchv" ) then  #special case
+      snmpset -v 2c -c tripplite hallb-pdu-4 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.7 i 1
+      sleep 5
+      snmpset -v 2c -c tripplite hallb-pdu-4 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.7 i 2
+    else if ( $roc == "atca1" ) then  #special case
+      snmpset -v 2c -c tripplite hallb-pdu-6 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.1 i 1
+      sleep 5
+      snmpset -v 2c -c tripplite hallb-pdu-6 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.1 i 2
+    else if ( $roc == "clondaq10" ) then  #special case
+      snmpset -v 2c -c tripplite hallb-pdu-6 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 1
+      sleep 5
+      snmpset -v 2c -c tripplite hallb-pdu-6 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 2
+    else if ( $roc == "clondaq9" ) then  #special case
+      snmpset -v 2c -c tripplite hallb-pdu-6 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.3 i 1
+      sleep 5
+      snmpset -v 2c -c tripplite hallb-pdu-6 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.3 i 2
+    endif
+
   end
-endif
-
-if ( $ii == -1 ) then
-  foreach word ($roc_name_canbus)
-    @ ii_canbus++
-    if ( $roc == $word ) set ii = $ii_canbus ; set group = $group_canbus
-#    echo ii = $ii ii_canbus = $ii_canbus roc = $roc word = $word
-  end
-endif
-
-if ( $ii == -1 ) then
-  echo ""
-  echo " Unknown ROC. Please check the ROC name."
-  echo "              Use -h for help."
-  echo ""
-  exit (-1)
-endif
-
-
-#*** Reboot ROC ***
-
-if ( $group == $group_snmp ) then
-#
-#***** snmp-controlled ROCs processing :
-#
-
-  if ( $roc == "clondaq11" ) then  #special case
-    # This part turns off the external clock for the FEUs before rebooting
-    # if coda in prestart/go state
-    #foreach mod ($atof_modules)
-    #  tcpClient clondaq11 petiroc_set_clk($mod,0)
-    #endif
-    # if coda is off or in configure/download
-    ssh clondaq11 '/usr/clas12/release/1.4.0/coda/src/rol/Linux_x86_64/bin/petiroc_setclk     0'
-    sleep 3
-    snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 1
-    sleep 5
-    snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 2
-  else if ( $roc == "clondaq12" ) then  #special case
-    snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.4 i 1
-    sleep 5
-    snmpset -v 2c -c tripplite hallb-pdu-2 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.4 i 2
-  else if ( $roc == "clondaq14" ) then  #special case
-    snmpset -v 2c -c tripplite hallb-pdu-3 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 1
-    sleep 10
-    snmpset -v 2c -c tripplite hallb-pdu-3 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.2 i 2
-  else if ( $roc == "srs1" ) then  #special case
-    snmpset -v 2c -c tripplite hallb-pdu-3 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.3 i 1
-    sleep 5
-    snmpset -v 2c -c tripplite hallb-pdu-3 TRIPPLITE-PRODUCTS::tlpPduOutletCommand.1.3 i 2
-  else # generic case
-    set ip = ${ip_snmp[$ii]}
-    snmpset -v 1 -c private $ip enterprises.19947.1.1.1.0 i 0
-    sleep 5
-    snmpset -v 1 -c private $ip enterprises.19947.1.1.1.0 i 1
-  endif
-
-  # logfile
-  echo "`date` $roc" >> /logs/rocs/roc_reboot.log
-
-else if ( $group == $group_PwSw ) then
-#
-#***** Power Switch - controlled ROCs processing :
-#
-  remote_recycle.tcl  $roc >& /dev/null &
-  echo "$roc node rebooting is in progress"
-
-
-else if ( $group == $group_softioc ) then
-#
-#***** software IOC reboot via service command :
-#
-  ssh clasrun@$roc "setenv  SUDO_ASKPASS $CODA/common/scripts/remote_softioc.sh ; sudo -A /etc/init.d/softioc restart" >& /dev/null &
-  echo "$roc node rebooting is in progress"
-
-
-else if ( $group == $group_canbus ) then
-#
-#***** reboot via canbus command :
-#
-  $CODA/common/scripts/roc_reboot_canbus.py ${roc}-crate >& /dev/null &
-  echo "$roc node rebooting is in progress"
-
-
-else
-#
-#***** reset board - controlled ROCs processing :
-#
-  remote_reboot.tcl  $roc >& /dev/null &
-  echo "$roc node rebooting is in progress"
-
-  if ( $roc == "tage3" ) then
-    sleep 3
-    remote_reboot.tcl  $roc >& /dev/null &
-  endif
 
 endif
 
 
-exit (0)
 
+exit(0)

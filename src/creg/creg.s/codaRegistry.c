@@ -43,6 +43,8 @@ XInternAtom(,'property name,) returns property ID
 #include <unistd.h>
 #include <ctype.h>
 
+#include <inttypes.h> //sergey: added this just in case July 2025
+
 //#include <X11/Intrinsic.h>
 //#include <X11/Xatom.h>
 //#include <X11/StringDefs.h>
@@ -375,26 +377,26 @@ long_length = 20000;
 static Window
 RegFindName(NameRegistry *regPtr, char *name)
 {
-    char *p, *entry;
-    Window commWindow;
+  char *p, *entry;
+  Window commWindow;
 
-    commWindow = None;
-    for (p = regPtr->property; (p-regPtr->property) < regPtr->propLength; )
+  commWindow = None;
+  for (p = regPtr->property; (p-regPtr->property) < regPtr->propLength; )
+  {
+    entry = p;
+    while ((*p != 0) && (!isspace((unsigned char)(*p))))
     {
-	  entry = p;
-	  while ((*p != 0) && (!isspace((unsigned char)(*p))))
+      p++;
+    }
+    if ((*p != 0) && (strcmp(name, p+1) == 0))
+    {
+      if (sscanf(entry, "%x", (unsigned int *) &commWindow) == 1)
       {
-	    p++;
-	  }
-	  if ((*p != 0) && (strcmp(name, p+1) == 0))
-      {
-	    if (sscanf(entry, "%x", (unsigned int *) &commWindow) == 1)
-        {
-		  return commWindow;
-	    }
-	}
-	while (*p != 0) p++;
-	p++;
+	return commWindow;
+      }
+    }
+    while (*p != 0) p++;
+    p++;
   }
 
   return(None);
@@ -801,7 +803,7 @@ CODAGetAppNames(Display *display)
   for (p = regPtr->property; (p-regPtr->property) < regPtr->propLength; )
   {
     entry = p;
-    if (sscanf(p,  "%x",(unsigned int *) &commWindow) != 1)
+    if (sscanf(p, "%x", (unsigned int *) &commWindow) != 1)
     {
       commWindow =  None;
     }
@@ -879,7 +881,7 @@ CODAGetAppWindow(Display *display, char *name)
   {
     entry = p;
 
-    if (sscanf(p,"%x",(unsigned int *) &commWindow) != 1)
+    if (sscanf(p, "%x", (unsigned int *) &commWindow) != 1)
     {
       commWindow = None;
     }
@@ -1402,11 +1404,20 @@ printf("codaRegistry::motifHandler: abc2 %d\n",abc[0]);fflush(stdout);
   {
     if (propInfo[0] == 'r')
     {
-      sscanf(&propInfo[2],"%x %x", &target, &parent);
+      //sergey: it looks like values on string always 32bit (like >r:0x0460000b 0x044001c0<);
+      //        on 64bit system, when parent become 8-byte long, sscanf() add some junk in higher 32bit for some reason ...
+      //sscanf(&propInfo[2],"%x %x", &target, &parent);
+
+      //do it as above - use (unsigned int *) - still does not work on some platforms ...
+      //sscanf(&propInfo[2],"%x %x", (unsigned int *)&target, (unsigned int *)&parent);
+
+      //using %lx instead of %x seems fixes it ... (using 'long' in format, in hope that it must be 32bit and 64bit on corresponding systems ...)
+      sscanf(&propInfo[2],"%lx %lx", &target, &parent);
+
 
 #ifdef DEBUG
       printf("codaRegistry::motifHandler: sizes: target=%d parent=%d\n",sizeof(target),sizeof(parent));
-      printf("codaRegistry::motifHandler: target=0x%08x parent=0x%08x\n",target,parent);
+      printf("codaRegistry::motifHandler: target=0x%lx parent=0x%lx\n",target,parent);
 #endif
 
 	  /*
@@ -1502,9 +1513,15 @@ After that the window should probably be embeddable without GNOME interfering.
 	unsigned int nch;
         XQueryTree(dis, target, &root, &window, &ch, &nch);
 #ifdef DEBUG
-	printf("  ATTEMPT[%2d]=> parent=0x%x, window=0x%x\n",ii,parent,window);
+	printf("  ATTEMPT[%2d]=> parent=%p, window=%p\n",ii,(void *)parent,(void *)window);
 #endif
-	if(parent!=window) XReparentWindow(dis, target, parent, 0, 0);
+	if(parent!=window)
+	{
+#ifdef DEBUG
+	  printf("  == calling XReparentWindow()\n");
+#endif
+          XReparentWindow(dis, target, parent, 0, 0);
+	}
 	if(nch>0) XFree(ch);
 	XSync(dis, False);
         if(parent==window)

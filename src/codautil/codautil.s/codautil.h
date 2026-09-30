@@ -1,6 +1,6 @@
 /* codautil.h */
 
-#define STRLEN 80
+#define CODAUTIL_STRLEN 256
 
 #ifdef  __cplusplus
 extern "C" {
@@ -16,11 +16,13 @@ extern "C" {
   char *get_run_datafile(char *mysql_database, char *configname);
   int   get_run_time(char *mysql_database, char *configname);
 
-  void  get_roc_name(char *mysql_database, int id, char name[STRLEN]);
+  void  get_roc_name(char *mysql_database, int id, char name[CODAUTIL_STRLEN]);
   void  get_roc_id(char *mysql_database, char *name, int *id);
 
   void  get_run_config(char *mysql_database, char *session, int *run, char **config, char **conffile, char **datafile);
   int   get_comp_name_host(char *mysql_database, char *session, char *name, char **compname, char **comphost);
+
+  int   get_hostname(char *name, size_t len);
 
 #ifdef  __cplusplus
 }

@@ -1,5 +1,4 @@
 
-
 /* rol1.c - 'standard' first readout list */
 
 #if defined(VXWORKS) || defined(Linux_vme)
@@ -10,27 +9,146 @@
 
 static int nusertrig, ndone;
 
-#undef DMA_TO_BIGBUF /*if want to dma directly to the big buffers*/
+
+
+#ifndef TI_ONLY
 
 #define USE_FADC250
+//#define USE_FAV3
 #define USE_DSC2
 #define USE_V1190
 #define USE_SSP
-#define USE_SSP_RICH
-#define USE_VSCM
-#define USE_DCRB
-#undef USE_VETROC
-#undef USE_FLP
-#define USE_VFTDC
-#undef USE_SIS3801
-#define USE_HD
-
+//#define USE_SSP_RICH
+//#define USE_VSCM
+//#define USE_DCRB
+//#define USE_VETROC
+//#define USE_FLP
+//#define USE_VFTDC
+//#define USE_SIS3801
+//#define USE_HD
+//#define USE_MPD
 
 //#define USE_ED
 
+#endif
+
+/*
+gem2:
+
+ERROR: TI nwords = 24 (expected 8)
+ti[ 0] 0x85419b05
+ti[ 1] 0xff112005
+ti[ 2] 0xfe010003
+ti[ 3] 0x00145803 - evnum
+ti[ 4] 0x4d3a5dca
+ti[ 5] 0x73f00011
+ti[ 6] 0xfe010003
+ti[ 7] 0x00145804 - evnum
+ti[ 8] 0x4d3adc72
+ti[ 9] 0x6e900011
+ti[10] 0xfe010003
+ti[11] 0x00145805 - evnum
+ti[12] 0x4d3b0d22
+ti[13] 0x31500011
+ti[14] 0xfe010003
+ti[15] 0x00145806 - evnum
+ti[16] 0x4d3b9462
+ti[17] 0x4e500011
+ti[18] 0xfe010003
+ti[19] 0x00145807 - evnum
+ti[20] 0x4d3bbdae
+ti[21] 0xf3800011
+ti[22] 0x8d400017
+ti[23] 0xfd40119b
+ERROR: TI nwords = 24 (expected 8)
+ti[ 0] 0x85419c05
+ti[ 1] 0xff112005
+ti[ 2] 0xfe010003
+ti[ 3] 0x00145808 - evnum
+ti[ 4] 0x4d3bced2
+ti[ 5] 0x38100011
+ti[ 6] 0xfe010003
+ti[ 7] 0x00145809 - evnum
+ti[ 8] 0x4d3bd596
+ti[ 9] 0x53200011
+ti[10] 0xfe010003
+ti[11] 0x0014580a - evnum
+ti[12] 0x4d3c2baa
+ti[13] 0xab700011
+ti[14] 0xfe010003
+ti[15] 0x0014580b - evnum
+ti[16] 0x4d3c685e
+ti[17] 0x9e400011
+ti[18] 0xfe010003
+ti[19] 0x0014580c - evnum
+ti[20] 0x4d3c6e0a
+ti[21] 0xb4f00011
+ti[22] 0x8d400017
+ti[23] 0xfd40119c
+ERROR: TI nwords = 24 (expected 8)
+ti[ 0] 0x85419d05
+ti[ 1] 0xff112005
+ti[ 2] 0xfe010003
+ti[ 3] 0x0014580d
+ti[ 4] 0x4d3ccba2
+ti[ 5] 0x2b500011
+ti[ 6] 0xfe010003
+ti[ 7] 0x0014580e
+ti[ 8] 0x4d3ce6b6
+ti[ 9] 0x97a00011
+ti[10] 0xfe010003
+ti[11] 0x0014580f
+ti[12] 0x4d3d67d2
+ti[13] 0x9c100011
+ti[14] 0xfe010003
+ti[15] 0x00145810
+ti[16] 0x4d3e9872
+ti[17] 0x5e900011
+ti[18] 0xfe010003
+ti[19] 0x00145811
+ti[20] 0x4d3ec136
+ti[21] 0x01a00011
+ti[22] 0x8d400017
+ti[23] 0xfd40119d
+ERROR: TI nwords = 24 (expected 8)
+ti[ 0] 0x85419e05
+ti[ 1] 0xff112005
+ti[ 2] 0xfe010003
+ti[ 3] 0x00145812
+ti[ 4] 0x4d50b1ba
+ti[ 5] 0xc3b00011
+ti[ 6] 0xfe010003
+ti[ 7] 0x00145813
+ti[ 8] 0x4d51260a
+ti[ 9] 0x94f00011
+ti[10] 0xfe010003
+ti[11] 0x00145814
+ti[12] 0x4d513d6a
+ti[13] 0xf2700011
+ti[14] 0xfe010003
+ti[15] 0x00145815
+ti[16] 0x4d51861e
+ti[17] 0x15400011
+ti[18] 0xfe010003
+ti[19] 0x00145816
+ti[20] 0x4d51bb9e
+ti[21] 0xeb400011
+ti[22] 0x8d400017
+ti[23] 0xfd40119e
+ERROR: TI nwords = 24 (expected 8)
+ti[ 0] 0x85419f05
+ti[ 1] 0xff112005
+ti[ 2] 0xfe010003
+ti[ 3] 0x00145817
+ti[ 4] 0x4d51cf0e
+ti[ 5] 0x39000011
+ti[ 6] 0xfe010003
+ti[ 7] 0x00145818
+
+ */
 
 
-/* if event rate goes higher then 10kHz, with random triggers we have wrong
+/* CAEN TDCs: if event rate goes higher then 10kHz, with random triggers we have wrong
 slot number reported in GLOBAL HEADER and/or GLOBAL TRAILER words; to work
 around that problem temporary patches were applied - until fixed (Sergey) */
 #define SLOTWORKAROUND
@@ -60,10 +178,13 @@ typedef      long long       hrtime_t;
 static char ssname[80];
 #endif
 
+#include "libconfig.h"
+
 #include "daqLib.h"
 #include "moLib.h"
 #include "v851.h"
 #include "sdLib.h"
+#include "sdConfig.h"
 #include "vscmLib.h"
 #include "dcrbLib.h"
 #include "sspLib.h"
@@ -76,13 +197,10 @@ static char ssname[80];
 #include "dsc2Lib.h"
 #include "dsc2Config.h"
 
-#include "circbuf.h"
+#include "circbuf.h" /* MAX_EVENT_LENGTH defined here */
 
 /* from fputil.h */
 #define SYNC_FLAG 0x20000000
-
-/* readout list name */
-#define ROL_NAME__ "ROL1"
 
 /* polling mode if needed */
 #define POLLING_MODE
@@ -94,6 +212,9 @@ static char ssname[80];
 
 /* name used by loader */
 
+#ifndef TI_ONLY
+
+#define ROL_NAME__ "ROL1"
 #ifdef TI_MASTER
 #define INIT_NAME rol1_master__init
 #define TI_READOUT TI_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
@@ -106,6 +227,25 @@ static char ssname[80];
 #define TI_READOUT TI_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
 #endif
 #endif
+
+#else
+
+#define ROL_NAME__ "ROL1_TI"
+#ifdef TI_MASTER
+#define INIT_NAME rol1_ti_master__init
+#define TI_READOUT TI_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
+#else
+#ifdef TI_SLAVE
+#define INIT_NAME rol1_ti_slave__init
+#define TI_READOUT TI_READOUT_TS_POLL /* Poll for available data, triggers from master over fiber */
+#else
+#define INIT_NAME rol1_ti__init
+#define TI_READOUT TI_READOUT_EXT_POLL /* Poll for available data, front panel triggers */
+#endif
+#endif
+
+#endif
+
 
 #include "rol.h"
 
@@ -140,6 +280,7 @@ static char rcname[5];
 #define NBOARDS 22    /* maximum number of VME boards: we have 21 boards, but numbering starts from 1 */
 #define MY_MAX_EVENT_LENGTH 3000/*3200*/ /* max words per board */
 static unsigned int *tdcbuf;
+static unsigned int *tdcbuf_origin;
 
 /*#ifdef DMA_TO_BIGBUF*/
 /* must be 'rol' members, like dabufp */
@@ -316,6 +457,7 @@ static int SSP_SLOT;
 
 #ifdef USE_FLP
 #include "flpLib.h"
+#include "flpConfig.h"
 static int nflp;
 #endif
 
@@ -337,7 +479,12 @@ static int VSCM_ROFLAG = 1;
 
 
 static int sd_found = 0;
+static unsigned int MAXFADCWORDS2 = 0;
+static unsigned int MAXFADCWORDS3 = 0;
 
+
+/* for the calculation of maximum data words in the block transfer */
+static unsigned int MAXTIWORDS  = 0;
 
 #ifdef USE_FADC250
 
@@ -346,19 +493,11 @@ extern int fadcBlockError; /* defined in fadcLib.c */
 
 #define DIST_ADDR  0xEA00	  /*  base address of FADC signal distribution board  (A16)  */
 
-
 unsigned int fadcSlotMask   = 0;    /* bit=slot (starting from 0) */
-static int nfadc;                 /* Number of FADC250s verified with the library */
-static int NFADC;                   /* The Maximum number of tries the library will
-                                     * use before giving up finding FADC250s */
-static int FA_SLOT;                 /* We'll use this over and over again to provide
-				                     * us access to the current FADC slot number */ 
 
-static int FADC_ROFLAG           = 2;  /* 0-noDMA, 1-board-by-board DMA, 2-chainedDMA */
+static int FADC_ROFLAG           = 1;  /* 0-noDMA, 1-board-by-board DMA, 2-chainedDMA */
 
 /* for the calculation of maximum data words in the block transfer */
-static unsigned int MAXFADCWORDS = 0;
-static unsigned int MAXTIWORDS  = 0;
 static unsigned int MAXVSCMWORDS  = 100000;
 
 
@@ -403,6 +542,83 @@ getFadcPedsFilename(int rocid)
 
 #endif
 
+
+#if defined(USE_FADC250) ||  defined(USE_FAV3)
+
+static int nfadc;                 /* Number of FADC250s verified with the library */
+static int NFADC;                   /* The Maximum number of tries the library will
+                                     * use before giving up finding FADC250s */
+static int FA_SLOT;                 /* We'll use this over and over again to provide
+				      us access to the current FADC slot number */ 
+extern int nfaV3;
+
+#endif
+
+
+
+#ifdef USE_FAV3
+#include "faV3Lib.h"
+//#include "faV3-HallD.h"     /* Hall D firmware */
+#include "faV3Config.h"
+
+//unsigned int faV3SlotMask   = 0;    /* bit=slot (starting from 0) */
+
+/* Number of fadc250 to initialize */
+#define NFAV3     (18+2)  //it seems SwitchSlots counted ???
+/* Address of first fADC250 (set to slot# << 19 )*/
+#define FADC_ADDR (3 << 19)
+/* Increment address to find next fADC250 (increment by 1 slot) */
+#define FADC_INCR (1 << 19)
+
+
+
+
+// use only default config files for now
+// BR Mar23: changed to default first, then runcontrol file
+//#define FAV3_READ_CONF_FILE {	\
+//    faV3Config("");		\
+//    if(strncasecmp(rol->confFile,"none",4))			\
+//      faV3Config(rol->confFile);		\
+//  }
+
+// use only default config files for now
+#define FAV3_READ_CONF_FILE {			\
+    if(/*rol->usrConfig*/1)			\
+      faV3Config(""/*rol->usrConfig*/);		\
+  }
+
+
+static int FAV3_ROFLAG           = 2;  /* 0-noDMA, 1-board-by-board DMA, 2-chainedDMA */
+
+/* call following after DMA readout - until bug in CPU firmware fixed */
+#define FAV3_LAST_4_DMA_WORDS_RECOVER \
+  { \
+    unsigned int lastword = LSWAP(tdcbuf[nwords-1]); \
+    if(      ((lastword>>27)&0x1F) == 0x11 ) /*block trailer*/ \
+    { \
+      /*printf("rol1: block trailer 0x%08x (befor 0x%08x 0x%08x 0x%08x 0x%08x)\n",LSWAP(tdcbuf[nwords-1]),LSWAP(tdcbuf[nwords-5]),LSWAP(tdcbuf[nwords-4]),LSWAP(tdcbuf[nwords-3]),LSWAP(tdcbuf[nwords-2]));*/ \
+    } \
+    else if( ((lastword>>27)&0x1F) == 0x1E ) /*not valid*/ \
+    { \
+      /*printf("rol1: not valid 0x%08x (befor 0x%08x 0x%08x 0x%08x 0x%08x)\n",LSWAP(tdcbuf[nwords-1]),LSWAP(tdcbuf[nwords-5]),LSWAP(tdcbuf[nwords-4]),LSWAP(tdcbuf[nwords-3]),LSWAP(tdcbuf[nwords-2]));*/ \
+    } \
+    else if( ((lastword>>27)&0x1F) == 0x1F ) /*filler*/ \
+    { \
+      /*printf("rol1: filler 0x%08x (befor 0x%08x 0x%08x 0x%08x 0x%08x)\n",LSWAP(tdcbuf[nwords-1]),LSWAP(tdcbuf[nwords-5]),LSWAP(tdcbuf[nwords-4]),LSWAP(tdcbuf[nwords-3]),LSWAP(tdcbuf[nwords-2]));*/ \
+    } \
+    else \
+    { \
+      /*printf("rol1: ERROR: nwords=%d, unknown data 0x%08x (followed by 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x)\n",*/ \
+      /*	 nwords,LSWAP(tdcbuf[nwords-1]),LSWAP(tdcbuf[nwords]),LSWAP(tdcbuf[nwords+1]),LSWAP(tdcbuf[nwords+2]),LSWAP(tdcbuf[nwords+3]),LSWAP(tdcbuf[nwords+4]),LSWAP(tdcbuf[nwords+5]));*/ \
+      /*printf("incrementing nwords by 4\n");*/ \
+      nwords += 4; \
+    } \
+  }
+
+
+#endif
+
+
 #ifdef USE_SIS3801
 #include "sis3801.h"
 static unsigned long run_trig_count = 0;
@@ -427,6 +643,100 @@ static int mode = 2;
 #endif
 
 
+#ifdef USE_MPD
+
+#include "mpdLib.h"
+#include "mpdConfig.h"
+int I2C_SendStop(int id);
+
+//static int nmpd;
+int fnMPD = 0;
+extern int mpdOutputBufferBaseAddr;	/* output buffer base address */
+#define MPD_DMA_BUFSIZE 80000
+static int UseSdram, FastReadout;
+
+
+/*sergey: just to resolve reference(s)*/
+/*extern*/ int sspID[MPD_SSP_MAX_BOARDS + 1];
+/*extern*/ int nSSP;
+/*extern*/ //uint32_t sspMpdReadReg(int id, int impd, unsigned int reg);
+/*extern*/ //int sspMpdWriteReg(int id, int impd, unsigned int reg, unsigned int value);
+
+
+int
+resetMPDs(unsigned int *broken_list, int nbroken)
+{
+  int impd = 0,  id = 0, rval = OK;
+  static int ncalls = 0;
+
+  printf("%s: Number of calls = %d\n",
+	 __func__, ncalls);
+
+  for (impd = 0; impd < nbroken; impd++)
+    {
+      id = broken_list[impd];
+      mpdDAQ_Disable(id);
+    }
+
+  for (impd = 0; impd < nbroken; impd++)
+    {				// only active mpd set
+      id = broken_list[impd];
+
+      // mpd latest configuration before trigger is enabled
+      mpdSetAcqMode(id, "process");
+
+      // load pedestal and thr default values
+      mpdPEDTHR_Write(id);
+
+      // enable acq
+      mpdDAQ_Enable(id);
+
+      if (mpdAPV_Reset101(id) != OK)
+	{
+	  printf("MPD Slot %2d: Reset101 FAILED\n", id);
+	  rval = ERROR;
+	}
+    }
+
+  /* Check MPDs for data */
+  int sd_init, sd_overrun, sd_rdaddr, sd_wraddr, sd_nwords;
+  int obuf_nblock = 0, empty = 0, full = 0, nwords = 0;
+  for (impd = 0; impd < nbroken; impd++)
+    {				// only active mpd set
+      id = broken_list[impd];
+      mpdSDRAM_GetParam(id, &sd_init, &sd_overrun, &sd_rdaddr, &sd_wraddr,
+			&sd_nwords);
+
+      if ((sd_nwords != 0) || (sd_overrun == 1) || (sd_init == 0))
+	{
+	  printf("ERROR: Slot %2d SDRAM status: \n"
+		 "init=%d, overrun=%d, rdaddr=0x%x, wraddr=0x%x, nwords=%d\n",
+		 id, sd_init, sd_overrun, sd_rdaddr, sd_wraddr, sd_nwords);
+	  rval = ERROR;
+	}
+
+      obuf_nblock = mpdOBUF_GetBlockCount(id);
+      mpdOBUF_GetFlags(id, &empty, &full, &nwords);
+
+      if ((obuf_nblock != 0) || (empty == 0) || (full == 1) || (nwords != 0))
+	{
+	  printf("ERROR: Slot %2d OBUF status: \n"
+		 "nblock = %d  empty=%d  full=%d  nwords=%d\n",
+		 id, obuf_nblock, empty, full, nwords);
+	  rval = ERROR;
+	}
+    }
+
+  return rval;
+}
+
+
+#endif
+
+
+
+
+
 static unsigned int maxA32Address;
 static unsigned int fadcA32Address = 0x09000000;
 static unsigned int vfTDCA32Address = 0x09000000;
@@ -437,13 +747,13 @@ __download()
 {
   int i1, i2, i3;
   char *ch, tmp[256];
-  int ret;
+  int ret, rval, ifa;
   char *myhost = getenv("HOST");
+  int iFlag=0;
 
-#ifdef USE_FADC250
   int ii, id, isl, ichan, slot;
-  unsigned short iflag;
-  int fadc_mode = 1, iFlag = 0;
+#ifdef USE_FADC250
+  int fadc_mode = 1;
   int ich, NSA, NSB;
 #endif
 #ifdef POLLING_MODE
@@ -466,7 +776,7 @@ __download()
 
 
 
-  /* if slave, get fiber port number from user string */
+  /* if slave, get 'uplink' fiber port number from user string */
 #ifdef TI_SLAVE
   ti_slave_fiber_port = 1; /* default */
 
@@ -528,24 +838,27 @@ vmeBusUnlock();
 
 
   /* set wide pulse */
-vmeBusLock();
+//vmeBusLock();
 /*sergey: WAS tiSetSyncDelayWidth(1,127,1);*/
 /*worked for bit pattern latch tiSetSyncDelayWidth(0x54,127,1);*/
-vmeBusUnlock();
+//vmeBusUnlock();
 
-  usrVmeDmaSetConfig(2,5,1); /*A32,2eSST,267MB/s*/
-  /*usrVmeDmaSetConfig(2,5,0);*/ /*A32,2eSST,160MB/s*/
-  /*usrVmeDmaSetConfig(2,3,0);*/ /*A32,MBLT*/
+/* option 4 (2eVME)) is not supported on XVB603 !!! */
+usrVmeDmaSetConfig(2,5,1); /*A32,2eSST,267MB/s*/ /*DOES NOT WORK FOR v1190 ON NEW CONTROLLERS XVB603 !!??*/
+//usrVmeDmaSetConfig(2,5,0); /*A32,2eSST,160MB/s*/ /*DOES NOT WORK FOR v1190 !!??*/
+//usrVmeDmaSetConfig(2,3,0); /*A32,MBLT*/
 
 
 
-  /*
-if(rol->pid==18)
-{
-  usrVmeDmaSetConfig(2,3,0);
-}
-  */
 
+//if(rol->pid==142)
+//{
+//  printf("Set DMA to MBLT for TAGE\n");
+//  usrVmeDmaSetConfig(2,3,0);
+//}
+ 
+
+ 
 
   /*
   usrVmeDmaSetChannel(1);
@@ -553,7 +866,7 @@ if(rol->pid==18)
   */
 
   tdcbuf = (unsigned int *)i2_from_rol1;
-
+  tdcbuf_origin = (unsigned int *)i2_from_rol1;
 
 
 
@@ -606,6 +919,19 @@ vmeBusUnlock();
   printf("dsc2: %d boards set to be readout by daq\n",ndsc2_daq);
   printf("DSC2 Download() ends =========================\n\n");
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -708,7 +1034,6 @@ v1190: 0x11xx0000, where xx follows the same scheme as FADCs
   }
 
 
-
 #ifndef VXWORKS
   vmeSetQuietFlag(1); /* skip the errors associated with BUS Errors */
 #endif
@@ -718,16 +1043,17 @@ vmeBusLock();
   faInit((unsigned int)(3<<19),(1<<19),NFADC,iFlag); /* start from 0x00180000, increment 0x00080000 */
 vmeBusUnlock();
 
-  faGetMinA32MB(0);
-  faGetMaxA32MB(0);
-
-  nfadc = faGetNfadc(); /* acual number of FADC boards found  */
+  nfadc = faGetNfadc(); /* actual number of FADC boards found  */
 #ifndef VXWORKS
   vmeSetQuietFlag(0); /* Turn the error statements back on */
 #endif
 
   if(nfadc>0)
   {
+    faGetMinA32MB(0);
+    faGetMaxA32MB(0);
+
+    
     if(nfadc==1) FADC_ROFLAG = 1; /*no chainedDMA if one board only*/
     if(!sd_found) FADC_ROFLAG = 1; /*no chainedDMA if no SD*/
 
@@ -753,20 +1079,22 @@ vmeBusUnlock();
       }
 */
 
-	  {
+      {
         unsigned int PL, PTW, NSB, NSA, NP;
 vmeBusLock();
         faGetProcMode(FA_SLOT, &fadc_mode, &PL, &PTW, &NSB, &NSA, &NP);
 vmeBusUnlock();
         printf(", slot %d, fadc_mode=%d\n",FA_SLOT,fadc_mode);
-	  }
+      }
 
       /* Bus errors to terminate block transfers (preferred) */
 vmeBusLock();
       faEnableBusError(FA_SLOT);
 vmeBusUnlock();
 
-#ifdef NEW
+
+
+#ifdef NEW 
       /*****************/
       /*trigger-related*/
 vmeBusLock();
@@ -844,7 +1172,6 @@ STATUS for FADC in slot 18 at VME (Local) base address 0x900000 (0xa16b1000)
    *   SD SETUP
    ***************************************/
 vmeBusLock();
-  /*sd_found = sdInit(1); moved before anything else*/   /* Initialize the SD library */
   if(sd_found)
   {
     sdSetActiveVmeSlots(fadcSlotMask); /* Use the fadcSlotMask to configure the SD */
@@ -855,6 +1182,218 @@ vmeBusUnlock();
 
   printf("FADC250 Download() ends =========================\n\n");
 #endif
+
+
+
+
+
+
+
+
+
+
+#ifdef USE_FAV3
+
+
+
+
+
+
+  //?????????????????????????????? redone below
+  
+  /* Program/Init FADC Modules Here */
+
+  iFlag = 0;
+
+  /* Sync Source */
+  iFlag |= FAV3_INIT_EXT_SYNCRESET;  /* Front panel sync-reset (1<<0)*/
+
+  if(sd_found)
+  {
+    printf("Assume SD usage for FAV3s\n");
+
+    /* Trigger Source */
+    iFlag |= (1<<2);    /* VXS */ //FAV3_INIT_VXS_TRIG;       /* VXS trigger source */
+
+    /* Clock Source */
+    /*iFlag |= (1<<5);*/    /* VXS */ // FAV3_INIT_VXS_CLKSRC
+    iFlag |= (0<<5);  /* Internal Clock Source */ //FAV3_INIT_INT_CLKSRC;     /* Internal 250MHz Clock source, switch to VXS in prestart */
+  }
+  else
+  {
+    printf("Assume SDC usage for FADCs\n");
+
+    /* Trigger Source - have to do it to make faV3Init() configure for SDC board */
+    iFlag |= FAV3_INIT_FP_TRIG;  /* Front Panel Input trigger source (1<<1)*/
+
+    /* Clock Source */
+    iFlag |= FAV3_INIT_FP_CLKSRC;  /* Internal 250MHz Clock source (1<<4)*/
+
+    /* SDC address */
+    iFlag |= (0xea<<8);
+  }
+
+  //??????????????????????????????
+
+
+
+
+
+  
+
+  extern uint32_t faV3A32Base;
+  faV3A32Base = 0x09000000;
+#ifdef USE_FADC250
+  if(nfadc>0)
+  {
+    faV3A32Base += nfadc * FA_MAX_A32_MEM;
+  }
+#endif
+  printf("===> faV3A32Base = 0x%08x\n",faV3A32Base);
+
+
+
+
+  /*
+  vmeSetQuietFlag(1);
+  faV3Init(FADC_ADDR, FADC_INCR, NFAV3, iFlag);
+  vmeSetQuietFlag(0);
+  */
+
+
+
+  vmeSetQuietFlag(1);
+  int iflag=0;
+  iflag |= FAV3_INIT_EXT_SYNCRESET;  /* vxs sync-reset */
+  iflag |= FAV3_INIT_VXS_TRIG;       /* VXS trigger source */
+
+  //sergey: set it to VXS here, and remove switching to VXS in prestart (Jun 10, 2026)
+  //  iflag |= FAV3_INIT_INT_CLKSRC;     /* Internal 250MHz Clock source, switch to VXS in prestart */
+  iflag |= FAV3_INIT_VXS_CLKSRC;     /* VXS 250MHz Clock source */
+
+  /////iflag |= FAV3_INIT_A32_SLOTNUMBER;
+  faV3Init( 3 << 19 , 1 << 19, NFAV3, iflag);
+  vmeSetQuietFlag(0);
+
+  nfaV3 = faV3GetN();
+  if(nfaV3>0)
+  {
+
+    if(nfaV3==1) FAV3_ROFLAG = 1; /*no chainedDMA if one board only*/
+    if(!sd_found) FAV3_ROFLAG = 1; /*no chainedDMA if no SD*/
+
+    if(FAV3_ROFLAG==2) faV3EnableMultiBlock(1);
+    else               faV3DisableMultiBlock();
+
+
+    /* configure all modules based on config file */
+    FAV3_READ_CONF_FILE;
+
+
+
+#if 0 /* USE FUNCTION 'faV3ScanMask()' INSTEAD */
+    /* Additional Configuration for each module */
+    faV3SlotMask=0;
+    for(id=0; id<nfadc; id++) 
+    {
+      FA_SLOT = faV3Slot(id);      /* Grab the current module's slot number */
+      faV3SlotMask |= (1<<FA_SLOT); /* Add it to the mask */
+      printf("=======================> faV3SlotMask=0x%08x",faV3SlotMask);
+    }
+#endif
+
+
+
+    
+#if 0
+    /*sergey*/
+    for(ifa=0; ifa<nfaV3; ifa++)
+    {
+      int pmode;       // =1 for raw spactra
+      uint32_t PL;     // Window Latency (must be greater than PTW)
+      uint32_t PTW;    // Window Width
+      uint32_t NSB;    // Number of samples before pulse over threshold included in sum
+      uint32_t NSA;    // Number of samples after pulse over threshold to be included in sum (NSA+NSB must be an odd number)
+      uint32_t NP;     // Number of pulses processed per window
+      uint32_t NPED;   // Number of samples to sum for pedestal (must be less than PTW and 4 <= NPED <= 15)
+      uint32_t MAXPED; // Maximum value of sample to be included in pedestal sum
+      uint32_t NSAT;   // Number of consecutive samples over threshold for valid pulse
+
+      slot = faV3Slot(ifa);
+      faV3HallDGetProcMode(slot, &pmode, &PL, &PTW, &NSB, &NSA, &NP, &NPED, &MAXPED, &NSAT);
+      printf("111: pmode=%d PL=%u PTW=%u NSB=%u NSA=%u NP=%u NPED=%u MAXPED=%u NSAT=%u\n",pmode,PL,PTW,NSB,NSA,NP,NPED,MAXPED,NSAT);
+      pmode = 10;  // 1 or 10
+      faV3HallDSetProcMode(slot, pmode, PL, PTW, NSB, NSA, NP, NPED, MAXPED, NSAT);
+      faV3HallDGetProcMode(slot, &pmode, &PL, &PTW, &NSB, &NSA, &NP, &NPED, &MAXPED, &NSAT);
+      printf("222: pmode=%d PL=%u PTW=%u NSB=%u NSA=%u NP=%u NPED=%u MAXPED=%u NSAT=%u\n",pmode,PL,PTW,NSB,NSA,NP,NPED,MAXPED,NSAT);
+    }
+#endif
+
+    for(ifa = 0; ifa < nfaV3; ifa++)
+    {
+      FA_SLOT = faV3Slot(ifa);
+
+      /* Bus errors to terminate block transfers (preferred) */
+      faV3EnableBusError(FA_SLOT);
+
+
+#ifdef NEW
+      /*****************/
+      /*trigger-related*/
+vmeBusLock();
+//      faResetMGT(FA_SLOT,1);
+      faV3SetTrigOut(FA_SLOT, 0x5);
+vmeBusUnlock();
+#endif
+
+    }
+
+
+
+    
+    faV3GStatus(0);
+
+
+    /* TODO: FOR MIXED SET (fadc250+faV3), FOLLOWING MUST INCLUDE fadc250's MASK IF IT WAS SET ABOVE !!! */
+    if(sd_found)
+    {
+vmeBusLock();
+      sdSetActiveVmeSlots(/*faV3SlotMask*/faV3ScanMask()); /* configure the SD */
+      /*sdSetTrigoutLogic(0, 2);*/ /* Enable SD trigout as OR by default */
+      sdStatus(0);
+vmeBusUnlock();
+    }
+    else
+    {
+      faV3SDC_Status(0);
+    }
+
+  }
+
+
+  
+
+
+
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1108,6 +1647,242 @@ vmeBusUnlock();
 #endif
 
 
+
+#ifdef USE_MPD
+
+  /*****************
+   *   MPD SETUP
+   *****************/
+  rval = OK;
+  int error_status = OK;
+
+  /* Read config file and fill internal variables
+     Change this to point to your main configuration file */
+
+  char *clonparms = getenv("CLON_PARMS");
+  char dirname[256], conffilename[256];
+
+  // for nested config files, we can set top directory
+  sprintf(dirname, "%s/mpd", clonparms);
+  mpdSetConfigDirectory(dirname);
+
+  // for the main config file, we must specify full path
+  sprintf(conffilename, "%s/%s",dirname,"config_apv.txt");
+  rval = mpdConfigInit(conffilename); 
+
+  if(rval != OK)
+  {
+    logMsg("ERROR: Error in configuration file",1,2,3,4,5,6);
+    error_status = ERROR;
+  }
+
+  mpdConfigLoad();
+
+  /* Init and config MPD+APV */
+
+  // discover MPDs and initialize memory mapping
+  mpdInit((3<<19), 0x80000, 18, 0x0);
+  fnMPD = mpdGetNumberMPD();
+
+  if (fnMPD > 0)
+  {
+    printf("MPD discovered = %d\n", fnMPD);
+
+    printf("\n");
+
+    // APV configuration on all active MPDs
+    int impd, iapv;
+
+    for (impd = 0; impd < fnMPD; impd++)
+    {				// only active mpd set
+      id = mpdSlot(impd);
+      printf("MPD slot %2d config:\n", id);
+
+
+      rval = mpdHISTO_MemTest(id);
+
+      printf(" - Initialize I2C\n");
+      fflush(stdout);
+      if (mpdI2C_Init(id) != OK)
+	{
+	  printf(" * * FAILED\n");
+	  error_status = ERROR;
+	}
+
+      printf(" - APV discovery and init\n");
+
+      fflush(stdout);
+      mpdSetPrintDebug(0x0);
+      if (mpdAPV_Scan(id) <= 0)
+	{			// no apd found, skip next
+	  printf(" * * None Found\n");
+	  error_status = ERROR;
+	  continue;
+	}
+      mpdSetPrintDebug(0);
+
+      // apv reset
+      printf(" - APV Reset\n");
+      fflush(stdout);
+      if (mpdI2C_ApvReset(id) != OK)
+	{
+	  printf(" * * FAILED\n");
+	  error_status = ERROR;
+	}
+
+      usleep(10);
+      I2C_SendStop(id);
+      // board configuration (APV-ADC clocks phase)
+      // (do this while APVs are resetting)
+      printf(" - DELAY setting\n");
+      fflush(stdout);
+      if (mpdDELAY25_Set
+	  (id, mpdGetAdcClockPhase(id, 0), mpdGetAdcClockPhase(id, 1)) != OK)
+	{
+	  printf(" * * FAILED\n");
+	  error_status = ERROR;
+	}
+
+      // apv configuration
+      mpdSetPrintDebug(0);
+      printf(" - Configure Individual APVs\n");
+      printf(" - - ");
+      fflush(stdout);
+      int itry, badTry = 0, saveError = error_status;
+      error_status = OK;
+      for (itry = 0; itry < 3; itry++)
+	{
+	  if(badTry)
+	    {
+	      printf(" ******** RETRY ********\n");
+	      printf(" - - ");
+	      fflush(stdout);
+	      error_status = OK;
+	    }
+	  badTry = 0;
+	  for (iapv = 0; iapv < mpdGetNumberAPV(id); iapv++)
+	    {
+	      printf("%2d ", iapv);
+	      fflush(stdout);
+
+	      if (mpdAPV_Config(id, iapv) != OK)
+		{
+		  printf(" * * FAILED for APV %2d\n", iapv);
+		  if(iapv < (mpdGetNumberAPV(id) - 1))
+		    printf(" - - ");
+		  fflush(stdout);
+		  error_status = ERROR;
+		  badTry = 1;
+		}
+	    }
+	  printf("\n");
+	  fflush(stdout);
+	  if(badTry)
+	    {
+	      printf(" ***** APV RESET *****\n");
+	      fflush(stdout);
+	      mpdI2C_ApvReset(id);
+	    }
+	  else
+	    {
+	      if(itry > 0)
+		{
+		  printf(" ****** SUCCESS!!!! ******\n");
+		  fflush(stdout);
+		}
+	      break;
+	    }
+
+	}
+
+      error_status |= saveError;
+      mpdSetPrintDebug(0);
+
+      // configure adc on MPD
+      printf(" - Configure ADC\n");
+      fflush(stdout);
+      if (mpdADS5281_Config(id) != OK)
+	{
+	  printf(" * * FAILED\n");
+	  error_status = ERROR;
+	}
+
+      // configure fir
+      // not implemented yet
+
+      // RESET101 on the APV
+      printf(" - Do APV RESET101\n");
+      fflush(stdout);
+      if (mpdAPV_Reset101(id) != OK)
+	{
+	  printf(" * * FAILED\n");
+	  error_status = ERROR;
+	}
+
+      // <- MPD+APV initialization ends here
+      printf("\n");
+      fflush(stdout);
+    }				// end loop on mpds
+    //END of MPD configure
+
+
+    mpdGStatus(1);
+
+    // summary report
+    printf("\n");
+    printf("Configured APVs (ADC 15 ... 0)\n");
+    int ibit;
+    for (impd = 0; impd < fnMPD; impd++)
+    {
+      id = mpdSlot(impd);
+
+      if (mpdGetApvEnableMask(id) != 0)
+      {
+        printf("  MPD %2d : ", id);
+	iapv = 0;
+	for (ibit = 15; ibit >= 0; ibit--)
+	{
+	  if (((ibit + 1) % 4) == 0) printf(" ");
+	  if (mpdGetApvEnableMask(id) & (1 << ibit))
+	  {
+	    printf("1");
+	    iapv++;
+	  }
+	  else
+	  {
+		  printf(".");
+	  }
+	}
+	printf(" (#APV %d)\n", iapv);
+      }
+    }
+    printf("\n");
+
+    if (error_status != OK)
+    {
+      printf("\nERROR: MPD initialization has errors\n");
+      printf("ERROR: MPD initialization has errors\n");
+      printf("ERROR: MPD initialization has errors\n");
+      printf("ERROR: MPD initialization has errors\n");
+      printf("ERROR: MPD initialization has errors\n\n");
+      //fnMPD = 0; sergey: temporary !!!
+    }
+
+  }
+  else
+  {				// test all possible vme slot ?
+    printf("ERR: no MPD discovered, cannot continue\n");
+    //return;
+    fnMPD = 0;
+  }
+
+
+#endif
+
+
+
+
+
   sprintf(rcname,"RC%02d",rol->pid);
   printf("rcname >%4.4s<\n",rcname);
 
@@ -1128,11 +1903,11 @@ static void
 __prestart()
 {
   int ii, i1, i2, i3;
-  int ret;
+  int ret, ifa, id, slot, type;
+  int iFlag=0;
 #ifdef USE_FADC250
-  int id, isl, ichan, slot;
+  int isl, ichan;
   unsigned short iflag;
-  int iFlag = 0;
   int ich;
   unsigned short aa = 0;
   unsigned short bb;
@@ -1141,7 +1916,11 @@ __prestart()
 #ifdef USE_HD
   uint8_t hd_clock, hd_clock_ret;
 #endif
-
+  //#ifdef USE_SSP
+  int latency, fiber;
+  int latency_timeout = 2;
+  //#endif
+    
   /* Clear some global variables etc for a clean start */
   *(rol->nevents) = 0;
   event_number = 0;
@@ -1152,6 +1931,8 @@ __prestart()
 
   tiEnableVXSSignals();
 
+  sleep(1); //sometimes 'next_block_level' is wrong, not sure why, maybe sleep will help ???
+  
 #ifdef POLLING_MODE
   CTRIGRSS(TIPRIMARY, TIR_SOURCE, usrtrig, usrtrig_done);
 #else
@@ -1160,7 +1941,6 @@ __prestart()
 
   printf(">>>>>>>>>> next_block_level = %d, block_level = %d, use %d\n",next_block_level,block_level,next_block_level);
   block_level = next_block_level;
-
 
   /**************************************************************************/
   /* setting TI busy conditions, based on boards found in Download          */
@@ -1176,9 +1956,9 @@ vmeBusUnlock();
 #endif
 
 
-#ifdef USE_FADC250
+#if defined(USE_FADC250) ||  defined(USE_FAV3)
   /* if FADCs are present, set busy from SD board */
-  if(nfadc>0)
+  if(nfadc>0 || nfaV3>0)
   {
     printf("Set BUSY from SWB for FADCs\n");
 vmeBusLock();
@@ -1200,7 +1980,7 @@ vmeBusUnlock();
 
 vmeBusLock();
     tiSetBusySource(TI_BUSY_SWB,0);
-	sdSetActiveVmeSlots(vscmSlotMask);
+    sdSetActiveVmeSlots(vscmSlotMask);
 
     /*sdSetTrigoutLogic(0, 2);*/
 
@@ -1395,6 +2175,18 @@ vmeBusUnlock();
   /*****************************************************************/
   /*****************************************************************/
 
+
+
+
+
+
+
+
+
+
+
+
+
 #ifdef USE_FADC250
   printf("FADC250 Prestart() starts =========================\n");
 
@@ -1452,6 +2244,117 @@ vmeBusUnlock();
   printf("FADC250 Prestart() ends =========================\n\n");
   sleep(2);
 #endif
+
+
+
+
+
+
+
+#ifdef USE_FAV3
+
+  if(nfaV3>0)
+  {
+    int fadc_mode = 0;
+    uint32_t pl=0, ptw=0, nsb=0, nsa=0, np=0, nped=0, maxped=0, nsat=0;
+
+    /* Program/Init VME Modules Here */
+    /* Set Clock Source to VXS */
+
+
+    
+    //sergey: done in faV3Init() !!!!!
+    //faV3GSetClockSource(2); // ped=2200
+
+
+    
+    faV3GEnableSyncSrc();
+    //faV3GSetSparsificationMode(0); segfault
+
+    for(ifa=0; ifa < nfaV3; ifa++)
+    {
+      faV3SoftReset(faV3Slot(ifa),0); // ped=181
+      faV3ResetToken(faV3Slot(ifa));
+      faV3ResetTriggerCount(faV3Slot(ifa));
+    }
+
+    /* Set number of events per block (broadcasted to all connected TI Slaves)*/
+    //tiSetBlockLevel(block_level); ??????????????????????
+
+    /* Sync Reset to synchronize TI and fadc250 timestamps and their internal buffers */
+    if(!sd_found)
+    {
+      printf("CALLING faV3SDC_Sync()\n");
+      faV3SDC_Sync();
+    }
+
+    //sergey: get 'ptw' from the first board, assuming they all have the same ...
+    for(ifa=0; ifa < 1/*nfaV3*/; ifa++)
+    {
+      //faV3HallDGetProcMode(faV3Slot(ifa), &fadc_mode, &pl, &ptw, &nsb, &nsa, &np, &nped, &maxped, &nsat);
+      faV3GetProcMode(faV3Slot(ifa), &fadc_mode, &pl, &ptw, &nsb, &nsa, &np);
+    }
+    printf("\n===> fadc_mode=%d\n\n",fadc_mode);
+
+
+    /* Set Max words from fadc (proc mode == 1 produces the most)
+       nfaV3 * ( Block Header + Trailer + 2  # 2 possible filler words
+                 blockLevel * ( Event Header + Header2 + Timestamp1 + Timestamp2 +
+	                        nchan * (Channel Header + (WindowSize / 2) )
+               ) +
+       scaler readout # 16 channels + header/trailer
+     */
+    MAXFADCWORDS3 = nfaV3 * (4 + block_level * (4 + 16 * (1 + (ptw / 2))) + 18);
+    printf("\nMAXFADCWORDS3 = %d words (ptw=%d)\n\n",MAXFADCWORDS3,ptw);
+    MAXFADCWORDS3 = MAXFADCWORDS3 + 10000; //just in case
+    printf("\nMAXFADCWORDS3(final) = %d words (ptw=%d)\n\n",MAXFADCWORDS3,ptw);
+
+    /* Check these numbers, compared to our buffer size.. */
+    if( (MAXFADCWORDS3+MAXTIWORDS)*4 > MAX_EVENT_LENGTH )
+    {
+      printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+      printf(" WARNING(V3).  Event buffer size (%d bytes) is smaller than the expected data size (%d bytes)\n",
+        MAX_EVENT_LENGTH,(MAXFADCWORDS3+MAXTIWORDS)*4);
+      printf("     Increase the size of MAX_EVENT_LENGTH and recompile!\n");
+      printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    }
+
+    
+
+//#ifdef USE_ED
+    /* sergey: set faV3 internal busy parameters */
+    printf("\n\n== Setting faV3 internal busy parameters\n\n");
+    for(id=0; id<nfaV3; id++) 
+    {
+      slot = faV3Slot(id);
+
+#if 1 /*????????????????????????????????????????*/
+vmeBusLock();
+      /*the maximum number of unacknowledged triggers before
+		module stops accepting incoming triggers*/
+      faV3SetTriggerStopCondition(slot, 9); /* halld - 9 */ /*2000/nsamples-3 ???*/
+      /*the maximum number of unacknowledged triggers before module asserts BUSY*/
+      faV3SetTriggerBusyCondition(slot, 3); /* halld - 3 */
+      //faV3Status(slot,0);
+vmeBusUnlock();
+#endif
+
+    }
+    printf("\n\n== Done setting faV3 internal busy parameters\n\n");
+//#endif
+
+    
+    faV3GSetBlockLevel(block_level);
+
+    
+    faV3GStatus(0);
+  }
+
+#endif
+
+
+
+
 
 
 
@@ -1553,37 +2456,151 @@ vmeBusUnlock();
 
 
 
+  
 
-  /* master and standalone crates, NOT slave */
+/*******************************************/
+/* master and standalone crates, NOT slave */
+/*******************************************/
+
 #ifndef TI_SLAVE
 
+
+#ifdef USE_VFTDC
 vmeBusLock();
-printf("CLOCK251?\n");
-vfTDCGetClockSource(19);
-vfTDCGetClockSource(20);
-printf("CLOCK251!\n");
+  printf("CLOCK251?\n");
+  vfTDCGetClockSource(19);
+  vfTDCGetClockSource(20);
+  printf("CLOCK251!\n");
+vmeBusUnlock();
+#endif
+
+  sleep(1);
+  
+#ifdef USE_SSP
+  for(ii=0; ii<nssp; ii++)
+  {
+    slot = sspSlot(ii);
+    //printf("\nSLOT=%d\n\n",slot);
+vmeBusLock();
+    type = sspGetFirmwareType_Shadow(slot);
+vmeBusUnlock();
+    //printf("\nTYPE=%d\n\n",type);
+    if(type == SSP_CFG_SSPTYPE_PRAD)
+    {
+vmeBusLock();
+      ret = sspPRAD_GetFiberLatency(slot, &latency, &fiber);
+vmeBusUnlock();
+      printf("\nCHECK1: ret=%d, latency=%d, fiber=0x%2x\n\n",ret,latency,fiber);
+    }
+  }
+#endif
+  
+  sleep(1);
+    
+vmeBusLock();
+  tiSyncReset(1);
 vmeBusUnlock();
 
   sleep(1);
+
+/*********************************************************/
+/*PRAD: check ssp latency; if wrong, call syncreset again*/
+#ifdef USE_SSP
+
+  printf("\nSSP =======================\n\n");
+
+  for(ii=0; ii<nssp; ii++)
+  {
+    char msgtxt[256];
+    slot = sspSlot(ii);
+    //printf("\nSLOT=%d\n\n",slot);
+vmeBusLock();
+    type = sspGetFirmwareType_Shadow(slot);
+vmeBusUnlock();
+    //printf("\nTYPE=%d\n\n",type);
+    if(type == SSP_CFG_SSPTYPE_PRAD)
+    {
+vmeBusLock();
+      ret = sspPRAD_GetFiberLatency(slot, &latency, &fiber);
+vmeBusUnlock();
+      printf("\nRET=%d, LATENCY=%d, FIBER=0x%02x\n\n",ret,latency,fiber);
+
+      /*trying to recover*/
+      while( (ret<0) && (latency_timeout>0) )
+      {
+        printf("ERROR in sspPRAD_GetFiberLatency(slot=%d): latency=%d, fiber=0x%02x, timeout=%d\n",slot,latency,fiber,latency_timeout);
+	sleep(1);
+vmeBusLock();
+        tiSyncReset(0);
+vmeBusUnlock();
+	sleep(1);
+vmeBusLock();
+	ret = sspPRAD_GetFiberLatency(slot, &latency, &fiber);
+vmeBusUnlock();
+	latency_timeout --;
+      }
+
+      if(ret<0)
+      {
+        printf("ERROR in sspPRAD_GetFiberLatency(slot=%d): latency=%d, fiber=0x%02x, timeout=%d\n",slot,latency,fiber,latency_timeout);
+
+	sprintf(msgtxt,"TRIGGER LATENCY, adchycals:");
+	if((fiber& 0x1)==0) strcat(msgtxt, " 1");
+	if((fiber& 0x2)==0) strcat(msgtxt, " 2");
+	if((fiber& 0x4)==0) strcat(msgtxt, " 3");
+	if((fiber& 0x8)==0) strcat(msgtxt, " 4");
+	if((fiber&0x10)==0) strcat(msgtxt, " 5");
+	if((fiber&0x20)==0) strcat(msgtxt, " 6");
+	if((fiber&0x40)==0) strcat(msgtxt, " 7");
+	strcat(msgtxt, "\n-> RESTART FROM CONFIGURE !!!\n");
+	printf("%s",msgtxt);
+	
+        UDP_user_request(MSGERR, "rol1", msgtxt);
+      }
+      else
+      {
+        printf("INFO: sspPRAD_GetFiberLatency(slot=%d) return OK\n",slot);
+        UDP_user_request(0, "rol1", "TRIGGER LATENCY IS OK");
+      }
+    }
+  }
+
+#endif
+/*********************************************************/
+/*********************************************************/
+
+
+
+
+
+
+
+ 
+  sleep(1);
+  
+#ifdef USE_VFTDC
+vmeBusLock();
+  printf("CLOCK252?\n");
+  vfTDCGetClockSource(19);
+  vfTDCGetClockSource(20);
+  printf("CLOCK252!\n");
+vmeBusUnlock();
+#endif
+
+
+/*second tisyncreset ???*/
+#if 0
 vmeBusLock();
   tiSyncReset(1);
 vmeBusUnlock();
   sleep(1);
-
-vmeBusLock();
-printf("CLOCK252?\n");
-vfTDCGetClockSource(19);
-vfTDCGetClockSource(20);
-printf("CLOCK252!\n");
-vmeBusUnlock();
+#endif
 
 
-vmeBusLock();
-  tiSyncReset(1);
-vmeBusUnlock();
-  sleep(1);
 
 
+
+ 
 
   /* USER RESET - use it because 'SYNC RESET' produces too short pulse, still need 'SYNC RESET' above because 'USER RESET'
   does not do everything 'SYNC RESET' does (in paticular does not reset event number) */
@@ -1593,12 +2610,13 @@ vmeBusLock();
 vmeBusUnlock();
 
 
-
-
 vmeBusLock();
   ret = tiGetSyncResetRequest();
 vmeBusUnlock();
-  if(ret)
+
+
+
+ if(ret)
   {
     printf("ERROR: syncrequest still ON after tiSyncReset(); trying again\n");
     sleep(1);
@@ -1607,7 +2625,7 @@ vmeBusLock();
 vmeBusUnlock();
     sleep(1);
   }
-
+ 
 
 vmeBusLock();
   ret = tiGetSyncResetRequest();
@@ -1621,12 +2639,24 @@ vmeBusUnlock();
     printf("INFO: syncrequest is OFF now\n");
   }
 
+
   printf("holdoff rule 1 set to %d\n",tiGetTriggerHoldoff(1));
   printf("holdoff rule 2 set to %d\n",tiGetTriggerHoldoff(2));
 
-#endif
 
 
+  
+#endif /*#ifndef TI_SLAVE*/
+
+/*******************************************/
+/* master and standalone crates, NOT slave */
+/*******************************************/
+
+
+
+
+
+  
 
 #if 0
   if(!sd_found)
@@ -1668,23 +2698,28 @@ vmeBusLock();
 vmeBusUnlock();
   }
 #endif
+
 #ifdef USE_FADC250
+
+  if(nfadc>0)
+  {
+
     /* Calculate the maximum number of words per block transfer (assuming Pulse mode)
      *   MAX = NFADC * block_level * (EvHeader + TrigTime*2 + Pulse*2*chan) 
      *         + 2*32 (words for byte alignment) 
      */
-    MAXFADCWORDS = NFADC * block_level * (1+2+100/*FADC_WINDOW_WIDTH*/*16) + 2*32;
+    MAXFADCWORDS2 = NFADC * block_level * (1+2+100/*FADC_WINDOW_WIDTH*/*16) + 2*32;
   
     printf("**************************************************\n");
-    printf("* Calculated MAXFADCWORDS per block = %d\n",MAXFADCWORDS);
+    printf("* Calculated MAXFADCWORDS2 per block = %d\n",MAXFADCWORDS2);
     printf("**************************************************\n");
 
     /* Check these numbers, compared to our buffer size.. */
-    if( (MAXFADCWORDS+MAXTIWORDS)*4 > MAX_EVENT_LENGTH )
+    if( (MAXFADCWORDS2+MAXTIWORDS)*4 > MAX_EVENT_LENGTH )
     {
       printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
       printf(" WARNING.  Event buffer size (%d bytes) is smaller than the expected data size (%d bytes)\n",
-        MAX_EVENT_LENGTH,(MAXFADCWORDS+MAXTIWORDS)*4);
+        MAX_EVENT_LENGTH,(MAXFADCWORDS2+MAXTIWORDS)*4);
       printf("     Increase the size of MAX_EVENT_LENGTH and recompile!\n");
       printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     }
@@ -1701,26 +2736,31 @@ vmeBusUnlock();
 
 //#ifdef USE_ED
     /* sergey: set fadc250 internal busy parameters */
-	printf("\n\n== Setting fadc250 internal busy parameters\n\n");
+    printf("\n\n== Setting fadc250 internal busy parameters\n\n");
     for(id=0; id<nfadc; id++) 
     {
       slot = faSlot(id);
-vmeBusLock();
 
+
+
+
+      /*???????????????????????????????????????????????*/
+
+vmeBusLock();
       /*the maximum number of unacknowledged triggers before
 		module stops accepting incoming triggers*/
       faSetTriggerStopCondition(slot, 9); /* halld - 9 */ /*2000/nsamples-3 ???*/
-
 	  /*the maximum number of unacknowledged triggers before module asserts BUSY*/
       faSetTriggerBusyCondition(slot, 3); /* halld - 3 */
-
       faStatus(slot,0);
 vmeBusUnlock();
+
+
     }
 	printf("\n\n== Done setting fadc250 internal busy parameters\n\n");
 //#endif
 
-
+  }
 
 #endif
 
@@ -1857,10 +2897,18 @@ vmeBusUnlock();
 #endif
 
 
+#ifdef USE_MPD
+  //
+#endif
 
-vmeBusLock();
-  tiStatus(1);
-vmeBusUnlock();
+
+  //vmeBusLock();
+  //  tiStatus(1);
+  //vmeBusUnlock();
+
+
+//printf("\nMAXFADCWORDS2=%d words (%d bytes)\n\n",MAXFADCWORDS2,MAXFADCWORDS2<<2);
+//printf("\nMAXFADCWORDS3=%d words (%d bytes)\n\n",MAXFADCWORDS3,MAXFADCWORDS3<<2);
 
   printf("INFO: Prestart1 Executed\n");fflush(stdout);
 
@@ -1936,6 +2984,17 @@ vmeBusUnlock();
 #endif
 
 
+#ifdef USE_FAV3
+  if(nfaV3>0)
+  {
+    /* FADC Disable */
+    faV3GDisable(0);
+    /* FADC Event status - Is all data read out */
+    faV3GStatus(0);
+  }
+#endif
+
+
 #ifdef USE_VFTDC
   for(id=0; id<nvftdc; id++)
   {
@@ -1955,6 +3014,14 @@ vmeBusUnlock();
     hdStatus(0);
   }
 
+#endif
+
+
+#ifdef USE_MPD
+  for (id = 0; id < fnMPD; id++)
+  {
+    mpdDAQ_Disable(mpdSlot(id));
+  }
 #endif
 
 
@@ -1994,9 +3061,11 @@ vmeBusUnlock();
 static void
 __go()
 {
-  int ii, jj, id, slot;
+  int ii, jj, id, slot, ifa, type;
 
   logMsg("INFO: Entering Go 1\n",1,2,3,4,5,6);
+
+printf("block_level 10=%d\n",block_level);
 
 #ifndef TI_SLAVE
   /* set sync event interval (in blocks) */
@@ -2032,13 +3101,27 @@ vmeBusUnlock();
     for(id=0; id<nfadc; id++) portMask |= (1<<id);
     printf("Configuring SDC card with portMask=0x%08x for %d FADC boards\n",portMask,nfadc);
 
-	faSDC_Config(1, portMask);
+    faSDC_Config(1, portMask);
   }
 
   /*  Send Sync Reset to FADC */
   /*if(!sd_found) faSDC_Sync();*/
 
 #endif
+
+
+#ifdef USE_FAV3
+
+  if(nfaV3>0)
+  {
+    //faV3GSetBlockLevel(block_level);
+
+    /*  Enable FADC */
+    faV3GEnable(0);
+  }
+
+#endif
+
 
 #ifdef USE_V1190
   for(jj=0; jj<ntdcs; jj++)
@@ -2052,7 +3135,18 @@ vmeBusUnlock();
 
 #endif
 
-
+#ifdef USE_SSP
+  for(ii=0; ii<nssp; ii++)
+  {
+    slot = sspSlot(ii);
+    type = sspGetFirmwareType_Shadow(slot);
+    if(type == SSP_CFG_SSPTYPE_PRAD)
+    {
+      sspEbReset(slot, 1);
+      sspEbReset(slot, 0);
+    }
+  }
+#endif
 
 #ifdef USE_VSCM
   for(ii=0; ii<nvscm1; ii++)
@@ -2175,13 +3269,89 @@ vmeBusUnlock();
 #endif
 
 
+printf("block_level 11=%d\n",block_level);
+
+
+
+
+#ifdef USE_MPD
+
+  if(fnMPD>0)
+  {
+    /*Enable MPD */
+    int impd;
+    mpdOutputBufferBaseAddr = 0x09000000;
+    for (impd = 0; impd < fnMPD; impd++)
+    {				// only active mpd set
+      id = mpdSlot(impd);
+
+      // mpd latest configuration before trigger is enabled
+      mpdSetAcqMode(id, "process");
+
+      // load pedestal and thr default values
+      mpdPEDTHR_Write(id);
+
+      // enable acq
+      mpdDAQ_Enable(id);
+
+      if (mpdAPV_Reset101(id) != OK)
+      {
+        printf("MPD Slot %2d: Reset101 FAILED\n", id);
+      }
+    }
+
+    /* Check MPDs for data */
+    int sd_init, sd_overrun, sd_rdaddr, sd_wraddr, sd_nwords;
+    int obuf_nblock = 0, empty = 0, full = 0, nwords = 0;
+    for (impd = 0; impd < fnMPD; impd++)
+    {				// only active mpd set
+      id = mpdSlot(impd);
+      mpdSDRAM_GetParam(id, &sd_init, &sd_overrun, &sd_rdaddr, &sd_wraddr, &sd_nwords);
+
+      if ((sd_nwords != 0) || (sd_overrun == 1) || (sd_init == 0))
+      {
+	printf("ERROR: Slot %2d SDRAM status: \n"
+	       "init=%d, overrun=%d, rdaddr=0x%x, wraddr=0x%x, nwords=%d\n",
+	       id, sd_init, sd_overrun, sd_rdaddr, sd_wraddr, sd_nwords);
+      }
+
+      obuf_nblock = mpdOBUF_GetBlockCount(id);
+      mpdOBUF_GetFlags(id, &empty, &full, &nwords);
+
+      if ((obuf_nblock != 0) || (empty == 0) || (full == 1) || (nwords != 0))
+      {
+	printf("ERROR: Slot %2d OBUF status: \n"
+	       "nblock = %d  empty=%d  full=%d  nwords=%d\n",
+               id, obuf_nblock, empty, full, nwords);
+      }
+    }
+
+    mpdGStatus(1);
+
+    // assume sdram and fastreadout are the same for all MPDs
+    UseSdram = mpdGetUseSdram(mpdSlot(0)); //should be 1 ???
+    FastReadout = mpdGetFastReadout(mpdSlot(0)); // A32 BLT etc
+
+    printf("\n\n ========= "
+	   "UseSDRAM= %d , FastReadout= %d   Readout Event = %d\n",
+           UseSdram, FastReadout, tiGetIntCount());
+  }
+
+#endif
+
+
+printf("block_level 12=%d\n",block_level);
+
+
   /* always clear exceptions */
-  jlabgefClearException(1);
+  vmeClearException(1);
 
   nusertrig = 0;
   ndone = 0;
 
   CDOENABLE(TIPRIMARY,TIR_SOURCE,0); /* bryan has (,1,1) ... */
+  
+printf("block_level 13=%d\n",block_level);
 
   logMsg("INFO: Go 1 Executed\n",1,2,3,4,5,6);
 }
@@ -2192,20 +3362,26 @@ void
 usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
 {
   int *jw, ind, ind2, i, ii, jj, kk, jjj, blen, len, lentot, rlen, itdcbuf, nbytes, nblocks;
-  unsigned int *tdcbuf_save, *tdc, utmp;
+  unsigned int *tdcbuf_save;
+  unsigned int *tdc, utmp;
   unsigned int *dabufp1, *dabufp2;
   int njjloops, slot, type;
   int dready = 0, tdctimeout = 0, sistimeout = 0, siswasread = 0;
-  int nwords;
+  int dCnt, stat, nwords;
+  int status, itime, gbready;
 #ifndef VXWORKS
   TIMERL_VAR;
 #endif
 #ifdef USE_FADC250
-  unsigned int datascan, mask;
+  unsigned int mask;
   unsigned short *dabufp16, *dabufp16_save;
   int id;
-  int dCnt, idata;
-  int status, stat, itime, gbready;
+  int idata;
+#endif
+#ifdef USE_FAV3
+  int ifa;
+  unsigned int datascan, scanmask;
+  int roCount = 0, blockError = 0;
 #endif
 #ifdef USE_V1190
   int nev, rlenbuf[22];
@@ -2216,11 +3392,18 @@ usrtrig(unsigned int EVTYPE, unsigned int EVSOURCE)
   unsigned long tdcslot_h, tdcslot_t, remember_h;
 #endif
 #endif
-#ifdef DMA_TO_BIGBUF
-  unsigned int pMemBase, uMemBase, mSize;
-#endif
   char *chptr, *chptr0;
 
+
+#if 0
+#ifndef VXWORKS
+TIMERL_START;
+#endif
+#endif
+ 
+//printf("block_level1=%d\n",block_level);
+
+  
 #ifdef DEBUG
   printf("\n\n\nEVTYPE=%d syncFlag=%d\n",EVTYPE,syncFlag);
 #endif
@@ -2269,6 +3452,7 @@ vmeBusUnlock();
 
 
 
+  //printf("block_level2=%d\n",block_level);
 
 
   CEOPEN(EVTYPE, BT_BANKS); /* reformatted on CODA_format.c !!! */
@@ -2294,12 +3478,9 @@ vmeBusUnlock();
   }
   else           /* physics and physics_sync events */
   {
-
+    
     /* for EVIO format, will dump raw data */
     tdcbuf_save = tdcbuf;
-
-
-
 
     /*************/
     /* TI stuff */
@@ -2307,6 +3488,12 @@ vmeBusUnlock();
     /* Set high, the first output port 
     tiSetOutputPort(1,0,0,0);
     */
+
+    //printf("block_level3=%d\n",block_level);
+
+tiEnableBusError();
+
+
 
 
 #if 0
@@ -2328,31 +3515,36 @@ vmeBusUnlock();
 #endif
 
 
+    //printf("block_level4=%d\n",block_level);
+
     /*
 adcecal3_ts - works perfect
      */
 
-
+    //sleep(1);
 
 #if 1
     /* Grab the data from the TI */
     tdcbuf = tdcbuf_save;
     len = 0;
+    //printf("TI: tdcbuf=0x%lx\n",tdcbuf);
 vmeBusLock();
     len = tiReadBlock(tdcbuf,2048,1);
 vmeBusUnlock();
-    //printf("TI nwords(1) = %d\n\n",len);fflush(stdout);
-    //for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
+    //printf("TI: nwords(1) = %d\n\n",len);fflush(stdout);
     lentot=len;
+    //if(len>10) len=10;
+    //for(jj=0; jj<len; jj++) printf("TI: ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
 
 vmeBusLock();
     nblocks = tiGetNumberOfBlocksInBuffer();
 vmeBusUnlock();
-    //if(nblocks!=0) printf("TI nblocks(2) = %d\n",nblocks);fflush(stdout);
-    if(nblocks>7/*buffer_level*/) printf("TI nblocks(2) = %d\n",nblocks);fflush(stdout);
+//if(nblocks!=0) printf("TI: nblocks(2) = %d\n",nblocks);fflush(stdout);
+ if(nblocks>=8/*buffer_level*/) printf("TI: nblocks(2) = %d\n",nblocks);fflush(stdout);
 #endif
 
 
+ //printf("block_level5=%d\n",block_level);
 
 
 #if 0
@@ -2380,7 +3572,6 @@ vmeBusUnlock();
     sleep(1);
     printf(".. end sleeping 2\n");fflush(stdout);
 
-
 vmeBusLock();
     nblocks = tiGetNumberOfBlocksInBuffer();
 vmeBusUnlock();
@@ -2395,26 +3586,33 @@ vmeBusUnlock();
 
 
 
+/*for TI_SLAVE the number of TI words per event should always be 4 !*/
+/* for master extra word can be inserted, it contains trigger bits (if tiSetFPInputReadout(1) is called) */
+#ifdef TI_SLAVE
 
+    //printf("block_level6=%d\n",block_level);
+    
+    if(lentot!=block_level*4+4)
+    {
+      printf("ERROR: TI nwords = %d (expected %d)\n",lentot,block_level*4+4);fflush(stdout);
+      for(jj=0; jj<lentot; jj++) printf("ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
+    }
+#endif
 
-    if(lentot!=block_level*4+4) printf("ERROR: TI nwords = %d\n",lentot);fflush(stdout);
     if(lentot<=0)
     {
       printf("ERROR in tiReadBlock : No data or error, len = %d\n",lentot);
+      //jvmeVIVOPrintAXIErrorCaptureRegs();
       sleep(1);
     }
     else
     {
 	  
 #ifdef DEBUG
-      //if((len != 163) && (len != 164))
-      {
-        //printf("ERROR ROL1 TI: len=%d\n",lentot);
-        for(jj=0; jj<lentot; jj++) printf("ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
-      }
+      for(jj=0; jj<lentot; jj++) printf("=ti[%2d] 0x%08x\n",jj,LSWAP(tdcbuf_save[jj]));
 #endif
 
-      BANKOPEN(0xe10A,1,rol->pid);
+      BANKOPEN(0xe10a,1,rol->pid);
       for(jj=0; jj<lentot; jj++) *rol->dabufp++ = tdcbuf_save[jj];
       BANKCLOSE;
 	  
@@ -2423,7 +3621,8 @@ vmeBusUnlock();
     /* Turn off all output ports 
     tiSetOutputPort(0,0,0,0);
     */
-	/* TI stuff */
+    
+    /* TI stuff */
     /*************/
 
 
@@ -2434,10 +3633,27 @@ vmeBusUnlock();
 #endif
 
 
+   
 
-#ifndef VXWORKS
-TIMERL_START;
-#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2447,7 +3663,6 @@ TIMERL_START;
     tdcbuf = tdcbuf_save;
     if(ntdcs>0)
     {
-
 
       /*check if we have 'block_level' events in every board*/
       for(jj=0; jj<ntdcs; jj++)
@@ -2459,12 +3674,255 @@ vmeBusUnlock();
 	{
           printf("WARN: v1190/v1290[%2d] has %d events - wait\n",jj,nev);fflush(stdout);
 	}
+	//else
+	//{
+	//  printf("\n\nINFO: v1190[%d]: nev = %d\n",jj,nev);
+	//}
       }
 
 
+      /*
+usrVme2MemDmaStart: calling vmeDmaSendPhys: physAdrs = 0x5e100010, vmeAdrs = 0x8000000, nbytes = 8192 bytes
+
+jvmeVIVODmaSendPhys: INFO: physAdrs=0x5e100010, vmeAdrs=0x8000000, size=8192
+
+jvmeVIVODmaSendPhys: INFO: data count: dma_vivo->tl=8192
+
+ii=5
+      */
+
+
+      
 
 vmeBusLock();
-      tdc1190ReadStart(tdcbuf, rlenbuf);
+
+
+
+
+
+
+
+
+ 
+    tdc1190ReadStart(tdcbuf, rlenbuf);
+
+    //printf("\n\n\nTTTTTTTTTTTTTTTTT\n");
+    //for(ii=0; ii<rlenbuf[0]; ii++) printf("TDC[%2d] = 0x%08x (0x%08x)\n",ii,tdcbuf[ii],LSWAP(tdcbuf[ii]));
+    //printf("TTTTTTTTTTTTTTTTT\n\n\n");
+
+      /*
+
+
+=============== OLD CONTROLLER 2eSST (options 2,5,1):
+
+
+INFO: v1190[0]: nev = 1
+tdc1190ReadBoardDmaStart: INFO: berr_fifo=0 -> trying to DMA 512 words
+tdc1190ReadBoardDmaStart[0]: c1190vme=0x11900000, tdata=0x98bad010, nbytes=2048
+
+V1190 DMA: c1190vme[0]=0x11900000, tdata=0x98bad010, nbytes=2048
+
+[ 0] ERROR: tdc1190ReadEvent[Dma] returns 0
+
+
+
+TTTTTTTTTTTTTTTTT
+TDC[ 0] = 0xf20c0040 (0x40000cf2)
+TDC[ 1] = 0x0e7a0608 (0x08067a0e)
+TDC[ 2] = 0x02700618 (0x18067002)
+TDC[ 3] = 0x0e7a0609 (0x09067a0e)
+TDC[ 4] = 0x02700619 (0x19067002)
+TDC[ 5] = 0xd2000080 (0x800000d2)
+TDC[ 6] = 0x000000c0 (0xc0000000)
+TDC[ 7] = 0x000000c0 (0xc0000000)
+TTTTTTTTTTTTTTTTT
+
+
+
+
+=============== 2eSST (options 2,5,1):
+
+INFO: v1190[0]: nev = 1
+tdc1190ReadBoardDmaStart: INFO: berr_fifo=0 -> trying to DMA 512 words
+tdc1190ReadBoardDmaStart[0]: c1190vme=0x09900000, tdata=0x140ea010, nbytes=2048
+
+V1190 DMA: c1190vme[0]=0x9900000, tdata=0x7f74140ea010, nbytes=2048
+
+
+usrVme2MemDmaStart: calling vmeDmaSendPhys: physAdrs = 0x5e000010, vmeAdrs = 0x9900000, nbytes = 2048 bytes
+
+jvmeVIVODmaSendPhys: INFO: physAdrs=0x5e000010, vmeAdrs=0x9900000, size=2048
+
+jvmeVIVODmaSendPhys: INFO: data count: dma_vivo->tl=2048
+
+ii=3
+jvmeVIVODmaDone: ERROR: DMA terminated on master byte count,    however (dcnt=2048) != 0 (the number of loops ii=3, timeout=10000000) (vmeAdrs=0x09900000, size=2048)
+
+
+=============== 2eSST (options 2,5,0):
+
+
+
+segfault
+
+=============== MBLT (options 2,3,0):
+
+
+INFO: v1190[0]: nev = 1
+tdc1190ReadBoardDmaStart: INFO: berr_fifo=0 -> trying to DMA 512 words
+tdc1190ReadBoardDmaStart[0]: c1190vme=0x09900000, tdata=0x6ae7a010, nbytes=2048
+
+V1190 DMA: c1190vme[0]=0x9900000, tdata=0x7faf6ae7a010, nbytes=2048
+
+
+usrVme2MemDmaStart: calling vmeDmaSendPhys: physAdrs = 0x5e000010, vmeAdrs = 0x9900000, nbytes = 2048 bytes
+
+jvmeVIVODmaSendPhys: INFO: physAdrs=0x5e000010, vmeAdrs=0x9900000, size=2048
+
+jvmeVIVODmaSendPhys: INFO: data count: dma_vivo->tl=2048
+
+ii=3
+
+usrVme2MemDmaStart: calling vmeDmaSendPhys: physAdrs = 0x5e000028, vmeAdrs = 0x9900000, nbytes = 2024 bytes
+
+jvmeVIVODmaSendPhys: INFO: physAdrs=0x5e000028, vmeAdrs=0x9900000, size=2024
+
+jvmeVIVODmaSendPhys: INFO: data count: dma_vivo->tl=2024
+
+ii=3
+[ 0] ERROR: tdc1190ReadEvent[Dma] returns 0
+
+TTTTTTTTTTTTTTTTT
+TDC[ 0] = 0x12030040 (0x40000312)
+TDC[ 1] = 0xcc8a0108 (0x08018acc)
+TDC[ 2] = 0x02800118 (0x18018002)
+TDC[ 3] = 0xcc8a0109 (0x09018acc)
+TDC[ 4] = 0x02800119 (0x19018002)
+TDC[ 5] = 0xd2000080 (0x800000d2)
+TTTTTTTTTTTTTTTTT
+
+       */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+ 
+      //tdc1190PrintEvent(0,0);
+
+      /*
+
+===== TDC1190_BERR_FIFO  1
+
+tdc1190PrintEvent: tdc[0]
+ TDC DATA for Module at address 0x7f12a3900000
+  Global Header  [  0]: 0x40000892   Event Count = 68
+    TDC 0 Header [  1]: 0x08044233   EventID = 68  Bunch ID = 563 
+    TDC 0 EOB    [  2]: 0x18044002   Word Count = 2
+    TDC 1 Header [  3]: 0x09044233   EventID = 68  Bunch ID = 563 
+    TDC 1 EOB    [  4]: 0x19044002   Word Count = 2
+  Global EOB     [  5]: 0x800000d2   Total Word Count = 6
+  Filler         [  6]: 0xc0000000
+--> [7] 0xc0000000
+--> [8] 0xc0000000
+--> [9] 0xc0000000
+--> [10] 0xc0000000
+............
+tdc1190PrintEvent: Total number of words: 11
+
+
+
+===== TDC1190_BERR_FIFO  0
+
+tdc1190PrintEvent: tdc[0]
+ TDC DATA for Module at address 0x7f15cf900000
+  Global Header  [  0]: 0x400004b2   Event Count = 37
+    TDC 0 Header [  1]: 0x080254f9   EventID = 37  Bunch ID = 1273 
+    TDC 0 EOB    [  2]: 0x18025002   Word Count = 2
+    TDC 1 Header [  3]: 0x090254f9   EventID = 37  Bunch ID = 1273 
+    TDC 1 EOB    [  4]: 0x19025002   Word Count = 2
+  Global EOB     [  5]: 0x800000d2   Total Word Count = 6
+tdc1190PrintEvent: INFO: no filler Word 0xffffffff
+--> [6] 0xffffffff
+--> [7] 0xffffffff
+--> [8] 0xffffffff
+--> [9] 0xffffffff
+tdc1190PrintEvent: Total number of words: 10
+
+*/
+
+
+
+
+
+      
+
+ 
+      //rlen = tdc1190ReadBoard(0, tdcbuf);
+      //printf("\nTDC got %d words\n",rlen);
+      //for(ii=0; ii<rlen; ii++) printf(" TDC[%3d] = 0x%08x\n",ii,LSWAP(tdcbuf[ii]));
+
+      /*
+      
+===== TDC1190_BERR_FIFO  1
+
+INFO: v1190[0]: nev = 1
+tdc1190ReadBoard: nev1=1
+tdc1190ReadBoard: nev2=1
+tdc1190ReadBoard: will read fifo from 0x7fb1ff901038
+tdc1190ReadBoard: fifodata[6]=0x6 (52)
+tdc1190ReadBoard: will read data from 0x7fb1ff900000
+tdc1190ReadBoard: data[0]=0x40000672 (1073743474)
+tdc1190ReadBoard: data[1]=0x080332e7 (134427367)
+tdc1190ReadBoard: data[2]=0x18033002 (402862082)
+tdc1190ReadBoard: data[3]=0x090332e7 (151204583)
+tdc1190ReadBoard: data[4]=0x19033002 (419639298)
+tdc1190ReadBoard: data[5]=0x800000d2 (-2147483438)
+tdc1190ReadBoard: filler=0xc0000000
+tdc1190ReadBoard: done read data, last word was 0x800000d2 (-2147483438), ndata=6
+
+TDC got 6 words
+ TDC[  0] = 0x72060040
+ TDC[  1] = 0xe7320308
+ TDC[  2] = 0x02300318
+ TDC[  3] = 0xe7320309
+ TDC[  4] = 0x02300319
+ TDC[  5] = 0xd2000080
+
+
+===== TDC1190_BERR_FIFO  0
+
+INFO: v1190[0]: nev = 1
+tdc1190ReadBoard: will read data from 0x7fd6726f9000
+tdc1190ReadBoard: data[0]=0x40000052 (1073741906)
+tdc1190ReadBoard: data[1]=0x0800240a (134226954)
+tdc1190ReadBoard: data[2]=0x18002002 (402661378)
+tdc1190ReadBoard: data[3]=0x0900240a (151004170)
+tdc1190ReadBoard: data[4]=0x19002002 (419438594)
+tdc1190ReadBoard: data[5]=0x800000d2 (-2147483438)
+tdc1190ReadBoard: filler=0xffffffff
+tdc1190ReadBoard: done read data, last word was 0x800000d2 (-2147483438), ndata=6
+
+TDC got 6 words
+ TDC[  0] = 0x52000040
+ TDC[  1] = 0x0a240008
+ TDC[  2] = 0x02200018
+ TDC[  3] = 0x0a240009
+ TDC[  4] = 0x02200019
+ TDC[  5] = 0xd2000080
+
+      */
+      
 vmeBusUnlock();
 
 
@@ -2546,8 +4004,12 @@ vmeBusUnlock();
         }
 #endif
 
-        for(jj=0; jj<rlen; jj++) *rol->dabufp ++ = tdc[jj];
-
+        for(jj=0; jj<rlen; jj++)
+	{
+	  *rol->dabufp ++ = tdc[jj];
+	  //printf("TDC[%3d]=0x%08x\n",jj,LSWAP(tdc[jj]));
+	}
+	  
       } /*for(ii=0; ii<njjloops; ii++)*/
 
       BANKCLOSE;
@@ -2631,7 +4093,7 @@ vmeBusUnlock();
             BANKCLOSE;
 
             siswasread = 1;
-		  }
+	  }
 
 		  /*
           ret = scaler7201readHLS(scaler0, ring0, nHLS);
@@ -2646,9 +4108,9 @@ vmeBusUnlock();
 
 #ifdef USE_DSC2
         if(siswasread)
-		{
-	      if(ndsc2_daq>0)
-	      {
+	{
+	  if(ndsc2_daq>0)
+	  {
             BANKOPEN(0xe115,1,rol->pid);
             for(jj=0; jj<ndsc2_daq; jj++)
             {
@@ -2663,11 +4125,11 @@ vmeBusUnlock();
               for(kk=0; kk<nwords; kk++) *rol->dabufp ++ = LSWAP(tdcbuf[kk]);
             }
             BANKCLOSE;
-	      }
-		}
+	  }
+	}
 #endif
 
-	  }
+      }
     }
 #endif
 
@@ -2768,54 +4230,75 @@ vmeBusUnlock();
 
 #if 0
 #ifdef USE_SSP
-    if(nssp>0)
+    ///////////////////////////////////////
+    // SSP_CFG_SSPTYPE_HPS       Readout //
+    // SSP_CFG_SSPTYPE_PRAD      Readout //
+    ///////////////////////////////////////
+    tdcbuf = tdcbuf_save;
+    dCnt=0;
+    for(ii=0; ii<nssp; ii++)
     {
-#ifdef DEBUG
-      printf("Calling sspGBReady ...\n");fflush(stdout);
-#endif
-      for(itime=0; itime<100000; itime++) 
-	    {
-vmeBusLock();
-	      gbready = sspGBReady();
-vmeBusUnlock();
-	      stat = (gbready == sspSlotMask);
-	      if (stat>0) 
-	      {
-	        break;
-	      }
-#ifdef DEBUG
-		    else
-		    {
-          printf("SSP NOT READY: gbready=0x%08x, expect 0x%08x\n",gbready,sspSlotMask);
-		    }
-#endif
-	    }
-
-
-#ifdef DEBUG
-      printf("SSP IS READY: gbready=0x%08x, expect 0x%08x\n",gbready,sspSlotMask);
-#endif
-
-vmeBusLock();
-      len = sspReadBlock(0,tdcbuf,0x10000,1);
-vmeBusUnlock();
-	  
-/*
-      printf("ssp tdcbuf[%2d]: 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
-          len,tdcbuf[0],tdcbuf[1],tdcbuf[2],tdcbuf[3],tdcbuf[4],tdcbuf[5],tdcbuf[6]);
-*/
-
-	  
-      if(len>0)
+      slot = sspSlot(ii);
+      type = sspGetFirmwareType_Shadow(slot);
+      
+      if( (type==SSP_CFG_SSPTYPE_HPS) || (type==SSP_CFG_SSPTYPE_PRAD) )
       {
-        BANKOPEN(0xe10C,1,rol->pid);
-        for(jj=0; jj<len; jj++) *rol->dabufp++ = tdcbuf[jj];
-        BANKCLOSE;
+#ifdef DEBUG
+      printf("Calling sspBReady(%d) ...\n", slot); fflush(stdout);
+#endif
+        for(itime=0; itime<100000; itime++) 
+        {
+          vmeBusLock();
+          gbready = sspBReady(slot);
+          vmeBusUnlock();
+          
+          if(gbready)
+            break;
+#ifdef DEBUG
+          else
+            printf("SSP NOT READY (slot=%d)\n",slot);
+#endif
+        }
+
+        if(!gbready)
+        {
+          printf("SSP NOT READY (slot=%d)\n",slot);
+          
+          ssp_not_ready_errors[slot]++;
+        }
+#ifdef DEBUG
+        else
+          printf("SSP IS READY (slot=%d)\n",slot);
+#endif
+        sspPrintEbStatus(slot);
+        printf(" ");
+
+        vmeBusLock();
+        len = sspReadBlock(slot,&tdcbuf[dCnt],0x10000,1);
+        vmeBusUnlock();
+      
+        printf("ssp tdcbuf[%2d]:", len);
+        for(jj=0;jj<(len>40?40:len);jj++)
+          printf(" 0x%08x",tdcbuf[jj]);
+        
+        printf(" ");
+        sspPrintEbStatus(slot);
+        printf("\n");
+
+        dCnt += len;
       }
-	  
+    }
+
+    if(dCnt>0)
+    {
+      BANKOPEN(0xe10C,1,rol->pid);
+      for(jj=0; jj<dCnt; jj++) *rol->dabufp++ = tdcbuf[jj];
+      BANKCLOSE;
     }
 #endif /* USE_SSP */
-#endif
+#endif /* if 0*/
+
+
 
 #ifdef USE_FADC250
 
@@ -2827,83 +4310,53 @@ vmeBusUnlock();
 
 
 #ifdef DEBUG
-	  printf("FADC250 readout starts\n");fflush(stdout);
+      printf("FADC250 readout starts\n");fflush(stdout);
 #endif
 
-/*COMMENT OUT FOLLOWING 'FOR' LOOP FOR SPEED UP !!!*/
+
       for(itime=0; itime<200000/*100000*/; itime++) 
-	  {
+      {
 vmeBusLock();
-	    gbready = faGBready();
+	gbready = faGBready();
 vmeBusUnlock();
-	    stat = (gbready == fadcSlotMask);
-	    if (stat>0) 
-	    {
-	      break;
-	    }
-	  }
+	stat = (gbready == fadcSlotMask);
+	if (stat>0) 
+	{
+	  break;
+	}
+      }
+
+
 
       if(stat>0)
-	  {
+      {
+
         BANKOPEN(0xe109,1,rol->pid);
 
         FA_SLOT = faSlot(0);
+
         if(FADC_ROFLAG==2)
         {
-
-#ifdef DMA_TO_BIGBUF
- 		  /*
-          printf("dabufp_usermembase=0x%08x\n",dabufp_usermembase);
-          printf("dabufp_physmembase=0x%08x\n",dabufp_physmembase);
-           */
- /*1ms->*/
-          uMemBase = dabufp_usermembase;
-          pMemBase = dabufp_physmembase;
-          mSize = 0x100000;
- 	      /*printf("desired: 0x%08x 0x%08x 0x%08x\n",pMemBase,uMemBase,mSize);*/
-          usrChangeVmeDmaMemory(pMemBase, uMemBase, mSize);
- 
-          usrVmeDmaMemory(&pMemBase, &uMemBase, &mSize);
- 	      /*printf("actual: 0x%08x 0x%08x 0x%08x\n",pMemBase,uMemBase,mSize);*/
- /*->1us*/
- 
- 
- /*25us->*/
-vmeBusLock();
-          dCnt = faReadBlock(FA_SLOT,rol->dabufp,/*(dmaMemSize/4)*/MAXFADCWORDS,FADC_ROFLAG);
-vmeBusUnlock();
- /*->25us*/
-#ifdef DEBUG
-  		  printf("dCnt=%d\n",dCnt);
-          for(jjj=0; jjj<dCnt; jjj++) printf(" [%3d]  0x%08x\n",jjj,rol->dabufp[jjj]);
-#endif
-          rol->dabufp += dCnt;
-
-          usrRestoreVmeDmaMemory();
-          usrVmeDmaMemory(&pMemBase, &uMemBase, &mSize);
- 	      /*printf("restored: 0x%08x 0x%08x 0x%08x\n",pMemBase,uMemBase,mSize);*/
-
-#else
 
 #ifdef DEBUG
           printf("fadc1: Starting DMA, dmaMemSize=%d(0x%08x) bytes\n",dmaMemSize,dmaMemSize);fflush(stdout);
 #endif
 
 vmeBusLock();
-          dCnt = faReadBlock(FA_SLOT,tdcbuf,/*(dmaMemSize/4)*/MAXFADCWORDS,FADC_ROFLAG);
+          dCnt = faReadBlock(FA_SLOT,tdcbuf,/*(dmaMemSize/4)*/MAXFADCWORDS2,FADC_ROFLAG);
 vmeBusUnlock();
 
           if(fadcBlockError)
-		  {
+	  {
             printf("fadc1 ERROR: Finished DMA, fadcBlockError=%d\n",fadcBlockError);fflush(stdout);
-            printf("MAXFADCWORDS=%d can be too small\n",MAXFADCWORDS);fflush(stdout);
-		  }
+            printf("MAXFADCWORDS2=%d can be too small\n",MAXFADCWORDS2);fflush(stdout);
+	  }
 #ifdef DEBUG
           printf("fadc1: Finished DMA, dCnt*4=%d bytes, fadcBlockError=%d\n",dCnt*4,fadcBlockError);fflush(stdout);
 #endif
 		  
           if((dCnt*4) >= dmaMemSize)
-		  {
+	  {
             printf("ERROR !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");fflush(stdout);
             printf("ERROR !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");fflush(stdout);
             printf("ERROR: increase dmaMemSize above %d bytes by calling usrVmeDmaSetMemSize(size)\n",dCnt*4);fflush(stdout);
@@ -2912,150 +4365,243 @@ vmeBusUnlock();
             printf("ERROR !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");fflush(stdout);
             exit(0);
           }
-		  
-#endif
-
 
         }
-        else
-		{
-
-
-
+        else /*if(FADC_ROFLAG==2)*/
+	{
 
           for(jj=0; jj<nfadc; jj++)
-		  {
+	  {
 #ifdef DEBUG
             printf("fadc1: [%d] Starting DMA\n",jj);fflush(stdout);
 #endif
-#ifdef DMA_TO_BIGBUF
-
-            uMemBase = dabufp_usermembase;
-            pMemBase = dabufp_physmembase;
-            mSize = 0x100000;
-            usrChangeVmeDmaMemory(pMemBase, uMemBase, mSize);
-
-
 vmeBusLock();
-	        len = faReadBlock(faSlot(jj),rol->dabufp,MAXFADCWORDS,FADC_ROFLAG);
-vmeBusUnlock();
-            rol->dabufp += len;
-            dCnt += len;
-
-            usrRestoreVmeDmaMemory();
-#else
-vmeBusLock();
-	        len = faReadBlock(faSlot(jj),&tdcbuf[dCnt],MAXFADCWORDS,FADC_ROFLAG);
+	    len = faReadBlock(faSlot(jj),&tdcbuf[dCnt],MAXFADCWORDS2,FADC_ROFLAG);
 vmeBusUnlock();
             dCnt += len;
-#endif
 
-			/*
-			if(len!=21244)
-			{
-			printf("!!!!!!!!!!!!!!!!!!! ERROR len=%d\n",len);
+	    /*
+	    if(len!=21244)
+	    {
+	    printf("!!!!!!!!!!!!!!!!!!! ERROR len=%d\n",len);
             faStatus(jj,0);
             printf("FADC board %d: len=%d dCnt=%d\n",jj,len,dCnt);
             for(jjj=0; jjj<len; jjj++) printf(" [%3d]  0x%08x (tag=0x%02x)\n",jjj,LSWAP(tdcbuf[(dCnt-len)+jjj]),((LSWAP(tdcbuf[(dCnt-len)+jjj])>>27)&0x1F));
             printf("End of FADCs data\n");
-			}
-			*/
-		  }
-
-
-
-
 	    }
+	    */
+	  }
+	}
 
-
-
-
-
-	    if(dCnt<=0)
-	    {
-	      printf("FADCs: No data or error.  dCnt = %d (slots from %d)\n",dCnt,FA_SLOT);
+	if(dCnt<=0)
+	{
+	  printf("FADCs: No data or error.  dCnt = %d (slots from %d)\n",dCnt,FA_SLOT);
           dCnt=0;
-	    }
-	    else
-	    {
-#ifndef DMA_TO_BIGBUF
+	}
+	else
+	{
 #ifdef DEBUG
           printf("fadc: moving %d words to dabufp starting from address 0x%lx\n",dCnt,rol->dabufp);fflush(stdout);
 #endif
-          for(jj=0; jj<dCnt; jj++) *rol->dabufp++ = tdcbuf[jj];
+          for(jj=0; jj<dCnt; jj++)
+	  {
+            *rol->dabufp++ = tdcbuf[jj];
+            //printf("fadc250buf[%3d] = 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
+	  }
 #ifdef DEBUG
           printf("fadc: ending dabufp address 0x%lx\n",rol->dabufp);fflush(stdout);
 #endif
-#endif
         }
 
+#ifdef USE_FAV3
+        /* close bank only if we do not have faV3's */
+        if(nfaV3<=0) BANKCLOSE;
+#else
         BANKCLOSE;
+#endif
 
-	  }
-      else 
-	  {
-	    printf ("FADCs: no events   stat=%d  intcount = %d   gbready = 0x%08x  fadcSlotMask = 0x%08x\n",
+      }
+      else /*if(stat>0) */
+      {
+	printf ("FADCs: no events   stat=%d  intcount = %d   gbready = 0x%08x  fadcSlotMask = 0x%08x\n",
 		  stat,tiGetIntCount(),gbready,fadcSlotMask);
         printf("Missing slots:");
         for(jj=1; jj<21; jj++)
-		{
+	{
           mask = 1<<jj;
           if((fadcSlotMask&mask) && !(gbready&mask)) printf("%3d",jj);
-		}
+	}
         printf("\n");fflush(stdout);
 
 
-
-
-		{
-          printf("\n============= trying to read troubled FADCs ===================\n");fflush(stdout);
-
-          for(jj=1; jj<21; jj++)
-		  {
-            mask = 1<<jj;
-            if((fadcSlotMask&mask) && !(gbready&mask))
-			{
-              printf("FADC in slot %3d:\n",jj);fflush(stdout);
+        printf("\n============= trying to read troubled FADCs ===================\n");fflush(stdout);
+        for(jj=1; jj<21; jj++)
+	{
+          mask = 1<<jj;
+          if((fadcSlotMask&mask) && !(gbready&mask))
+	  {
+            printf("FADC in slot %3d:\n",jj);fflush(stdout);
 vmeBusLock();
-              faStatus(jj,0);
-	          len = faReadBlock(jj,tdcbuf,MAXFADCWORDS,1);
+            faStatus(jj,0);
+	    len = faReadBlock(jj,tdcbuf,MAXFADCWORDS2,1);
 vmeBusUnlock();
-              printf("ERROR: Printing %d words from FADC %d\n",len,jj);
-              for(jjj=0; jjj<len; jjj++) printf(" [%3d]  0x%08x (tag=0x%02x)\n",jjj,LSWAP(tdcbuf[jjj]),((LSWAP(tdcbuf[jjj])>>27)&0x1F));
-              printf("End of FADC data\n");
-			}
-		  }
-          printf("\n============= finished reading troubled FADCs ===================\n");
-		}
-
-
-
-
-
-
+            printf("ERROR: Printing %d words from FADC %d\n",len,jj);
+            for(jjj=0; jjj<len; jjj++) printf(" [%3d]  0x%08x (tag=0x%02x)\n",jjj,LSWAP(tdcbuf[jjj]),((LSWAP(tdcbuf[jjj])>>27)&0x1F));
+            printf("End of FADC data\n");
 	  }
+        }
+        printf("\n============= finished reading troubled FADCs ===================\n");
+
+      } /*if(stat>0)*/
+
+
 
       /* Reset the Token */
       if(FADC_ROFLAG==2)
-	  {
+      {
 /*2us->*/
-	    for(id=0; id<nfadc; id++)
-	    {
-	      FA_SLOT = faSlot(id);
+        for(id=0; id<nfadc; id++)
+	{
+	  FA_SLOT = faSlot(id);
 vmeBusLock();
-	      faResetToken(FA_SLOT);
+	  faResetToken(FA_SLOT);
 vmeBusUnlock();
-	    }
+	}
 /*->2us*/
-	  }
+      }
 
 #ifdef DEBUG
-	  printf("FADC250 readout ends\n");fflush(stdout);
+      printf("FADC250 readout ends\n");fflush(stdout);
 #endif
 
-    }
+    } /*if(nfadc>0)*/
 
 #endif /* USE_FADC250 */
+
+
+
+#ifdef USE_FAV3
+
+
+    
+//#define CLEAR_BUFFER_TO_RECOVED_4_DMA_WORDS
+
+    
+TIMERL_START;
+ 
+  tdcbuf = tdcbuf_save;
+  dCnt=0;
+  if(nfaV3>0)
+  {
+    /* Mask of initialized modules (1us per 20events) */
+    scanmask = faV3ScanMask();
+    
+    /* Check scanmask for block ready up to 100 times (15us per 20events) */
+    datascan = faV3GBlockReady(scanmask, 100);
+
+    stat = (datascan == scanmask);
+    if(stat)
+    {
+      
+      if(tdcbuf != tdcbuf_origin) printf("WARN: tdcbuf=0%lx, tdcbuf_origin=0%lx\n",tdcbuf,tdcbuf_origin);fflush(stdout);
+
+#ifdef CLEAR_BUFFER_TO_RECOVED_4_DMA_WORDS
+      memset((char *)tdcbuf, 0, MAXFADCWORDS3<<2);
+#endif
+
+      if(FAV3_ROFLAG == 2) /* multiblock dma readout*/
+      {
+        nwords = faV3ReadBlock(faV3Slot(0), tdcbuf, MAXFADCWORDS3, FAV3_ROFLAG);      
+#ifdef CLEAR_BUFFER_TO_RECOVED_4_DMA_WORDS
+        if( tdcbuf[nwords] != 0 )
+        {
+          for(int iii=0; iii<4; iii++)
+          {
+            if( tdcbuf[nwords] != 0) nwords ++;
+          }
+        }
+#else
+        FAV3_LAST_4_DMA_WORDS_RECOVER;
+#endif
+	
+        dCnt += nwords;
+
+        /* Reset the Token */
+        for(ifa = 0; ifa < nfaV3; ifa++)
+        {
+	  FA_SLOT = faV3Slot(ifa);
+vmeBusLock();
+	  faV3ResetToken(FA_SLOT);
+vmeBusUnlock();
+        }
+
+      }
+      else /*board-by-board dma readout*/
+      {
+
+        for(ifa = 0; ifa < nfaV3; ifa++)
+        {
+	  nwords = faV3ReadBlock(faV3Slot(ifa), tdcbuf, MAXFADCWORDS3, FAV3_ROFLAG);
+#ifdef CLEAR_BUFFER_TO_RECOVED_4_DMA_WORDS
+          if( tdcbuf[nwords] != 0 )
+          {
+            for(int iii=0; iii<4; iii++)
+            {
+              if( tdcbuf[nwords] != 0) nwords ++;
+            }
+          }
+#else
+	  FAV3_LAST_4_DMA_WORDS_RECOVER;
+#endif
+   
+	  //printf("faV3ReadBlock(slot=%d) returned nwords=%d\n",faV3Slot(ifa),nwords);
+          //for(jj=0; jj<nwords; jj++) printf("  data[%3d] = 0x%08x\n",jj,LSWAP(tdcbuf[jj]));
+
+          /* Check for ERROR in block read */
+          blockError = faV3GetBlockError(1);
+          if(blockError)
+          {
+	    printf("ERROR: Slot %d: in transfer (event = %d), nwords = 0x%x\n",faV3Slot(ifa), roCount, nwords);
+            if(nwords > 0)
+	    {
+              tdcbuf += nwords;
+              dCnt += nwords;
+	    }
+          }
+          else
+          {
+            tdcbuf += nwords;
+            dCnt += nwords;
+          }
+        }
+      
+      }
+      
+    }
+    else
+    {
+      printf("ERROR: Event %d: Datascan != Scanmask  (0x%08x != 0x%08x)\n",roCount, datascan, scanmask);
+    }
+
+#ifdef USE_FADC250
+    /* open bank only if we do not have fadc250's */
+    if(nfadc<=0) BANKOPEN(0xe141,1,rol->pid);
+#else
+    BANKOPEN(0xe141,1,rol->pid);
+#endif
+
+    tdcbuf = tdcbuf_save;
+    for(jj=0; jj<dCnt; jj++)
+    {      
+      *rol->dabufp++ = tdcbuf[jj];
+    }
+    BANKCLOSE;
+    
+  } /*if(nfaV3>0)*/
+
+TIMERL_STOP(100000/block_level,1000+rol->pid);
+
+#endif
 
 
 
@@ -3799,25 +5345,313 @@ vmeBusUnlock();
 #endif /*USE_VETROC*/
 
 
+#ifdef USE_MPD
+    /*
+TIMERL_START;
+    */
+// 113us for entire MPD readout (single MPD board, one APV)
+if(fnMPD>0)
+{
+  int verbose_level = 0;
+  int errFlagMask = 0;
+  int errSlotMask = 0;
+  int mpd_data_offset = 0;
+  int nwread, iw;
+  int empty, full, obuf_nblock;
+
+  tdcbuf = tdcbuf_save;
+  dCnt=0;
+
+
+//make sure buffer_level<=5, and block_level=1 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+  // -> now trigger can be enabled
+
+  int tout, impd, id;
+  for (impd = 0; impd < fnMPD; impd++)
+  {				// only active mpd set
+    id = mpdSlot(impd);
+
+    if (verbose_level > 0) printf("MPD %d: \n", id);
+
+   // prepare internal variables for readout @@ use old buffer scheme, need improvement
+    mpdArmReadout(id); // 1us
+
+    if (UseSdram)
+    {
+      blen = MPD_DMA_BUFSIZE;
+    }
+    else
+    {
+      blen = mpdApvGetBufferAvailable(id, 0);
+    }
+
+    nwread = 0;
+
+    if (UseSdram)
+    {
+      int sd_init, sd_overrun, sd_rdaddr, sd_wraddr, sd_nwords;
+      
+      mpdSDRAM_GetParam(id, &sd_init, &sd_overrun, &sd_rdaddr, &sd_wraddr, &sd_nwords); //5us
+      if (verbose_level > 0) printf(" - SDRAM status: init=%d, overrun=%d, "
+		                    "rdaddr=0x%x, wraddr=0x%x, nwords=%d\n",
+		                    sd_init, sd_overrun, sd_rdaddr, sd_wraddr, sd_nwords);
+
+      /*
+TIMERL_START;
+      */
+      
+//usleep(1); //900-1900us !!!!!!!!!
+   struct timespec ts; 
+   ts.tv_sec = 0;
+   ts.tv_nsec = 10000; /* 10000 - 1200-1300us,  */
+   // nanosleep(&ts, NULL);
+   /*
+TIMERL_STOP(3000/block_level,0);
+   */ 
+
+
+   /*
+TIMERL_START;
+   */
+      tout = 0;	   
+      while (mpdOBUF_GetBlockCount(id) == 0 && tout < 1000) //55us; on loop exit, tout=29..32
+      {
+	//usleep(10);
+	//nanosleep(&ts, NULL);
+	tout++;
+      }
+/*
+TIMERL_STOP(3000/block_level,0);
+*/   
+      
+      if (tout >= 1000)
+      {
+	timeout = 1;
+
+	errFlagMask |= (1 << 0);
+	errSlotMask |= (1 << id);
+
+	printf("WARNING: *** Timeout while waiting for data in mpd %d (tout=%d)"
+	       " - check MPD/APV configuration\n", id,tout);
+	//exit(0);
+      }
+
+      obuf_nblock = mpdOBUF_GetBlockCount(id); // 2us
+      // evb_nblock = mpdGetBlockCount(i);
+
+      if (obuf_nblock > 0)
+      {			// read data
+        mpdOBUF_GetFlags(id, &empty, &full, &nwords); // 2us
+
+	if (verbose_level > 0) printf(" - OBUF status: empty=%d, full=%d, nwords=%d\n", empty, full, nwords);
+
+	if (FastReadout > 0)
+	{		//64bit transfer
+	  if (nwords < 128)
+	  {
+	    empty = 1;
+	  }
+	  else
+	  {
+	    nwords *= 2;
+	  }
+	}
+
+	if (full)
+	{
+	  printf("\n\n **** OUTPUT BUFFER FIFO is FULL in MPD %d "
+		 "!!! RESET EVERYTHING !!!\n\n", id);
+
+	  errSlotMask |= (1 << id);
+	  errFlagMask |= (1 << 1);
+	}
+
+	if (verbose_level > 0) printf(" - OBUF Data Ready: %d (32b-words)\n", nwords);
+	if (nwords > 0)	// was >=
+	{
+	  if (nwords > blen / 4)
+	  {
+	    nwords = blen / 4;
+	  }
+
+	    /*
+TIMERL_START; //50us
+	    */
+	  //mpd_data_offset = ((int) (dma_dabufp) - (int) (&the_event->data[0])) >> 2;
+	  mpdOBUF_Read(id, tdcbuf/*dma_dabufp*/, nwords, &nwread);
+	  printf("tdcbuf: 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
+		 LSWAP(tdcbuf[0]),LSWAP(tdcbuf[1]),LSWAP(tdcbuf[2]),LSWAP(tdcbuf[3]),LSWAP(tdcbuf[4]),LSWAP(tdcbuf[5]));
+	  /*
+TIMERL_STOP(3000/block_level,0);
+	  */
+	  
+	  if (verbose_level > 0) printf(" - Readout: %d (32b-words)", nwread);
+
+	  if (nwords != nwread)
+	  {
+	    printf(" * ERROR: MPD %2d OBUF Data Ready (%d) != Data Readout (%d)\n", id, nwords, nwread);
+	    errSlotMask |= (1 << id);
+	    errFlagMask |= (1 << 2);
+	  }
+
+	  //dma_dabufp += nwread;
+	}
+      }
+      else
+      {
+	printf("sleeping a bit ...\n");fflush(stdout);
+	usleep(10);
+      }
+    }
+    else
+    {			// if not Sdram
+      // FIXME: THIS PROCEDURE IS CURRENTLY BROKEN
+      mpdFIFO_IsEmpty(id, 0, &empty);	//  read fifo channel=0 status
+
+      if (!empty)
+      {			// read fifo
+	nwread = blen / 4;
+	mpdFIFO_ReadSingle(id, 0, mpdApvGetBufferPointer(id, 0, 0), &nwread, 20);
+	if (nwread == 0)
+	{
+	  printf(" * ERROR: word read count is 0, "
+		 "while some words are expected back\n");
+	  errFlagMask = (1 << 0);
+	}
+      }
+
+    }
+
+    if (verbose_level > 1)
+    {
+      printf(" (dump data on screen)\n");
+      if (nwread > 0)
+      {
+	for (iw = 0; iw < ((nwread > 40) ? 40 : nwread); iw++)
+	{
+	  //uint32_t datao = LSWAP(the_event->data[iw + mpd_data_offset]);
+	  uint32_t datao = LSWAP(tdcbuf[iw]);
+
+	  if (verbose_level > 1)
+	  {
+	    if ((iw % 8) == 0)
+	    {
+	      printf("0x%06x:", iw);
+	    }
+	    printf(" 0x%08x", datao);
+
+	    if (((iw % 8) == 7) || (iw == (nwread - 1)))
+	    {
+	      printf("\n");
+	    }
+	  }
+	}
+
+	printf(" - Summary: nwords=%d  nwread=%d\n\n", nwords, nwread);
+      }
+    }
+
+
+    tdcbuf += nwread;
+    dCnt += nwread;
+
+  }				// active mpd loop
+
+
+
+ if(dCnt>0) // 2us
+  {
+    tdcbuf = tdcbuf_save; // jump to the beginning of the data
+    /*for(jj=0; jj<dCnt; jj++) printf(" data[%3d] = 0x%08x\n",jj,LSWAP(tdcbuf[jj]));*/
+    BANKOPEN(0xe140,1,0);
+    for(jj=0; jj<dCnt; jj++) *rol->dabufp++ = tdcbuf[jj];
+    BANKCLOSE;
+  }
+
+
+
+  if (errFlagMask)
+  {
+    int ibit = 0, nbroken = 0;
+    unsigned int broken_list[21] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    int broken_status = OK;
+
+    printf("errFlagMask=0x%08x (%d)\n",errFlagMask,errFlagMask);
+    
+    tiStatus(1);
+    mpdGStatus(1);
+    printf(" * * ERRORS in Readout. Types: \n");
+    if(errFlagMask & (1<<0)) printf("   * Empty\n");
+    if(errFlagMask & (1<<1)) printf("   * Full\n");
+    if(errFlagMask & (1<<2)) printf("   * nwords ready != nwords readout\n");
+
+    printf(" * * MPDS with errors: \n     ");
+    for (ibit = 0; ibit < 21; ibit++)
+    {
+      if(errSlotMask & (1 << ibit))
+      {
+	printf(" %2d", ibit);
+	broken_list[nbroken++] = ibit;
+      }
+    }
+    printf("\n");
+
+
+
+    /*sergey
+    printf(" * * Trying a reset \n");
+    logMsg("INFO: Resetting MPDs with ERRORs",1,2,3,4,5,6);
+    broken_status = resetMPDs((unsigned int *)&broken_list, nbroken);
+
+    if(broken_status != OK)
+    {
+      printf("ERROR: Unable to reset MPDs with ERRORS\n");
+      logMsg("ERROR: Unable to reset MPDs with ERRORS",1,2,3,4,5,6);
+      tiSetBlockLimit(5);
+    }
+    else
+    {
+      printf(" * Success?  Be sure to check the data!\n");
+      logMsg("INFO: MPDs reset.  CHECK THE DATA",1,2,3,4,5,6);
+    }
+    */
+
+
+
+  }
+
+}
+/*
+TIMERL_STOP(3000/block_level,0);
+*/
+ 
+#endif /*USE_MPD*/
+
+
+
+
+
 #ifndef TI_SLAVE
 
   /* create HEAD bank if master and standalone crates, NOT slave */
 
-	event_number = (EVENT_NUMBER) * block_level - block_level;
+    event_number = (EVENT_NUMBER) * block_level - block_level;
 
     BANKOPEN(0xe112,1,0);
 
-	dabufp1 = rol->dabufp;
+    dabufp1 = rol->dabufp;
 
     *rol->dabufp ++ = LSWAP((0x10<<27)+block_level); /*block header*/
 
     for(ii=0; ii<block_level; ii++)
-	{
+    {
       event_number ++;
-	  /*
-	  printf(">>>>>>>>>>>>> %d %d\n",(EVENT_NUMBER),event_number);
+      /*
+      printf(">>>>>>>>>>>>> %d %d\n",(EVENT_NUMBER),event_number);
       sleep(1);
-	  */
+      */
       *rol->dabufp ++ = LSWAP((0x12<<27)+(event_number&0x7FFFFFF)); /*event header*/
 
       nwords = 6; /* UPDATE THAT IF THE NUMBER OF WORDS CHANGED BELOW !!! */
@@ -3828,22 +5662,22 @@ vmeBusUnlock();
       *rol->dabufp ++ = LSWAP(RUN_NUMBER); /*run  number */
       *rol->dabufp ++ = LSWAP(event_number); /*event number */
       if(ii==(block_level-1))
-	  {
+      {
         *rol->dabufp ++ = LSWAP(time(0)); /*event unix time */
         *rol->dabufp ++ = LSWAP(EVTYPE);  /*event type */
         *rol->dabufp ++ = 0;              /*reserved for L3 info*/
-	  }
+      }
       else
-	  {
+      {
         *rol->dabufp ++ = 0;
         *rol->dabufp ++ = 0;
         *rol->dabufp ++ = 0;
-	  }
+      }
       /* END OF DATA WORDS */
 
-	}
+    }
 
-    nwords = ((int)rol->dabufp-(int)dabufp1)/4 + 1;
+    nwords = ((long int)rol->dabufp-(long int)dabufp1)/4 + 1;
 
     *rol->dabufp ++ = LSWAP((0x11<<27)+nwords); /*block trailer*/
 
@@ -3854,12 +5688,9 @@ vmeBusUnlock();
 
 
 
-#ifndef VXWORKS
-TIMERL_STOP(100000/block_level,1000+rol->pid);
-#endif
 
 
-
+    
 
 
 #if 1 /* enable/disable sync events processing */
@@ -3899,10 +5730,23 @@ vmeBusUnlock();
         nbytes += len;
 	  }
 #endif
+      
+#ifdef USE_FAV3
+      if(nfaV3>0)
+      {
+vmeBusLock();
+        len = faV3UploadAll(chptr, 32000);
+vmeBusUnlock();
+        //printf("%s\n",chptr);
+        //printf("\nFAV3 len=%d\n",len);
+        chptr += len;
+        nbytes += len;
+      }
+#endif
 
 #ifdef USE_V1190_HIDE
-	  if(ntdcs>0)
-	  {
+      if(ntdcs>0)
+      {
 vmeBusLock();
         len = tdc1190UploadAll(chptr, 10000);
 vmeBusUnlock();
@@ -3966,11 +5810,12 @@ vmeBusUnlock();
 	  }
 #endif
 
+      
 
 #if 0
-	  /* temporary for crates with GTP */
+      /* temporary for crates with GTP */
       if(rol->pid==37||rol->pid==39)
-	  {
+      {
 #define TEXT_STR  1000
         char *roc;
         int  ii, kk, stt = 0;
@@ -3993,7 +5838,7 @@ vmeBusUnlock();
         strncpy(chptr,result,len);
         chptr += len;
         nbytes += len;
-	  }
+      }
 #endif
 
 
@@ -4119,6 +5964,8 @@ vmeBusUnlock();
 
   }
 
+
+  
   /* close event */
   CECLOSE;
 
@@ -4126,6 +5973,13 @@ vmeBusUnlock();
   nusertrig ++;
   
   //printf("usrtrig called %d times\n",nusertrig);fflush(stdout);
+
+
+#if 0
+#ifndef VXWORKS
+TIMERL_STOP(10000/block_level,1000+rol->pid);
+#endif
+#endif
   
   return;
 }
@@ -4166,4 +6020,27 @@ fadc1_dummy()
   return;
 }
 
+#endif
+
+
+/*???*/
+#ifdef USE_MPD_HIDE
+void
+rocCleanup()
+{
+  int impd = 0, ia = 0;
+
+  printf("%s: Free single read buffers\n", __FUNCTION__);
+
+  for (impd = 0; impd < fnMPD; impd++)
+    {
+      for (ia = 0; ia < 16; ia++)
+	mpdApvBufferFree(mpdSlot(impd), ia);
+    }
+
+#ifdef TI_MASTER
+  tiResetSlaveConfig();
+#endif
+
+}
 #endif

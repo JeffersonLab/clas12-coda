@@ -122,6 +122,7 @@ extern char *session; /* coda_component.c */
 static int mbytes_in_current_run;
 static int nevents_in_current_run;
 static int ievent_old;
+static int runnumber_old;
 
 #define ER_ERROR 1
 #define ER_OK 0
@@ -313,9 +314,9 @@ update_database(ERp erp)
           }
 
           mysql_free_result(result);
-	    }
-      }
 	}
+      }
+    }
 
     /* disconnect from database */
     dbDisconnect(dbsocket);
@@ -436,7 +437,7 @@ ER_constructor()
 
   ERP.split = 512*1024*1024;
 
-
+  runnumber_old = -1;
 
   /*
   {
@@ -755,9 +756,12 @@ CODA_write_event(ERp erp, int flag)
 	  if (pe[i]->control[0] == prestartEvent)
           {
 	    printf("Got Prestart Event!!\n");
+
+	    /*clean up counters one more time just in case ...*/
 	    mbytes_in_current_run = 0;
             nevents_in_current_run = 0;
             ievent_old = 0;
+	    
 	    /* look for first prestart */
 	    if (PrestartCount == 0)
             {
@@ -882,9 +886,14 @@ codaDownload(char *conf)
   erp->object = object;
   erp->write_thread = 0; /*sergey: will check it*/
 
+  /*just in case, will do it again in Prestart*/
+  mbytes_in_current_run = 0;
+  nevents_in_current_run = 0;
+  ievent_old = 0;
+
+  
   /***************************************************/
   /* extract all necessary information from database */
-
 
   /*****************************/
   /*****************************/
@@ -982,7 +991,7 @@ codaDownload(char *conf)
   */
   {
     int  arg1c;
-    char arg1v[10][256];
+    char arg1v[LISTARGV1][LISTARGV2];
     char *p_sl;
     listSplit2(tmpp," ",&arg1c,arg1v);
     printf("\nfirst split, arg1c=%d, first piece >%s<\n",arg1c,arg1v[0]);
@@ -1131,6 +1140,11 @@ erDaqCmd(char *param)
   case 'o': /*open*/
     (*(erp->open_proc))(erp);
 
+    /*sergey: call this to cleanup nevents etc in database, need it if previous run failed to end correctly*/
+    printf("update_database called ..\n");
+    update_database(erp);
+    printf(".. update_database done\n");
+
     erp->write_thread = 0; /*sergey: will check it*/
     printf("starting write thread 1 ..\n");fflush(stdout);
     if(erp->fd)
@@ -1241,13 +1255,36 @@ codaPrestart()
   /* disconnect from database */
   dbDisconnect(dbsock);
 
-  printf("INFO: prestarting,run %d, type %d\n",
-    object->runNumber, object->runType);
+  printf("INFO: prestarting, run %d, type %d\n", object->runNumber, object->runType);
 
   PrestartCount = 0;
   object->nevents = 0;
   object->nlongs = 0;
 
+  if(runnumber_old == (-1))
+  {
+    runnumber_old = object->runNumber;
+    mbytes_in_current_run = 0;
+    nevents_in_current_run = 0;
+    ievent_old = 0;
+  }
+  else
+  {
+    if(object->runNumber == (runnumber_old+1))
+    {
+      runnumber_old = object->runNumber;
+      mbytes_in_current_run = 0;
+      nevents_in_current_run = 0;
+      ievent_old = 0;
+    }
+    else
+    {
+      printf("\ncoda_erc: ERROR: object->runNumber=%d, runnumber_old=%d\n",object->runNumber,runnumber_old);
+      printf("coda_erc: ERROR: object->runNumber=%d, runnumber_old=%d\n",object->runNumber,runnumber_old);
+      printf("coda_erc: ERROR: object->runNumber=%d, runnumber_old=%d\n\n",object->runNumber,runnumber_old);
+    }
+  }
+  
   erDaqCmd("open");
 
   tcpState = DA_PAUSED;

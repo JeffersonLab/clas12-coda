@@ -113,7 +113,7 @@ struct flex_struct
 
 
 /* Function prototypes */
-int  sis3801Init(unsigned int addr, unsigned int addr_inc, int nsis, int iFlag);
+int  sis3801Init(unsigned long int addr, unsigned int addr_inc, int nsis, int iFlag);
 int  sis3801CheckAddresses();
 int  sis3801setinputmode(int id, int mode);
 int  sis3801readfifo(int id);

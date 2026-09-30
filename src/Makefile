@@ -24,12 +24,11 @@ all:
 	- cd codaedit;                       $(MAKE) install
 	- cd cterm;                          $(MAKE)
 	- cd cterm;                          $(MAKE) install
-#	- cd rol;                            $(MAKE) jvmes
-	- cd rol/jvme;                       $(MAKE)
+	- cd jvme;                           $(MAKE)
+	- cd jvme;                           $(MAKE) install
 	- cd dac;                            $(MAKE)
 	- cd dac;                            $(MAKE) install
 	- cd rol;                            $(MAKE)
-	- cd rol;                            $(MAKE) install
 	- cd rol;                            $(MAKE) rols
 	- cd rol;                            $(MAKE) install
 	- cd rc;                             $(MAKE)
@@ -42,13 +41,15 @@ clean:
 	- cd rcscripts;                      $(MAKE) clean
 	- cd evio-4.3;                       $(MAKE) clean
 	- cd et-14.0;                        $(MAKE) clean
-	- cd codatcl1.0;                     $(MAKE) clean
 	- cd creg;                           $(MAKE) clean
+	- cd codatcl1.0;                     $(MAKE) clean
+	- cd ipc;                            $(MAKE) clean
+	- cd codautil;                       $(MAKE) clean
 	- cd codaedit;                       $(MAKE) clean
-	- cd codaterm;                       $(MAKE) clean
+	- cd cterm;                          $(MAKE) clean
+	- cd jvme;                           $(MAKE) clean
 	- cd dac;                            $(MAKE) clean
 	- cd rol;                            $(MAKE) clean
-	- cd rol/jvme;                       $(MAKE) clean
 	- cd rc;                             $(MAKE) clean
 	- cd diaggui;                        $(MAKE) clean
 
@@ -90,8 +91,7 @@ arm:
 	- cd dac;                            make install 
 	- cd vtp;                            make     
 	- cd vtp;                            make install 
-	- cd rol;                            make     
-	- cd rol;                            make install 
+	- cd rol;                            make
 	- cd rol;                            make rols    
 	- cd rol;                            make install 
 

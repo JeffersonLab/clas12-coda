@@ -49,7 +49,7 @@
 /* write flash page */
 
 void
-write_flash_page(unsigned int addr, unsigned char *page, unsigned int pagenum)
+write_flash_page(unsigned long int addr, unsigned char *page, unsigned int pagenum)
 {
   volatile TDC1190 *tdc890 = (TDC1190 *) addr;
   unsigned int flash_addr, data;
@@ -120,7 +120,7 @@ write_flash_page(unsigned int addr, unsigned char *page, unsigned int pagenum)
 /* read flash page */
 
 void
-read_flash_page(unsigned int addr, unsigned char *page, unsigned int pagenum)
+read_flash_page(unsigned long int addr, unsigned char *page, unsigned int pagenum)
 {
   volatile TDC1190 *tdc890 = (TDC1190 *) addr;
   unsigned int flash_addr, data;

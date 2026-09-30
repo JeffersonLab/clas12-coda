@@ -706,9 +706,8 @@ gtpReadConfigFile(char *filename)
   char *getenv();
   char *clonparms;
 
-  gethostname(host,ROCLEN);  /* obtain our hostname */
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");

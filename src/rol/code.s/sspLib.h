@@ -92,7 +92,11 @@ typedef struct
 typedef struct
 {
   /* 0x0000-0x0003 */ volatile unsigned int Latency;
-  /* 0x0004-0x00FF */          unsigned int Reserved0[(0x0100-0x0004)/4];
+  /* 0x0004-0x0007 */ volatile unsigned int Width;
+  /* 0x0008-0x000B */ volatile unsigned int TrgNameWr;
+  /* 0x000C-0x000F */ volatile unsigned int TrgNameRd;
+  /* 0x0010-0x002F */ volatile unsigned int Prescale[8];
+  /* 0x0030-0x00FF */          unsigned int Reserved1[(0x0100-0x0030)/4];
 } Trigger_regs;
 
 /* HPS Cosmic Peripheral */
@@ -491,6 +495,22 @@ typedef struct
   /* 0x0038-0x00FF */ BLANKSSP[(0x0100-0x0038)/4];
 } GTC_sscndctof_regs;
 
+/******************************************************************/
+/*** PRAD Structures ***********************************************/
+/******************************************************************/
+
+/* PRAD subsystem */
+typedef struct
+{
+  /* 0x0000-0x0003 */ volatile unsigned int Ctrl;
+  /* 0x0004-0x0007 */ volatile unsigned int Status;
+  /* 0x0008-0x000F */ BLANKSSP[(0x0010-0x0008)/4];
+  /* 0x0010-0x0013 */ volatile unsigned int Delay;
+  /* 0x0014-0x0017 */ volatile unsigned int ClusterTrg;
+  /* 0x0018-0x001B */ volatile unsigned int ESumTrg;
+  /* 0x001C-0x007F */ BLANKSSP[(0x0080-0x001C)/4];
+} PRAD_trgbit_regs;
+
 /************************/
 /* SSP memory structure */
 /************************/
@@ -551,7 +571,24 @@ typedef struct
   /* 0x5000-0x53FF */ GTC_ctrg_regs   ctrigger[4];
   } gtc;
 
-  /* 0x5400-0xFFFF */ BLANKSSP[(0x10000-0x5400)/4];
+  /*sergey*/
+#if 0
+  /* 0x5400-0x67FF */ BLANKSSP[(0x06800-0x5400)/4];
+#else
+  /* 0x5400-0x5FFF */ BLANKSSP[(0x06000-0x5400)/4];
+  /* 0x6000-0x6003 */ volatile unsigned int FiberCtrl;
+  /* 0x6004-0x6007 */ volatile unsigned int FiberStatus;
+  /* 0x6008-0x67FF */ BLANKSSP[(0x06800-0x6008)/4];
+#endif
+  /*sergey*/
+  
+  struct
+  {
+  /* 0x6800-0x6BFF */ PRAD_trgbit_regs trgbit[8];
+  /* 0x6C00-0x6CFF */ BLANKSSP[(0x6D00-0x6C00)/4];
+  } prad;
+
+  /* 0x6D00-0xFFFF */ BLANKSSP[(0x10000-0x6D00)/4];
   
   struct
   {
@@ -754,6 +791,7 @@ typedef struct
 #define SSP_CFG_SSPTYPE_HALLBGT   0x04
 #define SSP_CFG_SSPTYPE_HALLBRICH 0x05
 #define SSP_CFG_SSPTYPE_HALLBGTC  0x06
+#define SSP_CFG_SSPTYPE_PRAD      0x09
 
 #define SSP_CFG_FIRMWAREREV_MASK           0x0000FFFF
 #define SSP_CFG_FIRMWAREREV_MAJOR_MASK     0x0000FF00
@@ -862,6 +900,17 @@ int  sspHps_SetPairsEDmin(int id, int n, int min);
 
 void sspPrintHpsScalers(int id);
 void sspPrintHpsConfig(int id);
+
+/* PRAD routines */
+int sspPRAD_SetTriggerName(int id, int trgbit, int flag0, int flag1, char *short_name, char *long_name);
+int sspPRAD_GetTriggerName(int id, int trgbit, int *flag0, int *flag1, char *short_name, char *long_name);
+int sspPRAD_SetTrigger(int id, int trg_latency, int trg_width);
+int  sspPRAD_GetTrigger(int id, int *trg_latency, int *trg_width);
+int  sspPRAD_SetTriggerBit(int id, int trgbit, int trg_prescale, int dly_cmult, int dly_csum, int dly_esum, int cmult_min, int csum_min, int esum_min);
+int  sspPRAD_GetTriggerBit(int id, int trgbit, int *trg_prescale, int *dly_cmult, int *dly_csum, int *dly_esum, int *cmult_min, int *csum_min, int *esum_min);
+int sspPRAD_GetFiberLatency(int id, int *latency, int *fibermask); //sergey
+
+void sspPrintPRADConfig(int id);
 
 /* GT routines */
 int sspGt_SetLatency(int id, int latency);
@@ -1056,7 +1105,6 @@ void sspWriteReg(volatile unsigned int *addr, unsigned int val);
 void SSPLOCK();
 void SSPUNLOCK();
 
-void sspSetA32BaseAddress(unsigned int addr);
 int sspGetEbWordCnt(int id);
 
 int sspGt_SetPcal_PcuDelay(int id, int delay);
@@ -1104,6 +1152,12 @@ int sspGtSendErrors(int id);
 int sspGtSendScalers(int id);
 int sspGtcSendErrors(int id);
 int sspGtcSendScalers(int id);
+int sspPRADSendScalers(int id);
 
+//sergey
+int sspQSFPReset(int id, int fiber, int reset);
+int sspQSFPStatus(int id);
+void sspSetA32BaseAddress(unsigned int addr);
+unsigned int sspGetA32BaseAddress();
 
 #endif

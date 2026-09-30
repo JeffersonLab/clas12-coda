@@ -44,6 +44,8 @@
 #include <vxLib.h>
 #else
 #include "jvme.h"
+#include "usrvme.h"
+#include "codautil.h"
 #endif
 
 /*
@@ -321,11 +323,11 @@ tdc1190CommonInit(int itdc, unsigned long laddr)
       printf(">>> Found board with BOARD_ID=0x%08x, firmware=0x%08x\n",boardID,rdata);
 	}
 
-    /* Check if this is the firmware we expect V1190_FIRMWARE_REV or V1190_FIRMWARE_REV+1 */
-    if( (rdata != V1190_FIRMWARE_REV) && (rdata != (V1190_FIRMWARE_REV+1)) && (rdata != 0xc) && (rdata != 0x11) )
+    /* Check if this is the firmware we expect certain V1190_FIRMWARE_REV's */
+    if( (rdata != V1190_FIRMWARE_REV05) && (rdata != V1190_FIRMWARE_REV06) && (rdata != V1190_FIRMWARE_REV09) &&  (rdata != V1190_FIRMWARE_REV11) )
 	{
-	  printf("WARN: Firmware does not match: 0x%08x (expected 0x%08x) (laddr=0x%08x)\n",
-			 rdata,V1190_FIRMWARE_REV, laddr);
+	  printf("WARN: Firmware does not match: 0x%02x (expected 0x%02x, 0x%02x, 0x%02x or 0x%02x) (laddr=0x%08x)\n",
+			 rdata,V1190_FIRMWARE_REV05,V1190_FIRMWARE_REV06,V1190_FIRMWARE_REV09,V1190_FIRMWARE_REV11,laddr);
       return ERROR;
 	} 
   }
@@ -466,8 +468,6 @@ tdc119GetSerialNumber(int id)
   return(rval);
 }
 
-#define SSWAP(x)        ((((x) & 0x00ff) << 8) | \
-                         (((x) & 0xff00) >> 8))
 /*
 to see all ROM from checksum to sernum2:
       tcpClient rocbcal1 "tdc1190PrintROM(0x4000,34)"
@@ -598,9 +598,8 @@ tdc1290ReadConfigFile(char *filename)
   char *getenv();
   char *clonparms;
 
-  gethostname(host,ROCLEN);  /* obtain our hostname */
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");
@@ -1093,7 +1092,7 @@ void
 tdc1290Mon(int slot)
 {
   int id, ii, start, end, res;
-  UINT16 channels[2];
+  UINT16 channels[8];
   usrVmeDmaGetConfig(&a24_a32, &sngl_blt_mblt, &sst_rate);
 
   printf("\nCPU DMA settings:\n");
@@ -2041,25 +2040,26 @@ retry:
   mstatus = vmeRead16(&(c1190p[id]->microHandshake)) & V1190_MICRO_WRITEOK;
 
   if(mstatus)
-    {
-      vmeWrite16(&(c1190p[id]->microReg),data);
-    }
+  {
+    vmeWrite16(&(c1190p[id]->microReg),data);
+  }
   else
+  {
+    kk++;
+    mstatus=0;
+    if(kk>=20)
     {
-      kk++;
-      mstatus=0;
-      if(kk>=20)
-	{
-	  logMsg("tdc1190WriteMicro: ERROR: Write Status not OK\n",0,0,0,0,0,0);
-	  UNLOCK_1190;
-	  return(ERROR);
-	}
-      else
-	{
-	  taskDelay(10);
-	  goto retry;
-	}
+      logMsg("tdc1190WriteMicro: ERROR: Write Status not OK\n",0,0,0,0,0,0);
+      UNLOCK_1190;
+      return(ERROR);
     }
+    else
+    {
+      //sleep(1);printf("tdc1190WriteMicro: retry kk=%d\n",kk);
+      taskDelay(10);
+      goto retry;
+    }
+  }
 
   UNLOCK_1190;
   if(kk > 10) printf("-> WriteMicro: kk=%d\n",kk);
@@ -2121,135 +2121,160 @@ tdc1190GWriteMicro(UINT16 data)
 int
 tdc1190PrintEvent(int id, int pflag)
 {
-  int ii, jj, nWords, evID, bunchID, evCount, headFlag, trigMatch;
-  UINT32 gheader, gtrailer, theader, ttrailer, tmpData, dCnt;
+  int ii, jj, nTDCs, nWords, evID, bunchID, evCount, headFlag, trigMatch;
+  UINT32 gheader, gtrailer, filler, theader, ttrailer, tmpData, dCnt;
   int tdcID, chanID, dataVal, tEdge;
 
   CHECKID(id);
 
+  if(use1190[id]==1) nTDCs = 4; // v1190
+  else               nTDCs = 2; // v1290
 
+  printf("\n\ntdc1190PrintEvent: tdc[%d]\n",id);
+  
   LOCK_1190;
   /* Check if there is a valid event */
-  if(vmeRead16(&(c1190p[id]->status))&V1190_STATUS_DATA_READY) {
+  if(vmeRead16(&(c1190p[id]->status))&V1190_STATUS_DATA_READY)
+  {
     dCnt = 0;
     headFlag  = vmeRead16(&(c1190p[id]->status))&V1190_STATUS_HEADER_ENABLE;
     trigMatch = vmeRead16(&(c1190p[id]->status))&V1190_STATUS_TRIG_MATCH;
 
-    if(trigMatch) {  /* If trigger match mode then print individual event */
-
+    if(trigMatch)  /* If trigger match mode then print individual event */
+    {
       /* Read Global Header - Get event count */
       gheader = vmeRead32(&(c1190p[id]->data[0]));
       if((gheader&V1190_DATA_TYPE_MASK) != V1190_GLOBAL_HEADER_DATA)
+      {
+	logMsg("tdc1190PrintEvent: ERROR: Invalid Global Header Word 0x%08x\n",gheader,2,3,4,5,6);
+	UNLOCK_1190;
+	return(ERROR);
+      }
+      else
+      {
+	printf(" TDC DATA for Module at address 0x%lx\n",(unsigned long)c1190p[id]);
+	evCount = (gheader&V1190_GHEAD_EVCOUNT_MASK)>>5;
+	dCnt++;
+	printf("  Global Header  [%3d]: 0x%08x   Event Count = %d\n",dCnt-1,gheader,evCount);
+      }
+
+      /* Loop over four TDC chips and get data for each */
+      for(ii=0; ii<nTDCs; ii++)
+      {
+	/* Read TDC Header - Get event ID, Bunch ID */
+	theader = vmeRead32(&(c1190p[id]->data[0]));
+	if((theader&V1190_DATA_TYPE_MASK) != V1190_TDC_HEADER_DATA)
 	{
-	  logMsg("tdc1190PrintEvent: ERROR: Invalid Global Header Word 0x%08x\n",
-		 gheader,2,3,4,5,6);
+	  logMsg("ERROR: Invalid TDC Header Word 0x%08x for TDC %d\n",theader,ii,3,4,5,6);
 	  UNLOCK_1190;
 	  return(ERROR);
 	}
-      else
+	else
 	{
-	  logMsg("  TDC DATA for Module at address 0x%lx\n",
-		 (unsigned long)c1190p[id],2,3,4,5,6);
-	  evCount = (gheader&V1190_GHEAD_EVCOUNT_MASK)>>5;
+	  evID = (theader&V1190_TDCHEAD_EVID_MASK)>>12;
+	  bunchID = (theader&V1190_TDCHEAD_BUNCHID_MASK);
 	  dCnt++;
-	  logMsg("  Global Header: 0x%08x   Event Count = %d \n",
-		 gheader,evCount,3,4,5,6);
+	  printf("    TDC %d Header [%3d]: 0x%08x   EventID = %d  Bunch ID = %d ",ii,dCnt-1,theader,evID,bunchID);
 	}
-
-      /* Loop over four TDC chips and get data for each */
-      for(ii=0; ii<4; ii++)
+	
+	jj=0;
+	tmpData = vmeRead32(&(c1190p[id]->data[0]));
+	dCnt++;
+	while((tmpData&V1190_DATA_TYPE_MASK) != V1190_TDC_EOB_DATA)
 	{
-	  /* Read TDC Header - Get event ID, Bunch ID */
-	  theader = vmeRead32(&(c1190p[id]->data[0]));
-	  if((theader&V1190_DATA_TYPE_MASK) != V1190_TDC_HEADER_DATA)
-	    {
-	      logMsg("ERROR: Invalid TDC Header Word 0x%08x for TDC %d\n",
-		     theader,ii,3,4,5,6);
-	      UNLOCK_1190;
-	      return(ERROR);
-	    }
-	  else
-	    {
-	      evID = (theader&V1190_TDCHEAD_EVID_MASK)>>12;
-	      bunchID = (theader&V1190_TDCHEAD_BUNCHID_MASK);
-	      dCnt++;
-	      logMsg("    TDC %d Header: 0x%08x   EventID = %d  Bunch ID = %d ",
-		     ii,theader,evID,bunchID,5,6);
-	    }
-	  jj=0;
-	  tmpData = vmeRead32(&(c1190p[id]->data[0]));
+	  printf("        CHAN %d:   0x%08x (0x%08x)\n",(tmpData&0x3e00000)>>21,(tmpData&0x1ffff),(tmpData));
+	  jj++;
+	  tmpData = vmeRead32(&(c1190p[id]->data[jj]));
 	  dCnt++;
-	  while((tmpData&V1190_DATA_TYPE_MASK) != V1190_TDC_EOB_DATA)
-	    {
-/* 	      if((jj % 5) == 0) printf("\n     "); */
-	      logMsg("ch %d:   0x%08x (0x%08x)\n",
-		     (tmpData&0x3e00000)>>21,(tmpData&0x1ffff),
-		     (tmpData),4,5,6);
-	      jj++;
-	      tmpData = vmeRead32(&(c1190p[id]->data[jj]));
-	    }
-	  /* reached EOB for TDC */
-	  logMsg("\n",1,2,3,4,5,6);
-	  ttrailer = tmpData;
-	  if((ttrailer&V1190_DATA_TYPE_MASK) != V1190_TDC_EOB_DATA)
-	    {
-	      logMsg("ERROR: Invalid TDC EOB Word 0x%08x for TDC %d\n",
-		     ttrailer,ii,3,4,5,6);
-	      UNLOCK_1190;
-	      return(ERROR);
-	    }
-	  else
-	    {
-	      nWords = (ttrailer&V1190_TDCEOB_WORDCOUNT_MASK);
-	      dCnt++;
-	      logMsg("    TDC %d EOB   : 0x%08x   Word Count = %d \n",
-		     ii,ttrailer,nWords,4,5,6);
-	    }
 	}
+	
+	/* reached EOB for TDC */
+	logMsg("\n",1,2,3,4,5,6);
+	ttrailer = tmpData;
+	if((ttrailer&V1190_DATA_TYPE_MASK) != V1190_TDC_EOB_DATA)
+	{
+	  logMsg("ERROR: Invalid TDC EOB Word 0x%08x for TDC %d\n",ttrailer,ii,3,4,5,6);
+	  UNLOCK_1190;
+	  return(ERROR);
+	}
+	else
+	{
+	  nWords = (ttrailer&V1190_TDCEOB_WORDCOUNT_MASK);
+	  //dCnt++; no vmeread -> no dCnt increment ! 
+	  printf("    TDC %d EOB    [%3d]: 0x%08x   Word Count = %d\n",ii,dCnt-1,ttrailer,nWords);
+	}
+      }
 
       /* next data word should be Global EOB */
       gtrailer = vmeRead32(&(c1190p[id]->data[dCnt]));
       if((gtrailer&V1190_DATA_TYPE_MASK) != V1190_GLOBAL_EOB_DATA)
-	{
-	  logMsg("tdc1190PrintEvent: ERROR: Invalid Global EOB Word 0x%08x\n",
-		 gtrailer,2,3,4,5,6);
-	  UNLOCK_1190;
-	  return(ERROR);
-	}
+      {
+	logMsg("tdc1190PrintEvent: ERROR: Invalid Global EOB Word 0x%08x\n",gtrailer,2,3,4,5,6);
+	UNLOCK_1190;
+	return(ERROR);
+      }
       else
-	{
-	  nWords = (gtrailer&V1190_GEOB_WORDCOUNT_MASK)>>5;
-	  dCnt++;
-	  logMsg("  Global EOB   : 0x%08x   Total Word Count = %d \n",
-		 gtrailer,nWords,3,4,5,6);
-	}
+      {
+	nWords = (gtrailer&V1190_GEOB_WORDCOUNT_MASK)>>5;
+	dCnt++;
+	printf("  Global EOB     [%3d]: 0x%08x   Total Word Count = %d\n",dCnt-1,gtrailer,nWords);
+      }
+
+      /* next data word can be Filler */
+      filler = vmeRead32(&(c1190p[id]->data[dCnt]));
+      if((filler&V1190_DATA_TYPE_MASK) != V1190_FILLER_DATA)
+      {
+	logMsg("tdc1190PrintEvent: INFO: no filler Word 0x%08x\n",filler,2,3,4,5,6);
+	UNLOCK_1190;
+	//return(ERROR);
+      }
+      else
+      {
+	dCnt++;
+	printf("  Filler         [%3d]: 0x%08x\n",dCnt-1,filler);
+      }
+
+      gtrailer = vmeRead32(&(c1190p[id]->data[dCnt++]));
+      printf("--> [%d] 0x%08x\n",dCnt-1,gtrailer);
+      gtrailer = vmeRead32(&(c1190p[id]->data[dCnt++]));
+      printf("--> [%d] 0x%08x\n",dCnt-1,gtrailer);
+      gtrailer = vmeRead32(&(c1190p[id]->data[dCnt++]));
+      printf("--> [%d] 0x%08x\n",dCnt-1,gtrailer);
+      gtrailer = vmeRead32(&(c1190p[id]->data[dCnt++]));
+      printf("--> [%d] 0x%08x\n",dCnt-1,gtrailer);
+      
     }
     else /* Continuous Storage mode */
+    {
+      tmpData = vmeRead32(&(c1190p[id]->data[dCnt]));
+      logMsg("  TDC Continuous Storage DATA\n",1,2,3,4,5,6);
+      while((tmpData&V1190_DATA_TYPE_MASK) != V1190_FILLER_DATA)
       {
+	tdcID  = (tmpData&V1190_TDC_MASK)>>24;
+	chanID = (tmpData&V1190_CHANNEL_MASK)>>19;
+	tEdge = (tmpData&V1190_EDGE_MASK)>>19;
+	dataVal = (tmpData&V1190_DATA_MASK);
+	logMsg("    %d   %d   %d    %d\n",tdcID, chanID, tEdge, dataVal,5,6);
+	dCnt++;
 	tmpData = vmeRead32(&(c1190p[id]->data[dCnt]));
-	logMsg("  TDC Continuous Storage DATA\n",1,2,3,4,5,6);
-	while((tmpData&V1190_DATA_TYPE_MASK) != V1190_FILLER_DATA)
-	  {
-	    tdcID  = (tmpData&V1190_TDC_MASK)>>24;
-	    chanID = (tmpData&V1190_CHANNEL_MASK)>>19;
-	    tEdge = (tmpData&V1190_EDGE_MASK)>>19;
-	    dataVal = (tmpData&V1190_DATA_MASK);
-	    logMsg("    %d   %d   %d    %d\n",tdcID, chanID, tEdge, dataVal,5,6);
-	    dCnt++;
-	    tmpData = vmeRead32(&(c1190p[id]->data[dCnt]));
-	  }
-	printf("\n");
       }
+      printf("\n");
+    }
     UNLOCK_1190;
+    
+    logMsg("tdc1190PrintEvent: Total number of words: %d\n\n",dCnt,2,3,4,5,6);
+
     return(dCnt);
   }
   else
-    {
-      logMsg("tdc1190PrintEvent: No data available for readout!\n",1,2,3,4,5,6);
-      UNLOCK_1190;
-      return(0);
-    }
+  {
+    logMsg("tdc1190PrintEvent: No data available for readout!\n\n",1,2,3,4,5,6);
+    UNLOCK_1190;
+    return(0);
+  }
   UNLOCK_1190;
+
+  return(0);
 }
 
 /*******************************************************************************
@@ -2747,7 +2772,8 @@ tdc1190ReadBoard(int itdc, UINT32 *tdata)
   */
   UINT32 *output = tdata - 1;
   int fifodata, ndata, nev, ii;
-
+  UINT32 filler;
+  
   /*
   UINT32 addr = (unsigned int) c1190p[itdc];
   data = (UINT32 *) addr;
@@ -2761,19 +2787,43 @@ tdc1190ReadBoard(int itdc, UINT32 *tdata)
        otherwise 'full' condition will happens */
 
     nev = tdc1190Dready(itdc);
+    printf("tdc1190ReadBoard: nev1=%d\n",nev);
     if(nev > blt_Events) nev = blt_Events;
+    printf("tdc1190ReadBoard: nev2=%d\n",nev);
+    printf("tdc1190ReadBoard: will read fifo from 0x%lx\n",&(c1190p[itdc]->fifo));
     for(ii=0; ii<nev; ii++)
     {
       fifodata = (vmeRead32(&(c1190p[itdc]->fifo))&0xffff);
+      printf("tdc1190ReadBoard: fifodata[%d]=0x%x (%d)\n",fifodata,fifodata);
     }
   }
 
+  printf("tdc1190ReadBoard: will read data from 0x%lx\n",&(c1190p[itdc]->data[0]));
+  ii=0;
   do
   {
     *(++output) = vmeRead32(&(c1190p[itdc]->data[0]));
+    printf("tdc1190ReadBoard: data[%d]=0x%08x (%6d)\n",ii++,*output,*output);
   } while( ((*output)&V1190_DATA_TYPE_MASK) != V1190_GLOBAL_EOB_DATA );
 
-  return(((int)(output-tdata))+1);
+  
+  
+  if(berr_fifo == 0x01) /* sergey: ?? if fifo enabled, it will be extra filler, have to read it (!?) */
+  {
+    filler = vmeRead32(&(c1190p[itdc]->data[0]));
+    printf("tdc1190ReadBoard: filler=0x%08x\n",filler);
+  }
+  else /* sergey: still read it, should get 0xFFFFFFFF (otherwise it shows up in the beginning of the next event ???!!!) */
+  {
+    filler = vmeRead32(&(c1190p[itdc]->data[0]));
+    printf("tdc1190ReadBoard: filler=0x%08x\n",filler);    
+  }
+
+  
+  ndata = ((int)(output-tdata))+1;
+  printf("tdc1190ReadBoard: done read data, last word was 0x%08x (%6d), ndata=%d\n",*output,*output,ndata);
+  
+  return(ndata);
 }
 
 
@@ -2789,6 +2839,9 @@ tdc1190ReadBoardDmaStart(int ib, UINT32 *tdata)
   UINT32 addr = (unsigned int) c1190p[ib];
   fifo = (UINT32 *) (addr+0x1038);
   */
+  
+  //printf("\n\n\ntdc1190ReadBoardDmaStart reached, berr_fifo=%d\n",berr_fifo);
+
   if(berr_fifo == 0x01)
   {
     /* get event length in words */
@@ -2800,19 +2853,17 @@ tdc1190ReadBoardDmaStart(int ib, UINT32 *tdata)
       fifodata = (vmeRead32(&(c1190p[ib]->fifo))&0xffff);
       ndata_save += fifodata&0xffff;
     }
-    /*
-    logMsg("tdc1190ReadBoardDmaStart: INFO: event fifo reports %d words\n",
-           ndata_save,0,0,0,0,0);
-	*/
+    
+    //printf("tdc1190ReadBoardDmaStart: INFO: berr_fifo=%d -> event fifo reports %d words\n",berr_fifo,ndata_save);
+    
   }
   else
   {
     ndata_save = V1190_MAX_WORDS_PER_BOARD * blt_Events;
     mdata = 0;
-    /*
-    logMsg("tdc1190ReadBoardDmaStart: INFO: trying to DMA %d words\n",
-           ndata_save,0,0,0,0,0);
-    */
+    
+    //printf("tdc1190ReadBoardDmaStart: INFO: berr_fifo=%d -> trying to DMA %d words\n",berr_fifo,ndata_save);
+    
   }
 
   /*usrVmeDmaReset();*/
@@ -2820,23 +2871,21 @@ tdc1190ReadBoardDmaStart(int ib, UINT32 *tdata)
   if(berr_fifo == 0x01)
   {
     if(sngl_blt_mblt >= 0x04) /* 128 bit alignment */
-	{
+    {
       extra_save = (4-(ndata_save%4));
-	  /*
-      logMsg("111: tdc1190ReadBoardDmaStart: ndata_save=%d extra_save=%d\n",
-        ndata_save,extra_save,3,4,5,6);
-	  */
+      
+      //printf("111: tdc1190ReadBoardDmaStart: sngl_blt_mblt=%d -> ndata_save=%d extra_save=%d\n",sngl_blt_mblt,ndata_save,extra_save);
+      
       if(extra_save==4) extra_save=0;
-	}
-	else /* 64 bit alignment */
-	{
+    }
+    else /* 64 bit alignment */
+    {
       if( (ndata_save%2) != 0 ) extra_save = 1;
       else                      extra_save = 0;
-	}
-	/*
-    logMsg("tdc1190ReadBoardDmaStart: ndata_save=%d extra_save=%d\n",
-      ndata_save,extra_save,3,4,5,6);
-	*/
+    }
+    
+    //printf("tdc1190ReadBoardDmaStart: ndata_save=%d extra_save=%d\n",ndata_save,extra_save);
+    
     nbytes_save[ib] = nbytes = ((ndata_save+extra_save)<<2);
   }
   else
@@ -2844,11 +2893,18 @@ tdc1190ReadBoardDmaStart(int ib, UINT32 *tdata)
     nbytes_save[ib] = nbytes = ndata_save<<2;
   }
 
-  /*
-printf("tdc1190ReadBoardDmaStart[%d]: c1190vme=0x%08x, tdata=0x%08x, nbytes=%d\n",
-		 ib,c1190vme[ib],tdata, nbytes);
-  */
-  res = usrVme2MemDmaStart( c1190vme[ib], (unsigned long)tdata, nbytes);
+  
+  //printf("tdc1190ReadBoardDmaStart[%d]: c1190vme=0x%08x, tdata=0x%08x, nbytes=%d\n",ib,c1190vme[ib],tdata, nbytes);
+  
+
+  //printf("\nV1190 DMA: c1190vme[%d]=0x%lx, tdata=0x%lx, nbytes=%d\n\n",ib,c1190vme[ib],(unsigned long)tdata, nbytes);fflush(stdout);
+
+  /*sergey: test */
+  //nbytes = nbytes + 16;
+  //printf("ADD 16 bytes, now nbytes=%d\n",nbytes);fflush(stdout);
+
+  //sergey: usrVme2MemDmaStart() multiplies nbytes by 4 ???!!!
+  res = usrVme2MemDmaStart( c1190vme[ib], (unsigned long)tdata, nbytes/*(nbytes/4)*/);
 
   if(res < 0)
   {
@@ -2887,7 +2943,7 @@ tdc1190ReadBoardDmaDone(int ib)
     /*logMsg("%s: nbytes_save=%d res=%d -> mbytes=%d\n",__FUNCTION__,nbytes_save[id],res,mbytes,5,6);*/
     if(mbytes>0)
     {
-      logMsg("%s: WRONG: nbytes_save[%d]=%d, res=%d => mbytes=%d\n",(int)__FUNCTION__,
+      logMsg("%s: WRONG: nbytes_save[%d]=%d, res=%d => mbytes=%d\n",__FUNCTION__,
           ib,nbytes_save[ib],res,mbytes,6);
       return(-2);
     }
@@ -2913,6 +2969,8 @@ tdc1190ReadStart(INT32 *tdcbuf, INT32 *rlenbuf)
 
 /* part1: 6 usec */
 
+  //printf("\n\n\ntdc1190ReadStart reached, berr_fifo=%d\n",berr_fifo);
+  
   if(Nc1190==0)
   {
     logMsg("tdc1190ReadStart: ERROR: Nc1190=%d\n",Nc1190,2,3,4,5,6);
@@ -2942,13 +3000,17 @@ tdc1190ReadStart(INT32 *tdcbuf, INT32 *rlenbuf)
       logMsg("tdc1190ReadStart: [%2d] not ready ! (nev=%d)\n",jj,tdc1190Dready(jj),3,4,5,6);
       notready = 1;
     }
+    //else
+    //{
+    //  logMsg("tdc1190ReadStart: [%2d] nev=%d\n",jj,nev,3,4,5,6);
+    //}
 
     /* should never have more then 100 events in one block 
     if(nev > 100)      
     {
-	  logMsg("tdc1190ReadStart: ERROR: [%2d] nev=%d\n",jj,nev,3,4,5,6);
-	}
-	*/
+      logMsg("tdc1190ReadStart: ERROR: [%2d] nev=%d\n",jj,nev,3,4,5,6);
+    }
+    */
   }
 
   if(notready) return(ERROR);
@@ -2983,8 +3045,12 @@ tdc1190ReadStart(INT32 *tdcbuf, INT32 *rlenbuf)
       /* 18usec x 2boards = 36Usec */
 
       tdc1190ReadBoardDmaStart(jj,&tdcbuf[itdcbuf]);
-      res = tdc1190ReadBoardDmaDone(jj); /* returns the number of words */
 
+      /*sergey ??? see berr_fifo ??? return #words if BERR readout , or 0 if FIFO readout ??? */
+      res = tdc1190ReadBoardDmaDone(jj); /* returns the number of words */
+      //printf("berr_fifo=%d\n",berr_fifo);
+      //printf("res1=%d\n",res);
+      
 repeat_dma:
 
       mbytes = nbytes_save[jj] - (res<<2);
@@ -2994,11 +3060,11 @@ repeat_dma:
         notready = 1;
       }
       else if(mbytes>0)
-	  {
-		/* logMsg("%s: WARN: nbytes_save[%d]=%d, res=%d => mbytes=%d, DMAing again\n",(int)__FUNCTION__,jj,nbytes_save[jj],res,mbytes,6);*/
+      {
+	logMsg("%s: WARN: nbytes_save[%d]=%d, res=%d => mbytes=%d, DMAing again\n",__FUNCTION__,jj,nbytes_save[jj],res,mbytes,6);
         rlenbuf[jj] += res; /* byte couter for the board 'jj' */
         itdcbuf += res; /* output buffer index */
-		nbytes_save[jj] = mbytes; /* the number of bytes remains in buffer 'jj' */
+	nbytes_save[jj] = mbytes; /* the number of bytes remains in buffer 'jj' */
 
         res = usrVme2MemDmaStart( c1190vme[jj], (unsigned long)&tdcbuf[itdcbuf], mbytes);
         if(res < 0)
@@ -3006,12 +3072,13 @@ repeat_dma:
           logMsg("tdc1190ReadEventDmaRepeat: ERROR: usrVme2MemDmaStart returned %d\n",res,0,0,0,0,0);
         }
         res = tdc1190ReadBoardDmaDone(jj); /* returns the number of words */
+        //printf("res2=%d\n",res);
 
         goto repeat_dma;
-	  }
+      }
       else
       {
-        /*logMsg("%s: INFO: nbytes_save[%d]=%d, res=%d => mbytes=%d, DMA is done\n",(int)__FUNCTION__,jj,nbytes_save[jj],res,mbytes,6);*/
+        //logMsg("%s: INFO: nbytes_save[%d]=%d, res=%d => mbytes=%d, DMA is done\n",__FUNCTION__,jj,nbytes_save[jj],res,mbytes,6);
         rlenbuf[jj] += res;
         itdcbuf += res;
       }
@@ -3033,7 +3100,7 @@ tdc1190ReadListStart(INT32 *tdcbuf, INT32 *rlenbuf)
   int fifodata;
   int ii, jj, nev;
   int itdcbuf;
-  static unsigned int destination[V1190_MAX_MODULES];
+  unsigned long int destination;
   int ndata_save, extra_save;
 
   /*
@@ -3090,6 +3157,7 @@ TIMER_VAR;
   if(berr_fifo == 0x01) /* use FIFO reaout */
   {
     itdcbuf = 0;
+    destination = (unsigned long int)tdcbuf;
     for(jj=0; jj<Nc1190; jj++)
     {
 
@@ -3117,13 +3185,11 @@ TIMER_VAR;
       nbytes_save[jj] = (ndata_save+extra_save)<<2;
       rlenbuf[jj] = ndata_save+extra_save;
 
-      destination[jj] = (unsigned int)&tdcbuf[itdcbuf];
-
       itdcbuf += rlenbuf[jj];
 
 	/*
 logMsg("[%d] ask=%d (%d bytes), got=%d (0x%08x to 0x%08x)\n",
- jj,ndata_save+extra_save,nbytes_save[jj],rlenbuf[jj],(unsigned int)c1190p[jj],destination[jj]);
+ jj,ndata_save+extra_save,nbytes_save[jj],rlenbuf[jj],(unsigned int)c1190p[jj],destination);
 	*/
 
     }
@@ -3131,6 +3197,7 @@ logMsg("[%d] ask=%d (%d bytes), got=%d (0x%08x to 0x%08x)\n",
   else /* use BERR readout */
   {
     itdcbuf = 0;
+    destination = (unsigned long int)tdcbuf;
     for(jj=0; jj<Nc1190; jj++)
     {
       ndata_save = V1190_MAX_WORDS_PER_BOARD;
@@ -3139,10 +3206,8 @@ logMsg("[%d] ask=%d (%d bytes), got=%d (0x%08x to 0x%08x)\n",
       nbytes_save[jj] = (ndata_save)<<2;
       rlenbuf[jj] = ndata_save;
 
-      destination[jj] = (unsigned int)&tdcbuf[itdcbuf];
-
       itdcbuf += rlenbuf[jj];
-	} 
+    } 
   }
 
 
@@ -3213,7 +3278,7 @@ int
 tdc1190ReadEvent(int id, UINT32 *tdata)
 {
 /*   int ii, nWords, evID; */
-  UINT32 header, trailer, dCnt, tmpData;
+  UINT32 header, trailer, filler, dCnt, tmpData;
   UINT16 contReg, statReg;
   int fifodata, nev, ii;
 
@@ -3279,6 +3344,23 @@ tdc1190ReadEvent(int id, UINT32 *tdata)
       tdata[dCnt] = trailer;
       dCnt++;
     }
+    
+    /* check if we have filler */
+    filler = vmeRead32(&(c1190p[id]->data[dCnt/*0*/]));
+    if((filler&V1190_DATA_TYPE_MASK) != V1190_FILLER_DATA) {
+      logMsg("tdc1190ReadEvent: ERROR: there is no filler word 0x%08x\n",filler,0,0,0,0,0);
+      UNLOCK_1190;
+    }
+    else
+    {
+      tdata[dCnt] = filler;
+      dCnt++;
+    }
+
+
+
+
+    
     UNLOCK_1190;
     return (dCnt);
       
@@ -3305,12 +3387,15 @@ tdc1190ReadEvent(int id, UINT32 *tdata)
 int
 tdc1190ReadData(int id, UINT32 *tdata, int maxWords)
 {
-  int ii, jj, nWords, evID, bunchID, evCount, headFlag, trigMatch;
+  int ii, jj, nTDCs, nWords, evID, bunchID, evCount, headFlag, trigMatch;
   UINT32 gheader, gtrailer, theader, ttrailer, tmpData, dCnt;
 
   CHECKID(id);
 
   if(maxWords==0) maxWords = 1024;
+
+  if(use1190[id]==1) nTDCs = 4; // v1190
+  else               nTDCs = 2; // v1290
 
   /* Check if there is a valid event */
   LOCK_1190;
@@ -3340,7 +3425,7 @@ tdc1190ReadData(int id, UINT32 *tdata, int maxWords)
 	    }
 
 	  /* Loop over four TDC chips and get data for each */
-	  for(ii=0; ii<4; ii++)
+	  for(ii=0; ii<nTDCs; ii++)
 	    {
 	      /* Read TDC Header - Get event ID, Bunch ID */
 	      theader = vmeRead32(&(c1190p[id]->data[0]));

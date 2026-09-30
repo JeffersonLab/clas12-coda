@@ -37,7 +37,54 @@ main()
   */
 
 
-  epics_json_msg_sender_init("clasrun","clasprod","daq","HallB_DAQ");
+  epics_json_msg_sender_init("clasrun","clasprod","daq","HallB_DAQ",NULL,NULL);
+  //epics_json_msg_sender_init("clasrun","clasprod","daq","HallB_DAQ","daq","gem3vtp");
+
+  for(int i=0; i<3; i++)
+  {
+    sleep(1);
+    epics_json_msg_send("TestScalers", "int", MAXELEM, iarray);
+  }
+
+  sleep(2);
+  
+  printf("\nepics_json_msg_sender_init\n");
+  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "gem1vtp", NULL, NULL);
+
+  sleep(2);
+  printf("\nsend_control_message 1\n");
+  send_control_message("command:coda_ebc", "nostats");
+  printf("\n");
+  
+  sleep(2);
+  printf("\nsend_control_message 2\n");
+  send_control_message("command:coda_ebc", "nostats");
+  printf("\n");
+
+
+  printf("\nepics_json_msg_sender_init\n");
+  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "gem2vtp", NULL, NULL);
+
+  sleep(2);
+  printf("\nsend_control_message 3\n");
+  send_control_message("command:coda_ebc", "nostats");
+  printf("\n");
+
+  sleep(2);
+  printf("\nsend_control_message 4\n");
+  send_control_message("command:coda_ebc", "nostats");
+  printf("\n");
+
+
+
+  
+  sleep(2);
+
+
+  
+
+#if 0
+  epics_json_msg_sender_init("clasrun","clasprod","bla1","bla2","daq","gem4vtp");
 
   while(1)
   {
@@ -48,8 +95,9 @@ main()
     epics_json_msg_send("TestVals", "float", MAXELEM, farray);
     epics_json_msg_send("DoubleVals", "double", MAXELEM, darray);
   }
-
+#endif
+  
   epics_json_msg_close();
-
+  
 }
 

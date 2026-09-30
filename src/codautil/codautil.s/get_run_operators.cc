@@ -37,14 +37,18 @@ get_run_operators(char *mysql_database, char *session)
   int ii, jj, len, numRows;
   
   /*hps
-  char *user = "hpsshiftbot";
-  char *passwd = "88hIMrBzLqwKHQaO";
+  const char *user = "hpsshiftbot";
+  const char *passwd = "88hIMrBzLqwKHQaO";
   */
 
-  /*clas12*/
+  /*clas12
   const char *user = "shiftbot";
   const char *passwd = "manageshiftdb";
-
+  */
+  
+  /*prad*/
+  const char *user = "hpsshiftbot";
+  const char *passwd = "88hIMrBzLqwKHQaO";
 
   static char chres[1000];
 
@@ -67,8 +71,12 @@ get_run_operators(char *mysql_database, char *session)
   dbsock = dbConnectFull("clasdb", "hpsshift", user, passwd);
   */  
 
-  /*clas12*/
+  /*clas12
   dbsock = dbConnectFull("clasdb", "shift", user, passwd);
+  */
+    
+  /*prad*/
+  dbsock = dbConnectFull("clasdb", "hpsshift", user, passwd);
 
 
   /* get experiment */

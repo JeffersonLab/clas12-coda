@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "jvme.h"
 #include "fadcLib.h"
 #include "fadc250Config.h"
 

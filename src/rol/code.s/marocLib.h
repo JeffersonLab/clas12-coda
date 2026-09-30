@@ -412,5 +412,13 @@ void SetupMAROC_ADC(int devid, unsigned char h1, unsigned char h2, int resolutio
 void maroc_fifo_reset(int devid);
 void maroc_enable_trigger(int devid, int source);
 
+/*sergey*/
+void maroc_setmask_fpga_or0(int devid, int m0_0, int m0_1, int m1_0, int m1_1, int m2_0, int m2_1);
+void maroc_setmask_fpga_or1(int devid, int m0_0, int m0_1, int m1_0, int m1_1, int m2_0, int m2_1);
+void maroc_getmask_fpga_or0(int devid, int *m0_0, int *m0_1, int *m1_0, int *m1_1, int *m2_0, int *m2_1);
+void maroc_getmask_fpga_or1(int devid, int *m0_0, int *m0_1, int *m1_0, int *m1_1, int *m2_0, int *m2_1);
+void marocSetIPStart(int ip);
+int marocGetIPStart();
+
 #endif
 

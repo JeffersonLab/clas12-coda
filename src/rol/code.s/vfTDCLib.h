@@ -323,7 +323,7 @@ int  vfTDCSetBlockLevel(int id, int blockLevel);
 int  vfTDCSetTriggerSource(int id, unsigned int trigmask);
 int  vfTDCSetSyncSource(int id, unsigned int sync);
 int  vfTDCSoftTrig(int id);
-int  vfTDCSetWindowParamters(int id, int latency, int width);
+int  vfTDCSetWindowParameters(int id, int latency, int width);
 int  vfTDCReadBlockStatus(int pflag);
 int  vfTDCReadBlock(int id, volatile UINT32 *data, int nwrds, int rflag);
 int  vfTDCEnableBusError(int id);

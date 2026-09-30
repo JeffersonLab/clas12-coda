@@ -72,6 +72,8 @@ typedef      long long       hrtime_t;
 */
 #endif
 
+#include "jvme.h"
+
 #include "daqLib.h"
 #include "moLib.h"
 #include "v851.h"
@@ -707,8 +709,10 @@ v1190: 0x11xx0000, where xx follows the same scheme as FADCs
 	printf("=======================> fadcSlotMask=0x%08x\n",fadcSlotMask);
 
 	{
-      unsigned int PL, PTW, NSB, NSA, NP;
-      faGetProcMode(FA_SLOT, &fadc_mode, &PL, &PTW, &NSB, &NSA, &NP);
+        unsigned int PL, PTW, NSB, NSA, NP;
+vmeBusLock();
+        faGetProcMode(FA_SLOT, &fadc_mode, &PL, &PTW, &NSB, &NSA, &NP);
+vmeBusUnlock();
       printf("slot %d, fadc_mode=%d\n",FA_SLOT,fadc_mode);
 	}
     if(fadc_mode==1)

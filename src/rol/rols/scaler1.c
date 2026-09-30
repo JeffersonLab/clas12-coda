@@ -1,6 +1,7 @@
 
 /* scaler1.c - first readout list for scalers */
 
+
 #if defined(VXWORKS) || defined(Linux_vme)
 
 #define NEW
@@ -15,7 +16,7 @@ static int nusertrig, ndone;
 #define USE_SIS3801
 #define USE_DSC2
 #define USE_V1190
-#define USE_V851
+//#define USE_V851
 #define USE_MO
 
 
@@ -52,8 +53,11 @@ static char ssname[80];
 #include "v851.h"
 #include "tiLib.h"
 #include "tiConfig.h"
+
+#ifdef USE_DSC2
 #include "dsc2Lib.h"
 #include "dsc2Config.h"
+#endif
 
 #include "circbuf.h"
 
@@ -332,9 +336,9 @@ vmeBusUnlock();
 #endif
 
 
-  /*********************************************************/
-  /*********************************************************/
 
+  /*********************************************************/
+  /*********************************************************/
 
 
   /* set wide pulse */
@@ -343,18 +347,11 @@ vmeBusLock();
 /*worked for bit pattern latch tiSetSyncDelayWidth(0x54,127,1);*/
 vmeBusUnlock();
 
-  usrVmeDmaSetConfig(2,5,1); /*A32,2eSST,267MB/s*/
-  /*usrVmeDmaSetConfig(2,5,0);*/ /*A32,2eSST,160MB/s*/
-  /*usrVmeDmaSetConfig(2,3,0);*/ /*A32,MBLT*/
+//usrVmeDmaSetConfig(2,5,1); /*A32,2eSST,267MB/s*/
+  //usrVmeDmaSetConfig(2,5,0); /*A32,2eSST,160MB/s*/
+  usrVmeDmaSetConfig(2,3,0); /*A32,MBLT*/ /*use this for caen TDC1190s on new CONTROLLERS XVB603 */
 
 
-
-  /*
-if(rol->pid==18)
-{
-  usrVmeDmaSetConfig(2,3,0);
-}
-  */
 
 
   /*
@@ -363,7 +360,6 @@ if(rol->pid==18)
   */
 
   tdcbuf = (unsigned int *)i2_from_rol1;
-
 
 
 
@@ -809,7 +805,7 @@ vmeBusUnlock();
 #endif
 
   /* always clear exceptions */
-  jlabgefClearException(1);
+  vmeClearException(1);
 
   nusertrig = 0;
   ndone = 0;
@@ -943,9 +939,13 @@ TIMERL_START;
 
 
 
+ 
+
     /*************/
     /* TDC stuff */
 
+ for(jj=0; jj<10000; jj++) tdcbuf[jj] = 0;
+  
 #ifdef USE_V1190
     if(ntdcs>0)
     {
@@ -976,6 +976,7 @@ vmeBusUnlock();
         itdcbuf += rlen;
 
 
+	
 #ifdef SLOTWORKAROUND
 	/* go through current board and fix slot number */
         for(jj=0; jj<rlen; jj++)
@@ -986,7 +987,7 @@ vmeBusUnlock();
 	  {
             slot = utmp&0x1f;
             if( slot != slotnums[ii] )
-			{
+	    {
               /*printf("ERROR: old=0x%08x: WRONG slot=%d IN GLOBAL HEADER, must be %d - fixed\n",utmp,slot,slotnums[ii]);*/
               utmp = (utmp & 0xFFFFFFE0) | slotnums[ii];
               /*printf("new=0x%08x\n",utmp);*/
@@ -1007,11 +1008,20 @@ vmeBusUnlock();
         }
 #endif
 
-        for(jj=0; jj<rlen; jj++) *rol->dabufp ++ = tdc[jj];
+        for(jj=0; jj<rlen; jj++)
+	{
+	  *rol->dabufp ++ = tdc[jj];
+	  //printf("TDC[%3d]=0x%08x\n",jj,LSWAP(tdc[jj]));
+	}
+	
+        //for(jj=0; jj<10000; jj++)
+	//{
+	//  if(tdc[jj]!=0) printf("TDC[%3d]=0x%08x\n",jj,LSWAP(tdc[jj]));
+	//}
+	
       }
       BANKCLOSE;
-
-	}
+    }
 
 #endif /* USE_V1190 */
 
@@ -1020,8 +1030,7 @@ vmeBusUnlock();
 
 
 
-
-
+    
 
     /*****************/
     /* SCALERS stuff */
@@ -1176,7 +1185,7 @@ vmeBusUnlock();
 
     }
 
-    nwords = ((int)rol->dabufp-(int)dabufp1)/4 + 1;
+    nwords = ((long int)rol->dabufp-(long int)dabufp1)/4 + 1;
 
     *rol->dabufp ++ = LSWAP((0x11<<27)+nwords); /*block trailer*/
 

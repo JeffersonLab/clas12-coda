@@ -19,17 +19,23 @@
 
 #include "CrateMsgTypes.h"
 
+#include "codautil.h"
 #include "ipc.h"
-
 #include "libdb.h"
 
 #ifdef Linux_vme
 #include "jvme.h"
+#include "usrvme.h"
 #include "daqLib.h"
 #include "dsc2Lib.h"
 #include "dsc2Config.h"
+
 #include "fadcLib.h"
 #include "fadc250Config.h"
+
+#include "faV3Lib.h"
+#include "faV3Config.h"
+
 #include "vscmLib.h"
 #include "sspLib.h"
 #include "sspConfig.h"
@@ -40,6 +46,7 @@
 #include "tsConfig.h"
 #include "moLib.h"
 #include "vfTDCLib.h"
+#include "tagdscLib.h"
 #endif
 
 #ifdef Linux_armv7l
@@ -151,7 +158,7 @@ What have to be done:
 
 #define DIST_ADDR  0xEA00	  /*  base address of FADC signal distribution board  (A16)  */
 
-#define MAXBOARDS  22   /* max number od boards per crate */
+#define MAXBOARDS  40/*22*/   /* max number of boards per crate (increased to bigger number because of tagdsc etc) */
 #define MAXWORDS  /*256*//*4096*/8192   /* max number of scaler words per board */
 
 #define MIN(a,b) ( (a) < (b) ? (a) : (b) )
@@ -164,7 +171,7 @@ static pthread_mutex_t vmescalers_lock;
 #endif
 
 
-static int nfadc, ndsc2_tcp, nvscm, nssp, nvftdc, nts, ntd, nmo, rflag, rmode;
+static int nfadc, nfav3, ntagdsc, ndsc2, ndsc2_tcp, nvscm, nssp, nvftdc, nts, ntd, nmo, rflag, rmode;
 static int mssp, mvscm;
 static int mfiber;
 
@@ -339,6 +346,44 @@ vmeBusUnlock();
         vmescalerslen[slot] = nw;
         for(ii=0; ii<nw; ii++) vmescalers[slot][ii] = adcbuf[ii];
 
+        jj=0;
+        for(ii=0; ii<nw; ii++) 
+        {
+          data[jj++] = ((float)(adcbuf[ii]));
+	}
+
+	sprintf(name,"%s_FADC250SLOT%d",hostname,slot);
+        epics_json_msg_send(name, "float", 16/*nw*/, data);
+
+        faReadChargeScalers(slot, lldata, chmask);
+        for(ii=0; ii<nw; ii++)
+          data[ii] = (float)lldata[ii];
+
+        /* skip first report of charge values to eliminate bogus reporting */
+        if(!first)
+        {
+          sprintf(name,"%s_FADC250SLOT%d_Q",hostname,slot);
+          epics_json_msg_send(name, "float", 16/*nw*/, data);
+        }
+      }
+    }
+
+    
+    else if(itype == SCALER_TYPE_FAV3)    /* faV3 scalers */
+    {
+      char name[100];
+      float ref, data[16*17]; /* 17 scalers per slot, maximum can be 16 FADCs */
+      unsigned long long lldata[16];
+      int jj;
+
+      for(id=0; id<nfav3; id++)
+      {
+        slot = faV3Slot(id);
+vmeBusLock();
+        nw = faV3ReadScalers(slot, adcbuf, chmask, 0x3/*rflag*/);
+vmeBusUnlock();
+        vmescalerslen[slot] = nw;
+        for(ii=0; ii<nw; ii++) vmescalers[slot][ii] = adcbuf[ii];
 
         jj=0;
         for(ii=0; ii<nw; ii++) 
@@ -346,27 +391,25 @@ vmeBusUnlock();
           data[jj++] = ((float)(adcbuf[ii]));
 	}
 
-	  sprintf(name,"%s_FADC250SLOT%d",hostname,slot);
+	sprintf(name,"%s_FADC250SLOT%d",hostname,slot);
+        epics_json_msg_send(name, "float", 16/*nw*/, data);
+
+#if 0
+        faV3ReadChargeScalers(slot, lldata, chmask);
+        for(ii=0; ii<nw; ii++) data[ii] = (float)lldata[ii];
+
+        /* skip first report of charge values to eliminate bogus reporting */
+        if(!first)
+        {
+          sprintf(name,"%s_FADC250SLOT%d_Q",hostname,slot);
           epics_json_msg_send(name, "float", 16/*nw*/, data);
-
-//        if(!strcmp(hostname,"adcecal2") ||
-//           !strcmp(hostname,"adcpcal2") ||
-//           !strcmp(hostname,"adcftof2") )
-//        {
-          faReadChargeScalers(slot, lldata, chmask);
-          for(ii=0; ii<nw; ii++)
-            data[ii] = (float)lldata[ii];
-
-          /* skip first report of charge values to eliminate bogus reporting */
-          if(!first)
-          {
-            sprintf(name,"%s_FADC250SLOT%d_Q",hostname,slot);
-            epics_json_msg_send(name, "float", 16/*nw*/, data);
-          }
-//        }
+        }
+#endif
       }
     }
 
+
+    
     else if(itype == SCALER_TYPE_VSCM)    /* vscm scalers */
     {
 #if 0
@@ -382,6 +425,7 @@ vmeBusUnlock();
       }
 #endif
     }
+
     else if(itype == SCALER_TYPE_SSP)    /* ssp scalers */
     {
 
@@ -430,6 +474,7 @@ vmeBusUnlock();
               sspbuf[nw_len] = nw - nw_len; /*inclusive length in words*/
 	    }
 	    /*sleep(1);*/
+	    usleep(10000);
 	  }
 	}
 
@@ -447,9 +492,10 @@ vmeBusUnlock();
         mssp++;
         if(mssp>=nssp) mssp = 0;
       }
-    }
+      }
 
     }
+    
     else if(itype == SCALER_TYPE_TD)    /* td scalers */
     {
       char name[100];
@@ -499,14 +545,15 @@ vmeBusUnlock();
 		*/
       }
     }
-#if 1
+
     else if(itype == SCALER_TYPE_TS)    /* ts scalers */
-	{
+    {
       char name[100];
       unsigned int gtpbuf[32], fpbuf[32];
       static unsigned int gtpbufold[32], fpbufold[32];
       float ref, data1[32], data2[32]; /* 32 scalers per group, 2 groups */
-      int nw1, nw2;
+      unsigned int prescale1[32], prescale2[32];
+      int nw1, nw2, nw3, nw4;
       int livetime;
       float live_percent;
 
@@ -517,10 +564,13 @@ vmeBusLock();
         tsLatchTimers();
         nw1 = tsReadScalers(gtpbuf, 1); /* second parameter: 1-GTP scalers, 3-FP scalers */
         nw2 = tsReadScalers(fpbuf, 3);
+        nw3 = tsGetGTPTriggerPrescale(prescale1);
+        nw4 = tsGetFPTriggerPrescale(prescale2);
+	//printf("prescale2 ="); for(ii=0; ii<32; ii++) printf("%2d",prescale2[ii]); printf("\n");
         livetime = tsLive(0); /* returns 3 digits, for ex 97.5 returned as 975 */
 vmeBusUnlock();
         live_percent = (float)livetime/10.0;
-	    /*printf("============= Livetime=%f percent\n",live_percent);*/
+	/*printf("============= Livetime=%f percent\n",live_percent);*/
 
         /*printf("nw1=%d nw2=%d\n",nw1,nw2);fflush(stdout);*/
         nw = nw1 + nw2;
@@ -535,16 +585,68 @@ vmeBusUnlock();
         for(ii=0; ii<nw1; ii++) gtpbufold[ii] = gtpbuf[ii];
         for(ii=0; ii<nw2; ii++) fpbufold[ii] = fpbuf[ii];
 
-		sprintf(name,"%s_TSGTPSLOT%d",hostname,slot);
+	sprintf(name,"%s_TSGTPSLOT%d",hostname,slot);
         epics_json_msg_send(name, "float", nw1, data1);
 
-		sprintf(name,"%s_TSFPSLOT%d",hostname,slot);
+        sprintf(name,"%s_TSFPSLOT%d",hostname,slot);
         epics_json_msg_send(name, "float", nw2, data2);
 
-		sprintf(name,"%s_TSLIVETIMESLOT%d",hostname,slot);
+	sprintf(name,"%s_TSGTPPRESCALESSLOT%d",hostname,slot);
+        epics_json_msg_send(name, "int", nw3, prescale1);
+
+        sprintf(name,"%s_TSFPPRESCALESSLOT%d",hostname,slot);
+        epics_json_msg_send(name, "int", nw4, prescale2);
+
+	sprintf(name,"%s_TSLIVETIMESLOT%d",hostname,slot);
         epics_json_msg_send(name, "float", 1, &live_percent);
       }
     }
+
+#if 1
+
+    else if(itype == SCALER_TYPE_TAGDSC)    /* tagdsc scalers */
+    {
+      char name[100];
+      float ref, data[34]; /* 2+16+16=34 scalers per board */
+      int ii, chan;
+      unsigned int count[34];
+
+      //printf("ntagdsc=%d\n",ntagdsc);
+      for(id=0; id<ntagdsc; id++)
+      {
+	nw = 0;
+vmeBusLock();
+	for(chan=0; chan<NTAGDSCCHAN; chan++)
+	{
+	  count[nw++] = tagdscReadChannelScaler1(id, chan);
+	}
+	for(chan=0; chan<NTAGDSCCHAN; chan++)
+	{
+	  count[nw++] = tagdscReadChannelScaler2(id, chan);
+	}
+        count[nw++] = tagdscReadGateScaler1(id);
+        count[nw++] = tagdscReadGateScaler2(id);
+vmeBusUnlock();
+
+        if(nw!=34)
+        {
+	  printf("ERROR in tagdsc: nw=%d\n",nw);fflush(stdout);
+	}
+	//else printf("tagdsc[%d]: nw=%d\n",id,nw);
+	
+        vmescalerslen[id] = nw;
+        for(ii=0; ii<nw; ii++) vmescalers[id][ii] = count[ii];
+
+        for(ii=0; ii<nw; ii++) 
+        {
+          data[ii] = ((float)(count[ii]));
+	}
+
+	sprintf(name,"%s_TAGDSCSLOT%d",hostname,id);
+        epics_json_msg_send(name, "float", nw, data);
+      }
+    }
+    
 #endif
 
 
@@ -664,21 +766,21 @@ vmeGetBoardParams(int slot, int partype, int *buf, int *len)
   if(vmescalersmap[slot] == SCALER_TYPE_DSC2)
   {
     if(partype==SCALER_PARTYPE_THRESHOLD)
-	{
+    {
 vmeBusLock();
       *len = 16;
       for(chan=0; chan<16; chan++) buf[chan] = dsc2GetThreshold(slot, chan, 1);
 vmeBusUnlock();
-	}
+    }
     else if(partype==SCALER_PARTYPE_THRESHOLD2)
-	{
+    {
 vmeBusLock();
       *len = 16;
       for(chan=0; chan<16; chan++) buf[chan] = dsc2GetThreshold(slot, chan, 2);
 vmeBusUnlock();
     }
     else if(partype==SCALER_PARTYPE_NCHANNELS)
-	{
+    {
       *len = 1;
       buf[0] = 16;
     }
@@ -686,19 +788,34 @@ vmeBusUnlock();
   else if(vmescalersmap[slot] == SCALER_TYPE_FADC250)
   {
     if(partype==SCALER_PARTYPE_THRESHOLD)
-	{
+    {
 vmeBusLock();
       *len = 16;
       for(chan=0; chan<16; chan++) buf[chan] = faGetChThreshold(slot, chan);
 vmeBusUnlock();
-	}
+    }
     else if(partype==SCALER_PARTYPE_NCHANNELS)
-	{
+    {
       *len = 1;
       buf[0] = 16;
     }
   }
-
+  else if(vmescalersmap[slot] == SCALER_TYPE_FAV3)
+  {
+    if(partype==SCALER_PARTYPE_THRESHOLD)
+    {
+vmeBusLock();
+      *len = 16;
+      for(chan=0; chan<16; chan++) buf[chan] = faV3GetThreshold(slot, chan);
+vmeBusUnlock();
+    }
+    else if(partype==SCALER_PARTYPE_NCHANNELS)
+    {
+      *len = 1;
+      buf[0] = 16;
+    }
+  }
+  
   if(*len == 0) return(-1);
   return(0);
 }
@@ -731,13 +848,24 @@ vmeBusUnlock();
   else if(vmescalersmap[slot] == SCALER_TYPE_FADC250)
   {
     if(partype==SCALER_PARTYPE_THRESHOLD)
-	{
+    {
 vmeBusLock();
       *len = 1;
       buf[0] = faGetChThreshold(slot, channel);
 vmeBusUnlock();
-	}
+    }
   }
+  else if(vmescalersmap[slot] == SCALER_TYPE_FAV3)
+  {
+    if(partype==SCALER_PARTYPE_THRESHOLD)
+    {
+vmeBusLock();
+      *len = 1;
+      buf[0] = faV3GetThreshold(slot, channel);
+vmeBusUnlock();
+    }
+  }
+  
   /*
   printf("--> vmeGetChannelParams: len=%d buf[0]=%d\n",*len,buf[0]);
   */
@@ -773,12 +901,22 @@ vmeBusUnlock();
   else if(vmescalersmap[slot] == SCALER_TYPE_FADC250)
   {
     if(partype==SCALER_PARTYPE_THRESHOLD)
-	{
+    {
 vmeBusLock();
       faSetChThreshold(slot, channel, buf[0]);
 vmeBusUnlock();
       err = 0;
-	}
+    }
+  }
+  else if(vmescalersmap[slot] == SCALER_TYPE_FAV3)
+  {
+    if(partype==SCALER_PARTYPE_THRESHOLD)
+    {
+vmeBusLock();
+      faV3SetThreshold(slot, channel, buf[0]);
+vmeBusUnlock();
+      err = 0;
+    }
   }
 
   if(err) return(-1);
@@ -799,6 +937,7 @@ vmeReadTask()
   unsigned int lastA32Address = 0x08800000;
 
   unsigned int fadcA32Address = 0x09000000;
+  unsigned int fav3A32Address = 0x09000000;
   unsigned int sspA32Address = 0x08800000;
   unsigned int vfTDCA32Address = 0x09000000;
 
@@ -864,15 +1003,15 @@ vmeReadTask()
   }
   /*iFlag |= (1<<19);*/ /* ignore slot numbers, enumerate boards from 0 */
 
-  dsc2Init(0x100000,0x80000,20,iFlag);
-
-  dsc2Config("");
+  ndsc2 = dsc2Init(0x100000,0x80000,20,iFlag);
+  if(ndsc2>0) dsc2Config("");
 
 maxA32Address = dsc2GetA32MaxAddress();
 printf("dsc2GetA32MaxAddress returned 0x%08x\n",maxA32Address);fflush(stdout);
 
 /* assume that only one type of the fillowing boards can be in the same VME crate */
 fadcA32Address = maxA32Address + DSC_MAX_A32_MEM;
+fav3A32Address = maxA32Address + DSC_MAX_A32_MEM;
 sspA32Address = maxA32Address + DSC_MAX_A32_MEM;
 vfTDCA32Address = maxA32Address + DSC_MAX_A32_MEM;
 
@@ -906,32 +1045,84 @@ vfTDCA32Address = maxA32Address + DSC_MAX_A32_MEM;
 faSetA32BaseAddress(fadcA32Address);
   faInit((unsigned int)(3<<19),(1<<19),18,iFlag);
   nfadc = faGetNfadc();
-  fadc250Config("");
-
-  /* fill map array with FADC's found */
-  for(ii=0; ii<nfadc; ii++) if( (slot=faSlot(ii)) > 0) vmescalersmap[slot] = SCALER_TYPE_FADC250;
-
-  /* issue soft sync reset */
-  if(init_boards)
+  printf("\n===> nfadc = %d\n\n",nfadc);
+  if(nfadc>0)
   {
-    for(ii=0; ii<nfadc; ii++)
+    fadc250Config("");
+
+    /* fill map array with FADC's found */
+    for(ii=0; ii<nfadc; ii++) if( (slot=faSlot(ii)) > 0) vmescalersmap[slot] = SCALER_TYPE_FADC250;
+
+    /* issue soft sync reset */
+    if(init_boards)
     {
-      if( (slot=faSlot(ii)) > 0)
+      for(ii=0; ii<nfadc; ii++)
       {
-        faEnable(slot,0,0);
-        faSync(slot);
-        faDisable(slot,0);
+        if( (slot=faSlot(ii)) > 0)
+        {
+          faEnable(slot,0,0);
+          faSync(slot);
+          faDisable(slot,0);
+        }
       }
     }
   }
 
+  /*************/
+  /* FAV3 INIT */
+
+  rflag = 0xFF; /* latch and read everything */
+  rmode = 0; /* not-dma readout */
+
+  iFlag = 0;  /* base address */
+  iFlag = (DIST_ADDR)<<10;
+  /*iFlag |= (1<<0);*/    /* Sync Source: VXS */
+  iFlag |= (0<<0);    /* Sync Source: SW */
+  iFlag |= (1<<2);    /* Trigger Source: VXS */
+  /*iFlag |= (1<<5);*/    /* Clock Source: VXS */
+  iFlag |= (0<<5);  /* Internal Clock Source */
+
+  if(init_boards==0)
+  {
+    /* skip initialization* */
+    iFlag |= (1<<16);
+  }
+
+faV3SetA32BaseAddress(fadcA32Address);
+  faV3Init((unsigned int)(3<<19),(1<<19),18,iFlag);
+  nfav3 = faV3GetN();
+  printf("\n===> nfav3 = %d\n\n",nfav3);
+  if(nfav3>0)
+  {
+    faV3Config("");
+
+    /* fill map array with FADC's found */
+    for(ii=0; ii<nfadc; ii++) if( (slot=faV3Slot(ii)) > 0) vmescalersmap[slot] = SCALER_TYPE_FAV3;
+
+    /* issue soft sync reset */
+    if(init_boards)
+    {
+      for(ii=0; ii<nfav3; ii++)
+      {
+        if( (slot=faV3Slot(ii)) > 0)
+        {
+          faV3Enable(slot,0);
+          faV3Sync(slot);
+          faV3Disable(slot,0);
+        }
+      }
+    }
+  }
+
+
+  
   /*************/
   /* VSCM INIT */
 
   nvscm = vscmInit(0x100000,0x80000,20,0);
   vscmConfig ("");
 
-  /* fill map array with FADC's found */
+  /* fill map array with VSCM's found */
   for(ii=0; ii<nvscm; ii++) if( (slot=vscmSlot(ii)) > 0) vmescalersmap[slot] = SCALER_TYPE_VSCM;
 
 
@@ -954,7 +1145,7 @@ sspSetA32BaseAddress(sspA32Address);
   nssp = sspInit(0,0,0,iFlag);
   sspConfig ("");
 
-  /* fill map array with FADC's found */
+  /* fill map array with SSP's found */
   for(ii=0; ii<nssp; ii++) if( (slot=sspSlot(ii)) > 0) vmescalersmap[slot] = SCALER_TYPE_SSP;
 
   printf("Finished SSP initialization, nssp=%d\n",nssp);fflush(stdout);
@@ -975,7 +1166,7 @@ sspSetA32BaseAddress(sspA32Address);
   nvftdc = vfTDCInit(3<<19, 1<<19, 20, iFlag);
   //vfTDCConfig ("");
 
-  /* fill map array with FADC's found */
+  /* fill map array with vfTDC's found */
   //for(ii=0; ii<nvftdc; ii++) if( (slot=vfTDCSlot(ii)) > 0) vmescalersmap[slot] = SCALER_TYPE_VFTDC;
 
   printf("Finished vfTDC initialization, nvftdc=%d\n",nvftdc);fflush(stdout);
@@ -1020,7 +1211,12 @@ sspSetA32BaseAddress(sspA32Address);
   printf("Finished MO initialization, nmo=%d\n",nmo);fflush(stdout);
   if(nmo>=0) moConfigPrint();
 
-  
+
+  /***************/
+  /* TAGDSC init */
+  ntagdsc = tagdscInit();
+  if(ntagdsc>0) tagdscConfig("");
+
 
   /* always clean up init flag ! */
   init_boards = 0;
@@ -1204,7 +1400,7 @@ vtpSendScalers();
 
 /* return a number of slots (len) in the crate
 and the array of size len that is an array of board types.
-(type -1 : slot is empty, type 0 : is Discr2, type 1 : is FADC250)
+(type -1 : slot is empty, type 0 : is Discr2, type 1 : is FADC250, ...)
  */
 int
 GetCrateMap(int *buf, int *len)
@@ -1667,7 +1863,7 @@ main(int argc, char *argv[])
   /* get hostname and convert to upper case */
   char *s;
   /*strcpy(hostname,getenv("HOST"));*/
-  gethostname(hostname,127);
+  get_hostname(hostname,127);
   s = hostname;
   hostname[strlen(hostname)] = 0;
   while(*s)
@@ -1731,7 +1927,8 @@ main(int argc, char *argv[])
 
 #ifdef Linux_vme
   {
-    unsigned int i1, i2, i3;
+    unsigned long int i1, i2;
+    unsigned int i3;
 
     usrVmeDmaInit();
 
@@ -1747,28 +1944,29 @@ main(int argc, char *argv[])
 
   /* connect to IPC server */
   printf("Connect to IPC server...\n");fflush(stdout);
-  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
+  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ", NULL, NULL);*/
 
 #if 1
   /* Sergey: use different topics for different hosts */
   if( (!strncmp(hostname,"TDCECAL",7)) || (!strncmp(hostname,"TDCPCAL",7)) || (!strncmp(hostname,"TDCFTOF",7)) )
   {
-    epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "dsc2");
+    epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "dsc2", NULL, NULL);
   }
   else if( (!strncmp(hostname,"ADCECAL",7)) || (!strncmp(hostname,"ADCPCAL",7)) || (!strncmp(hostname,"ADCFTOF",7)) ||
-           (!strncmp(hostname,"ADCCTOF",7)) || (!strncmp(hostname,"ADCBAND",7)) || (!strncmp(hostname,"ADCCND",6)) ||
-           (!strncmp(hostname,"ADCFT",5))   || (!strcmp(hostname,"HPS1"))    || (!strcmp(hostname,"HPS2")) )
+           (!strncmp(hostname,"ADCCTOF",7)) || (!strncmp(hostname,"ADCBAND",7)) || (!strncmp(hostname,"ADCCND",6))  ||
+           (!strncmp(hostname,"ADCFT",5))   || (!strcmp(hostname,"HPS1"))       || (!strcmp(hostname,"HPS2"))       ||
+	   (!strncmp(hostname,"ADCHY",5)) )
   {
-    epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "fadc");
+    epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "fadc", NULL, NULL);
   }
   else if( (!strncmp(hostname,"SCALER1",7)) )
   {
-    epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "dsc2");
+    epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "dsc2", NULL, NULL);
   }
   else /* default topic */
 #endif
   {
-    epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
+    epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ", NULL, NULL);
   }
   printf("done.\n");fflush(stdout);
 
@@ -1873,6 +2071,7 @@ sig_handler(int signo)
 
 
 
+#include "codautil.h"
 
 #include "daqLib.h"
 
@@ -2112,7 +2311,7 @@ main(int argc, char *argv[])
   /* get hostname and convert to upper case */
   char *s;
   /*strcpy(hostname,getenv("HOST"));*/
-  gethostname(hostname,127);
+  get_hostname(hostname,127);
   s = hostname;
   hostname[strlen(hostname)] = 0;
   while(*s)
@@ -2148,11 +2347,11 @@ main(int argc, char *argv[])
 
   /* connect to IPC server */
   printf("Connect to IPC server...\n");fflush(stdout);
-  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
+  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ", NULL, NULL);*/
 
   if( (!strncmp(hostname,"CLONDAQ11",9)) )
   {
-    epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "HallB_DAQ");
+    epics_json_msg_sender_init("clasrun", "clasprod", "scalers", "HallB_DAQ", NULL, NULL);
   }
   else
   {

@@ -35,7 +35,8 @@
 #include <unistd.h>
 #endif
 
-#include <jvme.h>
+#include "jvme.h"
+#include "usrvme.h"
 #include "sis3801.h"
 
 static int Nsis = 0;		/* Number of SISs in Crate */
@@ -53,7 +54,7 @@ pthread_mutex_t sis3801Mutex = PTHREAD_MUTEX_INITIALIZER;
 
 LOCAL BOOL scalIntRunning = FALSE;
 LOCAL VOIDFUNCPTR scalIntRoutine = NULL;
-LOCAL int scalIntArg = (int) NULL;
+LOCAL int scalIntArg = 0;
 LOCAL UINT32 scalIntLevel = SCAL_VME_INT_LEVEL;
 LOCAL UINT32 scalIntVec = SCAL_INT_VEC;
 int scalIntID = -1; /* ID of s3801 that is the interrupt source */
@@ -81,9 +82,10 @@ volatile UINT32 scalData[32];
   }
 
 int
-sis3801Init(unsigned int addr, unsigned int addr_inc, int nsis, int iFlag)
+sis3801Init(unsigned long int addr, unsigned int addr_inc, int nsis, int iFlag)
 {
-  unsigned int laddr, laddr_inc, errFlag, fwrev;
+  unsigned long int laddr, laddr_inc;
+  unsigned int errFlag, fwrev;
   unsigned int boardID;
   volatile SIS3801 *sis;
   int ii, res;
@@ -156,7 +158,7 @@ sis3801Init(unsigned int addr, unsigned int addr_inc, int nsis, int iFlag)
 	{
 /*#ifdef DEBUG*/
 	  printf("%s: INFO: No addressable board at Address 0x%x\n",
-		 __func__, (UINT32) sis - vmeLocalOffset);
+		 __func__, (unsigned long int)sis - vmeLocalOffset);
 /*#endif*/
 	  errFlag = 1;
 	  continue;
@@ -166,7 +168,7 @@ sis3801Init(unsigned int addr, unsigned int addr_inc, int nsis, int iFlag)
 	  boardID = (boardID >> 16) & 0xFFFF;
 	  fwrev   = (boardID & 0xF000) >> 12;
 	  printf("%s: INFO: Found  boardID=0x%04X  version = 0x%X at Address 0x%x\n",
-			 __func__, boardID, fwrev, (UINT32) sis - vmeLocalOffset);
+			 __func__, boardID, fwrev, (unsigned long int)sis - vmeLocalOffset);
 	}
 
     /* Check if this is a SIS3801 */
@@ -174,7 +176,7 @@ sis3801Init(unsigned int addr, unsigned int addr_inc, int nsis, int iFlag)
 	{
 /*#ifdef DEBUG*/
 	  printf("%s: INFO: Board ID at addr=0x%x does not match: 0x%08x \n",
-		 __func__, (UINT32) sis - vmeLocalOffset, boardID);
+		 __func__, (unsigned long int)sis - vmeLocalOffset, boardID);
 /*#endif*/
 	  errFlag = 1;
 	  continue;
@@ -182,7 +184,7 @@ sis3801Init(unsigned int addr, unsigned int addr_inc, int nsis, int iFlag)
 
     sisp[Nsis] = (SIS3801 *) laddr_inc;
     printf("Initialized sis3801 (V%X) ID %d at VME (LOCAL) address 0x%x (0x%x).\n",
-	     fwrev, Nsis, (UINT32) sisp[Nsis] - vmeLocalOffset, (UINT32) sisp[Nsis]);
+	     fwrev, Nsis, (unsigned long int)sisp[Nsis] - vmeLocalOffset, (unsigned long int)sisp[Nsis]);
 
     Nsis++;
     if (Nsis >= nsis) break;
@@ -432,7 +434,7 @@ sis3801almostread(int id, unsigned int *value)
   outbuf = value;
   while (!(sis3801status(id) & FIFO_ALMOST_EMPTY))
     *outbuf++ = sis3801readfifo(id);
-  return ((int) ((int) outbuf - (int) value));
+  return ((int) ((long int) outbuf - (long int) value));
 }
 
 int
@@ -452,7 +454,7 @@ sis3801read(int id, unsigned int *value)
       if (--len == 0)
 	break;
     }
-  return (int) ((int) outbuf - (int) value);
+  return (int) ((long int) outbuf - (long int) value);
 
 }
 
@@ -1153,7 +1155,8 @@ l2_status_dead_reset()
 int
 readout1()
 {
-  unsigned int len, buffer[100];
+  unsigned int len;
+  unsigned int buffer[100];
   int i, j;
   char qui = 'z';
   int id = L2SCALERID;
@@ -1386,7 +1389,7 @@ hist()
 unsigned int
 sis3801GetAddress(int id)
 {
-  return ((UINT32) sisp[id] /* - vmeLocalOffset */ );
+  return ((unsigned long int)sisp[id] /* - vmeLocalOffset */ );
 }
 
 #else /* dummy version */

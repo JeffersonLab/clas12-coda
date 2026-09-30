@@ -4,7 +4,8 @@
 #ifndef VXWORKS
 #include <pthread.h>
 
-pthread_mutex_t tiISR_mutex=PTHREAD_MUTEX_INITIALIZER;
+//sergey pthread_mutex_t tiISR_mutex=PTHREAD_MUTEX_INITIALIZER;
+
 #else
 /* #include <intLib.h> */
 extern int intLock();

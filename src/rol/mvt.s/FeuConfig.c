@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <errno.h>
 #include <execinfo.h>
 
@@ -52,6 +53,9 @@
 
 #include "BeuConfig.h"
 #include "FeuConfig.h"
+
+#include "i2c_eeprom.h"    //sergey
+#include "i2c_Max16031.h"  //sergey
 
 /*
  * External log file pointer

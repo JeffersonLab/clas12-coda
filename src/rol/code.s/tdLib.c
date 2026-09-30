@@ -248,11 +248,10 @@ tdInit(UINT32 addr, UINT32 addr_inc, int nfind, int iFlag)
 	      /* Check if this is board has a valid slot number */
 	      boardID =  (rdata&TD_BOARDID_GEOADR_MASK)>>8;
 	      if((boardID <= 0)||(boardID >21)) 
-		{
-		  printf(" WARN: Board Slot ID is not in range: %d (this module ignored)\n"
-			 ,boardID);
-		  continue;
-		}
+	      {
+		printf(" WARN: Board Slot ID is not in range: %d (this module ignored)\n", boardID);
+		continue;
+	      }
 	      else
 		{
 		  TDp[boardID] = (struct TD_A24RegStruct *)(laddr_inc);
@@ -1430,8 +1429,7 @@ tdEnableFiber(int id, unsigned int fiber)
 
   TDLOCK;
   sval = vmeRead32(&TDp[id]->fiber);
-  vmeWrite32(&TDp[id]->fiber,
-	     sval | fiberbit );
+  vmeWrite32(&TDp[id]->fiber, sval | fiberbit );
   TDUNLOCK;
 
   return OK;
@@ -2492,13 +2490,15 @@ tdResetMGT(int id)
 int
 tdResetMGTRx(int id)
 {
-  if(id==0) id=tdID[0];
+  printf("tdResetMGTRx: id=%d -> tdID[%d]=%d -> TDp[%d]=0x%lx\n",id,id,tdID[id],id,TDp[id]);
+  
+  if(id==0) id=tdID[0]; //take first slot (?)
 
   if(TDp[id] == NULL) 
-    {
-      printf("%s: ERROR: TD in slot %d not initialized\n",__FUNCTION__,id);
-      return ERROR;
-    }
+  {
+    printf("%s: ERROR: TD %d in slot %d not initialized\n",__FUNCTION__,id,TDp[id]);
+    return ERROR;
+  }
 
   TDLOCK;
   vmeWrite32(&TDp[id]->reset, TD_RESET_MGT_RX_RESET);

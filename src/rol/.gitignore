@@ -5,6 +5,8 @@
 zz
 *.txt
 Linux_x86_64*
+Linux_armv7l*
+Linux_i686*
 last.kumac
 mvt.s_*
 zz

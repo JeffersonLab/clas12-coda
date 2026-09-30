@@ -96,7 +96,7 @@ rcRepCompOption::compCallback (int status, void* arg, daqNetData* data)
   rcRepCompOption* obj = (rcRepCompOption *)arg;
   int ncols;
 
-  printf("+++++ rcRepCompOption::compCallback: obj->numComp_=%d\n",obj->numComp_);
+  printf("+++++ rcRepCompOption::compCallback: befor obj->numComp_=%d\n",obj->numComp_);
 
   if (status == CODA_SUCCESS)
   {
@@ -111,8 +111,15 @@ rcRepCompOption::compCallback (int status, void* arg, daqNetData* data)
     {
       obj->removeAll ();
       obj->numComp_ = count;
+printf("321\n");fflush(stdout);
       obj->addEntries (obj->components_, count);
+printf("654\n");fflush(stdout);
     }
+    else
+    {
+      printf("+++++ rcRepCompOption::compCallback: ERROR\n");
+    }
+    printf("+++++ rcRepCompOption::compCallback: after obj->numComp_=%d\n\n",obj->numComp_);
   }
 }
 

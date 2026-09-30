@@ -9,7 +9,7 @@
 #include "codautil.h"
 
 void
-get_roc_name(char *mysql_database, int id, char name[STRLEN])
+get_roc_name(char *mysql_database, int id, char name[CODAUTIL_STRLEN])
 {
   MYSQL *connNum;
   MYSQL_RES *result;
@@ -52,7 +52,7 @@ get_roc_name(char *mysql_database, int id, char name[STRLEN])
   }
   else
   {
-    strncpy(name,row_out[0],STRLEN);
+    strncpy(name,row_out[0],CODAUTIL_STRLEN);
   }
 
   mysql_free_result(result);

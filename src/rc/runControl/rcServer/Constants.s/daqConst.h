@@ -85,8 +85,8 @@
 #define CODA_EVENT_RECORDER      "event_recorder"
 #define CODA_ER_CLASS            "ER"
 
-#define CODA_LOG                 "console_log"
-#define CODA_LOG_CLASS           "LOG"
+#define CODA_LOGS                 "console_log"
+#define CODA_LOGS_CLASS           "LOG"
 
 #define CODA_READOUT             "readout_controller"
 #define CODA_ROC_CLASS           "ROC"

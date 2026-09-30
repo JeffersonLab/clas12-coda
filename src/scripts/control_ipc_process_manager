@@ -9,6 +9,7 @@ if ($1 == start) then
 
 else if ($1 == stop) then
 
+  echo "Terminating ipc_process_manager on $CLON_DAQ .."
   stop_proc -n $CLON_DAQ -p ipc_process_manager >& /dev/null
 
 else 

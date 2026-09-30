@@ -47,13 +47,13 @@
 #define RC_CONFIGURE_NAME (char *)"Configure"
 #define RC_CONFIGURE_MSG  (char *)"Configure an experiment"
 
-rcConfigure::rcConfigure (Widget parent, rcButtonPanel* panel, 
-			  rcClientHandler& handler)
+rcConfigure::rcConfigure (Widget parent, rcButtonPanel* panel, rcClientHandler& handler)
 :rcComdButton (parent, RC_CONFIGURE_NAME, RC_CONFIGURE_MSG, panel, handler, (char *)"B")
 {
 #ifdef _TRACE_OBJECTS 
   printf ("                   Create rcConfigure Class Object\n");
 #endif
+  printf("c0\n");fflush(stdout);
   // empty
 }
 
@@ -74,7 +74,7 @@ void doitCbk(rcConfigure *obj)
 void
 rcConfigure::doit (void)
 {
-/*printf("c2\n");fflush(stdout);*/
+  printf("c2\n");fflush(stdout);
   assert (infoPanel_);
   rcComdOption* option = rcComdOption::option ();
   loadRcDbase (option->dbasename (), option->session ());
@@ -90,7 +90,7 @@ rcConfigure::undoit (void)
 void
 rcConfigure::loadRcDbase (char *dbase, char* session)
 {
-/*printf("c3\n");fflush(stdout);*/
+  printf("c3\n");fflush(stdout);
   /* get network handler */
   rcClient& client = netHandler_.clientHandler ();
 
@@ -109,6 +109,7 @@ rcConfigure::loadRcDbase (char *dbase, char* session)
   delete []temp[1];
 
   /*sergey: send command 'DALOADDBASE'  to rcServer's daqRun.cc*/
+  printf("rcConfigure::loadRcDbase: sending command 'DALOADDBASE'  to rcServer's daqRun.cc\n");fflush(stdout);
   int status = client.sendCmdCallback (DALOADDBASE, data, 
 	       (rcCallback)&(rcConfigure::loadRcDbaseCbk), 
 	       (void *)this);
@@ -123,7 +124,7 @@ rcConfigure::loadRcDbase (char *dbase, char* session)
 void
 rcConfigure::loadRcDbaseCbk (int status, void* arg, daqNetData* data)
 {
-/*printf("c4\n");fflush(stdout);*/
+  printf("c4\n");fflush(stdout);
   rcConfigure* obj = (rcConfigure *)arg;
   if (status != CODA_SUCCESS && status != CODA_IGNORED)
   {
@@ -132,7 +133,7 @@ rcConfigure::loadRcDbaseCbk (int status, void* arg, daqNetData* data)
   }
   else
   { 
-	/* sergey: popup runtype dialog window */
+    /* sergey: popup runtype dialog window */
     obj->infoPanel_->runTypeDialog()->popup ();
   }
 }

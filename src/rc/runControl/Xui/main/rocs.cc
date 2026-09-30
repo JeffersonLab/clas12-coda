@@ -42,7 +42,7 @@
 #endif
 
 
-#undef DEBUG
+//#define DEBUG
 
 /* the number of roc spaces */
 #define NSPACE 12

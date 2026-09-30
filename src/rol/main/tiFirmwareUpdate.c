@@ -19,16 +19,17 @@
 
 /*
 cd $CLON_PARMS/firmwares
-tiFirmwareUpdate 0xa80000 tip81.svf
+##tiFirmwareUpdate 0xa80000 tip81.svf
+tiFirmwareUpdate 0xa80000 tip116.svf
  */
-
-
-#if defined(VXWORKS) || defined(Linux_vme)
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#if defined(VXWORKS) || defined(Linux_vme)
+
 #ifdef VXWORKS
 #include "vxCompat.h"
 #else
@@ -89,17 +90,17 @@ main(int argc, char *argv[])
   programName = argv[0];
 
   if(argc<3)
-    {
-      printf(" ERROR: Must specify two arguments\n");
-      tiFirmwareUsage();
-      return(-1);
-    }
+  {
+    printf(" ERROR: Must specify two arguments\n");
+    tiFirmwareUsage();
+    return(-1);
+  }
   else
-    {
-      vme_addr = (unsigned int) strtoll(argv[1],NULL,16)&0xffffffff;
-      if(vme_addr <= 21) vme_addr = vme_addr << 19;
-      filename = argv[2];
-    }
+  {
+    vme_addr = (unsigned int) strtoll(argv[1],NULL,16)&0xffffffff;
+    if(vme_addr <= 21) vme_addr = vme_addr << 19;
+    filename = argv[2];
+  }
 
   vmeSetQuietFlag(1);
   stat = vmeOpenDefaultWindows();
@@ -109,74 +110,75 @@ main(int argc, char *argv[])
 
   stat = tiInit(vme_addr,TI_READOUT_EXT_POLL,TI_INIT_SKIP_FIRMWARE_CHECK | TI_INIT_NO_INIT);
   if(stat != OK)
-    {
-      printf("\n");
-      printf("*** Failed to initialize TI ***\nThis may indicate (either):\n");
-      printf("   a) an incorrect VME Address provided\n");
-      printf("   b) TI is unresponsive and needs firmware reloaded\n");
-      printf("\n");
-      printf("Proceed with the update with the provided VME address (0x%x)?\n", vme_addr);
-    REPEAT:
-      printf(" (y/n): ");
-      inputchar = getchar();
+  {
+    printf("\n");
+    printf("*** Failed to initialize TI ***\nThis may indicate (either):\n");
+    printf("   a) an incorrect VME Address provided\n");
+    printf("   b) TI is unresponsive and needs firmware reloaded\n");
+    printf("\n");
+    printf("Proceed with the update with the provided VME address (0x%x)?\n", vme_addr);
+REPEAT:
+    printf(" (y/n): ");
+    inputchar = getchar();
 
-      if((inputchar == 'n') || (inputchar == 'N'))
-	{
-	  printf("--- Exiting without update ---\n");
-	  goto CLOSE;
-	}
-      else if((inputchar == 'y') || (inputchar == 'Y'))
-	{
-	  printf("--- Continuing update, assuming VME address (0x%x) is correct ---\n", vme_addr);
-	  printf("\n");
-	  badInit = 1;
-	}
-      else
-	{
-	  goto REPEAT;
-	}
+    if((inputchar == 'n') || (inputchar == 'N'))
+    {
+      printf("--- Exiting without update ---\n");
+      goto CLOSE;
+    }
+    else if((inputchar == 'y') || (inputchar == 'Y'))
+    {
+      printf("--- Continuing update, assuming VME address (0x%x) is correct ---\n", vme_addr);
+      printf("\n");
+      badInit = 1;
+    }
+    else
+    {
+      goto REPEAT;
+    }
+  }
+
+  
+  if(badInit == 0)
+  {
+    /* Read out the board serial number first */
+    BoardSerialNumber = tiGetSerialNumber(NULL);
+
+    /* Check if this board should be relabled as a TIMaster */
+    if( ((BoardSerialNumber&0xF800)==0) && (tiMasterID(BoardSerialNumber)!=0) )
+    {
+      BoardSerialNumber |= tiMasterID(BoardSerialNumber);
     }
 
-  if(badInit == 0)
+    if(BoardSerialNumber & 0xF800) /* TIMaster */
     {
-      /* Read out the board serial number first */
-      BoardSerialNumber = tiGetSerialNumber(NULL);
-
-      /* Check if this board should be relabled as a TIMaster */
-      if( ((BoardSerialNumber&0xF800)==0) && (tiMasterID(BoardSerialNumber)!=0) )
-	{
-	  BoardSerialNumber |= tiMasterID(BoardSerialNumber);
-	}
-
-      if(BoardSerialNumber & 0xF800) /* TIMaster */
-	{
-	  printf("\n Board Serial Number from PROM usercode is: 0x%08x (TIM-%d  TI-%d) \n",
+      printf("\n Board Serial Number from PROM usercode is: 0x%08x (TIM-%d  TI-%d) \n",
 		 BoardSerialNumber,
 		 (BoardSerialNumber&0xF000)>>12,
 		 BoardSerialNumber&0x7FF);
-	}
-      else
-	{
-	  printf("\n Board Serial Number from PROM usercode is: 0x%08x (%d) \n", BoardSerialNumber,
-		 BoardSerialNumber&0xffff);
-	}
-
-      firmwareInfo = tiGetFirmwareVersion();
-      if(firmwareInfo>0)
-	{
-	  printf("\n  User ID: 0x%x \tFirmware (version - revision): 0x%X - 0x%03X\n",
-		 (firmwareInfo&0xFFFF0000)>>16, (firmwareInfo&0xF000)>>12, firmwareInfo&0xFFF);
-	  printf("\n");
-	}
-      else
-	{
-	  printf("  Error reading Firmware Version\n");
-	}
     }
-  else
+    else
     {
-      BoardSerialNumber = 0;
+      printf("\n Board Serial Number from PROM usercode is: 0x%08x (%d) \n", BoardSerialNumber,
+		 BoardSerialNumber&0xffff);
     }
+
+    firmwareInfo = tiGetFirmwareVersion();
+    if(firmwareInfo>0)
+    {
+      printf("\n  User ID: 0x%x \tFirmware (version - revision): 0x%X - 0x%03X\n",
+		 (firmwareInfo&0xFFFF0000)>>16, (firmwareInfo&0xF000)>>12, firmwareInfo&0xFFF);
+      printf("\n");
+    }
+    else
+    {
+      printf("  Error reading Firmware Version\n");
+    }
+  }
+  else
+  {
+    BoardSerialNumber = 0;
+  }
 
 
   /* Check the serial number and ask for input if necessary */
@@ -217,7 +219,7 @@ main(int argc, char *argv[])
 	 filename);
   printf("\t or n to quit without update\n");
 
- REPEAT2:
+REPEAT2:
   printf("(y/n): ");
   inputchar = getchar();
 

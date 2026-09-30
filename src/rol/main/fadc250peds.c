@@ -5,14 +5,12 @@
  *    fadc250peds.c
  *
  * Description:
- *    JLab Flash ADC pedestal measurement (HPS firmware)
+ *    JLab Flash ADC pedestal measurement
  *
  *
 
-HPS UNIX:
-
- cd $CLON_PARMS/peds/clasrun/
- fadc250peds rocXX.ped
+ cd $CLON_PARMS/fadc250/peds/
+ fadc250peds <rocname>_ped.cnf
 */
 
 
@@ -23,8 +21,10 @@ HPS UNIX:
 
 #ifdef Linux_vme
 #include "jvme.h"
+#include "usrvme.h"
 #endif
 
+#include "codautil.h"
 #include "fadcLib.h"
 #include "fadc250Config.h"
 
@@ -37,8 +37,6 @@ DMA_MEM_ID vmeIN, vmeIN2, vmeOUT;
 #define MAX_NUM_EVENTS    400
 #define MAX_SIZE_EVENTS   1024*10      /* Size in Bytes */
 
-#define NEWFORMAT
-
 extern int fadcA32Base;
 extern int nfadc;
 char *progName;
@@ -48,7 +46,7 @@ void Usage();
 int 
 main(int argc, char *argv[]) 
 {
-  GEF_STATUS status;
+  int status;
   char *filename;
   int inputchar=10;
   int ch, ifa=0;
@@ -57,7 +55,7 @@ main(int argc, char *argv[])
   fa250Ped ped;
 
   char myhostname[128];
-  gethostname(myhostname, 128);
+  get_hostname(myhostname, 128);
 
   printf("\nJLAB fadc pedestal measurement on host %s\n",myhostname);
   printf("----------------------------\n");
@@ -101,31 +99,15 @@ main(int argc, char *argv[])
     printf(" Unable to initialize any FADCs.\n");
     goto CLOSE;
   }
-  
-  f = fopen(filename, "wt");
 
-#ifdef NEWFORMAT  
+
+  f = fopen(filename, "wt");
+ 
   if(f) fprintf(f, "FADC250_CRATE %s\n", myhostname);
   for(ifa=0; ifa<nfadc; ifa++)
   {
     if(f) fprintf(f, "FADC250_SLOT %d\nFADC250_ALLCH_PED", faSlot(ifa));
 
-    for(ch=0; ch<16; ch++)
-	{
-      if(faMeasureChannelPedestal(faSlot(ifa), ch, &ped) != OK)
-	  {
-        printf(" Unabled to measure pedestal on slot %d, ch %d...\n", faSlot(ifa), ch);
-        fclose(f);
-        goto CLOSE;
-	  }
-	  if(f) fprintf(f, " %8.3f", ped.avg);
-    }
-    if(f) fprintf(f, "\n");
-  }
-  if(f) fprintf(f, "FADC250_CRATE end\n");
-#else
-  for(ifa=0; ifa<nfadc; ifa++)
-  {
     for(ch=0; ch<16; ch++)
     {
       if(faMeasureChannelPedestal(faSlot(ifa), ch, &ped) != OK)
@@ -134,10 +116,11 @@ main(int argc, char *argv[])
         fclose(f);
         goto CLOSE;
       }
-      if(f) fprintf(f, "%3d %3d %8.3f %8.3f\n", faSlot(ifa),ch,ped.avg,ped.rms);
+	  if(f) fprintf(f, " %8.3f", ped.avg);
     }
+    if(f) fprintf(f, "\n");
   }
-#endif
+  if(f) fprintf(f, "FADC250_CRATE end\n");
 
   if(f)
     fclose(f);
@@ -147,7 +130,7 @@ main(int argc, char *argv[])
 CLOSE:
 
     status = vmeCloseDefaultWindows();
-    if (status != GEF_SUCCESS)
+    if (status != 0)
     {
       printf("vmeCloseDefaultWindows failed: code 0x%08x\n",status);
       return -1;

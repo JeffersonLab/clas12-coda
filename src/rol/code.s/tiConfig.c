@@ -44,6 +44,7 @@ TI_FIBER_IN 1                                  # fiber number to be used as inpu
 
 #ifdef Linux_vme
 #include "jvme.h"
+#include "codautil.h"
 #endif
 
 #include "tiLib.h"
@@ -161,18 +162,8 @@ tiReadConfigFile(char *filename)
   char *getenv();
   char *clonparms;
   
-  gethostname(host,ROCLEN);  /* obtain our hostname */
-  for(jj=0; jj<strlen(host); jj++)
-  {
-    if(host[jj] == '.')
-    {
-      host[jj] = '\0';
-      break;
-    }
-  }
-
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");
@@ -478,12 +469,12 @@ tiUploadAll(char *string, int length)
   connectedfibers = tiGetConnectedFiberMask();
   if(connectedfibers>0)
   {
-	for(ifiber=0; ifiber<8; ifiber++)
-	{
-	  if( connectedfibers & (1<<ifiber) )
-	  {
+    for(ifiber=0; ifiber<8; ifiber++)
+    {
+      if( connectedfibers & (1<<ifiber) )
+      {
         slave_list[nslave++] = ifiber+1;
-	  }
+      }
     }
   }
   block_level = tiGetCurrentBlockLevel();

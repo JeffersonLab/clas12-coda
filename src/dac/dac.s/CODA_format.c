@@ -51,6 +51,11 @@ extern char confFile[256]; /* defined in coda_ebc.c */
 int 
 CODA_decode_frag(unsigned int **datap, evDesc desc)
 {
+  int ii;
+  //printf("\n");
+  //for(ii=0; ii<(*datap)[0]; ii++) printf("CODA_decode_frag[%2d]: 0x%08x\n",ii,(*datap)[ii]);
+  //printf("\n");
+
   desc->length = ((*datap)[0] - 1) << 2;
   desc->evnb   = (*datap)[1] & 0xff;
   /*printf("??? iev=%d\n",desc->evnb);*/
@@ -68,6 +73,11 @@ CODA_decode_frag(unsigned int **datap, evDesc desc)
   if(desc->user[3]) printf("CODA_decode_frag: syncFlag detected (0x%08x), event nuber %d type 0x%08x\n",
 						   desc->user[3],desc->evnb,desc->type);
   */
+
+  /*
+  printf("ROCID=%d -> EVTYPE=0x%2x (2nd word is 0x%08x\n",desc->rocid,desc->type,(*datap)[1]);
+  */
+  
   *datap += 2; /* CODA headers are two words */
 
   /* ??? fragment headers have a variable format and are hard to 

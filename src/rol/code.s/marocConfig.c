@@ -11,6 +11,7 @@
 #include "marocLib.h"
 #include "marocConfig.h"
 #include "xxxConfig.h"
+#include "codautil.h"
 
 static int active;
 static int nmaroc;
@@ -91,10 +92,9 @@ marocReadConfigFile(char *filename_in)
   char *clonparms;
   int do_parsing, error, argc;
 
-  gethostname(host,ROCLEN);  /* obtain our hostname */
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
   printf("CLON_PARMS=>%s< from environment\n",clonparms);fflush(stdout);
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");
@@ -935,8 +935,17 @@ marocUploadAll(char *string, int length)
       maroc[slot].chip[asic].CTest[1] = 0;
       maroc[slot].chip[asic].MaskOr[0] = 0;
       maroc[slot].chip[asic].MaskOr[1] = 0;
-      maroc_getmask_fpga_or0(slot, &maroc[slot].chip[asic].TriggerOr0[0], &maroc[slot].chip[asic].TriggerOr0[1]);
-      maroc_getmask_fpga_or1(slot, &maroc[slot].chip[asic].TriggerOr1[0], &maroc[slot].chip[asic].TriggerOr1[1]);
+      maroc_getmask_fpga_or0(slot,
+          &maroc[slot].chip[0].TriggerOr0[0], &maroc[slot].chip[0].TriggerOr0[1], 
+          &maroc[slot].chip[1].TriggerOr0[0], &maroc[slot].chip[1].TriggerOr0[1], 
+          &maroc[slot].chip[2].TriggerOr0[0], &maroc[slot].chip[2].TriggerOr0[1]
+        ); 
+   
+      maroc_getmask_fpga_or1(slot,
+          &maroc[slot].chip[0].TriggerOr1[0], &maroc[slot].chip[0].TriggerOr1[1], 
+          &maroc[slot].chip[1].TriggerOr1[0], &maroc[slot].chip[1].TriggerOr1[1], 
+          &maroc[slot].chip[2].TriggerOr1[0], &maroc[slot].chip[2].TriggerOr1[1]
+        );
 
       for(ch=0; ch<64; ch++)
       {

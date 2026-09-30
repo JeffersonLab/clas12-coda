@@ -327,7 +327,7 @@ v895ReadConfigFile (char *fname)
     printf("\nReadConfigFile: Can't open config file\n%s\n\n",fname);           return(-2);
   }
 
-  gethostname(host, &nameLen);
+  get_hostname(host, &nameLen);
   sprintf(ROC_name, "<%s>", host);
 
 #ifdef SP_DEBUG

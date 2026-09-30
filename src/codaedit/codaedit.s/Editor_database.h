@@ -45,6 +45,9 @@
 extern "C" {
 #endif
 
+  
+int compTypeInt(char* comp_type);
+
 
 /*****************************************************************************
  *              int connectToDatabase (char* host)                           *
@@ -274,7 +277,8 @@ extern int insertValToScriptTable (char* config, char* name, codaScript* list);
  ****************************************************************************/
 extern int insertValToConfigTable (char* config, char* name, char* code,
 				   char* inputs, char* outputs, char* next,
-								   int first, short order_num);
+				   int first, short order_num, char* cmd,
+				   int type);
 
 /*****************************************************************************
  *              int insertDaqcompToProcTable (daqComp* comp)                 *
@@ -374,6 +378,11 @@ extern void removeMiscConfigInfo (void);
  ****************************************************************************/
 extern int createRcNetCompsFromDbase (rcNetComp** comp, int* num);
 
+
+/*sergey: to be called from runcontrol*/
+int updateProcessTableFromConfigTable(char* config);
+
+  
 /*****************************************************************************
  *              int retrieveConfigInfoFromDbase (char*, ConfigInfo* comp)    *
  * Description:                                                              *

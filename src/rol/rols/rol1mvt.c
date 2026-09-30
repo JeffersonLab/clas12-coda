@@ -103,7 +103,10 @@ void usrtrig_done();
 #include "c792Lib.h"
 #include "tdc1190.h"
 #include "vscmLib.h"
-
+#include "daqLib.h"
+#include "sdLib.h"
+#include "fadcLib.h"
+#include "fadc250Config.h"
 
 #ifdef USE_SSP
 #include "sspLib.h"
@@ -2119,7 +2122,7 @@ vmeBusUnlock();
  *******************************************************************/
 
   /* always clear exceptions */
-  jlabgefClearException(1);
+  vmeClearException(1);
 
   nusertrig = 0;
   ndone = 0;
@@ -3426,7 +3429,7 @@ vmeBusUnlock();
 
 	}
 
-    nwords = ((int)rol->dabufp-(int)dabufp1)/4 + 1;
+    nwords = ((long int)rol->dabufp-(long int)dabufp1)/4 + 1;
 
     *rol->dabufp ++ = LSWAP((0x11<<27)+nwords); /*block trailer*/
 

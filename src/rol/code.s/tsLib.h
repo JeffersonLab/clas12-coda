@@ -451,6 +451,7 @@ struct TS_A24RegStruct
 /* 0xD0 adr24 bits and masks */
 #define TS_ADR24_ADDRESS_MASK         0x0000001F
 #define TS_ADR24_HARDWARE_SET_MASK    0x000003E0
+#define TS_ADR24_GEOADDR_MASK         0x00007C00 //sergey from TI
 #define TS_ADR24_TM_NBLOCKS_READY1    0x00FF0000
 #define TS_ADR24_TM_NBLOCKS_NEEDACK1  0xFF000000
 
@@ -620,7 +621,7 @@ int  tsVMESlot2PayloadPort(int vmeslot);
 int  tsVMESlotMask2PayloadPortMask(int vmeslot_mask);
 int  tsSetPrescale(int prescale);
 int  tsGetPrescale();
-int  tsSetTriggerPrescale(int type, int chan, unsigned int prescale);
+int  tsSetTriggerPrescale(int type, int chan, /*sergey unsigned*/ int prescale);
 int  tsGetTriggerPrescale(int type, int chan);
 
 int  tsSetTriggerPulse(int trigger, int delay, int width);
@@ -644,6 +645,9 @@ int  tsGetBlockLimitStatus();
 int  tsSetGTPInputReadout(int enable);
 int  tsSetFPInputReadout(int enable);
 int  tsSetBeforePrescaleReadout(int enable);
+
+int  tsGetGeoAddress(); //sergey from TI
+
 
 int  tsIntPoll();
 unsigned int  tsGetIntCount();
@@ -755,11 +759,13 @@ unsigned int tsDuplGetBusyStatus();
 int  tsDuplPrintBusyStatus();
 
 /* sergey */
-unsigned int tsGetFPInput();
 unsigned int tsGetGTPInput();
+unsigned int tsGetFPInput();
 unsigned int tsGetBlockBufferLevel();
 int tsEnableTriggerSource();
 int tsGetNumberOfBlocksInBuffer();
+int tsGetGTPTriggerPrescale(volatile unsigned int *data);
+int tsGetFPTriggerPrescale(volatile unsigned int *data);
 /* sergey */
 
 #endif /* TSLIB_H */

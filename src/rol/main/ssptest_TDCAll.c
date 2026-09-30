@@ -9,6 +9,7 @@
 #include "sspLib.h"
 #include "sspLib_rich.h"
 #include "jvme.h"
+#include "usrvme.h"
 #include "sspConfig.h"
 #include "tiLib.h"
 
@@ -100,7 +101,8 @@ int main(int argc, char *argv[]){
 
 
   //DMA variables
-  int i1,i2,i3;
+  unsigned long int i1,i2;
+  int i3;
   unsigned int * tdcbuf;
 
 

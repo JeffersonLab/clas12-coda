@@ -35,4 +35,4 @@ typedef struct v1495_struct
 
 /* functions */
 
-int v1495firmware(unsigned int baseaddr, char *filename, int page, int user_vme);
+int v1495firmware(unsigned long int baseaddr, char *filename, int page, int user_vme);

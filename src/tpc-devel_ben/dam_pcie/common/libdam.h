@@ -1,12 +1,15 @@
+/* libdam.h */
+
 #ifndef _LIBDAM_H
 #define _LIBDAM_H
+
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 
-#include "dam_ioctl.h"
+/*#include "dam_ioctl.h"  sergey: DEBUG defined inside .. not sure if it is needed at all here ... */
 
 int dam_open(int *fd, char *fname);
 int dam_close(int fd);

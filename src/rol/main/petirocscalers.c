@@ -1,9 +1,13 @@
+
 /* petirocscalers.c */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+
+#ifndef Linux_armv7l
+
 #include "petirocLib.h"
 #include "petirocConfig.h"
 
@@ -33,3 +37,12 @@ int main(int argc, char *argv[])
   exit(0);
 }
 
+#else
+
+int main()
+{
+  printf("Not supported on that architecture\n");
+  exit(0);
+}
+
+#endif

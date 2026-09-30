@@ -12,8 +12,10 @@
 
 #ifndef VXWORKS
 #include "jvme.h"
+#include "usrvme.h"
 #endif
 
+#include "codautil.h"
 #include "vscmLib.h"
 
 typedef struct {
@@ -102,7 +104,7 @@ fssrGainScan(int id, char *filename, \
       if (stat(datetime, &sb) != 0)
         mkdir(datetime, S_IRWXU | S_IRWXG | S_IROTH);
       char host[255];
-      gethostname(host, 255);
+      get_hostname(host, 255);
       sprintf(fname,"%s/%s_s%02d_c%1d_u%1d", datetime, host, id, ((ichip > 3) ? 2 : 1), ((ichip % 4) + 1));
       if( (fd = fopen(fname, "w")) == NULL )
       {

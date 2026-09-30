@@ -26,27 +26,25 @@
 
 #if defined(VXWORKS) || defined(Linux_vme)
 
-
-#ifdef VXWORKS
-#include <vxWorks.h>
-/*sergey#include "vxCompat.h"*/
-#else
-#include <stddef.h>
-#include <pthread.h>
-#include "jvme.h"
-#endif
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+
 #ifdef VXWORKS
+#include <vxWorks.h>
 #include <logLib.h>
 #include <taskLib.h>
 #include <intLib.h>
 #include <iv.h>
 #include <semLib.h>
 #include <vxLib.h>
+/*sergey#include "vxCompat.h"*/
 #else
 #include <unistd.h>
+#include <stddef.h>
+#include <pthread.h>
+#include "jvme.h"
+#include "usrvme.h"
 #endif
 
 
@@ -686,8 +684,8 @@ faInit (UINT32 addr, UINT32 addr_inc, int nadc, int iFlag)
 		      FA_RESET_DAC | FA_RESET_EXT_RAM_PT));
 
 #ifdef CLAS12
-      vmeWrite32(&(FAp[fadcID[ii]]->gtx_ctrl),0x203); /*put reset*/
-      vmeWrite32(&(FAp[fadcID[ii]]->gtx_ctrl),0x800); /*release reset*/
+	  vmeWrite32(&(FAp[fadcID[ii]]->gtx_ctrl),0x203); /*put reset*/
+          vmeWrite32(&(FAp[fadcID[ii]]->gtx_ctrl),0x800); /*release reset*/
 #else
 	  /* #ifdef USEMGTCTRL */
 	  /* Release reset on MGTs */
@@ -980,6 +978,7 @@ faStatus(int id, int sflag)
     ped_trg[ii] = 4.0 * ((float)(vmeRead16(&FAp[id]->adc_pedestal[ii]) & FA_ADC_PEDESTAL_MASK)) / ((float)(NSA+NSB));
 
     val = vmeRead16(&(FAp[id]->adc_thres[ii]));
+    //printf("TET from hardware = %d ( (val&FA_THR_IGNORE_MASK) = %d)\n",val,(val&FA_THR_IGNORE_MASK));
     tet_trg[ii] = (val & FA_THR_VALUE_MASK) - (int)ped_trg[ii];
     tet_readout[ii] = (val & FA_THR_IGNORE_MASK) ? 0 : ((val & FA_THR_VALUE_MASK) - (int)ped_trg[ii]);
   }
@@ -2104,172 +2103,172 @@ faReadBlock(int id, volatile UINT32 *data, int nwrds, int rflag)
   async = rflag&0x80;
   
   if(rmode >= 1) 
-    { /* Block Transfers */
+  { /* Block Transfers */
     
-      /*Assume that the DMA programming is already setup. */
-      /* Don't Bother checking if there is valid data - that should be done prior
-	 to calling the read routine */
+    /*Assume that the DMA programming is already setup. */
+    /* Don't Bother checking if there is valid data - that should be done prior
+       to calling the read routine */
 
     /* Check for 8 byte boundary for address - insert dummy word (Slot 0 FADC Dummy DATA)*/
     if((unsigned long) (data)&0x7) 
-	{
+    {
 #ifdef VXWORKS
-	  *data = FA_DUMMY_DATA;
+      *data = FA_DUMMY_DATA;
 #else
-	  *data = LSWAP(FA_DUMMY_DATA);
+      *data = LSWAP(FA_DUMMY_DATA);
 #endif
-	  dummy = 1;
-	  laddr = (data + 1);
-	} 
+      dummy = 1;
+      laddr = (data + 1);
+    } 
     else 
-	{
-	  dummy = 0;
-	  laddr = data;
-	}
+    {
+      dummy = 0;
+      laddr = data;
+    }
 
     FALOCK;
     if(rmode == 2) 
-	{ /* Multiblock Mode */
-	  if((vmeRead32(&(FAp[id]->ctrl1))&FA_FIRST_BOARD)==0) 
-	  {
-	    logMsg("faReadBlock: ERROR: FADC in slot %d is not First Board\n",id,0,0,0,0,0);
-	    FAUNLOCK;
-	    return(ERROR);
-	  }
-	  vmeAdr = (unsigned int)((unsigned long)(FApmb) - fadcA32Offset);
-	}
+    { /* Multiblock Mode */
+      if((vmeRead32(&(FAp[id]->ctrl1))&FA_FIRST_BOARD)==0) 
+      {
+	logMsg("faReadBlock: ERROR: FADC in slot %d is not First Board\n",id,0,0,0,0,0);
+	FAUNLOCK;
+	return(ERROR);
+      }
+      vmeAdr = (unsigned int)((unsigned long)(FApmb) - fadcA32Offset);
+    }
     else
-	{
-	  vmeAdr = (unsigned int)((unsigned long)(FApd[id]) - fadcA32Offset);
-	}
+    {
+      vmeAdr = (unsigned int)((unsigned long)(FApd[id]) - fadcA32Offset);
+    }
 /*sergey
 #ifdef VXWORKS
-      retVal = sysVmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2), 0);
+    retVal = sysVmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2), 0);
 #else
-      retVal = vmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2));
+    retVal = vmeDmaSend((UINT32)laddr, vmeAdr, (nwrds<<2));
 #endif
 */
 /*
-	printf("faReadBlock: fadcA32Offset=0x%08x vmeAdr=0x%08x laddr=0x%08x nwrds=%d\n",fadcA32Offset,vmeAdr,laddr,nwrds);fflush(stdout);
+    printf("faReadBlock: fadcA32Offset=0x%08x vmeAdr=0x%08x laddr=0x%08x nwrds=%d\n",fadcA32Offset,vmeAdr,laddr,nwrds);fflush(stdout);
 */
     retVal = usrVme2MemDmaStart(vmeAdr, (unsigned long)laddr, (nwrds<<2));
 
     if(retVal |= 0) 
-	{
-	  logMsg("faReadBlock: ERROR in DMA transfer Initialization 0x%x\n",retVal,0,0,0,0,0);
-	  FAUNLOCK;
-	  return(retVal);
-	}
+    {
+      logMsg("faReadBlock: ERROR in DMA transfer Initialization 0x%x\n",retVal,0,0,0,0,0);
+      FAUNLOCK;
+      return(retVal);
+    }
 
     if(async) 
-	{ /* Asynchronous mode - return immediately - don't wait for done!! */
-	  FAUNLOCK;
-	  return(OK);
-	}
+    { /* Asynchronous mode - return immediately - don't wait for done!! */
+      FAUNLOCK;
+      return(OK);
+    }
     else
-	{
-	  /* Wait until Done or Error */
+    {
+      /* Wait until Done or Error */
 /*sergey
 #ifdef VXWORKS
-	  retVal = sysVmeDmaDone(10000,1);
+      retVal = sysVmeDmaDone(10000,1);
 #else
-	  retVal = vmeDmaDone();
+      retVal = vmeDmaDone();
 #endif
 */
       retVal = usrVme2MemDmaDone();
-	}
+    }
 
     if(retVal > 0) 
-	{
-	  /* Check to see that Bus error was generated by FADC */
-	  if(rmode == 2) 
-	    {
-	      csr = vmeRead32(&(FAp[fadcMaxSlot]->csr));  /* from Last FADC */
-	      stat = (csr)&FA_CSR_BERR_STATUS;  /* from Last FADC */
-	    }
-	  else
-	    {
-	      csr = vmeRead32(&(FAp[id]->csr));  /* from Last FADC */
-	      stat = (csr)&FA_CSR_BERR_STATUS;  /* from Last FADC */
-	    }
+    {
+      /* Check to see that Bus error was generated by FADC */
+      if(rmode == 2) 
+      {
+	csr = vmeRead32(&(FAp[fadcMaxSlot]->csr));  /* from Last FADC */
+	stat = (csr)&FA_CSR_BERR_STATUS;  /* from Last FADC */
+      }
+      else
+      {
+	csr = vmeRead32(&(FAp[id]->csr));  /* from Last FADC */
+	stat = (csr)&FA_CSR_BERR_STATUS;  /* from Last FADC */
+      }
 
-	  if((retVal>0) && (stat)) 
-	    {
+      if((retVal>0) && (stat)) 
+      {
 /*sergey
 #ifdef VXWORKS
-	      xferCount = (nwrds - (retVal>>2) + dummy);
+	xferCount = (nwrds - (retVal>>2) + dummy);
 #else
 */
-	      xferCount = ((retVal>>2) + dummy);  /* Number of Longwords transfered */
-	      /* 	xferCount = (retVal + dummy);  /\* Number of Longwords transfered *\/ */
+	xferCount = ((retVal>>2) + dummy);  /* Number of Longwords transfered */
+	/*xferCount = (retVal + dummy);  /\* Number of Longwords transfered *\/ */
 /*sergey
 #endif
 */
-	      FAUNLOCK;
-	      return(xferCount); /* Return number of data words transfered */
-	    }
-	  else
-	    {
+	FAUNLOCK;
+	return(xferCount); /* Return number of data words transfered */
+      }
+      else
+      {
 /*sergey
 #ifdef VXWORKS
-	      xferCount = (nwrds - (retVal>>2) + dummy);
-	      logMsg("faReadBlock: DMA transfer terminated by unknown BUS Error (csr=0x%x xferCount=%d id=%d)\n",
+	xferCount = (nwrds - (retVal>>2) + dummy);
+	logMsg("faReadBlock: DMA transfer terminated by unknown BUS Error (csr=0x%x xferCount=%d id=%d)\n",
 		     csr,xferCount,id,0,0,0);
 #else
 */
-	      xferCount = ((retVal>>2) + dummy);  /* Number of Longwords transfered */
-	      if((retVal>>2)==nwrds)
-		{
-		  logMsg("faReadBlock: WARN: DMA transfer terminated by word count 0x%x\n",nwrds,0,0,0,0,0);
-		}
-	      else
-		{
-		  logMsg("faReadBlock: DMA transfer terminated by unknown BUS Error (csr=0x%x xferCount=%d id=%d)\n",
-			 csr,xferCount,id,0,0,0);
-		}
-/*sergey
-#endif
-*/
-	      FAUNLOCK;
-	      fadcBlockError=1;
-	      return(xferCount);
-	      /* 	return(ERROR); */
-	    }
-	} 
-    else if (retVal == 0)
-	{ /* Block Error finished without Bus Error */
-/*sergey
-#ifdef VXWORKS
+	xferCount = ((retVal>>2) + dummy);  /* Number of Longwords transfered */
+	if((retVal>>2)==nwrds)
+	{
 	  logMsg("faReadBlock: WARN: DMA transfer terminated by word count 0x%x\n",nwrds,0,0,0,0,0);
-#else
-*/
-	  logMsg("faReadBlock: WARN: DMA transfer returned zero word count 0x%x\n",nwrds,0,0,0,0,0);
+	}
+	else
+	{
+	  logMsg("faReadBlock: DMA transfer terminated by unknown BUS Error (csr=0x%x xferCount=%d id=%d)\n",
+			 csr,xferCount,id,0,0,0);
+	}
 /*sergey
 #endif
 */
-	  FAUNLOCK;
-	  fadcBlockError=1;
-	  return(nwrds);
-	} 
-    else 
-	{  /* Error in DMA */
+	FAUNLOCK;
+	fadcBlockError=1;
+	return(xferCount);
+	/*return(ERROR);*/
+      }
+    } 
+    else if (retVal == 0)
+    { /* Block Error finished without Bus Error */
 /*sergey
 #ifdef VXWORKS
-	  logMsg("faReadBlock: ERROR: sysVmeDmaDone returned an Error\n",0,0,0,0,0,0);
+      logMsg("faReadBlock: WARN: DMA transfer terminated by word count 0x%x\n",nwrds,0,0,0,0,0);
 #else
 */
-	  logMsg("faReadBlock: ERROR: vmeDmaDone returned an Error\n",0,0,0,0,0,0);
+      logMsg("faReadBlock: WARN: DMA transfer returned zero word count 0x%x\n",nwrds,0,0,0,0,0);
 /*sergey
 #endif
 */
-	  FAUNLOCK;
-	  fadcBlockError=1;
-	  return(retVal>>2);
-	}
-
+      FAUNLOCK;
+      fadcBlockError=1;
+      return(nwrds);
     } 
+    else 
+    {  /* Error in DMA */
+/*sergey
+#ifdef VXWORKS
+      logMsg("faReadBlock: ERROR: sysVmeDmaDone returned an Error\n",0,0,0,0,0,0);
+#else
+*/
+      logMsg("faReadBlock: ERROR: vmeDmaDone returned an Error\n",0,0,0,0,0,0);
+/*sergey
+#endif
+*/
+      FAUNLOCK;
+      fadcBlockError=1;
+      return(retVal>>2);
+    }
+
+  } 
   else 
-    {  /*Programmed IO */
+  {  /*Programmed IO */
 
       /* Check if Bus Errors are enabled. If so then disable for Prog I/O reading */
       FALOCK;
@@ -3790,7 +3789,7 @@ faSetThreshold(int id, unsigned short tvalue, unsigned short chmask)
 
   if(chmask==0) chmask = 0xffff;  /* Set All channels the same */
 
-/*printf("faSetThreshold: slot %d, value %d, mask 0x%04X\n", id, tvalue, chmask);*/
+  //printf("faSetThreshold: slot %d, value %d, mask 0x%04X\n", id, tvalue, chmask);
 	  
   FALOCK;
   for(ii=0;ii<FA_MAX_ADC_CHANNELS;ii++) 
@@ -3865,55 +3864,65 @@ int
 faSetDAC(int id, unsigned short dvalue, unsigned short chmask)
 {
   int ii, doWrite=0;
-  unsigned int lovalue=0, hivalue=0;
+  unsigned short lovalue=0, hivalue=0;
+  unsigned int tmp1, tmp2;
   
   if(id==0) id=fadcID[0];
   
   if((id<=0) || (id>21) || (FAp[id] == NULL)) 
-    {
-      logMsg("faSetDAC: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
-      return(ERROR);
-    }
+  {
+    logMsg("faSetDAC: ERROR : ADC in slot %d is not initialized \n",id,0,0,0,0,0);
+    return(ERROR);
+  }
   
   if(chmask==0) chmask = 0xffff;  /* Set All channels the same */
   
   if(dvalue>0xfff) 
-    {
-      logMsg("faSetDAC: ERROR : DAC value (%d) out of range (0-255) \n",
+  {
+    logMsg("faSetDAC: ERROR : DAC value (%d) out of range (0-4095) \n",
 	     dvalue,0,0,0,0,0);
-      return(ERROR);
-    }
+    return(ERROR);
+  }
   
   FALOCK;
-  for(ii=0;ii<FA_MAX_ADC_CHANNELS;ii++)
+  for(ii=0; ii<FA_MAX_ADC_CHANNELS; ii++)
+  {
+    if(ii%2==0)
     {
+      lovalue = vmeRead16(&FAp[id]->dac[ii]);
+      hivalue = vmeRead16(&FAp[id]->dac[ii+1]);
 
-      if(ii%2==0)
-	{
-	  lovalue = (vmeRead16(&FAp[id]->dac[ii]));
-	  hivalue = (vmeRead16(&FAp[id]->dac[ii+1]));
+      if((1<<ii)&chmask)
+      {
+	lovalue = dvalue&FA_DAC_VALUE_MASK;
+	doWrite=1;
+      }
+      if((1<<(ii+1))&chmask)
+      {
+	hivalue = (dvalue&FA_DAC_VALUE_MASK);
+	doWrite=1;
+      }
 
-	  if((1<<ii)&chmask)
-	    {
-	      lovalue = dvalue&FA_DAC_VALUE_MASK;
-	      doWrite=1;
-	    }
-	  if((1<<(ii+1))&chmask)
-	    {
-	      hivalue = (dvalue&FA_DAC_VALUE_MASK);
-	      doWrite=1;
-	    }
+      if(doWrite)
+      {
 
-	  if(doWrite)
-	    vmeWrite32((unsigned int *)&(FAp[id]->dac[ii]), 
-		       lovalue<<16 | hivalue);
+        //tmp1 = (lovalue<<16) | hivalue;
+        //vmeWrite32((unsigned int *)&(FAp[id]->dac[ii]), tmp1);
 
-	  lovalue = 0; 
-	  hivalue = 0;
-	  doWrite=0;
-	}
+        
+        vmeWrite16((unsigned short *)&(FAp[id]->dac[ii]), lovalue);
+        vmeWrite16((unsigned short *)&(FAp[id]->dac[ii+1]), hivalue);
 
+
+        //tmp2 = vmeRead32(&FAp[id]->dac[ii]);
+        //printf("tmp1=0x%08x, tmp2=0x%08x\n",tmp1,tmp2);
+      }
+
+      lovalue = 0; 
+      hivalue = 0;
+      doWrite=0;
     }
+  }
   FAUNLOCK;
 
   return(OK);
@@ -3953,7 +3962,7 @@ unsigned int
 faGetChannelDAC(int id, unsigned int chan)
 {
   int ii;
-  unsigned int val;
+  unsigned short val;
 
   if(id==0) id=fadcID[0];
 
@@ -4388,7 +4397,7 @@ faGetChThreshold(int id, int ch)
 int
 faSetChThreshold(int id, int ch, int threshold)
 {
-/*  printf("faSetChThreshold: slot %d, ch %d, threshold=%d\n",id,ch,threshold);*/
+  //printf("faSetChThreshold: slot %d, ch %d, threshold=%d\n",id,ch,threshold);
 
   return faSetThreshold(id, threshold, (1<<ch));
 }

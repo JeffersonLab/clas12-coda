@@ -16,6 +16,7 @@ IMPORT  STATUS sysBusToLocalAdrs(int, char *, char **);
 #else
 #include <unistd.h>
 #include <pthread.h>
+#define ULONGINT unsigned long int
 #define UINT32 unsigned int
 #define UINT16 unsigned short
 #define UINT8 unsigned char
@@ -23,8 +24,8 @@ IMPORT  STATUS sysBusToLocalAdrs(int, char *, char **);
 
 #include "v288.h"
 #include "jvme.h"
+#include "usrvme.h"
 
-#define SSWAP(x)  ((((x) & 0x00ff) << 8) | (((x) & 0xff00) >> 8))
 #define QQ (UINT16)0xfffe
 #define OK 0
 #define MEK (UINT16)1
@@ -80,7 +81,7 @@ v288ActiveLoop(int spas)
      spas   -  parameter for delay active loop
  */
 int
-v288Transmit(UINT32 addr, UINT32 offset, UINT16 vmedat, int spas)
+v288Transmit(ULONGINT addr, UINT32 offset, UINT16 vmedat, int spas)
 {
   volatile UINT16 *vmeaddress = (volatile UINT16 *) (addr+offset);
   volatile UINT16 *statreg = (volatile UINT16 *) (addr+2);
@@ -107,7 +108,7 @@ v288Transmit(UINT32 addr, UINT32 offset, UINT16 vmedat, int spas)
 /*---- CAEN Wait function -------------------------------- */
 /*---------------------------------------------------------*/
 int
-v288Wait(UINT32 addr, int delay)
+v288Wait(ULONGINT addr, int delay)
 {
   volatile UINT16 *v288adr = (volatile UINT16 *) addr;
   volatile UINT16 *statreg = (volatile UINT16 *) (addr+2);
@@ -141,7 +142,7 @@ v288Wait(UINT32 addr, int delay)
 /*------Reset_restart mod for caenet controller -----------*/ 
 /*---------------------------------------------------------*/
 int
-v288Reset(UINT32 addr)
+v288Reset(ULONGINT addr)
 {
   volatile UINT16 *statreg = (volatile UINT16 *) (addr+2);
   volatile UINT16 *resetreg = (volatile UINT16 *) (addr+6);
@@ -181,7 +182,7 @@ v288Reset(UINT32 addr)
 
 /* first stage of command sending */
 int
-v288Send1(UINT32 addr, UINT16 crate, UINT16 code, int delay)
+v288Send1(ULONGINT addr, UINT16 crate, UINT16 code, int delay)
 {
   int res = 0;
 
@@ -208,7 +209,7 @@ v288Send1(UINT32 addr, UINT16 crate, UINT16 code, int delay)
 
 /* second stage of command sending */
 int
-v288Send2(UINT32 addr, UINT16 value, int delay)
+v288Send2(ULONGINT addr, UINT16 value, int delay)
 {
   int res = 0;
 
@@ -223,7 +224,7 @@ v288Send2(UINT32 addr, UINT16 value, int delay)
 
 /* third stage of command sending */
 int
-v288Send3(UINT32 addr, int delay)
+v288Send3(ULONGINT addr, int delay)
 {
   int res = 0;
 
@@ -237,7 +238,7 @@ v288Send3(UINT32 addr, int delay)
 
 /* full sending command */
 int
-v288Send(UINT32 addr, UINT16 crate, UINT16 code, UINT16 *value)
+v288Send(ULONGINT addr, UINT16 crate, UINT16 code, UINT16 *value)
 {
   int i, res = 0;
 #ifdef VXWORKS
@@ -271,7 +272,7 @@ v288Send(UINT32 addr, UINT16 crate, UINT16 code, UINT16 *value)
 
 /* get data */
 int
-v288Get(UINT32 addr, int nw, UINT16 *buffer)
+v288Get(ULONGINT addr, int nw, UINT16 *buffer)
 {
   volatile UINT16 *v288adr = (volatile UINT16 *) addr;
   volatile UINT16 *statreg = (volatile UINT16 *) (addr+2);
@@ -436,7 +437,8 @@ int
 CAENHVInitSystem(const char *SystemName, int LinkType, void *Arg,
                  const char *UserName, const char *Passwd)
 {
-  int i, addr;
+  int i;
+  unsigned long int addr;
   char arg1[256], arg2[256], arg3[256];
   char *ch1, *ch2;
 

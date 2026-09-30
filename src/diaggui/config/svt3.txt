@@ -3,6 +3,7 @@
 ###########################################################
 
 HOSTNAME svt3
-	MODULE MOD_TYPE_FADC250	0x00180000	# SLOT 3
+#        MODULE MOD_TYPE_FADC250 0x00180000      # SLOT 15
+	MODULE MOD_TYPE_FAV3 0x00300000	        # SLOT 6
 ENDHOST
 

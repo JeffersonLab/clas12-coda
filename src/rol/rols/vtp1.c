@@ -143,14 +143,12 @@ __download()
   DAQ_READ_CONF_FILE;
 
   /* user code */
-#ifdef USE_DMA
-  vtpDmaMemOpen(2, MAXBUFSIZE*4);
-#endif
 
   printf("INFO: User Download 1 Executed\n");
 
   return;
 }
+
 
 
 static void
@@ -182,6 +180,7 @@ __prestart()
   VTP_READ_CONF_FILE;
 
 #ifdef USE_DMA
+  vtpDmaMemOpen(2, MAXBUFSIZE*4);
   vtpDmaInit(VTP_DMA_TI);
   vtpDmaInit(VTP_DMA_VTP);
 #endif

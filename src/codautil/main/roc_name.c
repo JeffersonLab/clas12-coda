@@ -13,7 +13,7 @@ main(int argc, char **argv)
 {
   char *mysql_database = getenv("EXPID");
   int id = atoi(argv[1]);
-  char name[STRLEN];
+  char name[CODAUTIL_STRLEN];
 
   get_roc_name(mysql_database, id, name);
 

@@ -10,6 +10,16 @@
 #ifndef __TIPRIMARY_ROL__
 #define __TIPRIMARY_ROL__
 
+#include <stdio.h>
+#include <libdb.h>
+
+
+#ifdef Linux_vme
+#include "jvme.h"
+#include "usrvme.h"
+#include "tiLib.h"
+#include "tiConfig.h"
+#endif
 
 #define DAQ_READ_CONF_FILE  {daqSetExpid(expid);                        daqConfig("");     if(strncasecmp(rol->confFile,"none",4)) daqConfig(rol->confFile);}
 #define TI_READ_CONF_FILE   {tiSetExpid(expid);                         tiConfig("");      if(strncasecmp(rol->confFile,"none",4)) tiConfig(rol->confFile);}
@@ -17,6 +27,7 @@
 #define DCRB_READ_CONF_FILE {dcrbSetExpid(expid);                       dcrbConfig("");    if(strncasecmp(rol->confFile,"none",4)) dcrbConfig(rol->confFile);}
 #define VSCM_READ_CONF_FILE {vscmSetExpid(expid);                       vscmConfig("");    if(strncasecmp(rol->confFile,"none",4)) vscmConfig(rol->confFile);}
 #define FADC_READ_CONF_FILE {fadc250SetExpid(expid);                    fadc250Config(""); if(strncasecmp(rol->confFile,"none",4)) fadc250Config(rol->confFile);}
+#define FAV3_READ_CONF_FILE {faV3SetExpid(expid);                       faV3Config("");    if(strncasecmp(rol->confFile,"none",4)) faV3Config(rol->confFile);}
 #define SSP_READ_CONF_FILE  {sspSetExpid(expid);     sspInitGlobals();  sspConfig("");     if(strncasecmp(rol->confFile,"none",4)) sspConfig(rol->confFile);}
 #define GTP_READ_CONF_FILE  {gtpSetExpid(expid);                        gtpConfig("");     if(strncasecmp(rol->confFile,"none",4)) gtpConfig(rol->confFile);}
 #define TDC_READ_CONF_FILE  {tdc1290SetExpid(expid);                    tdc1190Config(""); if(strncasecmp(rol->confFile,"none",4)) tdc1190Config(rol->confFile);}
@@ -26,36 +37,6 @@
 #define SD_READ_CONF_FILE   {sdSetExpid(expid);                         sdConfig("");      if(strncasecmp(rol->confFile,"none",4)) sdConfig(rol->confFile);}
 
 
-#include <stdio.h>
-#include <libdb.h>
-
-
-
-
-
-
-#ifndef Linux_x86_64_vme
-
-#ifndef VXWORKS
-#include "../jvme/jlabgef.h"
-#include "../jvme/jvme.h"
-#endif
-
-#else
-
-#include "jlabgef.h"
-#include "jvme.h"
-
-#endif
-
-
-
-
-
-
-
-
-#include "../code.s/tiLib.h"
 
 static unsigned int dmaMemSize; /* DMA memory size, see below */
 
@@ -120,7 +101,7 @@ static int TIPRIMARYflag;
 static int TIPRIMARY_isAsync;
 
 /*max tested value is 40*/
-static int block_level = /*40*/1;
+static int block_level = 1;
 static int next_block_level = 1;
 
 #ifdef VXWORKS
@@ -146,7 +127,7 @@ TIPRIMARY_int_handler(int arg)
 #endif
 
 
-static unsigned long i2_from_rol1;
+static unsigned long int i2_from_rol1;
 static char ourhostname[128];
 static char ourvtphostname[128];
 
@@ -154,7 +135,8 @@ static void
 tiprimarytinit(int code)
 {
   int ii, ret, j1, j2;
-  unsigned long i1, i2, i3;
+  unsigned long int i1, i2;
+  int32_t i3;
   unsigned int slavemask, connectmask;
   char chtmp[256];
   char *p, tmp[1000];
@@ -180,7 +162,7 @@ vmeCheckMutexHealth(1); /*- use 'mutexclean' command if needed !!!!!!!!!!!!!!!!!
   /* DMA setup */
 
 /* increase DMA memory size here if necessary */
-usrVmeDmaSetMemSize(0x200000);
+//usrVmeDmaSetMemSize(0x200000);
 
 /* usrVmeDmaSetMemSize(0x800000); produces error:
  usrVmeDmaSetMemSize: set memSize to 0x00800000 (8 MB)
@@ -189,7 +171,12 @@ usrVmeDmaSetMemSize(0x200000);
 */
 
  dmaMemSize = usrVmeDmaGetMemSize();
+ printf("TIPRIMARY_source.h: dmaMemSize=0x%08x\n",dmaMemSize);fflush(stdout);
+
  usrVmeDmaInit();
+ printf("TIPRIMARY_source.h: just after usrVmeDmaInit()\n");fflush(stdout);
+
+
 #ifdef VXWORKS
   i2 = &tdcbuftmp[0];
 #else
@@ -240,7 +227,6 @@ vmeBusLock();
   block_level = tiConfigGetBlockLevel();
   printf("TIPRIMARY: new block_level (config) to %d\n",block_level);
 vmeBusUnlock();
-
 
 
 #ifdef TI_SLAVE
@@ -329,19 +315,19 @@ vmeBusUnlock();
   {
     j1 = slavemask&(1<<ii);
     if(j1)
-	{
+    {
       j2 = (j1 & connectmask) >> ii;
       printf("======> ii=%d j1=%d j2=%d\n",ii,j1,j2);
       if(j2==0)
-	  {
+      {
         printf("Fiber %d lost connection - trying to recover\n");
 vmeBusLock();
-		tiResetMGT();
+	tiResetMGT();
 vmeBusUnlock();
         taskDelay(10);
         goto try_again1;
-	  }
-	}
+      }
+    }
   }
 
   taskDelay(200);
@@ -392,7 +378,6 @@ vmeBusUnlock();
   printf("TIPRIMARY: next_block_level = %d\n",next_block_level);
 
 
-
 #ifdef USE_HPS
 vmeBusLock();
   if(rol->pid==37||rol->pid==39) tiRemoveRocSWA(); /*temporary: remove GTPs by default*/
@@ -414,7 +399,7 @@ TEST*/
 vmeBusLock();
     roc_id_fiber[port] = tiGetCrateID(port);
 vmeBusUnlock();
-	printf("TIPRIMARY: port=%d, roc_id_fiber=%d\n",port,roc_id_fiber[port]);
+    printf("TIPRIMARY: port=%d, roc_id_fiber=%d\n",port,roc_id_fiber[port]);
   }
 
   dbsocket = dbConnect(mysql_host, expid);
@@ -486,21 +471,21 @@ vmeBusUnlock();
 #ifdef USE_HPS
 
         if(roc_id_db==38 && rol->pid==37) /*hps1/hps1gtp, temporary until resolved in hardware*/
-		{
+	{
           printf("   TIPRIMARY: set busy for hps1gtp\n");
 vmeBusLock();
           tiSetBusySource(TI_BUSY_SWA,0);
           tiAddRocSWA();
 vmeBusUnlock();
-		}
+	}
         else if(roc_id_db==40 && rol->pid==39) /*hps2/hps2gtp, temporary until resolved in hardware*/
-		{
+	{
           printf("   TIPRIMARY: set busy for hps2gtp\n");
 vmeBusLock();
           tiSetBusySource(TI_BUSY_SWA,0);
           tiAddRocSWA();
 vmeBusUnlock();
-		}
+	}
         else if(roc_id_db==52|| /*ignore all dpm's except 2, temporary until resolved in hardware*/
                 roc_id_db==53||
                 roc_id_db==54||
@@ -514,11 +499,11 @@ vmeBusUnlock();
                 roc_id_db==63||
                 roc_id_db==64||
                 roc_id_db==65)
-		{
+	{
           printf("   TIPRIMARY: do nothing for 'secondary' DPMs\n");
-		}
+        }
         else if(roc_id_db==51) /*temporary until resolved in hardware*/
-		{
+	{
           printf("   TIPRIMARY: add slave connected to fiber 4 (DPM0)\n");
 vmeBusLock();
 /* hps10: tiAddSlave(2);*/ /* temporary !!!! TI buster, so moved 4->2 */
@@ -532,10 +517,10 @@ vmeBusLock();
 /* hps10: tiAddSlave(3);*/ /* temporary !!!! TI buster, so moved 5->3 */
           tiAddSlave(5);
 vmeBusUnlock();
-		}
+	}
         else
 
-#endif
+#endif /*USE_HPS*/
 
 
 
@@ -560,18 +545,18 @@ vmeBusUnlock();
           {
             printf("==> roc_id_db=%d, roc_id_fiber[%d]=%d\n",roc_id_db,port,roc_id_fiber[port]);
             if(roc_id_db == roc_id_fiber[port])
-		    {
+	    {
               if(roc_id_db == rol->pid) /* never here ? */
-		      {
+	      {
                 printf("      TIPRIMARY: rocid=%d - do nothing (cannot be myself's slave\n",roc_id_db);
-		      }
-		      else
-		      {
+	      }
+	      else
+	      {
                 printf("      TIPRIMARY: added slave connected to fiber %d, rocid=%d\n",port,roc_id_db);
 vmeBusLock();
                 tiAddSlave(port);
 vmeBusUnlock();
-		      }
+	      }
               break;
             }
           }
@@ -582,7 +567,7 @@ tiAddSlave(1);
 vmeBusUnlock();
 		  */
 
-		}
+        }
 
 
       } /* 'inuse' != 'no' */
@@ -760,7 +745,7 @@ vmeBusUnlock();
 static unsigned int
 tiprimaryttype(unsigned int code)
 {
-  return(1); /* not used any more: event type reported in every event in TI data, and recodred into fragment header in ROL2 */
+  return(1); /* not used any more: event type reported in every event in TI data, and recorded into fragment header in ROL2 */
 }
 
 /* for polling mode only */

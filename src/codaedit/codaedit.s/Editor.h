@@ -63,7 +63,7 @@ Editor_syntax_checker.c
 #define CODA_L3        5
 #define CODA_ER        6
 #define CODA_LOG       7
-#define CODA_SC        8
+#define CODA_TSROC     8 /*was CODA_SC*/
 #define CODA_SPR       9 /*was CODA_UC*/
 #define CODA_SRO       10
 #define CODA_FILE      11
@@ -80,15 +80,17 @@ Editor_syntax_checker.c
 #define MAX_NUM_IOS    130 /* was 40 */
 #define MAX_NUM_COMPS  500
 
+#define MAX_NUM_ROLS   3
+
 typedef struct _comp
 {
   int      type;
-  char     *comp_name;     /* component unique name           */
-  char     *node_name;     /* default address                 */
-  int      id_num;         /* unique id number within a class */
-  int      status;         /* component status from RC        */
-  char     *boot_string;   /* boot string, how to start       */
-  char     *code[3];       /* readout lists code              */
+  char     *comp_name;           /* component unique name           */
+  char     *node_name;           /* default address                 */
+  int      id_num;               /* unique id number within a class */
+  int      status;               /* component status from RC        */
+  char     *boot_string;         /* boot string, how to start       */
+  char     *code[MAX_NUM_ROLS];  /* readout lists code              */
 } daqComp;
 
 typedef struct _whole_comp
@@ -136,29 +138,15 @@ typedef struct _config__info
   int         num_outputs;
   char*       code[3];
   codaScript* scripts;
+
+  /*sergey*/
+  char*       comp_cmd;
+  char*       comp_type;
+  /*sergey*/
+  
   /* private data */
   int  row, col;
 } ConfigInfo;
 
-/*
-extern ioLine *createIoLine();
-extern rcNetComp* newRcNetComp ();
-extern void       freeRcNetComp ();
-extern void       setRcNetComp ();
-extern IoId*      newIoId ();
-extern void       freeIoId ();
-extern ConfigInfo* newConfigInfo ();
-extern int         matchConfigInfo ();
-extern void        freeConfigInfo ();
-extern void        setConfigInfoName ();
-extern void        setConfigInfoCode ();
-extern void        setConfigInfoInputs ();
-extern void        setConfigInfoOutputs ();
-extern void        setConfigInfoPosition ();
-*/
 
 #endif
-
-
-
-

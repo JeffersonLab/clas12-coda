@@ -9,12 +9,8 @@ typedef unsigned int uintptr_t;
 #include <stdint.h>
 #endif
 
-#ifndef CODA3DMA
-#define LSWAP(x)        ((((x) & 0x000000ff) << 24) | \
-                         (((x) & 0x0000ff00) <<  8) | \
-                         (((x) & 0x00ff0000) >>  8) | \
-                         (((x) & 0xff000000) >> 24))
-#endif
+#include "codautil.h"
+
 
 /* Macros to help with register spacers */
 #define MERGE_(a,b)  a##b
@@ -346,7 +342,7 @@ void vscmLatchScalers(int id, int latch);
 uint32_t vscmReadVmeClk(int id);
 
 void vscmSetBCOFreq(int id, uint32_t freq);
-int vscmReadBlock(int id, volatile uintptr_t *data, int nwrds, int rflag);
+int vscmReadBlock(int id, unsigned int *data, int nwrds, int rflag);
 void vscmSetTriggerWindow(int id, \
                           uint32_t windowSize, \
                           uint32_t windowLookback, \

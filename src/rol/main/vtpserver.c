@@ -1,13 +1,12 @@
 
-
 /* vtpserver.c */
+
+#if defined(Linux_armv7l)
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#if defined(Linux_armv7l)
 
 #include <sys/mman.h>
 #include <sys/signal.h>
@@ -16,12 +15,16 @@
 #include <fcntl.h>
 #include <pthread.h>
 
+#include "codautil.h"
 #include "ipc.h"
+
 #include "vtpLib.h"
+#include "vtpConfig.h"
 
 void sig_handler(int signo);
 
 static char myhostname[100];
+
 
 /* returns: error: -1, not found host: 0, found host: 1 */
 int
@@ -31,7 +34,10 @@ load_firmware()
   char buf[1000], host[100], hostfile[100], z7file[100], v7file[100];
   int i, found;
 
+  printf("load_firmware() reached\n");fflush(stdout);
+
   sprintf(buf, "%s/firmwares/vtp_firmware.txt", getenv("CLON_PARMS"));
+  printf("Loading firmware >%s< ...\n",buf);
   f = fopen(buf, "rt");
   if(!f)
   {
@@ -39,16 +45,7 @@ load_firmware()
     return -1;
   }
 
-  gethostname(host,99);
-  for(i=0; i<strlen(host); i++)
-  {
-    if(host[i] == '.')
-    {
-      host[i] = '\0';
-      break;
-    }
-  }
-
+  get_hostname(host,99);
   strcpy(myhostname,host);
   printf("\n%s: >>> My hostname is >%s<\n",__func__,myhostname);
 
@@ -91,23 +88,37 @@ load_firmware()
   return(found);
 }
 
+
 int
 main(int argc, char *argv[])
 {
   int stat, count, ret;
   pthread_t gScalerThread;
 
+  /*sergey
   if(signal(SIGINT, sig_handler) == SIG_ERR)
   {
     perror("signal");
     exit(0);
   }
+  */
 
+ 
+  vtpSetDebugMask(0xFFFFFFFF);
+
+  printf("Calling vtpOpen()\n");fflush(stdout);
+  
   stat = vtpOpen(VTP_FPGA_OPEN|VTP_I2C_OPEN|VTP_SPI_OPEN);
   if(stat != (VTP_FPGA_OPEN|VTP_I2C_OPEN|VTP_SPI_OPEN))
-    goto CLOSE;
+  {
+    printf("ERROR in vtpOpen() - exiting\n");fflush(stdout);
+    //sergeygoto CLOSE;
+  }
   else
-    printf("vtpOpen'ed\n");
+  {
+    printf("vtpOpen'ed\n");fflush(stdout);
+  }
+
 
   /* read vtp firmware table and load into vtp here */
   ret = load_firmware();
@@ -136,8 +147,8 @@ main(int argc, char *argv[])
 
   /* connect to IPC server */
   printf("Connect to IPC server...\n");
-  //epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");
-  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
+  //epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ", NULL, NULL);
+  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ", NULL, NULL);
   printf("done.\n");
   fflush(stdout);
 
@@ -146,7 +157,11 @@ main(int argc, char *argv[])
 
   if(!stat) /*parent starts DiagGuiServer and returns*/
   {
-    system("/usr/clas12/release/1.4.0/coda/src/rol/Linux_armv7l/bin/DiagGuiServer");
+    char diagguiname[256];
+    sprintf(diagguiname,"%s/%s/bin/DiagGuiServer",getenv("CODA"),getenv("OSTYPE_MACHINE"));
+    printf("diagguiname = %s\n",diagguiname);
+    system(diagguiname);
+    //system("/usr/clas12/release/2.0.0/coda/src/rol/Linux_armv7l_RHEL7/bin/DiagGuiServer");
     return(0);
   }
 
@@ -173,6 +188,7 @@ CLOSE:
   exit(0);
 }
 
+
 void
 closeup()
 {
@@ -193,11 +209,16 @@ sig_handler(int signo)
   }
 }
 
+
+
 #else
+
+#include <unistd.h>
 
 int
 main()
 {
+  while(1) sleep(1);
 }
 
 #endif

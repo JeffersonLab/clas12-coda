@@ -41,7 +41,8 @@
 #include <daqNetData.h>
 #include "rccIO.h"
 
-#undef  _CODA_DEBUG
+#define  _CODA_DEBUG
+#define _TRACE_OBJECTS
 
 rccIO::rccIO (Reactor& r)
 :clientStream_ (), master_ (0), acceptor_ (0), reactor_ (r)
@@ -285,19 +286,19 @@ rccIO::handle_input (int)
           printf("rccIO::handle_input: command callback\n");
 #endif
           if (master_ || !acceptor_->hasMaster ())
-	      {
+	  {
 #ifdef _CODA_DEBUG
-            printf("rccIO::handle_input: processCommand %d\n",recver->type());
+	    printf("rccIO::handle_input: processCommand %d\n",recver->type()); //50 is DALOADDBASE
 #endif
-	        status = run_->processCommand (this, recver->type(), recver); 
-	      }
+	    status = run_->processCommand (this, recver->type(), recver); 
+	  }
           else
-	      {
+	  {
 #ifdef _CODA_DEBUG
             printf("rccIO::handle_input: accessViolation\n");
 #endif
-	        status = accessViolation (recver->type(), recver->reqId () );
-	      }
+	    status = accessViolation (recver->type(), recver->reqId () );
+	  }
           break;
       } /* switch (recver->type ()) */
     break;

@@ -40,7 +40,7 @@ typedef struct rolParameters
   int32_t        pid;              /* ROC ID */
   int32_t        poll;             /* to poll or not to poll */
 
-  int32_t        doDone;		   /* should we call 'done' in ROL1 ? */
+  int32_t        doDone;	       /* should we call 'done' in ROL1 ? */
 } ROLPARAMS;
 
 

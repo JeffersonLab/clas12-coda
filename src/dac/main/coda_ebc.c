@@ -28,10 +28,12 @@ main()
 #include <time.h>
 #include <dlfcn.h>
 #include <sys/mman.h>
+#include <sys/prctl.h>
 
 #include "rc.h"
 #include "rolInt.h"
 #include "da.h"
+#include "bigbuf.h"
 #include "circbuf.h"
 #include "libdb.h"
 
@@ -198,14 +200,39 @@ static pthread_cond_t id_out_empty; /* condition for 'idout' */
 
 
 
+
+
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/
+
+/* buffers to be used by 'LINK_sized_read()' to store data received from recv();
+ and then it will be send to 'eb_proc_thread' */
+#include "bigbuf.h"
+#define NUM_SEND_BUFS        8LL
+extern BIGBUF *gbuftmp[MAX_ROCS];  /* see LINK_support.c */
+
+
+/* buffers to be used by 'eb_proc_thread' to send processed data to main building thread */ 
+extern unsigned int *bufpool[MAX_ROCS][QSIZE];  /* see LINK_support.c */
+
+/******************************************************************************/
+/******************************************************************************/
+/******************************************************************************/
+
+
+
+
+
+
 extern WORD128 roc_linked; /* linked ROCs mask (see LINK_support.c)*/
 extern CIRCBUF *roc_queues[MAX_ROCS]; /* see LINK_support.c */
 extern int roc_queue_ix; /* cleaned up here, increment in LINK_support.c */
-extern unsigned int *bufpool[MAX_ROCS][QSIZE];  /* see LINK_support.c */
 
 static unsigned int *evptr[MAX_ROCS][NCHUNKMAX];
 
 extern char configname[128]; /* coda_component.c */
+
 
 
 /* param struct for building thread */
@@ -465,8 +492,8 @@ tmpUpdateStatistics()
                 executed as a detached thread.
 *********************************************************************/
 
-#define NPROF1 100
-#define NPROF2 100
+#define NPROF1 1000
+#define NPROF2 2000
 
 void *
 handle_build(ebArg arg)
@@ -479,6 +506,13 @@ handle_build(ebArg arg)
   int ii, len, id, in_error = 0, res = 0, i, j, k, ix, node_ix, cc, roc, lenbuf, rocid;
   DATA_DESC *desc1, desc2;
   int types[MAX_ROCS];
+
+#ifdef Linux
+  char thread_name[1024];
+  sprintf(thread_name,"BUILDER\0");
+  prctl(PR_SET_NAME,thread_name);
+  /*prctl(PR_SET_NAME,"coda_er1");*/
+#endif
 
   WORD128 fragment_mask;
   WORD128 sync_mask;
@@ -739,7 +773,7 @@ printf("[%1d] .. done\n",id);fflush(stdout);
       printf("[%1d] all ROCs reported\n",arg->id);
       fflush(stdout);
       print_rocs_report = 0;
-	}
+    }
 
 
 
@@ -775,12 +809,14 @@ data_lock(ebp);
       /* get chunk of events from roc fifos */
 #ifdef DO_NOT_BUILD
       while(1)
-	  {
+      {
 #endif
+	//printf("coda_ebc: calling cb_events_get ..\n");fflush(stdout);
         nevbuf = cb_events_get(roc_queues, id, ebp->nrocs, chunk, evptr, &nphys);
+	//printf("coda_ebc: .. cb_events_get returned %d\n",nevbuf);fflush(stdout);
 #ifdef DO_NOT_BUILD
-	    /*printf("================> got %d events\n",nevbuf);*/
-	  }
+	/*printf("================> got %d events\n",nevbuf);*/
+      }
 #endif
 
 
@@ -992,7 +1028,6 @@ printf("!!!coda_ebc: roc=%d desc1->evnb=%d\n",roc,desc1->evnb);
 
 
 
-
         ievent = current_evnb;
 
 	/* ievent can be -1 for Prestart event for example (?), we are checking only Physics events */
@@ -1146,7 +1181,7 @@ exit(0);
       printf("  (ID Mask: ");
       Print128(&type_mask);
 
-      printf("  differ from selected build type = %d\n",current_evty); fflush(stdout);
+      printf("  differ from TYPE = %d obtained from the first ROC ID = %d\n",current_evty,first_roc_id); fflush(stdout);
 
       printf("  Event Type Mismatch info:\n"); fflush(stdout);
       for(ix=0; ix<MAX_ROCS; ix++)
@@ -1162,6 +1197,10 @@ exit(0);
 	}
       }
 	  
+    }
+    else
+    {
+      ;
     }
 #endif
 
@@ -1427,9 +1466,9 @@ output_event:
           {
             while(idin!=id_out[0])
             {
-			  /*printf("[%1d]: cond_wait 1 ..\n",id);fflush(stdout);*/
+	      /*printf("[%1d]: cond_wait 1 ..\n",id);fflush(stdout);*/
               itmp = pthread_cond_wait(&id_out_empty, &id_out_lock);
-			  /*printf("[%1d]: cond_wait 2 ..\n",id);fflush(stdout);*/
+	      /*printf("[%1d]: cond_wait 2 ..\n",id);fflush(stdout);*/
             }
 
             /*printf("[%1d]: put data idin=%d\n",id,idin);*/
@@ -1633,8 +1672,7 @@ if(++nevtime2 == NPROF2)
   printf("[%1d] ============= Build threads cleaned\n",arg->id);
   printf("[%1d] ============= Build threads cleaned\n",arg->id);
   printf("[%1d] ============= Build threads cleaned\n",arg->id);
-  printf("[%1d] build thread exiting: %d %d\n",
-    id,ebp->force_end,ebp->ended); fflush(stdout);
+  printf("[%1d] build thread exiting: %d %d\n",id,ebp->force_end,ebp->ended); fflush(stdout);
   ebp->force_end = 0;
   roc_queue_ix = 0;
 
@@ -1675,7 +1713,7 @@ if(++nevtime2 == NPROF2)
   if(ebp->nthreads != 0) \
   { \
     int itmp = 0; \
-    printf("cancel building threads\n"); \
+    printf("\nSHUTDOWN_BUILD: cancel building threads\n\n"); \
     for(id=0; id<ebp->nthreads; id++) \
     { \
       if(ebp->idth[id] != 0) \
@@ -1705,6 +1743,7 @@ if(++nevtime2 == NPROF2)
     } \
     ebp->nthreads = 0; \
   } \
+  printf("\nSHUTDOWN_BUILD: calling 'debcloselinks()'\n\n"); \
   debcloselinks()
 
 
@@ -1723,7 +1762,7 @@ polling_routine()
 
   if(ebp->ended == 1)
   {
-printf("polling_routine ================!!!!!!!!!!!!!!!!!!=====\n");
+    printf("\npolling_routine calls SHUTDOWN_BUILD ================!!!!!!!!!!!!!!!!!!=====\n\n");fflush(stdout);
 fflush(stdout);
 
 	SHUTDOWN_BUILD;
@@ -1996,7 +2035,7 @@ tmpUpdateStatistics();
 
 
 
-
+/*called at Prestart*/
 int
 debopenlinks()
 {
@@ -2011,7 +2050,7 @@ debopenlinks()
   char tmp[2000], tmpp[1000], tohost[100];
 
 printf("=o=============================================\n");fflush(stdout);
-printf("=o=============================================\n");fflush(stdout);
+printf("=o================= debopenlinks ==============\n");fflush(stdout);
 printf("=o=============================================\n");fflush(stdout);
 printf("debopenlinks reached\n");fflush(stdout);
 
@@ -2019,11 +2058,11 @@ printf("debopenlinks reached\n");fflush(stdout);
   /* cleanup everything from previous configuration(s) */
   for(ix=0; ix<MAX_ROCS; ix++)
   {
-	ebp->roc_id[ix] = -1;
+    ebp->roc_id[ix] = -1;
     ebp->roc_nb[ix] = -1;
-	ebp->links[ix] = NULL;
+    ebp->links[ix] = NULL;
     for(i=0; i<QSIZE; i++)
-	{
+    {
       if(bufpool[ix][i] != NULL) free(bufpool[ix][i]);
       bufpool[ix][i] = NULL;
     }
@@ -2039,8 +2078,7 @@ printf("debopenlinks reached\n");fflush(stdout);
     exit(0);
   }
 
-  sprintf(tmp,"SELECT name,inputs,outputs,next FROM %s WHERE name='%s'",
-    configname,object->name);
+  sprintf(tmp,"SELECT name,inputs,outputs,next FROM %s WHERE name='%s'",configname,object->name);
   if(mysql_query(dbsock, tmp) != 0)
   {
     printf("ERROR: cannot select\n");
@@ -2064,11 +2102,11 @@ printf("debopenlinks reached\n");fflush(stdout);
     if(numRows != 1)
     {
       printf("ERROR: numRows=%d, must be 1\n",numRows);
-	}
+    }
     else
     {
       if((row = mysql_fetch_row(result)))
-	  {
+      {
         /* extract fields from the Event Builder line in config table, for example:
 	         name                  inputs                    outputs       next 
 	        >EB5< >croctest1:croctest1 croctest2:croctest2<     ><           ><   */
@@ -2084,12 +2122,12 @@ printf("debopenlinks reached\n");fflush(stdout);
         {
           if(listSplit1(tmp, 0, &linkArgc, linkArgv)) return(CODA_ERROR);
           for(ix=0; ix<linkArgc; ix++)
-		  {
+	  {
             printf("input1 [%1d] >%s<\n",ix,linkArgv[ix]);
-		  }
+	  }
           /* replace ':' by the end of string */
           for(ix=0; ix<linkArgc; ix++)
-		  {
+	  {
             len = strlen(linkArgv[ix]);
             for(i=0; i<len; i++)
             {
@@ -2099,12 +2137,12 @@ printf("debopenlinks reached\n");fflush(stdout);
                 break;
               }
             }
-		  }
+	  }
           for(ix=0; ix<linkArgc; ix++)
-		  {
+	  {
             printf("input2 [%1d] >%s<\n",ix,linkArgv[ix]);
-		  }
-	    }
+	  }
+	}
       }
       else
       {
@@ -2122,14 +2160,27 @@ printf("debopenlinks reached\n");fflush(stdout);
   for(ix=0; ix<linkArgc; ix++)
   {    
     /* get ROC id from process table */
-	sprintf(tmp,"SELECT id FROM process WHERE name ='%s'",linkArgv[ix]);
+    sprintf(tmp,"SELECT id FROM process WHERE name ='%s'",linkArgv[ix]);
     if(dbGetInt(dbsock, tmp, &rocid)==CODA_ERROR) return(CODA_ERROR);
     printf("rocid=%d\n",rocid);
 
-	ebp->roc_id[nrocs] = rocid; /* our rocid: DC1 is 1, CC1 is 12 etc */
-	ebp->roc_nb[rocid] = nrocs; /* roc numbers: 0,1,2,... */
+    ebp->roc_id[nrocs] = rocid; /* our rocid: DC1 is 1, CC1 is 12 etc */
+    ebp->roc_nb[rocid] = nrocs; /* roc numbers: 0,1,2,... */
+    
+    /* allocate BIGBUFs */
+    gbuftmp[ix] = bb_new(ix,NUM_SEND_BUFS,TOTAL_RECEIVE_BUF_SIZE);
+    if(gbuftmp[ix] == NULL)
+    {
+      printf("ERROR in bb_new: gbuftmp[%d] allocation FAILED\n",ix);
+      return(CODA_ERROR);
+    }
+    else
+    {
+      printf("bb_new: gbuftmp[%d] allocated at %p, size %lx MByte\n",ix,gbuftmp[ix],(2*NUM_SEND_BUFS*TOTAL_RECEIVE_BUF_SIZE)/1024/1024);
+      bb_init(&gbuftmp[ix]);
+    }
 
-    /* allocate 'bufpool' for this ROC */
+    /* allocate bufpool's */
     printf("creating pool of buffers for roc=%d (rocid=%d)\n",ix,rocid); fflush(stdout);
     for(i=0; i<QSIZE; i++)
     {
@@ -2143,15 +2194,19 @@ printf("debopenlinks reached\n");fflush(stdout);
         exit(0);
       }
       else
-	  {
+      {
         printf("[roc %2d][buf %2d] %d bytes has been allocated\n",rocid,i,TOTAL_RECEIVE_BUF_SIZE+128);
-	  }
+      }
     }
 
+    /* */    
     roc_queues[ix] = cb_init(ix, linkArgv[ix], "EventBuilder");
     /*ebp->roc_stream[ix] = &roc_queues[ix];*/
 
-	nrocs ++;
+    /*sergey: needed it in rol3 ... ???*/
+    roc_queues[ix]->rocid = rocid;
+  
+    nrocs ++;
   }
   ebp->nrocs = nrocs;
 
@@ -2160,7 +2215,7 @@ printf("debopenlinks reached\n");fflush(stdout);
   for(ix=0; ix<linkArgc; ix++)
   {
     /* get the host name where it suppose to send data */
-	sprintf(tmp,"SELECT outputs FROM %s WHERE name ='%s'",configname,linkArgv[ix]);
+    sprintf(tmp,"SELECT outputs FROM %s WHERE name ='%s'",configname,linkArgv[ix]);
     if(dbGetStr(dbsock, tmp, tmpp)==CODA_ERROR) return(CODA_ERROR);
     printf("tmpp>%s<\n",tmpp);
     len = strlen(tmpp);
@@ -2175,8 +2230,38 @@ printf("debopenlinks reached\n");fflush(stdout);
     }
     printf("tohost>%s<\n",tohost);
 
+
+
+    /* FOR MPD !!! */
+    /* FOR MPD !!! */
+    /* FOR MPD !!! */
+
+    /* get actual roc's host name (for example it can be 'gem0vtp-s1' instead of 'gem0vtp') from field 'next' */
+    sprintf(tmp,"SELECT next FROM %s WHERE name ='%s'",configname,linkArgv[ix]);
+    if(dbGetStr(dbsock, tmp, tmpp)==CODA_ERROR) return(CODA_ERROR);
+    printf("next: tmpp>%s<\n",tmpp);
+    len = strlen(tmpp);
+    printf("next: len=%d\n",len);
+    if(len>1)
+    {
+      printf("===> replacing >%s< by >%s<\n",linkArgv[ix],tmpp);
+      strncpy(linkArgv[ix],tmpp,len);
+      linkArgv[ix][len] = '\0';
+    }
+    printf("===> new link is >%s<\n",linkArgv[ix]);
+
+    /* if linkArgv[ix] is ending with '-s1', assume link from VTP and update */
+    
+
+
+    /* FOR MPD !!! */
+    /* FOR MPD !!! */
+    /* FOR MPD !!! */
+
+
+
     /* create link */
-	printf("debOpenLink: >%s< >%s< >%s< 0x%08x\n",linkArgv[ix],object->name,tohost, dbsock);
+    printf("debOpenLink: >%s< >%s< >%s< 0x%08x\n",linkArgv[ix],object->name,tohost,dbsock);
     ebp->links[ix] = debOpenLink(linkArgv[ix], object->name, tohost, dbsock);
     printf(">>>>> open link from >%s< link=0x%08x\n",linkArgv[ix],ebp->links[ix]);
   }
@@ -2206,7 +2291,7 @@ debcloselinks()
   EBp ebp = (void *) localobject->privated;
 
 printf("=c=============================================\n");fflush(stdout);
-printf("=c=============================================\n");fflush(stdout);
+printf("=c================= debcloselinks =============\n");fflush(stdout);
 printf("=c=============================================\n");fflush(stdout);
 
   dbsock = dbConnect(mysql_host, expid);
@@ -2219,7 +2304,7 @@ printf("=c=============================================\n");fflush(stdout);
   /* send force close command to all rocs */
   for(ix=0; ix<linkArgc; ix++)
   {
-	printf("=c====\n");fflush(stdout);
+    printf("=c====\n");fflush(stdout);
     printf(">>>>> force close link from >%s< link=0x%08x\n",linkArgv[ix],ebp->links[ix]);
     debForceCloseLink(ebp->links[ix], dbsock);
   }
@@ -2227,7 +2312,7 @@ printf("=c=============================================\n");fflush(stdout);
   /* wait for links to be closed */
   for(ix=0; ix<linkArgc; ix++)
   {
-	printf("=c====\n");fflush(stdout);
+    printf("=c====\n");fflush(stdout);
     printf(">>>>> check close link from >%s< link=0x%08x\n",linkArgv[ix],ebp->links[ix]);
     debCloseLink(ebp->links[ix], dbsock);
   }
@@ -2856,12 +2941,15 @@ printf("codaEnd 9\n");fflush(stdout);
     itmp = 0;
     for(i=0; i<ebp->nthreads; i++)
     {
-      if(ebp->idth[i] != 0) itmp ++;
+      if(ebp->idth[i] != 0)
+      {
+        printf("    deb_end: building thread %d still alive\n",i);
+	itmp ++;
+      }
     }
     if(itmp>0)
     {
-      printf("deb_end: %d threads still alive - waiting %d times ..\n",
-             itmp,count);
+      printf("deb_end: %d building threads still alive - waiting %d times ..\n",itmp,count);
       count ++;
       sleep(1);
     }
@@ -2871,26 +2959,26 @@ printf("codaEnd 9\n");fflush(stdout);
     }
 printf("codaEnd 10\n");fflush(stdout);
 	
-    if(count > 100)
+    if(count > 5)
     {
-	  /*
+      /*
       pthread_cond_broadcast(&id_out_empty);
-	  */
+      */
       printf("deb_end: set 'deleting=1' for all rocs\n");
 
       /* should call cb_delete() instead of following piece .. */
       for(j=0; j<ebp->nrocs; j++)
       {
-          CIRCBUF *f = roc_queues[j];
-          f->deleting = 1;
-          pthread_cond_broadcast(&f->read_cond);
-          pthread_cond_broadcast(&f->write_cond);
+        CIRCBUF *f = roc_queues[j];
+        f->deleting = 1;
+        pthread_cond_broadcast(&f->read_cond);
+        pthread_cond_broadcast(&f->write_cond);
       }
 
     }
 printf("codaEnd 11\n");fflush(stdout);
 
-    if(count > 110) /* ????? */
+    if(count > 8) /* ????? */
     {
       printf("DEB_END: thread(s) do not respond - do not wait any more\n");
       for(i=0; i<NTHREADMAX; i++) ebp->idth[i] = 0;

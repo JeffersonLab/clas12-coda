@@ -57,25 +57,25 @@ typedef struct Struck7201DAT
 
 /* functions */
 
-int scaler7201readfifo(int addr);
-void scaler7201writefifo(int addr, int value);
-int scaler7201status(int addr);
-void scaler7201control(int addr, int value);
-void scaler7201mask(int addr, int value);
-void scaler7201clear(int addr);
-void scaler7201nextclock(int addr);
-void scaler7201enablenextlogic(int addr);
-void scaler7201disablenextlogic(int addr);
-void scaler7201reset(int addr);
-void scaler7201testclock(int addr);
+int scaler7201readfifo(unsigned long int addr);
+void scaler7201writefifo(unsigned long int addr, int value);
+int scaler7201status(unsigned long int addr);
+void scaler7201control(unsigned long int addr, int value);
+void scaler7201mask(unsigned long int addr, int value);
+void scaler7201clear(unsigned long int addr);
+void scaler7201nextclock(unsigned long int addr);
+void scaler7201enablenextlogic(unsigned long int addr);
+void scaler7201disablenextlogic(unsigned long int addr);
+void scaler7201reset(unsigned long int addr);
+void scaler7201testclock(unsigned long int addr);
 
-void scaler7201ledon(int addr);
-void scaler7201ledoff(int addr);
-int scaler7201almostread(int addr, int *value);
-int scaler7201readHLS(int addr, int *ring, int counter);
-int scaler7201restore(int addr, int mask);
-int scaler7201read(int addr, int *value);
-void scaler7201test(int addr);
+void scaler7201ledon(unsigned long int addr);
+void scaler7201ledoff(unsigned long int addr);
+int scaler7201almostread(unsigned long int addr, int *value);
+int scaler7201readHLS(unsigned long int addr, int *ring, int counter);
+int scaler7201restore(unsigned long int addr, int mask);
+int scaler7201read(unsigned long int addr, int *value);
+void scaler7201test(unsigned long int addr);
 
 
 

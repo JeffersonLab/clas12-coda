@@ -5,26 +5,24 @@
 
 cd $CLON_PARMS/firmwares
 
-   * Slot  3:  tdc1190firmware 0x11180000 v1190core0.6.rbf
-   * Slot  4:  tdc1190firmware 0x11200000 v1190core0.6.rbf
-   * Slot  5:  tdc1190firmware 0x11280000 v1190core0.6.rbf
-   * Slot  6:  tdc1190firmware 0x11300000 v1190core0.6.rbf
-   * Slot  7:  tdc1190firmware 0x11380000 v1190core0.6.rbf
-   * Slot  8:  tdc1190firmware 0x11400000 v1190core0.6.rbf
-   * Slot  9:  tdc1190firmware 0x11480000 v1190core0.6.rbf
-   * Slot 10:  tdc1190firmware 0x11500000 v1190core0.6.rbf
-   * Slot 11:  tdc1190firmware 0x11580000 v1190core0.6.rbf
-   * Slot 12:  tdc1190firmware 0x11600000 v1190core0.6.rbf
-   * Slot 13:  tdc1190firmware 0x11680000 v1190core0.6.rbf
-   * Slot 14:  tdc1190firmware 0x11700000 v1190core0.6.rbf
-   * Slot 15:  tdc1190firmware 0x11780000 v1190core0.6.rbf
-   * Slot 16:  tdc1190firmware 0x11800000 v1190core0.6.rbf
-   * Slot 17:  tdc1190firmware 0x11880000 v1190core0.6.rbf
-   * Slot 18:  tdc1190firmware 0x11900000 v1190core0.6.rbf
-   * Slot 19:  tdc1190firmware 0x11980000 v1190core0.6.rbf
-   * Slot 20:  tdc1190firmware 0x11A00000 v1190core0.6.rbf
-
+   * Slot  3:  tdc1190firmware 0x11180000 v1190core_1.1.rbf
+   * Slot  4:  tdc1190firmware 0x11200000 v1190core_1.1.rbf
+   * Slot  5:  tdc1190firmware 0x11280000 v1190core_1.1.rbf
+   * Slot  6:  tdc1190firmware 0x11300000 v1190core_1.1.rbf
+   * Slot  7:  tdc1190firmware 0x11380000 v1190core_1.1.rbf
+   * Slot  8:  tdc1190firmware 0x11400000 v1190core_1.1.rbf
+   * Slot  9:  tdc1190firmware 0x11480000 v1190core_1.1.rbf
+   * Slot 10:  tdc1190firmware 0x11500000 v1190core_1.1.rbf
+   * Slot 11:  tdc1190firmware 0x11580000 v1190core_1.1.rbf
+   * Slot 12:  tdc1190firmware 0x11600000 v1190core_1.1.rbf
+   * Slot 13:  tdc1190firmware 0x11680000 v1190core_1.1.rbf
+   * Slot 14:  tdc1190firmware 0x11700000 v1190core_1.1.rbf
+   * Slot 15:  tdc1190firmware 0x11780000 v1190core_1.1.rbf
    * Slot 16:  tdc1190firmware 0x11800000 v1190core_1.1.rbf
+   * Slot 17:  tdc1190firmware 0x11880000 v1190core_1.1.rbf
+   * Slot 18:  tdc1190firmware 0x11900000 v1190core_1.1.rbf
+   * Slot 19:  tdc1190firmware 0x11980000 v1190core_1.1.rbf
+   * Slot 20:  tdc1190firmware 0x11A00000 v1190core_1.1.rbf
 */
 
 
@@ -62,7 +60,7 @@ cd $CLON_PARMS/firmwares
         =1 for VME flash
 ****************************************************************************/
 int
-write_flash_page2(unsigned int addr, unsigned char *page, int pagenum)
+write_flash_page2(unsigned long int addr, unsigned char *page, int pagenum)
 {
   volatile TDC1190 *tdc1190 = (TDC1190 *) addr;
   int i, flash_addr;
@@ -139,7 +137,7 @@ write_flash_page2(unsigned int addr, unsigned char *page, int pagenum)
  read_flash_page
 ****************************************************************************/
 int
-read_flash_page2(unsigned int addr, unsigned char *page, int pagenum)
+read_flash_page2(unsigned long int addr, unsigned char *page, int pagenum)
 {
   volatile TDC1190 *tdc1190 = (TDC1190 *) addr;
   int i, flash_addr;
@@ -246,7 +244,7 @@ tdc1190firmware_test1(unsigned int baseaddr)
 
 *****************************************************************************/
 int
-tdc1190firmware(unsigned int baseaddr, char *filename, int page, int user_vme)
+tdc1190firmware(unsigned long int baseaddr, char *filename, int page, int user_vme)
 {
   unsigned short *reload = (unsigned short *) (baseaddr+0x8016);
   int finish,i;
@@ -410,7 +408,7 @@ main(int argc, char *argv[])
 {
   int res;
   char myname[256];
-  unsigned int addr, laddr;
+  unsigned long int addr, laddr;
 
   if(argc==3)
   {

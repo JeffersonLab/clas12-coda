@@ -837,6 +837,8 @@ dbaseReader::sessionActive (char* name)
 int
 dbaseReader::createSession (char* name)
 {
+  printf("dbaseReader::createSession: name=%s\n",name);
+  
   if (!isDatabaseOpened ())
   {
     reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 8\n");
@@ -899,6 +901,8 @@ dbaseReader::createSession (char* name)
 int
 dbaseReader::selectSession (char* name)
 {
+  printf("dbaseReader::selectSession: name=%s\n",name);
+  
   if (!isDatabaseOpened ())
   {
     reporter->cmsglog (CMSGLOG_ERROR,"mysql server is not connected 9\n");
@@ -1021,7 +1025,8 @@ dbaseReader::getComponents (void)
 
     if (reconnectMysql () == CODA_ERROR)
       return CODA_ERROR;
-    if (::mysql_query (dbaseSock_, qstring) != 0) {
+    if (::mysql_query (dbaseSock_, qstring) != 0)
+    {
       reporter->cmsglog (CMSGLOG_ERROR,"Can't read process table: %s\n", mysql_error(dbaseSock_));
       return CODA_ERROR;
     }
@@ -1036,14 +1041,15 @@ dbaseReader::getComponents (void)
     reporter->cmsglog (CMSGLOG_ERROR,"Can't read process table: %s\n", mysql_error(dbaseSock_));
     return CODA_ERROR;
   }
+  
   // get every row of the process table
+  printf("dbaseReader::getComponents: get every row of the 'process' table\n");
   MYSQL_ROW row;
   while ((row = mysql_fetch_row (res)))
   {
     if (::strcasecmp (row[3], "RCS") != 0)
     {
-      compFactory_->createComponent (row[0], atoi (row[1]), row[3], row[4],
-				     row[2]);
+      compFactory_->createComponent (row[0], atoi (row[1]), row[3], row[4], row[2]);
       reporter->cmsglog (CMSGLOG_INFO1,"Creating component %s succeeded\n",row[0]);
     }
   }
@@ -1128,10 +1134,12 @@ dbaseReader::setDefaultPriorities (void)
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem ET has default priority of %d\n", 25);
   compFactory_->subSystemPriority ((char *)"LOG", 27);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem LOG has default priority of %d\n", 27);
-  compFactory_->subSystemPriority ((char *)"TS",  -27);
-  reporter->cmsglog (CMSGLOG_INFO1,"Subsystem TS has default priority of %d\n", -27);
   compFactory_->subSystemPriority ((char *)"L3",  26);
   reporter->cmsglog (CMSGLOG_INFO1,"Subsystem L3 has default priority of %d\n", 26);
+  compFactory_->subSystemPriority ((char *)"TS",  -27);
+  reporter->cmsglog (CMSGLOG_INFO1,"Subsystem TS has default priority of %d\n", -27);
+  compFactory_->subSystemPriority ((char *)"TSROC",  -25);
+  reporter->cmsglog (CMSGLOG_INFO1,"Subsystem TSROC has default priority of %d\n", -25);
 }
 
 int 
@@ -1645,6 +1653,14 @@ dbaseReader::configure (char* runtype)
     //printf(DBASE_DBG,"inuse flag was set, but ignore for now\n");
     //return CODA_ERROR;
   }
+
+
+  /*sergey: potential place to update 'process' table using info from 'runtype' config table*/
+  printf("\nRUNTYPE='%s' run_.exptname()='%s'\n\n",runtype,run_.exptname());
+  
+
+
+  
   // get new information from the database
   int status = CODA_SUCCESS;
 
@@ -1671,7 +1687,8 @@ dbaseReader::configure (char* runtype)
   }
 
   MYSQL_RES *res = mysql_store_result(dbaseSock_);
-  if (!res) {
+  if (!res)
+  {
 #ifdef _CODA_DEBUG
     printf ("Select from %s configutation table error: %s\n", runtype, mysql_error(dbaseSock_));
 #endif
@@ -1696,9 +1713,9 @@ dbaseReader::configure (char* runtype)
       reporter->cmsglog (CMSGLOG_INFO,"   activate component %s\n",row[0]);
     }
     else
-	{ 
+    { 
       reporter->cmsglog (CMSGLOG_WARN,"Duplicated entry %s\n", row[0]);
-	}
+    }
   }
   reporter->cmsglog (CMSGLOG_INFO,"Parsing %s finished\n", runtype);
 
@@ -1908,15 +1925,15 @@ dbaseReader::parseOptions (char* runtype)
       //printf(DBASE_DBG," Limit = %s\n",row[1]);
       if (::sscanf (row[1], "%d", &eventl) >= 1)
       {
-	    run_.eventLimit (eventl);
-	    if (eventl != 0)
+	run_.eventLimit (eventl);
+	if (eventl != 0)
         {
-	      reporter->cmsglog (CMSGLOG_INFO1,"Event limit to %d\n", eventl);
-	    }
+	  reporter->cmsglog (CMSGLOG_INFO1,"Event limit to %d\n", eventl);
+	}
         else
         {
-	      reporter->cmsglog (CMSGLOG_WARN,"No event count limit\n", eventl);
-	    }
+	  reporter->cmsglog (CMSGLOG_WARN,"No event count limit\n", eventl);
+	}
       }
     }
     else if (::strcmp (row[0], DBASE_DATALIMIT) == 0)
@@ -1925,15 +1942,15 @@ dbaseReader::parseOptions (char* runtype)
       //printf(DBASE_DBG," Limit = %s\n",row[1]);
       if (::sscanf (row[1], "%d", &dl) >= 1)
       {
-	    run_.dataLimit (dl);
-	    if (dl != 0)
+	run_.dataLimit (dl);
+	if (dl != 0)
         {
-	      reporter->cmsglog (CMSGLOG_INFO1,"Data limit %d Kbytes\n", dl);
-	    }
+	  reporter->cmsglog (CMSGLOG_INFO1,"Data limit %d Kbytes\n", dl);
+	}
         else
         {
-	      reporter->cmsglog (CMSGLOG_WARN,"No data count limit\n", dl);
-	    }
+	  reporter->cmsglog (CMSGLOG_WARN,"No data count limit\n", dl);
+	}
       }
     }
     else if (::strcmp (row[0], DBASE_DATAFILE) == 0)
@@ -1942,8 +1959,8 @@ dbaseReader::parseOptions (char* runtype)
       //printf(DBASE_DBG," dataFile = %s\n",row[1]);
       if (::sscanf (row[1], "%s", filename) >= 1)
       {
-	    run_.setDataFileName (filename);
-	    reporter->cmsglog (CMSGLOG_INFO1,"Data file name %s \n", filename);
+	run_.setDataFileName (filename);
+	reporter->cmsglog (CMSGLOG_INFO1,"Data file name %s \n", filename);
       }
     }
 
@@ -1960,8 +1977,8 @@ dbaseReader::parseOptions (char* runtype)
       //printf(DBASE_DBG," Token = %s\n",row[1]);
       if (::sscanf (row[1], "%d", &titval) >= 1)
       {
-	    run_.tokenInterval (titval, 0);
-	    reporter->cmsglog (CMSGLOG_INFO1,"Token interval %d \n", titval);
+	run_.tokenInterval (titval, 0);
+	reporter->cmsglog (CMSGLOG_INFO1,"Token interval %d \n", titval);
       }
     }
 

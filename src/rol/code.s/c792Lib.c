@@ -31,8 +31,9 @@
 #include "vxLib.h"
 #include "fppLib.h"
 #else
-#include "jvme.h"
 #include <pthread.h>
+#include "jvme.h"
+#include "usrvme.h"
 #endif
 
 #include <stdio.h>

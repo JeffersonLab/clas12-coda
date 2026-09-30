@@ -55,6 +55,7 @@ subSysSortedList::add (void *sys)
     tsys = (daqSubSystem *)itr ();
     if (*val > *tsys) { 
       // found a right position
+      //printf("subSysSortedList::add: inserting >%s< bfore >%s<\n",...
       itr.addBefore (sys);
       return;
     }

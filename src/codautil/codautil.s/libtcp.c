@@ -156,7 +156,7 @@ tcpClientCmd(char *target, char *command, char *result)
     /*mlen = remB;*/
     ch = strstr(replyBuf,"value = ");
     if(ch == NULL) mlen = remB;
-    else           mlen = (int)ch - (int)replyBuf;
+    else           mlen = (uintptr_t)ch - (uintptr_t)replyBuf;
 
 	/*
     printf("buf starts at 0x%08x, strstr returns 0x%08x, mlen=%d\n",

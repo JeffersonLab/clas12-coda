@@ -9,7 +9,7 @@
 
 #include "circbuf.h"
 
-#undef DEBUG
+//#define DEBUG
 
 #define MIN(x,y)    ( (x) < (y) ? (x) : (y) )
 #define NFBUF(r,w)  ( (w) >= (r) ? ((w)-(r)) : ((w)-(r)+QSIZE) )
@@ -31,7 +31,7 @@
 
 
 /*#define READ_SIGNAL_ALL  for(ii=0; ii<nrocs; ii++) {ccc = cba[ii]; pthread_cond_signal(&ccc->read_cond);}*/
-#define READ_SIGNAL_ALL  for(ii=0; ii<nrocs; ii++) {ccc = cba[ii]; pthread_cond_broadcast(&ccc->read_cond);}
+/*#define READ_SIGNAL_ALL  for(ii=0; ii<nrocs; ii++) {ccc = cba[ii]; pthread_cond_broadcast(&ccc->read_cond);}*/
 
 
 
@@ -163,24 +163,11 @@ put_cb_data(int fd, CIRCBUF **cbh, void *data)
   /* print some F's if '-1' (?) */
   if(cbp->data[icb] == (void *)-1) {printf("[%2d] PUT: FFFFFFFFFFFFFFFFFF\n",fd); fflush(stdout);}
 
-#ifndef NOALLOC
-  /* release previously used buffer */
-  if((cbp->data[icb] != NULL) && (cbp->data[icb] != (void *)-1))
-  {
-#ifdef DEBUG
-    printf("[%2d] PUT: release [%1d] 0x%08x\n",fd,icb,cbp->data[icb]);
-    fflush(stdout);
-#endif
-    free(cbp->data[icb]); //sergey: was 'cfree'
-  }
-#endif
-
   /**********************************************************/
   /* assign pointer to the data recieved as input parameter */
   cbp->data[icb] = data;
 #ifdef DEBUG
-  printf("[%2d] PUT: got icb=%2d at data=0x%08x (int=%d uint=%d)\n",
-    fd,icb,cbp->data[icb],(int)cbp->data[icb],(unsigned int)cbp->data[icb]);
+  printf("[%2d] PUT: got icb=%2d at data=%p\n",fd,icb,cbp->data[icb]);
   fflush(stdout);
 #endif
 
@@ -194,9 +181,9 @@ put_cb_data(int fd, CIRCBUF **cbh, void *data)
     cbp->rocid = buf[BBIROCID];         /* ROC id */
     cbp->nevents[icb] = buf[BBIEVENTS]; /* the number of events in buffer */
 
-	/* some basic checks */
-	if(buf[BBIEVENTS]<=0)
-	{
+    /* some basic checks */
+    if(buf[BBIEVENTS]<=0)
+    {
       printf("[%2d] PUT: DATA ERROR: nev=%d (rocid=%d); beginning of the buffer:\n",fd,buf[BBIEVENTS],buf[BBIROCID]);
       {
         int i;
@@ -206,15 +193,15 @@ put_cb_data(int fd, CIRCBUF **cbh, void *data)
             buff[i],buff[i+1],buff[i+2],buff[i+3],buff[i+4],buff[i+5],buff[i+6],buff[i+7]);
       }
       fflush(stdout);
-	}
+    }
 
     /* &buf[BBHEAD] - start of first event, contains event length in words */
     buf += BBHEAD;
     cbp->evptr1[icb] = buf; /* pointer to the first event in buffer */
 
 #ifdef DEBUG
-    printf("[%2d] PUT[%2d]: nevents=%d, buf=0x%08x, 1st 0x%08x, len=0x%08x (end=0x%08x)\n",fd,
-    icb,cbp->nevents[icb],data,cbp->evptr1[icb],lll,(int)buf+lll);
+    printf("[%2d] PUT[%2d]: nevents=%d, buf=%p, 1st 0x%08x, len=0x%08x (end=%p)\n",fd,
+    icb,cbp->nevents[icb],data,cbp->evptr1[icb],lll,buf+lll);
 	
     {
       int i;
@@ -254,7 +241,7 @@ put_cb_data(int fd, CIRCBUF **cbh, void *data)
 #ifdef DEBUG
     printf("[%2d] PUT: inside write_lock, icb=%d\n",fd,icb);fflush(stdout);
 #endif
-	cbp->write = icb;
+    cbp->write = icb;
 
     /******************************************/
     /* let a waiting reader know there's data */
@@ -267,8 +254,8 @@ put_cb_data(int fd, CIRCBUF **cbh, void *data)
   else
   {
 #ifdef DEBUG
-    printf("[%2d] PUT: BLYA: ROC >%s< data=%d -> set cbp->nevents[%d]=-1\n",fd,
-                cbp->name,(int)data,icb,cbp->nevents[icb]);
+    printf("[%2d] PUT: BLYA: ROC >%s< data=%p -> set cbp->nevents[%d]=-1\n",fd,
+                cbp->name,data,icb,cbp->nevents[icb]);
     fflush(stdout);
 #endif
     cbp->nevents[icb] = -1; /* need it in cb_events_get() */
@@ -344,20 +331,20 @@ get_cb_count(CIRCBUF **cbh)
     /*printf("[%1d] INFO(%d): copied %d bytes\n",id,flag,lenev<<2);*/	\
     lenbuf += lenev; /* returned buffer length in words */ \
     if( ((buf[1]>>16)&0xff)==0 )					\
-	{ \
+    { \
       int jj; \
       unsigned int *bbb; \
       printf("[%1d] ERROR(%d): roc %d, nev1=%d nev2=%d j=%d bank tag is zero (header: %d 0x%08x)\n",id,flag,i,nev1,nev2,j,buf[0],buf[1]); \
       /*for(jj=0; jj<j+1; jj++) \											
-	  { \
+      { \
         bbb = evptr[jj]; \
         printf("[%1d] INFO(%d): roc %d, jj=%d: nw = %d, sync=%d tag=0x%02x typ=0x%02x num=%d\n",id,flag,i,jj,bbb[0],(bbb[1]>>24)&0xff,(bbb[1]>>16)&0xff,(bbb[1]>>8)&0xff,(bbb[1])&0xff); \
-		}*/ \
-	} \
-	else \
-	{ \
+      }*/ \
+    } \
+    else \
+    { \
       nevphys ++; \
-	} \
+    } \
     buf += lenev; \
   } \
   cbp->nevents[icb] -= (nev2-nev1); /* update the number of events in buffer */ 
@@ -414,15 +401,15 @@ cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk,
     while(icb == cbp->write)
     {
 #ifdef DEBUG
-      printf("[%1d] GET1: wait (cbp->write=%d) ..............\n",id,cbp->write);
+      printf("[%1d] GET1: wait (icb=%d, and cbp->write still %d, must become at least %d) ..............\n",id,icb,cbp->write,(cbp->write+1)%QSIZE);
 #endif
       WRITE_WAIT;
 #ifdef DEBUG
-      printf("[%1d] GET1: proceed ..\n",id);
+      printf("[%1d] GET1: proceed .. icb=%d, cbp->write=%d\n",id,icb,cbp->write);
 #endif  
       if(cbp->deleting)
       {
-        printf("[%1d] GET1: deleting 1 .. %8.8s\n",id,cbp->name);fflush(stdout);
+        printf("[%1d] GET1: deleting 1 .. %s\n",id,cbp->name);fflush(stdout);
         WRITE_UNLOCK;
         return(-1);
       }
@@ -453,10 +440,10 @@ cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk,
     /* wait while there's nothing in the buffer (SHOULD NEVER BE HERE ???!!!) */
     while(cbp->nevents[icb] == 0)
     {
-      printf("[%1d] GET1: >%8.8s< NEVER COME HERE - 1 (nevents=0)\n",id,cbp->name);fflush(stdout);
+      printf("[%1d] GET1: >%s< NEVER COME HERE - 1 (nevents=0)\n",id,cbp->name);fflush(stdout);
       if(cbp->deleting && (NFBUF(cbp->read,cbp->write) == 0))
       {
-        printf("[%1d] GET1: deleting 2 .. %8.8s\n",id,cbp->name);fflush(stdout);
+        printf("[%1d] GET1: deleting 2 .. %s\n",id,cbp->name);fflush(stdout);
         return(-1);
       }
 
@@ -466,6 +453,7 @@ cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk,
       printf("[%1d] GET1: #roc=%d\n",id,cbp->rocid);
       fflush(stdout);
 #endif
+      printf("[%1d] GET1: --> itmp=%d\n",id,itmp);fflush(stdout);
       sleep(1);
 #ifdef DEBUG
       printf("[%1d] GET1: itmp=%d\n",id,itmp);fflush(stdout);
@@ -491,9 +479,9 @@ cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk,
       }
     }
     else
-	{
+    {
       printf("[%1d] GET1: ERROR: cbp->data[icb]=%d (0x%08x)\n",id,cbp->data[icb],cbp->data[icb]);
-	}
+    }
     nev = MIN(nev,nevtot);
 
     /* return 0 if there's nothing at least in one of the fifo's */
@@ -502,7 +490,7 @@ cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk,
     {
       printf("[%1d] GET1: NEVER COME HERE 2\n",id);fflush(stdout);
       return(0);
-	}
+    }
   }
   /* at that point we obtained 'nev' - the least number of events in every rocs */
   /******************************************************************************/
@@ -520,7 +508,7 @@ cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk,
   for(i=0; i<nrocs; i++)
   {
     cbp = cba[i]; /* set pointer to the next roc's fifo */
-    /*if(cbp != NULL) printf("[%2d] GET2: %8.8s\n",i,cbp->name);*/
+    /*if(cbp != NULL) printf("[%2d] GET2: %s\n",i,cbp->name);*/
 
 
     /* release buffers kept by 'id' if any */
@@ -535,7 +523,6 @@ cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk,
 			   id,i,icb,cbp->nattach[icb]); fflush(stdout);
       }
 
-#ifdef NOALLOC
       /* mark buffer as 'free' if .. */
       if(cbp->nattach[icb]==0) /* .. nobody holds that buffer, and .. */
       {
@@ -543,22 +530,15 @@ cb_events_get(CIRCBUF *cba[MAX_ROCS], int id, int nrocs, int chunk,
         {
           buf = (unsigned int *)cbp->data[icb];
 #ifdef DEBUG
-          printf("[%1d][%2d] GET2: free buffer %d (0x%08x)\n",id,i,icb,buf);
+          printf("[%1d][%2d] GET2: mark buffer as 'free': icb=%d (buf=%p)\n",id,i,icb,buf);
           fflush(stdout);
 #endif
           buf[0] = 0; /* mark buffer as free */
 
-
-
-
-		  /* send signal to LINK_support ??? */
-
-
-
+	  /* send signal to LINK_support ??? */
 
         }
       }
-#endif
 
     }
     cbp->nbuf[id] = 0;
@@ -774,7 +754,6 @@ get_cb_data(CIRCBUF **cbh, int id, int chunk,
                     id,icb,cbp->nattach[icb]); fflush(stdout);
     }
 
-#ifdef NOALLOC
     /* mark buffer as 'free' if .. */
     if(cbp->nattach[icb]==0) /* .. nobody holds that buffer, and .. */
     {
@@ -788,7 +767,6 @@ get_cb_data(CIRCBUF **cbh, int id, int chunk,
         buf[0] = 0; /* mark buffer as free */
       }
     }
-#endif
 
   }
   cbp->nbuf[id] = 0;

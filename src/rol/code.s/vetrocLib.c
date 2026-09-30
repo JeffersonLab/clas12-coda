@@ -16,6 +16,7 @@
 #include <stddef.h>
 #include <pthread.h>
 #include "jvme.h"
+#include "usrvme.h"
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -30,6 +31,7 @@
 #include <unistd.h>
 #endif
 
+#include "codautil.h"
 
 /* Include VETROC definitions */
 #include "vetrocLib.h"
@@ -44,10 +46,6 @@ pthread_mutex_t   vetrocMutex = PTHREAD_MUTEX_INITIALIZER;
 #define VETROCUNLOCK    if(pthread_mutex_unlock(&vetrocMutex)<0) perror("pthread_mutex_unlock");
 #endif
 
-#define LSWAP(x)        ((((x) & 0x000000ff) << 24) | \
-                         (((x) & 0x0000ff00) <<  8) | \
-                         (((x) & 0x00ff0000) >>  8) | \
-                         (((x) & 0xff000000) >> 24))
 
 /* Define external Functions */
 #ifdef VXWORKS

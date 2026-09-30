@@ -102,6 +102,8 @@
 #include "codaCompClnt.h"
 #include <rcMsgReporter.h>
 
+#define _CODA_DEBUG
+
 #ifdef solaris
 extern "C" int gethostname (char*, int);
 #endif
@@ -1795,37 +1797,55 @@ daqRun::cmdFinalResult (int success)
   // --jie chen 6/17/96
 
 #ifdef _CODA_DEBUG
-  printf("daqRun::cmdFinalResult: locked_=%d\n",locked_);
+  printf("daqRun::cmdFinalResult: locked_=%d\n",locked_);fflush(stdout);
 #endif
+  
 #ifndef _CENTERLINE
   assert (locked_);               // must be locked at this moment
   assert (!cmdBuffer.isEmpty ()); // command buffer cannot be empty
+#endif
+  
+#ifdef _CODA_DEBUG
+  printf("daqRun::cmdFinalResult: about to get first command from queue\n");fflush(stdout);
 #endif
   // get first command from queue
   rcCmdBufItem *item = cmdBuffer.removeCmd ();
   rccIO* chan = item->channel;
   if (chan != 0) /* real network call */
   {
-	daqNetData res (exptname_,(char *)"command",success);
-	// send result back to client
-	chan->sendResult (item->cmsg->type(), res, item->cmsg->reqId ());
-	// free memory of item and message
-	delete item->cmsg;
+    daqNetData res (exptname_,(char *)"command",success);
+    // send result back to client
+#ifdef _CODA_DEBUG
+    printf("daqRun::cmdFinalResult: 1\n");fflush(stdout);
+#endif
+    chan->sendResult (item->cmsg->type(), res, item->cmsg->reqId ());
+    // free memory of item and message
+    delete item->cmsg;
   }
   delete item;
   // unlock the system
   unlock ();
+#ifdef _CODA_DEBUG
+  printf("daqRun::cmdFinalResult: 2\n");fflush(stdout);
+#endif
 
   // check whether there are more commands pending, if yes, process them
   if (!cmdBuffer.isEmpty ())
   {
-	item = cmdBuffer.removeCmd ();
-	int type = item->cmsg->type ();
-	rcMsg *msg = item->cmsg;
-	rccIO* chan = item->channel;
-	delete item;
-	processCommand (chan, type, msg);
+#ifdef _CODA_DEBUG
+    printf("daqRun::cmdFinalResult: 3\n");fflush(stdout);
+#endif
+    item = cmdBuffer.removeCmd ();
+    int type = item->cmsg->type ();
+    rcMsg *msg = item->cmsg;
+    rccIO* chan = item->channel;
+    delete item;
+    processCommand (chan, type, msg);
   }
+    
+#ifdef _CODA_DEBUG
+  printf("daqRun::cmdFinalResult: 4\n");fflush(stdout);
+#endif
 }
 
 int
@@ -1839,14 +1859,14 @@ daqRun::processCommand (rccIO* chan, int command, rcMsg* cmsg)
   unsigned long cmd;
   daqNetData *res = 0;
 
-
 #ifdef _CODA_DEBUG
   printf("daqRun::processCommand command %d, locked_=%d\n",command,locked_);
 #endif
+
   if (locked_)
   {
-	cmdBuffer.insertCmd (chan, cmsg);
-	return 0;
+    cmdBuffer.insertCmd (chan, cmsg);
+    return 0;
   }
 
   // lock the command process
@@ -1857,7 +1877,7 @@ daqRun::processCommand (rccIO* chan, int command, rcMsg* cmsg)
   /*
 #ifdef _CODA_DEBUG
   {
-	daqNetData ndata = (daqNetData)(*cmsg);
+    daqNetData ndata = (daqNetData)(*cmsg);
     printf("processCommand: >%s<\n",(char *)ndata);
   }
 #endif
@@ -1876,7 +1896,7 @@ daqRun::processCommand (rccIO* chan, int command, rcMsg* cmsg)
 	  daqNetData ndata = (daqNetData)(*cmsg);
 	  if (ndata.getData (sdata, count) == CODA_SUCCESS)
 	  {
-		status = loadDatabase (sdata[0], sdata[1]);
+	    status = loadDatabase (sdata[0], sdata[1]);
 	  }
 	  res = new daqNetData (exptname_,(char *)"command",status);
 	  /* free memory */
@@ -1888,6 +1908,9 @@ daqRun::processCommand (rccIO* chan, int command, rcMsg* cmsg)
 	{
 	  daqNetData ndata = (daqNetData)(*cmsg);
 	  char *session = new char[::strlen ((char *)ndata) + 1];
+#ifdef _CODA_DEBUG
+      printf("daqRun::processCommand DASESSION\n");fflush(stdout);
+#endif
 	  ::strcpy (session, (char *)ndata);
 	  status = selectSession (session);
 	  res = new daqNetData (exptname_, (char *)"command", status);
@@ -2074,7 +2097,9 @@ daqRun::processCommand (rccIO* chan, int command, rcMsg* cmsg)
 	rcMsg* msg = item->cmsg;
 	rccIO* chan = item->channel;
 	delete item;
+	printf("processCommand 1\n");fflush(stdout);
 	status = processCommand (chan, type, msg);
+	printf("processCommand 2\n");fflush(stdout);
   }
  
   return 0;   // ACE expects  0 for success

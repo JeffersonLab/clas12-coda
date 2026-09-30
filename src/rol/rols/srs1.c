@@ -1349,7 +1349,7 @@ TIMERL_STOP(5000/block_level,1000+rol->pid);
 	  }
 	}
 
-    nwords = ((int)rol->dabufp-(int)dabufp1)/4+1;
+    nwords = ((long int)rol->dabufp-(long int)dabufp1)/4+1;
 	/*printf("nwords=%d\n",nwords);*/
 
     *rol->dabufp ++ = LSWAP((0x11<<27)+nwords); /*block trailer*/
@@ -1407,7 +1407,7 @@ TIMERL_STOP(5000/block_level,1000+rol->pid);
 
 	}
 
-    nwords = ((int)rol->dabufp-(int)dabufp1)/4 + 1;
+    nwords = ((long int)rol->dabufp-(long int)dabufp1)/4 + 1;
 
     *rol->dabufp ++ = ((0x11<<27)+nwords); /*block trailer*/
 

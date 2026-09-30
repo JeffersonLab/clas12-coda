@@ -39,20 +39,11 @@ LIBNAMES += ../../sace3.1/$(OSTYPE_MACHINE)/lib/libsace3.1.a
 
 LIBNAMES += $(CODA)/src/codautil/$(OSTYPE_MACHINE)/lib/libcodautil.a
 
-ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
+  LIBNAMES += /usr/lib/libmysqlclient.so
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-endif
-ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
-  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-#  LIBNAMES += /usr/lib64/libmariadb.so
-endif
-ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
-  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-endif
-ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
-  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
-endif
-ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
   LIBNAMES += /usr/lib/mysql/libmysqlclient.so
 endif
 

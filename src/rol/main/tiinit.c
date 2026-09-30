@@ -59,7 +59,9 @@ void tiFirmwareEMload(char *filename);
 static void tiFirmwareUsage();
 #endif
 
-#define TI_ADDR   (21<<19)
+//#define TI_ADDR   (21<<19)
+#define TI_ADDR   0xa80000 
+
 #define TI_READOUT 2
 
 int

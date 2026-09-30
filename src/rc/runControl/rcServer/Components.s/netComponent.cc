@@ -113,7 +113,7 @@
 #include <rcTclInterface.h>
 #endif
 
-#define DEBUG_MSGS
+//#define DEBUG_MSGS
 
 /* Sergey: status_, state_ etc described in daqTarget.h */
 
@@ -483,37 +483,42 @@ netComponent::boot (void)
     {
       if (status_ != CODA_SUCCESS && bootString_)
       {
-		// create bootString
-	    char msg[256];
-	    char *rshCmd = (char *)"rsh";
-	    char *bootCmd = (char *)"echo";
+	// create bootString
+	char msg[256];
+	char *rshCmd = (char *)"rsh";
+	char *bootCmd = (char *)"echo";
 
-	    if (::strcmp(type_,"RCS") == 0)
+	if (::strcmp(type_,"RCS") == 0)
         {
-	      bootCmd = (char *)"rcServer";
-	    }
-	    else if  (::strcmp(type_,"EB") == 0)
+	  bootCmd = (char *)"rcServer";
+	}
+	else if  (::strcmp(type_,"EB") == 0)
         {
-	      bootCmd = (char *)"coda_ebc";
-	    }
-	    else if (::strcmp(type_,"ROC") == 0)
+	  bootCmd = (char *)"coda_ebc";
+	}
+	else if (::strcmp(type_,"ROC") == 0)
         {
-	      bootCmd = (char *)"coda_roc";
-	    }
-	    else if (::strcmp(type_,"ER") == 0)
+	  bootCmd = (char *)"coda_roc";
+	}
+	else if (::strcmp(type_,"ER") == 0)
         {
-	      bootCmd = (char *)"coda_erc";
-	    }
-	    else if (::strcmp(type_,"TS") == 0)
+	  bootCmd = (char *)"coda_erc";
+	}
+	else if (::strcmp(type_,"TS") == 0)
         {
-	      bootCmd = (char *)"coda_ts";
-	    } 
+	  //bootCmd = (char *)"coda_ts";
+	  bootCmd = (char *)"coda_roc";
+	} 
+	else if (::strcmp(type_,"TSROC") == 0)
+        {
+	  bootCmd = (char *)"coda_roc";
+	} 
 
-	    char *realType = type_;
-	    if (::strcmp(type_,"EB") == 0)
+	char *realType = type_;
+	if (::strcmp(type_,"EB") == 0)
         {
-	      realType = (char *)"CDEB";
-	    }
+	  realType = (char *)"CDEB";
+	}
 	    daqRun* run = subsys_.system().run();
 
 	    reporter->cmsglog (CMSGLOG_WARN,"attempt to boot %s\n",
@@ -648,15 +653,15 @@ netComponent::configure (void)
   status_ = CODA_ERROR;
   // remove all the old information
 
-  printf("netComponent::configure 01 for %s\n",title_);fflush(stdout);
+  //printf("netComponent::configure 01 for %s\n",title_);fflush(stdout);
   config_ = 0;
 
-  printf("netComponent::configure 02 for %s\n",title_);fflush(stdout);
+  //printf("netComponent::configure 02 for %s\n",title_);fflush(stdout);
 
   // get configuration information
   daqRun* run = subsys_.system().run();
 
-  printf("netComponent::configure 03 for %s\n",title_);fflush(stdout);
+  //printf("netComponent::configure 03 for %s\n",title_);fflush(stdout);
 
   if (run->getNetConfigInfo (title_, config_) != CODA_SUCCESS)
   {
@@ -664,8 +669,8 @@ netComponent::configure (void)
     printf("Something is fishy..........\n");
   }
 
-  printf("netComponent::configure 11 for %s\n",title_);fflush(stdout);
-  printf("netComponent::configure 12 for %s\n",title_);fflush(stdout);
+  //printf("netComponent::configure 11 for %s\n",title_);fflush(stdout);
+  //printf("netComponent::configure 12 for %s\n",title_);fflush(stdout);
 
 
   /* sergey: wait for tcp to connect, at least we'll make sure component is started; timeout set = 30sec */
@@ -678,8 +683,8 @@ netComponent::configure (void)
     sleep(5);
   }
 
-  printf("netComponent::configure 13 for %s\n",title_);fflush(stdout);
-  printf("netComponent::configure 14 for %s\n",title_);fflush(stdout);
+  //printf("netComponent::configure 13 for %s\n",title_);fflush(stdout);
+  //printf("netComponent::configure 14 for %s\n",title_);fflush(stdout);
 
 
   /*

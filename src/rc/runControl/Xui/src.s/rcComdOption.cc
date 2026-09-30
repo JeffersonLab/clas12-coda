@@ -158,7 +158,7 @@ rcComdOption::parseOptions (void)
       }
       else if (::strcmp (argv_[i], "-v") == 0 || ::strcmp (argv_[i], "-verbose") == 0) audio_ = 1;
       else if (::strcmp (argv_[i], "-o") == 0 || ::strcmp (argv_[i], "-output") == 0) reportMsg_ = 1;
-      else if (::strcmp (argv_[i], "-c") == 0 || ::strcmp (argv_[i], "-cedit") == 0 || ::strcmp (argv_[i], "-codaedit") == 0) startCedit_ = 1;
+      else if (::strcmp (argv_[i], "-c") == 0 || ::strcmp (argv_[i], "-codaedit") == 0 || ::strcmp (argv_[i], "-codaedit") == 0) startCedit_ = 1;
       else if (::strcmp (argv_[i], "-d") == 0 || ::strcmp (argv_[i], "-dbedit") == 0) startDbedit_ = 1;
       else if (::strcmp (argv_[i], "-rocs") == 0) startRocs_ = 1;
       else if (::strcmp (argv_[i], "-log") == 0 || ::strcmp (argv_[i], "-logs") == 0) {logRocs_ = 1; logging = 1;} /*sergey*/
@@ -328,7 +328,7 @@ rcComdOption::usage (char* progname)
 	   "-s, -session <name>           : use \"name\" as the session name      \n"
 	   "-v, -verbose                  : verbose error reporting               \n"
 	   "-o, -output                   : local message output                  \n"
-	   "-c, -cedit, -codaedit         : start coda configuration editor       \n"
+	   "-c, -codaedit                 : start coda configuration editor       \n"
 	   "-d, -dbedit                   : start database editor                 \n"
 	   "-r, -rocs                     : start rocs/eb/er/etc windows          \n"
 	   "-A, -autostart                : start UNIX components when required   \n"

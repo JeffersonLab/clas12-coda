@@ -12,6 +12,7 @@ richfirmware fe_rich.bin
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "sspLib.h"
 #include "sspLib_rich.h"
@@ -20,6 +21,7 @@ richfirmware fe_rich.bin
 #ifdef Linux_vme
 
 #include "jvme.h"
+#include "codautil.h"
 
 int
 main(int argc, char *argv[])
@@ -31,7 +33,7 @@ main(int argc, char *argv[])
   char hostname[128];
   char *s;
 
-  gethostname(hostname,127);
+  get_hostname(hostname,127);
   s = hostname;
   hostname[strlen(hostname)] = 0;
   while(*s)

@@ -483,6 +483,7 @@ next_port:
           strncmp(address,"129.57.68.",10)  &&
           strncmp(address,"129.57.69.",10)  &&
           strncmp(address,"129.57.86.",10) &&
+          strncmp(address,"192.168.10.",11) &&
           strncmp(address,"129.57.29.",10) )
       {
         printf("ListenerThread: ignore request from %s, port %d\n",address,port);fflush(stdout);

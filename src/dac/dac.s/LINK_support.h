@@ -4,7 +4,7 @@
 
 #define NPROFMAX 10
 
-/* for LINK_support.c and deb_component.c only - temporary here !!! */
+/* for LINK_support.c and coda_ebc.c only */
 
 typedef struct data_link *DATA_LINK;
 typedef struct data_link
@@ -12,21 +12,26 @@ typedef struct data_link
   char *name;
   char *linkname;   /* for example 'croctest1->EB5' */
   char *parent;
-  pthread_t thread;
+  pthread_t link_thread;
+  pthread_t proc_thread;
   int sock;         /* listening socket (bind) */
   int fd;           /* accepted socket (returned by accept()) */
+  int ix;           /* link id from 0 in current daq configuration*/
   char host[100];
   int port;
   int exit;
   int bufCnt;
-  CIRCBUF *roc_queue;
+  
+  BIGBUF *gbufin;         /* input data buffer from LINK_sized_read */
+  CIRCBUF *roc_queue;     /* output to EB */
+  ROLPARAMS *rolP;        /*  */
+  
 } DATA_LINK_S;
 
 
 /* functions */
 
-int bufferSwap(unsigned int *cbuf, int nlongs);
-int LINK_sized_read(int fd, char **buf, hrtime_t tprof[NPROFMAX]);
+int LINK_sized_read(int fd, int ix, char **buf);
 void *handle_link(DATA_LINK theLink);
 DATA_LINK debOpenLink(char *fromname, char *toname, char *tohost, MYSQL *dbsock);
 int debCloseLink(DATA_LINK theLink, MYSQL *dbsock);

@@ -16,6 +16,7 @@
 #include <stddef.h>
 #include <pthread.h>
 #include "jvme.h"
+#include "usrvme.h"
 #endif
 
 #include <stdio.h>
@@ -36,8 +37,9 @@
 
 /* Include DCRB definitions */
 #include "dcrbLib.h"
-
 #include "xxxConfig.h"
+#include "codautil.h"
+
 static int active;
 
 #ifdef VXWORKS
@@ -50,10 +52,6 @@ pthread_mutex_t   dcrbMutex = PTHREAD_MUTEX_INITIALIZER;
 #define DCRBUNLOCK    if(pthread_mutex_unlock(&dcrbMutex)<0) perror("pthread_mutex_unlock");
 #endif
 
-#define LSWAP(x)        ((((x) & 0x000000ff) << 24) | \
-                         (((x) & 0x0000ff00) <<  8) | \
-                         (((x) & 0x00ff0000) >>  8) | \
-                         (((x) & 0xff000000) >> 24))
 
 /* Define external Functions */
 #ifdef VXWORKS
@@ -2357,9 +2355,8 @@ dcrbReadConfigFile(char *filename)
   char *getenv();
   char *clonparms;
 
-  gethostname(host,ROCLEN);  /* obtain our hostname */
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");

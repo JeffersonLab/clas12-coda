@@ -13,7 +13,7 @@ using namespace std;
 
 char *mysql_database = getenv("EXPID");
 char *session        = getenv("SESSION");
-char *partial_name   = "EB";
+char *partial_name   = (char *)"EB";
 
 extern "C"{
   int get_comp_name_host(char *mysql_database, char *session, char *name, char **compname, char **comphost);

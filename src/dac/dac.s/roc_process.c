@@ -306,7 +306,7 @@ proc_thread(BIGNET *bigprocptrin)
     /* remember some values (do not need all of them ..) */
     llenw = bigbufin[BBIWORDS];
     llen = bigbufin[BBIWORDS] << 2;
-	/*printf("proc_thread: llen=%d\n",llen);*/
+    /*printf("proc_thread: llen=%d\n",llen);*/
     nevent += bigbufin[BBIEVENTS];
     ifend = bigbufin[BBIEND];
     pid = bigbufin[BBIROCID];
@@ -365,6 +365,7 @@ printf("=0=> %d\n",bigbufout[BBIFD]);
           {
             bigbufout[BBIBUFNUM] = nbuffer ++;
           }
+          bigbufout[BBIHEAD]   = 8;
           bigbufout[BBIROCID]  = bigbufin[BBIROCID];
           bigbufout[BBIEVENTS] = 0;
           bigbufout[BBIFD]     = bigbufin[BBIFD];
@@ -392,7 +393,7 @@ printf("<--- 0x%08x 0x%08x - fd=%d\n",bigprocptr->gbigout,bigbufout,bigbufin[BBI
         printf(">>>>>>>>>>>>>>>> use pid=-1 <<<<<<<<<<<<<<<<<\n");
         lenout = proc_poll(bufin, bufout, -1, &nev_per_block);
 /*printf("111 nev_per_block=%d\n",nev_per_block);*/
-	  }
+      }
       else
       {
 #ifdef DEBUG
@@ -484,9 +485,9 @@ printf("=== PROC2: %d %d %d %d 0x%08x\n",bigbufout[0],bigbufout[1],bigbufout[2],
     {
       printf("proc_thread: ifend==1 (%d), ending ..\n",bigprocptr->doclose);fflush(stdout);
       sleep(1);
-	}
+    }
 
-	/* ????? why 'bigprocptr->doclose == 1' ??? */
+    /* ????? why 'bigprocptr->doclose == 1' ??? */
     /* exit the loop if 'End' condition was received */
     if(ifend == 1/* && bigprocptr->doclose == 1*/)
     {

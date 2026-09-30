@@ -33,9 +33,10 @@
 #include "libdb.h"
 #include "LINK_support.h"
 
-/*
-#define DEBUG
-*/
+
+//#define DEBUG
+
+#define USE_COND
 
 /* returns pool id */
 
@@ -81,7 +82,10 @@ bb_new(int id, int nbufs, int nbytes)
 
   /* initialize semaphores */
   pthread_mutex_init(&bbp->bb_lock, NULL);
-
+#ifdef USE_COND
+  pthread_cond_init(&bbp->bb_cond, NULL);
+#endif
+  
   /* initialize index */
   bbp->write = 1;
   bbp->read = 0;
@@ -101,13 +105,17 @@ bb_new(int id, int nbufs, int nbytes)
 
 
 
+
+#if 0
+
+
 /*************/
 /* GEF staff */
 
 #ifdef Linux_vme
 
-#include "../../rol/jvme/jvme.h"
-#include "gef/gefcmn_vme.h"
+#include "jvme.h"
+//#include "gef/gefcmn_vme.h"
 
 GEF_VME_BUS_HDL vmeHdl;
 
@@ -225,7 +233,10 @@ bb_new_rol1(int id, int nbufs, int nbytes)
 
   /* initialize semaphores */
   pthread_mutex_init(&bbp->bb_lock, NULL);
-
+#ifdef USE_COND
+  pthread_cond_init(&bbp->bb_cond, NULL);
+#endif
+  
   /* initialize index */
   bbp->write = 1;
   bbp->read = 0;
@@ -292,7 +303,10 @@ printf("bb_delete1 0: 0x%08x\n",bbh);fflush(stdout);
 
   pthread_mutex_unlock(&bbp->bb_lock);
   pthread_mutex_destroy(&bbp->bb_lock);
-
+#ifdef USE_COND
+  pthread_cond_destroy(&bbp->bb_cond);
+#endif
+  
 printf("bb_delete1 5\n");fflush(stdout);
 
   /* free buffers 
@@ -320,7 +334,7 @@ printf("bb_delete1 7\n");fflush(stdout);
 /* end of GEF staff */
 /********************/
 
-
+#endif
 
 
 
@@ -349,6 +363,9 @@ printf("bb_delete 0: 0x%08x\n",bbh);fflush(stdout);
 
   pthread_mutex_unlock(&bbp->bb_lock);
   pthread_mutex_destroy(&bbp->bb_lock);
+#ifdef USE_COND
+  pthread_cond_destroy(&bbp->bb_cond);
+#endif
 
 printf("bb_delete 5\n");fflush(stdout);
 
@@ -471,6 +488,7 @@ bb_write_(BIGBUF **bbh, int flag)
   /* try to take next (empty) buffer; if not available - sleep and try again */
   icb = (bbp->write + 1) % bbp->nbufs;  
 
+  if(icb == bbp->read) printf("[%d] bb_write: waiting for buffer (write=%d read=%d)\n",bbp->id,bbp->write,bbp->read);
   while(icb == bbp->read)
   {
     if(bbp->cleanup)
@@ -479,21 +497,24 @@ bb_write_(BIGBUF **bbh, int flag)
         bbp->id,bbp->cleanup,3,4,5,6);
       BB_UNLOCK;
       return(NULL);
-	}
+    }
 
-/*printf("[%d] bb_write: waiting for buffer (write=%d read=%d) unlock \n",bbp->id,bbp->write,bbp->read);*/
+#ifdef USE_COND
+    pthread_cond_wait(&bbp->bb_cond, &bbp->bb_lock);
+#else
+    printf("[%d] bb_write: waiting for buffer (write=%d read=%d) unlock \n",bbp->id,bbp->write,bbp->read);
     BB_UNLOCK;
-	
     if(flag) return(NULL);
-	
-	usleep(1000); /* was 10000 */
-	
+    microsleep(1000); /* was 10000 */ 
     BB_LOCK;
-/*printf("[%d] bb_write: waiting for buffer (write=%d read=%d) lock\n",bbp->id,bbp->write,bbp->read);*/
-	
+    /*printf("[%d] bb_write: waiting for buffer (write=%d read=%d) lock\n",bbp->id,bbp->write,bbp->read);*/
+#endif
   }
 
   bbp->write = icb;
+#ifdef USE_COND
+  pthread_cond_signal(&bbp->bb_cond);
+#endif
 
 #ifdef DEBUG
   printf("[%d] bb_write (out):         write=%d read=%d\n",bbp->id,bbp->write,bbp->read);fflush(stdout);
@@ -583,6 +604,7 @@ bb_read(BIGBUF **bbh)
   /* try to get next (full) buffer; if not available - sleep */
   icb = (bbp->read + 1) % bbp->nbufs;
   
+  //if(icb == bbp->write) printf("[%d] bb_read: icb=%d, bbp->write=%d -> waiting\n",bbp->id,icb,bbp->write);
   while(icb == bbp->write)
   {
     if(bbp->cleanup)
@@ -591,17 +613,26 @@ bb_read(BIGBUF **bbh)
         bbp->id,bbp->cleanup,3,4,5,6); 
       BB_UNLOCK;
       return(NULL);
-	}
-    BB_UNLOCK;
+    }
 
-	/*sleep(1);*/usleep(1000); /* was 100000 */
+#ifdef USE_COND
+    pthread_cond_wait(&bbp->bb_cond, &bbp->bb_lock);
+#else
+    //printf("[%d] bb_read: icb=%d, bbp->write=%d -> sleep ...\n",bbp->id,icb,bbp->write);sleep(1);
+    BB_UNLOCK;
+    microsleep(1000); /* was 100000 */
     BB_LOCK;
+#endif
+
   }
 
 
   /* set 'read' pointer to the next buffer */
   bbp->read = icb;
-
+#ifdef USE_COND
+  pthread_cond_signal(&bbp->bb_cond);
+#endif
+  
 #ifdef DEBUG
   printf("[%d] bb_read  (out):         write=%d read=%d\n",bbp->id,bbp->write,bbp->read);fflush(stdout);
 #endif

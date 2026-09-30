@@ -114,10 +114,6 @@ static int nusertrig, ndone;
 
 
 
-
-#undef DEBUG
-
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -126,6 +122,10 @@ static int nusertrig, ndone;
 #include <sys/types.h>
 
 #include <sys/time.h>
+
+
+//#define DEBUG
+
 
 #ifdef USE_HPS
 //RTH
@@ -309,12 +309,24 @@ static char ssname[80];
 
 
 
-/*for uRwell readout, enable both SRS and MAROC (and VMM if used)*/
+
+
+
+/*for uRwell readout, enable both SRS and MAROC (and VMM is used)*/
 #ifdef USE_URWELL
+
+#ifdef Linux_x86_64_RHEL9 // use srs on rhel9 only for now
 #define USE_SRS
-#define USE_MAROC
-//#define USE_VMM
 #endif
+
+#define USE_MAROC
+
+//#define USE_VMM
+
+#endif
+
+
+
 
 
 
@@ -800,13 +812,13 @@ vmeBusUnlock();
 	srsExecConfigFile("config/fecCalPulse_IP10012.txt"); */
     srsSetApvTriggerControl(FEC[ifec],
 			      4, // 3 - test pulse mode, 4 - run mode
-			      2, // how many time slots the APV chip is reading from its memory
+			      4, // how many time slots the APV chip is reading from its memory
                                  // for each trigger = (n+1)*3  
 			      4, // 40000 ???
                                    // in test pulse mode: period of the trigger sequenser
                                    // in run mode: deadtime
                                    // NOTE: must be more than the DAQ time (datalength Nchannels)
-			    0x69 /*0x4c*//*0x56*//*0x60*/, // int trgdelay 61(tage total sum) 5f(scintillator trigger) 60(MASTER OR)
+			    0x66 /*0x4c*//*0x56*//*0x60*/, // int trgdelay 61(tage total sum) 5f(scintillator trigger) 60(MASTER OR) // 69 with Hodoscope
                                     // Orig was 61 : Rafo, In EEL it was 6c
 			      0x7f, // not used in run mode ??? int tpdelay: Orig Value 0x7f  // Can try 0x80
 			      0x8A // rosync: delay between the FEC trigger and the start of data recording. Default was 9f
@@ -837,7 +849,7 @@ vmeBusUnlock();
       {
 	srsSetEventBuild(FEC[ifec],
 			 0xfff, //0xfff, //0xfffc,//0xfff/*1ff*/, // int chEnable // sergey: mask for front end cards connected
-			 1550, // int dataLength // the number of 16-bit samples, 12bits used (1 sample=128 - what ???). 3 ts = 550, 6ts = 1000, 15ts=2260, 9ts = 1400,12ts = 2000, 27ts 4000
+			 2500, // int dataLength // the number of 16-bit samples, 12bits used (1 sample=128 - what ???). 3 ts = 550, 6ts = 1000, 15ts=2500, 9ts = 1400,12ts = 2000, 27ts 4000
 			 2, // int mode
 			 0, // int eventInfoType
 			 0xaa000bb8 | ((ifec)<<16) // unsigned int eventInfoData
@@ -1302,7 +1314,12 @@ vmeBusUnlock();
 
 #ifdef USE_MAROC
 
-  nmaroc = marocInit(0, MAROC_MAX_NUM/*2*/);
+  //set appropriate starting IP and the number of devices
+  //sergey: urwell setup has addresses 10,11, while gem setup has 12,13
+  //marocSetIPStart(12);
+  //marocGetIPStart();
+  
+  nmaroc = marocInit(0, /*MAROC_MAX_NUM*/4);
   if(nmaroc<0) exit(0);
   marocInitGlobals();
   marocConfig("");
@@ -1656,8 +1673,8 @@ TIMERL_STOP(5000/block_level,1000+rol->pid);
     {
 
 #ifdef DEBUG
-      printf("ti: len=%d\n",len);
-      for(jj=0; jj<len; jj++) printf("ti[%2d] 0x%08x\n",jj,tdcbuf[jj]);
+      printf("tip: len=%d\n",len);
+      for(jj=0; jj<len; jj++) printf("tip[%2d] 0x%08x\n",jj,tdcbuf[jj]);
 #endif
 
       BANKOPEN(0xe10A,1,rol->pid);
@@ -1979,7 +1996,7 @@ TIMERL_STOP(5000/block_level,1000+rol->pid);
   */
 
   usleep(1000); // have to check here if event in fifo is ready; until it is implemented, do sleep() 
-  len = sampaReadBlock((volatile unsigned int *)tdcbuf, MAXDATA);
+  len = sampaReadBlock((/*volatile*/ uint32_t *)tdcbuf, MAXDATA);
   if(len > 0)
   {
     //sampaPrintBlock((volatile unsigned int *)tdcbuf, len);
@@ -2067,7 +2084,7 @@ TIMERL_STOP(5000/block_level,1000+rol->pid);
 	  }
 	}
 
-    nwords = ((int)rol->dabufp-(int)dabufp1)/4+1;
+    nwords = ((long int)rol->dabufp-(long int)dabufp1)/4+1;
 	/*printf("nwords=%d\n",nwords);*/
 
     *rol->dabufp ++ = LSWAP((0x11<<27)+nwords); /*block trailer*/
@@ -2124,7 +2141,7 @@ TIMERL_STOP(5000/block_level,1000+rol->pid);
 
     }
 
-    nwords = ((int)rol->dabufp-(int)dabufp1)/4 + 1;
+    nwords = ((long int)rol->dabufp-(long int)dabufp1)/4 + 1;
 
     *rol->dabufp ++ = ((0x11<<27)+nwords); /*block trailer*/
 

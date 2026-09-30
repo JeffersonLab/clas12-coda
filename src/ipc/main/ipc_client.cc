@@ -37,26 +37,46 @@ main(int argc AMQCPP_UNUSED, char* argv[] AMQCPP_UNUSED)
     int ret;
 
     server.AddSendTopic(getenv("EXPID"), NULL, NULL, (char *)"server");
+    //server.AddRecvTopic(getenv("EXPID"), NULL, NULL, (char *)"server");
 
-    server.AddRecvTopic(getenv("EXPID"), NULL, NULL, (char *)"server");
-    server.AddRecvTopic(getenv("EXPID"), NULL, NULL, (char *)"test");
 
-	printf("ipc_client: Opening server...\n");fflush(stdout);
+    
+    
+    //server.AddRecvTopic((char *)"clasrun", (char *)"clasprod", (char *)"daq", (char *)"*");
+    //server.AddRecvTopic((char *)"clasrun", (char *)"clasprod", (char *)"daq", (char *)"gem1vtp");
+    server.AddRecvTopic((char *)"clasrun", (char *)"clasprod", (char *)"daq", (char *)"gem2vtp");
+    //server.AddRecvTopic((char *)"clasrun", (char *)"clasprod", (char *)"daq", (char *)"HallB_DAQ");
+
+    
+    //server.AddSendTopic((char *)"clasrun",(char *)"clasprod",(char *)"daq",(char *)"test22");
+    //server.AddSendTopic((char *)"clasrun",(char *)"clastest1",(char *)"control",(char *)"ipc_check");
+    //server.AddSendTopic(NULL,NULL,NULL,NULL);
+    //server.AddRecvTopic(NULL,NULL,NULL,NULL);
+ 
+    printf("ipc_client: Opening server...\n");fflush(stdout);
     server.Open();
-	printf("ipc_client: Opened !\n");fflush(stdout);
+    printf("ipc_client: Opened !\n");fflush(stdout);
 
-    MessageActionControl  *control = new MessageActionControl((char *)"server");
-    MessageActionTest        *test = new MessageActionTest();
+    //MessageActionControl  *control = new MessageActionControl((char *)"server");
+    MessageActionControl  *control = new MessageActionControl((char *)"json_for_daq");
+    //MessageActionTest        *test = new MessageActionTest();
 
+    //control->setDebug(1);
     server.AddCallback(control);
-    server.AddCallback(test);
+
+    //server.AddCallback(test);
 
     long long startTime = System::currentTimeMillis();
 
 
 
+
+
+    
+#if 0
+    
     for(i=0; i<numMessages; i++)
-	{
+    {
 	  std::string str = "qwerty";
 
 printf("=====================================================================================\n");
@@ -96,15 +116,35 @@ printf("8=======================================================================
 printf("9===================================================================================9\n");
       server << endm;
 printf("10=================================================================================10\n");
-	}
+    }
 
-    server << clrm << (char *)"control" << "quit" << endm;
-
+    //server << clrm << (char *)"control" << "quit" << endm;
 
     //printf("done1=%d\n",control->done);
     sleep(1);
     //printf("done2=%d\n",control->done);
 
+
+#else
+
+    while(1)
+    {
+      sleep(1);
+      //server << clrm << "command:coda_ebc" << "stats" << endm;
+    }
+
+    
+    //server << clrm << "command:coda_ebc" << "nostats" << endm;
+    //sleep(5);
+    //server << clrm << "command:coda_ebc" << "stats" << endm;
+
+    //while(1) sleep(1);
+
+    
+#endif
+
+
+    
     long long endTime = System::currentTimeMillis();
     double totalTime = (double)(endTime - startTime) / 1000.0;
 
@@ -117,6 +157,6 @@ printf("10======================================================================
     std::cout << "Finished with the client." << std::endl;
     std::cout << "=====================================================\n";
 
-	exit(0);
+    exit(0);
 }
 

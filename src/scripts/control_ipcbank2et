@@ -7,15 +7,11 @@ set num = `echo $CLON_DAQ | sed "s/^....//"`
 
 if ($1 == start) then
 
-###  ssh -n $CLON_DAQ "ipcbank2et -a $2 -s $3 -d clondaq5 >>& $CLON_LOG/run_log/ipcbank2et.log &" &
   ssh -n $CLON_DAQ "ipcbank2et -a $2 -s $3 >>& $CLON_LOG/run_log/ipcbank2et.log &" &
-
-##  ssh -n $CLON_DAQ "ipcbank2et -a $2 -s $3 >>& $CLON_LOG/run_log/ipcbank2et_$CLON_DAQ.log &" &
 
 else if ($1 == stop) then
 
-##  stop_ipc_proc -a $2 -i ipcbank2et_${num}_$3 -n $CLON_DAQ -p ipcbank2et >& /dev/null
-##  stop_ipc_proc -a $2 -i ipcbank2et_$3 -n $CLON_DAQ -p ipcbank2et >& /dev/null
+  echo "Terminating ipcbank2et for exp=$2 on $CLON_DAQ .."
   stop_ipc_proc -a $2 -i ipcbank2et -n $CLON_DAQ -p ipcbank2et >& /dev/null
 
 else 

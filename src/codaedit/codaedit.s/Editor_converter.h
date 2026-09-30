@@ -41,6 +41,12 @@ extern IoId       *newIoId (void);
 extern void       freeIoId (IoId* id);
 extern ConfigInfo *newConfigInfo (void);
 extern void       setConfigInfoName (ConfigInfo* cinfo, char* name);
+  
+/*sergey*/
+extern void       setConfigInfoCmd (ConfigInfo* cinfo, char* cmd);
+extern void       setConfigInfoType (ConfigInfo* cinfo, char* type);
+/*sergey*/
+  
   void codeParser(char* rols[3], char* code); /*sergey*/
 extern void       setConfigInfoCode (ConfigInfo* cinfo, char* code);
 extern void       setConfigInfoInputs (ConfigInfo* cinfo, char* buffer);

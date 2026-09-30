@@ -319,6 +319,22 @@ typedef struct {
     ss_cndctof cndctof;
     int        gtpif_latency;
   } gtc; 
+
+  struct
+  {
+    int trg_latency;
+    int trg_width;
+    int trg_prescale[8];
+    int dly_csum[8];
+    int dly_cmult[8];
+    int dly_esum[8];
+    int cmult_min[8];
+    int csum_min[8];
+    int esum_min[8];
+    char short_name[8][256];
+    char long_name[8][256];
+    int flags[8][2];
+  } prad;
  
   struct
   {
@@ -341,5 +357,6 @@ int  sspDownloadAll();
 int  sspUploadAll(char *string, int length);
 int  sspUploadAllPrint();
 void sspMon(int slot);
+SSP_CONF *sspConfig_GetCONF();
 
 #endif

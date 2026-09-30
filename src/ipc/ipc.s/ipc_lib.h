@@ -467,7 +467,7 @@ private:
       producer(NULL),
       message(NULL),
 
-      waiting_for_messages(1)
+    waiting_for_messages(1)
     {
       //printf("================ IpcProducer created ====================================================\n");
     }
@@ -487,50 +487,64 @@ IpcProducer &sender = IpcProducer::Instance();
  public:
 
     static IpcProducer& Instance()
-	{
+    {
       static IpcProducer m_instance;
       return m_instance;
-	}
+    }
 
     void AddSendTopic(char* expid_ = NULL, char* sesid_ = NULL, char* sysid_ = NULL, char* unique_ = NULL)
-	{
+    {
       char tmp[MAX_TOPIC_LENGTH];
+      
+      //printf("IpcProducer::AddSendTopic 1\n");
       char* expid = expid_;
       char* sesid = sesid_;
       char* sysid = sysid_;
       char* unique = unique_;
 
+      //printf("IpcProducer::AddSendTopic 2\n");
       if(expid==NULL)  expid = (char *)"*";
       if(sesid==NULL)  sesid = (char *)"*";
       if(sysid==NULL)  sysid = (char *)"*";
       if(unique==NULL) sysid = (char *)"*";
 
+      //printf("IpcProducer::AddSendTopic 3\n");
       sprintf(tmp,"%s.%s.%s.%s",expid,sesid,sysid,unique);
 
-      if(Topic.length()!=0) Topic += ',';
+      //printf("IpcProducer::AddSendTopic 4: Topic.c_str() = >%s< (len=%d)\n",Topic.c_str(),Topic.length());
+      //printf("IpcProducer::AddSendTopic 5: tmp = >%s<\n",tmp);
+      if(Topic.length()!=0) Topic += ','; //if Topic already has something, add comma
       Topic += tmp;
 
-      printf("IpcProducer::AddSendTopic: Topic >%s< len=%d\n",Topic.c_str(),Topic.length());
-	}
+      //printf("IpcProducer::AddSendTopic: Topic >%s< len=%d\n",Topic.c_str(),Topic.length());
+    }
 
-
+    int GetSendTopicLength()
+    {
+      return(Topic.length());
+    }
+    char *GetSendTopicString()
+    {
+      return((char *)Topic.c_str());
+    }
+  
     void send_init(/*char* expid_ = NULL, char* sesid_ = NULL, char* sysid_ = NULL, char* unique_ = NULL*/)
-	{
-	  /*
-	  expid = expid_;
-	  sesid = sesid_;
-	  sysid = sysid_;
+    {
+      /*
+      expid = expid_;
+      sesid = sesid_;
+      sysid = sysid_;
       unique = unique_;
-	  */
+      */
       if(library_initialized_counter==0)
       {
         //printf("IpcProducer: initializeLibrary (library_initialized_counter=%d)\n",library_initialized_counter);
         activemq::library::ActiveMQCPP::initializeLibrary();
       }
       else
-	  {
+      {
         //printf("IpcProducer: library_initialized_counter1=%d\n",library_initialized_counter);
-	  }
+      }
       library_initialized_counter++;
 
       GET_BROKER;
@@ -538,23 +552,23 @@ IpcProducer &sender = IpcProducer::Instance();
       producerThread = new Thread(this); /* Start the producer thread */
       producerThread->start();
       this->waitUntilReady(); /* Wait for the producer to indicate that its ready to go */
-	}
+    }
 
     void send_close()
     {
-	  //printf("IpcProducer::close() reached, library_initialized_counter=%d\n",library_initialized_counter);
+      //printf("IpcProducer::close() reached, library_initialized_counter=%d\n",library_initialized_counter);
 
       this->run_exit();
-	  //printf("IpcProducer::close() 1: producerThread=%x\n",producerThread);
+      //printf("IpcProducer::close() 1: producerThread=%x\n",producerThread);
       if(producerThread != NULL)
-	  {
+      {
         producerThread->join();
         producerThread = NULL;
-	  }
-	  //printf("IpcProducer::close() 2\n");
+      }
+      //printf("IpcProducer::close() 2\n");
 
       this->cleanup();
-	  //printf("IpcProducer::close() 3\n");
+      //printf("IpcProducer::close() 3\n");
 
       if(library_initialized_counter==1)
       {
@@ -562,12 +576,12 @@ IpcProducer &sender = IpcProducer::Instance();
         activemq::library::ActiveMQCPP::shutdownLibrary();
       }
       else
-	  {
+      {
         //printf("IpcProducer: library_initialized_counter2=%d\n",library_initialized_counter);
-	  }
+      }
       library_initialized_counter--;
 
-	  //printf("IpcProducer::close() 4\n");
+      //printf("IpcProducer::close() 4\n");
     }
 
 
@@ -598,7 +612,7 @@ IpcProducer &sender = IpcProducer::Instance();
 
 
     virtual void run()
-	{
+    {
       try
       {
 		/*
@@ -828,16 +842,16 @@ public:
     IpcProducer& operator << (char              *val) {message->writeString(val); return(*this);}
     IpcProducer& operator << (const char        *val) {message->writeString(val); return(*this);}
     
-	/* arrays */
+    /* arrays */
 
 
     /********************/
     /********************/
 
-	/*ActiveMQ:
-        virtual void writeBytes(const std::vector<unsigned char>& value) = 0;
-        virtual void writeBytes(const unsigned char* value, int offset, int length) = 0;
-	*/
+    /*ActiveMQ:
+    virtual void writeBytes(const std::vector<unsigned char>& value) = 0;
+    virtual void writeBytes(const unsigned char* value, int offset, int length) = 0;
+    */
 
 private:
 
@@ -1103,13 +1117,13 @@ private:
  public:
 
     static IpcConsumer& Instance()
-	{
+    {
       static IpcConsumer m_instance;
       return m_instance;
-	}
+    }
 
     void AddRecvTopic(char* expid_ = NULL, char* sesid_ = NULL, char* sysid_ = NULL, char* unique_ = NULL)
-	{
+    {
       char tmp[MAX_TOPIC_LENGTH];
       char* expid = expid_;
       char* sesid = sesid_;
@@ -1122,13 +1136,24 @@ private:
       if(unique==NULL) sysid = (char *)"*";
 
       sprintf(tmp,"%s.%s.%s.%s",expid,sesid,sysid,unique);
-
+      printf("---> AddRecvTopic: tmp >%s<\n",tmp);
+      
       if(Topic.length()!=0) Topic += ',';
       Topic += tmp;
 
       printf("IpcConsumer::recv_addtopic: Topic >%s< len=%d\n",Topic.c_str(),Topic.length());
-	}
+    }
 
+    int GetRecvTopicLength()
+    {
+      return(Topic.length());
+    }
+    char *GetRecvTopicString()
+    {
+      return((char *)Topic.c_str());
+    }
+
+  
     void recv_init(/*char* expid_ = NULL, char* sesid_ = NULL, char* sysid_ = NULL, char* unique_ = NULL*/)
 	{
 	  /*
@@ -1269,53 +1294,53 @@ private:
 
     /* operators overloading for manipulators */
 
-	/*dima-sergey*/
+    /*dima-sergey*/
 
     // activated by '>>GetSize()' or any other manipulator with the same type;
     // just register manipolator (GetSize) here, it will be called from recvArray()
     IpcConsumer &operator >> (const RecvArrayConfigManip& mm)
     {
-	  //std::cout<<"--------------------------------------------- RecvArrayConfigManip.push_back"<<std::endl;
-	  _nextArrayManips.push_back(mm);
+      //std::cout<<"--------------------------------------------- RecvArrayConfigManip.push_back"<<std::endl;
+      _nextArrayManips.push_back(mm);
       const int* arr; // just fake, will not be used inside following call
       recvArray(arr, 0, 1);  // to get length of the array we received before
-	  return *this;
+      return *this;
     }
 
     /// This overloads receiving pointers to an array
     /// It will throw the exception if there is no GetSize is called before
     IpcConsumer &operator >> (const int* arr)
-	{
-	  //std::cout<<"IpcConsumer>>(int*). Receive array with unknown size (GetSize(...) must be set)"<<std::endl;
+    {
+      //std::cout<<"IpcConsumer>>(int*). Receive array with unknown size (GetSize(...) must be set)"<<std::endl;
       recvArray(arr, UnknownSize, 0);  // for pointers to array we don't know the size!
       return *this;
-	}
+    }
 
     /// This template function KNOWS the array size...
     template<typename T, size_t arrAutoSize>
-	IpcConsumer &operator >> (T(&arr)[arrAutoSize])
+    IpcConsumer &operator >> (T(&arr)[arrAutoSize])
     {
-	  //std::cout<<"IpcConsumer>>(T(&arr)[]). Receive array with known size="<<arrAutoSize<<std::endl;
-	  recvArray(arr, arrAutoSize, 0);
-	  return *this;
+      //std::cout<<"IpcConsumer>>(T(&arr)[]). Receive array with known size="<<arrAutoSize<<std::endl;
+      recvArray(arr, arrAutoSize, 0);
+      return *this;
     }
 
     /// std::vector of T implementation
     template<typename T>
-	IpcConsumer &operator >> (std::vector<T> arr)
+    IpcConsumer &operator >> (std::vector<T> arr)
     {
-	  //std::cout<<"IpcConsumer>>(vector). Receive vector with size="<<arr.size()<<std::endl;
-	  recvArray(arr, arr.size(), 0);
-	  return *this;
+      //std::cout<<"IpcConsumer>>(vector). Receive vector with size="<<arr.size()<<std::endl;
+      recvArray(arr, arr.size(), 0);
+      return *this;
     }
-	/*dima-sergey*/
+    /*dima-sergey*/
 
 
-	/* operators overloading: operator<< should always return it's left hand side operand
+    /* operators overloading: operator<< should always return it's left hand side operand
     in order to chain calls, just like operator=.
-	*/
+    */
 
-	const StreamMessage* streamMessage;
+    const StreamMessage* streamMessage;
 
     IpcConsumer& operator >> (char        &val) {val = streamMessage->readChar(); return(*this);}
     IpcConsumer& operator >> (int8_t      &val) {val = streamMessage->readByte(); return(*this);}
@@ -1328,7 +1353,21 @@ private:
     IpcConsumer& operator >> (uint64_t    &val) {val = streamMessage->readLong(); return(*this);}
     IpcConsumer& operator >> (float       &val) {val = streamMessage->readFloat(); return(*this);}
     IpcConsumer& operator >> (double      &val) {val = streamMessage->readDouble(); return(*this);}
-    IpcConsumer& operator >> (std::string &val) {val = streamMessage->readString(); return(*this);}
+    IpcConsumer& operator >> (std::string &val) {
+      //std::cout << "11" << std::endl;
+      //val = streamMessage->readString();
+      try {
+        val = streamMessage->readString();
+        //std::cout << "12: Success ! val >" << val << "<" << std::endl; // This won't run if an exception is thrown
+      } catch (const std::exception& e) {
+        // If an exception was thrown, execution jumps here
+        std::cerr << "ipc_lib.h: caught exception: " << e.what() << std::endl;
+	//val = (std::string)NULL;
+      }
+      //std::cout << "14" << std::endl;
+      std::cout.flush();
+      return(*this);
+    }
     IpcConsumer& operator >> (char        *val) {std::string str = streamMessage->readString(); strcpy(val,str.c_str()); return(*this);}
 
     /********************/
@@ -1342,35 +1381,36 @@ private:
     {
       static int count = 0;
 
-	  //std::cout << "received !!!" << std::endl;
+      //std::cout << "received !!!" << std::endl;
 
       try
       {
         count++;
-		// static_cast ??
+	// static_cast ??
         /*const StreamMessage* */streamMessage = dynamic_cast<const StreamMessage*> (message);
         if (streamMessage != NULL)
         {
 
-		  //std::cout << "\n\nonMessage: message size="<<sizeof(streamMessage)<< std::endl;
-		  //std::cout << "\n\nonMessage: message empty="<<streamMessage->isEmpty()<< std::endl;
+	  //std::cout << "onMessage: message size=" << sizeof(streamMessage) << std::endl;
+	  ///////std::cout << "onMessage: message empty=" << streamMessage->isEmpty() << std::endl;
 
-          
-	 std::string fmt = streamMessage->readString();
+          //std::cout << "onMessage: we have " << actionListeners.size() << " actionListeners" << std::endl;
+	  
+	  std::string fmt = streamMessage->readString();
           
 
           /* loop over all listeners and select the one with 'format' */
           for(int i = 0; i < actionListeners.size(); i++)
           {
-            //printf("onMessage: actionListener item number %d\n",i);
+            //std::cout << "onMessage: actionListener item number " << i << " from " << actionListeners.size() << std::endl;
 #if 0
             std::string f = actionListeners[i]->getFormat();
             if( !strncmp(f.c_str(),fmt.c_str(),strlen(f.c_str())) || !strncmp(f.c_str(),"*",strlen(f.c_str())) )
 #else
-	      if(actionListeners[i]->check(fmt)) 	  
+	    if(actionListeners[i]->check(fmt)) 	  
 #endif
             {
-	      // std::cout << "onMessage: found listener with format '"<<fmt<<"' - processing" << std::endl;
+	      //std::cout << "onMessage: found listener with format '"<<fmt<<"' - processing" << std::endl;
 
               /* call decoder sending pointer to this class (overloaded '>>' can be used in decoder) */
               actionListeners[i]->decode(*this);
@@ -1378,11 +1418,11 @@ private:
               actionListeners[i]->process();
             }
             else
-			{
+	    {
               //std::cout << "onMessage: does not match listener '"<<f.c_str()<<"' - ignoring" << std::endl;
-			}
-          }
 	    }
+          }
+	}
         else
         {
           /*printf("NOT A STREAM MESSAGE !\n")*/;
@@ -1480,25 +1520,25 @@ private:
 public:
 
     static IpcServer& Instance()
-	{
+    {
       static IpcServer m_instance;
       return m_instance;
-	}
+    }
 
     int Open()
-	{
-	  /*
+    {
+      /*
       printf("Use following: expid='%s', sesid='%s', sysid_send='%s', unique_send='%s', sysid_recv='%s', unique_recv='%s'\n",
                expid, sesid, sysid_send, unique_send, sysid_recv, unique_recv);
-	  */
+      */
 printf("open 1\n");fflush(stdout);
-	  send_init(/*expid, sesid, sysid_send, unique_send*/);
+      send_init(/*expid, sesid, sysid_send, unique_send*/);
 printf("open 2\n");fflush(stdout);
-	  recv_init(/*expid, sesid, sysid_recv, unique_recv*/);
+      recv_init(/*expid, sesid, sysid_recv, unique_recv*/);
 printf("open 3\n");fflush(stdout);
       inited = 1;
       return(0);
-	}
+    }
 
 	/*
     int init(char* expid, char* sesid,
@@ -1525,18 +1565,26 @@ printf("open 3\n");fflush(stdout);
     int Close()
     {
       if(inited)
-	  {
+      {
         send_close();
         recv_close();
         inited = 0;
         return(0);
-	  }
+      }
       else
-	  {
-		std::cout<<"ERROR in IpcServer:close(): already closed, do nothing"<<std::endl;
+      {
+	std::cout<<"ERROR in IpcServer:close(): already closed, do nothing"<<std::endl;
         return(-1);
-	  }
-	}
+      }
+    }
+
+
+    int Inited()
+    {
+      if(inited) return(1);
+      else       return(0);
+    }
+
 };
 
 

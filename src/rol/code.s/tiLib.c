@@ -50,9 +50,12 @@
 #include <sys/prctl.h>
 #include <unistd.h>
 #include "jvme.h"
+#include "usrvme.h"
 #endif
+
 #include <string.h>
 #include <pthread.h>
+
 #include "tiLib.h"
 
 /* Mutex to guard TI read/writes */
@@ -449,8 +452,9 @@ printf("%s:  INFO5: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
   /* Get the Firmware Information and print out some details */
 
   //firmwareInfo = tiGetFirmwareVersion(); //sergey: crash here if valgrind is used
-  firmwareInfo = 0x71013081;
-
+  //firmwareInfo = 0x71013081; //clas
+  firmwareInfo = 0x71013132; //prad (new TIs)
+  
   printf("%s: firmwareInfo=0x%08x\n",__FUNCTION__,firmwareInfo);
   if(firmwareInfo>0)
     {
@@ -557,7 +561,7 @@ printf("%s:  INFO6: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
   tiReadoutMode = mode;
 
   switch(mode)
-    {
+  {
     case TI_READOUT_EXT_INT:
     case TI_READOUT_EXT_POLL:
       printf("... Configure as TI Master...\n");
@@ -616,7 +620,7 @@ printf("%s:  INFO6: tiMaster=%d\n",__FUNCTION__,tiMaster);fflush(stdout);
       printf("%s: ERROR: Invalid TI Mode %d\n",
 	     __FUNCTION__,mode);
       return ERROR;
-    }
+  }
 
   /* Setup some Other Library Defaults */
 
@@ -1013,6 +1017,15 @@ tiStatus(int pflag)
 	  /*sergey*/
 
       printf("\n");
+
+  TILOCK;
+      printf("reg 0x54: 0x%08x\n",vmeRead32(&TIp->blank2[0]));
+      printf("reg 0x58: 0x%08x\n",vmeRead32(&TIp->blank2[1]));
+      printf("reg 0x5c: 0x%08x\n",vmeRead32(&TIp->blank2[2]));
+  TIUNLOCK;
+      printf("\n");
+
+      
     }
   printf("\n");
 
@@ -2939,9 +2952,9 @@ tiReadBlock(volatile unsigned int *data, int nwrds, int rflag)
       retVal = vmeDmaSend((unsigned long)laddr, vmeAdr, (nwrds<<2));
 #endif
     */
-/*printf("11 vmeAdr=0x%x laddr=0x%x (0x%lx)\n",vmeAdr,laddr,(unsigned long)laddr);fflush(stdout);*/
+    //printf("tiReadBlock: 11 vmeAdr=0x%x, laddr=0x%lx, nwrds=%d words\n",vmeAdr,(unsigned long)laddr,nwrds);fflush(stdout);
     retVal = usrVme2MemDmaStart(vmeAdr, (unsigned long)laddr, (nwrds<<2));
-/*printf("12\n");fflush(stdout);*/
+    //printf("tiReadBlock: 12 retVal=%d\n",retVal);fflush(stdout);
 
     if(retVal != 0)
     {
@@ -2959,6 +2972,7 @@ tiReadBlock(volatile unsigned int *data, int nwrds, int rflag)
 #endif
     */
     retVal = usrVme2MemDmaDone();
+    //printf("tiReadBlock: 13 retVal=%d\n",retVal);fflush(stdout);
 
     if(retVal > 0)
     {
@@ -3879,7 +3893,7 @@ tiEnableBusError()
 /**
  * @ingroup Config
  * @brief Disable Bus Errors to terminate Block Reads
- * @sa tiEnableBusError
+ * @sa tiDisableBusError
  * @return OK if successful, otherwise ERROR
  */
 void
@@ -4296,10 +4310,10 @@ void
 tiSyncReset(int blflag)
 {
   if(TIp == NULL)
-    {
-      printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
-      return;
-    }
+  {
+    printf("%s: ERROR: TI not initialized\n",__FUNCTION__);
+    return;
+  }
 
   TILOCK;
   vmeWrite32(&TIp->syncCommand,tiSyncResetType);
@@ -4309,13 +4323,13 @@ tiSyncReset(int blflag)
   TIUNLOCK;
 
   if(blflag) /* Set the block level from "Next" to Current */
-    {
-      printf("%s: INFO: Broadcasting Block Level %d, Buffer Level %d\n",
+  {
+    printf("%s: INFO: Broadcasting Block Level %d, Buffer Level %d\n",
 	     __FUNCTION__,
 	     tiNextBlockLevel, tiBlockBufferLevel);
-      tiBroadcastNextBlockLevel(tiNextBlockLevel);
-      tiSetBlockBufferLevel(tiBlockBufferLevel);
-    }
+    tiBroadcastNextBlockLevel(tiNextBlockLevel);
+    tiSetBlockBufferLevel(tiBlockBufferLevel);
+  }
 
 }
 
@@ -4677,10 +4691,10 @@ tiBReady()
   unsigned int blockBuffer=0, readyInt=0, rval=0;
 
   if(TIp == NULL)
-    {
-      logMsg("tiBReady: ERROR: TI not initialized\n",1,2,3,4,5,6);
-      return 0;
-    }
+  {
+    logMsg("tiBReady: ERROR: TI not initialized\n",1,2,3,4,5,6);
+    return 0;
+  }
 
   TILOCK;
   blockBuffer = vmeRead32(&TIp->blockBuffer);

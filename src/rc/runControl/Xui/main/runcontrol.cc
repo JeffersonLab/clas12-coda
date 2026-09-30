@@ -28,7 +28,7 @@
 //   satisfy Randy's lust for command line options
 //
 //   Revision 1.31  1998/08/25 17:58:52  rwm
-//   Drop reference to XmHTML_TopLevel. Don't start cedit & dbedit.
+//   Drop reference to XmHTML_TopLevel. Don't start codaedit & dbedit.
 //
 //   Revision 1.30  1998/06/18 12:20:44  heyes
 //   new GUI ready I think
@@ -140,7 +140,7 @@
 #include <Xm/TextF.h>
 #include <Xm/MainW.h>
 
-#include "cedit.h" /* in codaedit/ it is codaedit.h !!! */
+#include "codaedit.h"
 
 #ifdef USE_CREG
 #include <codaRegistry.h>
@@ -723,11 +723,11 @@ main (int argc, char** argv)
       {
         if (option->noEdit_)
         {
-          sprintf(temp2, "(echo \"start codaedit\"; sleep 1; %s/codaedit -embed -noedit )&",getenv("CODA_BIN"));
+          sprintf(temp2, "(echo \"start codaedit 1\"; sleep 1; %s/codaedit -embed -noedit )&",getenv("CODA_BIN"));
         }
         else
         {
-	  sprintf(temp2,"(echo \"start codaedit\"; sleep 1; %s/codaedit -embed )&",getenv("CODA_BIN"));
+	  sprintf(temp2,"(echo \"start codaedit 2\"; sleep 1; %s/codaedit -embed )&",getenv("CODA_BIN"));
 	  //sprintf(temp2,"(echo \"start codaedit\"; sleep 1;  %s/src/codaedit/%s/bin/codaedit -embed )&",getenv("CODA"),getenv("OSTYPE_MACHINE"));
        }
 
@@ -766,7 +766,7 @@ main (int argc, char** argv)
 
   }
 
-  
+
   while (1)
   {
     printf("executing main 1\n");fflush(stdout);

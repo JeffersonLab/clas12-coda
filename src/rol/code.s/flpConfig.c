@@ -35,6 +35,7 @@ FLP_WIDTH  20  40   <- TDC width (ns), TRG width (ns)
 #include "flpLib.h"
 #include "flpConfig.h"
 #include "xxxConfig.h"
+#include "codautil.h"
 
 
 /* Global variables */
@@ -149,7 +150,7 @@ flpReadConfigFile(char *filename)
   char *getenv();
   char *clonparms;
 
-  gethostname(host,ROCLEN);  /* obtain our hostname */
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
 
   if(expid==NULL)

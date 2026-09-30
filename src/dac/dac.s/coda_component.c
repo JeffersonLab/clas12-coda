@@ -24,26 +24,30 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <ctype.h>
+#include <math.h>
 #include <pthread.h>
 #include <sys/resource.h>
 #include <signal.h>
+#include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <dlfcn.h>
 #include <inttypes.h>
+#include <gnu/lib-names.h>
 
-#ifdef Linux_vme
+
+#define SSIPC
+
+#ifdef SSIPC
+#if defined(Linux_vme) || defined(Linux_x86_64) || defined(Linux_armv7l)
 #include "ipc.h"
 #endif
-#ifdef Linux_x86_64
-#include "ipc.h"
-#endif
-#ifdef Linux_armv7l
-#include "ipc.h"
 #endif
 
+#include "eviofmt.h"
 #include "rc.h"
 #include "rolInt.h"
 #include "da.h"
@@ -94,11 +98,15 @@ static char udphost[128];
 /*static*/ char    *session = NULL;
 static char    *objects = NULL;
 /*static*/ char    *mysql_host = NULL;
+/*static*/ char    *configalone = NULL;
+int standalone = 0;
+float statistics[4];
 
 static char Expid[80];
 static char Session[80];
 static char Objects[80];
 static char Mysql_host[80];
+static char Config[80];
 
 static char ObjectsName[80];
 static char ObjectsClass[80];
@@ -175,6 +183,8 @@ will be performed */
 int
 setHeartBeat(int system, int bit, int countdown)
 {
+  //return(0);
+
   if(bit<0 || bit>31)
   {
     printf("ERROR in setHeartBeat - do nothing\n");
@@ -220,7 +230,7 @@ checkHeartBeats()
   for(i=0; i<HB_MAX; i++)
   {
     if(heartbeaterrormsgcount[i]>0)
-	{
+    {
 
       /*strcpy(tmp,"err:"); send INFO, do not scare shift takers ..*/
       strcpy(tmp,"inf:");
@@ -233,26 +243,26 @@ checkHeartBeats()
 
       heartbeaterrormsgcount[i] --;
       if(heartbeaterrormsgcount[i]==0) UDP_cancel(tmp);
-	}
+    }
     /*else if(heartbeatcount[i]<0)
-	{
+    {
       printf("INFO: HeartBeat[%1d]: do not check (%d)\n",
         i,heartbeatcount[i]);
-	}*/
+    }*/
     else if(heartbeatcount[i]>0)
     {
       if(heartbeatcount[i]==3)
       {
         heartbeatold[i] = heartbeat[i];
       }
-	  /*
+      /*
       printf("INFO: HeartBeat[%1d]: decrement heartbeatcount=%d(beat=%d,%d)\n",
         i,heartbeatcount[i],heartbeat[i],heartbeatold[i]);
-	  */
+      */
       heartbeatcount[i] --;
 
       if(heartbeatcount[i]==0)
-	  {
+      {
         if(heartbeat[i]==heartbeatold[i])
         {
           sprintf(tmp,"sys %d, mask %d",i,heartmask[i]);
@@ -267,15 +277,16 @@ checkHeartBeats()
             i,heartbeat[i],heartbeatold[i],heartmask[i]);
         }
         else
-	    {
-		  /*
+	{
+	  /*
           printf("INFO: HeartBeat[%1d]: heartbeat=%d(%d) heartmask=0x%08x\n",
             i,heartbeat[i],heartbeatold[i],heartmask[i]);
-		  */
-	    }
-	  }
+	  */
 	}
+      }
+    }
   }
+  
   return(0);
 }
 
@@ -409,12 +420,11 @@ loadwholefile(char *file, int *size, int *padding)
 }
 
 
+
+
 /*******************************************************/
 
 /* routine to dynamically load and unload readout list */
-
-
-
 
 int
 codaLoadROL(ROLPARAMS *rolP, char *rolname, char *params)
@@ -476,18 +486,18 @@ char *error;
     strncat(rolnameful,p0,(int)(p1-p0));
     p2 = strchr(p1, '/');
     if(p2==0)
-	{
+    {
       printf("ERROR in ROL name: env var must start with '$' and end with '/'\n");
       return(CODA_ERROR);
-	}
+    }
     strncpy(tmp,(char *)&p1[1],(int)(p2-p1-1));
     tmp[p2-p1-1] = '\0';
     env = getenv(tmp);
     if(env==NULL)
-	{
+    {
       printf("ERROR in ROL name: env var >%s< does not exist\n",tmp);
       return(CODA_ERROR);
-	}
+    }
     strcat(rolnameful,env);
     p0 = p2;
   }
@@ -497,24 +507,37 @@ char *error;
 
 
 
-
   rolP->id = dlopen (rolnameful, RTLD_NOW | RTLD_GLOBAL);
   if(rolP->id == 0)
   {
-	printf ("ERROR: dlopen failed on rol: dlerror returned >%s<\n",dlerror());
+    printf ("ERROR: dlopen failed on rol: dlerror returned >%s<\n",dlerror());
     exit(1);
+  }
+  else
+  {
+    printf("INFO: dlopen returned %d\n",rolP->id);
   }
 
 
-  /* RIGHT
+  
+#ifdef Linux_x86_64
+  
+  /* RIGHT */
 #include <gnu/lib-names.h>
-handle = dlopen(LIBM_SO, RTLD_LAZY);
-  */
+  handle = dlopen(LIBM_SO, RTLD_LAZY);
 
+#else
+  
   /* WRONG */
-handle = dlopen ("libm.so", RTLD_LAZY);
+  handle = dlopen ("libm.so", RTLD_LAZY);
+
+#endif
 
 
+
+
+ 
+ 
 if (!handle)
 {
   printf("TEST1: %s\n", dlerror());
@@ -543,7 +566,20 @@ else
   }
   rolP->nounload = 0;
 
+//  dlerror(); /*clear previous error conditions if any*/
+
   res = (int64_t) dlsym (rolP->id, &ObjInitName[1]);
+
+//  error = dlerror();
+//  if (error != NULL)
+//  {
+//     printf(stderr, "dlsym error: %s\n", error);
+//     /*dlclose(handle);*/
+//     exit(1);
+//   }
+
+
+
   rolP->rol_code = (VOIDFUNCPTR) res;
   if((res != (-1)) && (res != 0))
   {
@@ -614,6 +650,354 @@ codaUnloadROL(ROLPARAMS *rolP)
 
 
 
+/*
+
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    Lmid_t namespace_id;
+    void *handle1, *handle2, *handle3;
+
+    // 1. Create a new namespace and load the first shared object
+    handle1 = dlmopen(LM_ID_NEWLM, "libone.so", RTLD_NOW);
+    if (!handle1) {
+        fprintf(stderr, "dlmopen error: %s\n", dlerror());
+        exit(EXIT_FAILURE);
+    }
+
+    // Retrieve the namespace ID assigned to the first handle
+    dlinfo(handle1, RTLD_DI_LMID, &namespace_id);
+
+    // 2. Load the second shared object into the SAME namespace
+    handle2 = dlmopen(namespace_id, "libtwo.so", RTLD_NOW);
+    if (!handle2) {
+        fprintf(stderr, "dlmopen error: %s\n", dlerror());
+        exit(EXIT_FAILURE);
+    }
+
+    // 3. Load the third shared object into the SAME namespace
+    handle3 = dlmopen(namespace_id, "libthree.so", RTLD_NOW);
+    if (!handle3) {
+        fprintf(stderr, "dlmopen error: %s\n", dlerror());
+        exit(EXIT_FAILURE);
+    }
+
+    // At this point, libone.so, libtwo.so, and libthree.so can resolve 
+    // each other's exported, non-local symbols while remaining completely 
+    // isolated from the rest of the application or other namespaces.
+
+    // Clean up
+    dlclose(handle3);
+    dlclose(handle2);
+    dlclose(handle1);
+
+    return 0;
+}
+
+ */
+
+/* function to fork and execute a command safely */
+#include <sys/wait.h>
+int
+run_command(char *cmd, char *args[])
+{
+  pid_t pid = fork();
+
+  if (pid < 0)
+  {
+    perror("Fork failed");
+    return(-1);
+  }
+
+  if (pid == 0)
+  {
+    // Inside child process: execute the command
+    execvp(cmd, args);
+        
+    // execvp only returns if an error occurs
+    perror("Execvp failed");
+    exit(EXIT_FAILURE);
+  }
+  else
+  {
+    // Inside parent process: wait for this specific child
+    int status;
+    waitpid(pid, &status, 0);
+
+    // Check if the child process exited successfully
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+    {
+      printf("Command '%s' executed successfully.\n",cmd);
+      return(0);
+    }
+    else
+    {
+      printf("Command '%s' failed to execute successfully.\n",cmd);
+      return(-1);
+    }
+  }
+}
+
+
+int
+codaLoadROL3(ROLPARAMS *rolP, char *rolname, char *params)
+{
+  char ObjInitName[100];
+  char *p0, *p1, *p2;
+  int32_t nchar = 0;
+  int64_t res;
+  char *env, rolnametmp[256], rolnameful[256], tmp[128];
+
+  int i;
+  char rolnamenew[256], rolnamenewfull[256];
+  char *cp_args[4];
+  char *patch_args[5];
+
+void *handle;
+double (*cosine)(double);
+char *error;
+
+
+
+
+  /* if 'rolname' does not start from '/', '.' or '$', assume that it contains no path
+	 and add default one */
+  if(rolname[0]!='/'&&rolname[0]!='.'&&rolname[0]!='$')
+  {
+    strcpy(rolnametmp,"$CODA/$OSTYPE_MACHINE/rol/");
+    strcat(rolnametmp,rolname);
+  }
+  else
+  {
+    strcpy(rolnametmp,rolname);
+  }
+
+  memset((char *) ObjInitName, 0, 100);
+  /* 'strrchr' returns the pointer to the last occurrence of '/' */
+  /* (actual readout list name starts after last '/') */
+  if((p1 = strrchr (rolnametmp, '/')) == 0) p1 = rolnametmp;
+  /* 'strrchr' returns the pointer to the last occurrence of '.' */
+  /* (actual readout list name ends before last '.') */
+  if((p2 = strrchr (rolnametmp, '.')) == 0) p2 = rolnametmp;
+  nchar = (p2 - p1) - 1;
+  if(nchar > 0)
+  {
+    ObjInitName[0] = '_';
+    strncpy(&ObjInitName[1], (p1 + 1), nchar);
+    strcat(ObjInitName, "__init");
+    printf("ObjInitName >%s< \n",ObjInitName);
+  }
+  else
+  {
+    printf("ERROR: cannot extract ObjInitName from the rolname\n");
+  }
+
+
+  printf("p1 >%s<\n",p1);
+  if(p1[0]=='/') strcpy(tmp,(char *)&p1[1]);
+  else           strcpy(tmp,p1);
+  for(i=0; i<strlen(p1); i++)
+  {
+    if(tmp[i]=='.')
+    {
+      tmp[i] = '\0';
+      break;
+    }
+  }
+  printf("tmp >%s<\n",tmp);
+  printf("rolP->pid=%d\n",rolP->pid);
+  sprintf(rolnamenew,"%s_%d.so",tmp,rolP->pid);
+  printf("rolnamenew >%s<\n",rolnamenew);
+  sprintf(rolnamenewfull,"/tmp/%s",rolnamenew);
+  printf("rolnamenewfull >%s<\n",rolnamenewfull);
+
+
+  
+#ifdef Linux
+
+  /* resolve environment variables in rolname; go from '/' to '/' and replace
+  env names starting from '$' by actual directories */
+  rolnameful[0] = '\0';
+  p0 = rolnametmp;
+  while( (p1 = strchr(p0, '$')) != 0)
+  {
+    strncat(rolnameful,p0,(int)(p1-p0));
+    p2 = strchr(p1, '/');
+    if(p2==0)
+    {
+      printf("ERROR in ROL name: env var must start with '$' and end with '/'\n");
+      return(CODA_ERROR);
+    }
+    strncpy(tmp,(char *)&p1[1],(int)(p2-p1-1));
+    tmp[p2-p1-1] = '\0';
+    env = getenv(tmp);
+    if(env==NULL)
+    {
+      printf("ERROR in ROL name: env var >%s< does not exist\n",tmp);
+      return(CODA_ERROR);
+    }
+    strcat(rolnameful,env);
+    p0 = p2;
+  }
+  strcat(rolnameful,p0);
+  printf("rolnameful >%s<\n",rolnameful);
+
+  
+  /*cannot use follwing because it can provide maximum 16 spaces, we may need more
+  rolP->id = dlmopen(LM_ID_NEWLM, rolnameful, RTLD_NOW);
+  */
+
+
+
+
+
+  /*******************************************************************************************************************************************************/
+  /* to make separate copies of the downloaded ROL3's, copy original .so file to the new one with different name, and adjust new file soname accordingly */
+  
+  cp_args[0] = strdup("cp");
+  cp_args[1] = strdup(rolnameful);
+  cp_args[2] = strdup(rolnamenewfull);
+  cp_args[3] = NULL;
+  
+ 
+  patch_args[0] = strdup("patchelf");
+  patch_args[1] = strdup("--set-soname");
+  patch_args[2] = strdup(rolnamenewfull);
+  patch_args[3] = strdup(rolnamenewfull);
+  patch_args[4] = NULL;
+
+  printf("Running copy command (%s %s %s)\n",cp_args[0],cp_args[1],cp_args[2]);
+  if (run_command("cp", cp_args) != 0)
+  {
+    printf("ERROR in command 'cp'\n");
+    return(CODA_ERROR);
+  }
+
+  printf("Running patchelf command (%s %s %s %s)\n",patch_args[0],patch_args[1],patch_args[2],patch_args[3]);
+  if (run_command("patchelf", patch_args) != 0)
+  {
+    printf("ERROR in command 'patchelf'\n");
+    return(CODA_ERROR);
+  }
+  printf("Both commands executed successfully!\n");
+
+ 
+  /***************************************/
+  /* now call dlopen for the new so file */
+  //rolP->id = dlopen (rolnamenewfull, RTLD_NOW | RTLD_GLOBAL);
+  rolP->id = dlopen (rolnamenewfull, RTLD_NOW);
+  if(rolP->id == 0)
+  {
+    printf ("ERROR: dlopen failed on rol: dlerror returned >%s<\n",dlerror());
+    return(CODA_ERROR);
+  }
+  else
+  {
+    printf("INFO: dlopen returned rolP->id=%d\n",rolP->id);
+  }
+
+  /* load libm */
+  handle = dlopen(LIBM_SO, RTLD_LAZY); 
+  if (!handle)
+  {
+    printf("TEST1: %s\n", dlerror());
+    return(CODA_ERROR);
+  }
+  else
+  {
+    printf("TEST1: handle=0x%016x\n",handle);
+  }
+
+
+
+#else
+
+  printf ("WARN: dynamic loading not supported\n");
+  return(CODA_ERROR);
+
+#endif
+
+
+  if(rolP->id == NULL)
+  {
+    printf("ERROR: unable to load readout list >%s<\n",rolnamenewfull);
+    return(CODA_ERROR);
+  }
+  rolP->nounload = 0;
+
+//  dlerror(); /*clear previous error conditions if any*/
+
+
+  printf("INFO: calling dlsym(%d,'%s') (ObjInitName=%s)\n",rolP->id,&ObjInitName[1],ObjInitName);
+  res = (int64_t) dlsym (rolP->id, &ObjInitName[1]);
+  printf("INFO: dlsym returned res=%d\n",res);
+  
+  error = dlerror();
+  if(error != NULL)
+  {
+    printf("ERROR: dlsym error: %s\n", error);
+    /*dlclose(handle);*/
+    return(CODA_ERROR);
+  }
+  else
+  {
+    /* run some test function from loaded .so */
+    //my_func_type my_func = (my_func_type)sym;
+    //int result = my_func(42);
+    //printf("Result: %d\n", result);
+  }
+
+
+
+
+  rolP->rol_code = (VOIDFUNCPTR) res;
+  if((res != (-1)) && (res != 0))
+  {
+    printf("INFO: >%s()< routine found, rolP->id=0x%016x, res=0x%016x\n",ObjInitName,rolP->id,res);
+  }
+  else
+  {
+    printf("ERROR: dlsym returned %lld\n",res);
+    printf("ERROR: >%s()< routine not found\n",ObjInitName);
+    printf("ERROR: <ObjName>__init() routine not found in >%s<\n",rolnamenewfull);
+    return(CODA_ERROR);
+  }
+
+  strncpy(rolP->usrString, params, 30);
+  printf ("codaLoadROL: readout list >%s< is loaded at address 0x%016x 0x%016x\n",rolnamenewfull,rolP->rol_code,*(rolP->rol_code));
+
+
+
+  dlerror();    /* Clear any existing error */
+
+  /*
+  cosine = dlsym(handle, "cos");
+  */
+  res = (int64_t) dlsym(handle, "cos");
+
+  if ((error = dlerror()) != NULL)
+  {
+    printf ("TEST2: ERROR: %s\n", error);
+    return(CODA_ERROR);
+  }
+
+  cosine = (VOIDFUNCPTR) res;
+  printf("TEST2: cosine=0x%016x *cosine=0x%016x\n",cosine,*cosine);
+
+  printf ("TEST3: cos(2.0)=%f\n", (*cosine)(2.0));
+  dlclose(handle);
+ 
+
+  return(CODA_OK);
+}
+
+
+
+
+
 
 
 /* Routine to check the Endianness of host machine */
@@ -669,6 +1053,19 @@ pr_time(char *stuff)
 #endif
   printf("%f %s\n",d1,stuff);
 }
+
+
+void
+microsleep(unsigned long usec)
+{
+  struct timespec req;
+  req.tv_sec = usec / 1000000L;                  // Convert microseconds to seconds
+  req.tv_nsec = (usec % 1000000L) * 1000L;       // Convert remainder to nanoseconds
+  nanosleep(&req, NULL);
+}
+
+
+
 /*
  * C error recovery, we attempt to recover from (normally) fatal system errors.
  */
@@ -708,6 +1105,7 @@ signal_thread (void *arg)
   char       *rtn;
 
   printf("signal_thread 1\n");fflush(stdout);
+
 
   if (global_env_depth[thr]>0)
   {
@@ -783,8 +1181,10 @@ signal_thread (void *arg)
 
     printf("signal_thread 5\n");fflush(stdout);
 
+#if 0
 #ifdef Linux_vme
 	bb_dma_free();
+#endif
 #endif
 
     printf("signal_thread 6\n");fflush(stdout);
@@ -879,11 +1279,17 @@ printf("\n\ncoda_constructor reached\n");fflush(stdout);
   eventNumber = (unsigned int *) &localobject->nevents;
   dataSent = (int64_t *) &localobject->nlongs;
 
-  /* set state to booted and update 'state' field in database*/
-  if(codaUpdateStatus("booted") != CODA_OK) return(CODA_ERROR);
+  /* set state to loaded and update 'state' field in database*/
+  if(codaUpdateStatus("loaded") != CODA_OK) return(CODA_ERROR);
   printf("INFO: '%s' state now '%s'\n",localobject->name,localobject->state);
 
   dbsock = dbConnect(mysql_host, expid);
+  if(dbsock==NULL)
+  {
+    printf("coda_constructor: cannot connect to the database\n");fflush(stdout);
+    return(CODA_ERROR);
+  }
+
   sprintf(tmpp,"SELECT id FROM process WHERE name='%s'",localobject->name);
   if(dbGetInt(dbsock, tmpp, &localobject->codaid)==CODA_ERROR)
   {
@@ -912,14 +1318,16 @@ coda_destructor()
   {
     printf("WARN: delete called in object '%s'\n",localobject->name);
 
-    /*
-    ("database query \"UPDATE process SET inuse='no',state='down' WHERE name='",localobject->name)
-    */
+	/*
+	("database query \"UPDATE process SET inuse='no',state='down' WHERE name='",localobject->name)
+	*/
   }
 
   /* disconnect from IPC server */
+#ifdef SSIPC
 #if defined(Linux_vme) || defined(Linux_x86_64) || defined(Linux_armv7l)
   epics_json_msg_close();
+#endif
 #endif
 
   return CODA_OK;
@@ -943,10 +1351,10 @@ listSplit2(char *list, char *separator, int *argc, char argv[LISTARGV1][LISTARGV
     /*printf("2[%d]: >%s< (%d)\n",*argc,(char *)&argv[*argc][0],strlen((char *)&argv[*argc][0]));*/
     (*argc) ++;
     if( (*argc) >= LISTARGV1)
-    {
+	{
       printf("listSplit2 ERROR: too many args\n");
       return(0);
-    }
+	}
     p = strtok(NULL,separator);
   }
 
@@ -961,7 +1369,7 @@ void
 CODA_Init(int argc, char **argv)
 {
   char       *args, *obj, *p, buf[20], tmp[128];
-  int        i, code;
+  int        i, code, len;
   MYSQL *dbsock;
   int  listArgc;
   char listArgv[LISTARGV1][LISTARGV2];
@@ -972,6 +1380,7 @@ CODA_Init(int argc, char **argv)
     "              [-objects Name and type of this object]\n"
     "              [-name Name of object]\n"
     "              [-mysql_host Name of host to connect to for mysql access]\n";
+    "              [-config Name of configuration for standalone running]\n";
 
 
   /* parsing command line options: loop over all arguments, except the 1st (which is program name) */
@@ -997,34 +1406,34 @@ CODA_Init(int argc, char **argv)
     }
     else if (strncasecmp(argv[i],"-objects",2)==0)
     {
-	  strcpy(Objects,argv[i+1]);
+      strcpy(Objects,argv[i+1]);
 
 
       /*************************************************************/
       /* if argument is just "ROC" or "TS", add hostname before it */
 
       if(!strcmp(Objects,"ROC"))
-	  {
+      {
         strcpy(tmp,getenv("HOST"));
         if( (p=strchr(tmp,'.'))!=NULL )
-		{
+	{
           printf("Will use everything before first '.' appearance in HOST=>%s<\n",tmp);
           *p = '\0';
-		}
+	}
         sprintf(Objects,"%s ROC",tmp);
         printf("Received object 'ROC', will use '%s'\n",Objects);
-	  }
+      }
       else if(!strcmp(Objects,"TS"))
-	  {
+      {
         strcpy(tmp,getenv("HOST"));
         if( (p=strchr(tmp,'.'))!=NULL )
-		{
+	{
           printf("Will use everything before first '.' appearance in HOST=>%s<\n",tmp);
           *p = '\0';
-		}
+	}
         sprintf(Objects,"%s TS",tmp);
         printf("Received object 'TS', will use '%s'\n",Objects);
-	  }
+      }
 
       objects = Objects;
       i=i+2;
@@ -1033,6 +1442,13 @@ CODA_Init(int argc, char **argv)
     {
       strcpy(Mysql_host,argv[i+1]);
       mysql_host = Mysql_host;
+      i=i+2;
+    }
+    else if (strncasecmp(argv[i],"-config",2)==0)
+    {
+      standalone=1;
+      strcpy(Config,argv[i+1]);
+      configalone = Config;
       i=i+2;
     }
     else if (strncasecmp(argv[i],"-",1)==0)
@@ -1077,18 +1493,14 @@ printf("1\n");fflush(stdout);
 
 printf("2\n");fflush(stdout);
 
-
-#if defined(Linux_vme) || defined(Linux_x86_64) || defined(Linux_armv7l)
-  printf("CODA_Init: Connecting to IPC server ..\n");
-  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
-  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
-  printf(".. done connecting to IPC server.\n");
-#endif
-
-
-printf("3\n");fflush(stdout);
+printf("mysql_host >%s<, expid >%s<\n",mysql_host,expid);fflush(stdout);
 
   dbsock = dbConnect(mysql_host, expid);
+  if(dbsock==NULL)
+  {
+    printf("CODA_Init: cannot connect to the database\n");fflush(stdout);
+    return;
+  }
 
 printf("333333333333333\n");fflush(stdout);
 
@@ -1106,39 +1518,40 @@ printf("333333333333333\n");fflush(stdout);
     }
     else
     {
-	  printf(">>>>>>>%d<<<<<<<<< %d\n",strlen(tmpp));fflush(stdout);
-	  printf(">>>>>>>%s<<<<<<<<< %d\n",tmpp);fflush(stdout);
-	  /*>>>>>>>clon00 boiarino 1538 146<<<<<<<<< 24*/
+      printf(">>>>>>>%d<<<<<<<<< %d\n",strlen(tmpp));fflush(stdout);
+      printf(">>>>>>>%s<<<<<<<<< %d\n",tmpp);fflush(stdout);
+      /*>>>>>>>clon00 boiarino 1538 146<<<<<<<<< 24*/
 
       dbDisconnect(dbsock);
 
-
-      if(strlen(tmpp) > 2)
+      len = strlen(tmpp);
+      if(len > 2)
       {
-        strncpy(list,tmpp,strlen(tmpp));
-        list[strlen(tmpp)] = '\0';
+        len = len < (256-1) ? len : (256-1);
+        strncpy(list,tmpp,len);
+        list[len] = '\0';
         printf("list >%s<\n",list);
-		/*list >clon00 boiarino 1538 146<*/
+	      /*list >clon00 boiarino 1538 146<*/
       }
       else
       {
         printf("ERROR: No owner information from database table sessions\n");
-        printf("string length of tmpp = %d\n",strlen(tmpp));
+        printf("string length of tmpp = %d\n",len);
         exit(3);
       }
 
 
-	  listSplit2(list," ",&listArgc,listArgv);
+      listSplit2(list," ",&listArgc,listArgv);
       if(listArgc == 4)
       {
-	    /*setuid(atoi(listArgv[2]));
-	      setgid(atoi(listArgv[3]));*/
-	  }
+	/*setuid(atoi(listArgv[2]));
+	  setgid(atoi(listArgv[3]));*/
+      }
       else
       {
-	    printf ("WARNING: Could not get uid and gid info from database\n");
-	    printf ("         number of args in the id entry of sessions is %d\n",listArgc);
-	  }
+	printf ("WARNING: Could not get uid and gid info from database\n");
+	printf ("         number of args in the id entry of sessions is %d\n",listArgc);
+      }
 
     }
 
@@ -1151,7 +1564,7 @@ printf("333333333333333\n");fflush(stdout);
     int  listArgc;
     char listArgv[LISTARGV1][LISTARGV2];	
 
-	listSplit2(objects," ",&listArgc,listArgv);
+    listSplit2(objects," ",&listArgc,listArgv);
 
 
     for(ix=0; ix<listArgc; ix+=2)
@@ -1171,10 +1584,16 @@ printf("333333333333333\n");fflush(stdout);
       printf("object class: >%s<\n",ObjectsClass);/*TS*/
 
 
-	  /* set 'type' field in 'process' table if ROC or TS */
+      /* set 'type' field in 'process' table if ROC or TS */
       if( (!strcmp(ObjectsClass,"ROC")) || (!strcmp(ObjectsClass,"TS")) )
-	  {
+      {
         dbsock = dbConnect(mysql_host, expid);
+	if(dbsock==NULL)
+        {
+          printf("CODA_Init: cannot connect to the database\n");fflush(stdout);
+          return;
+        }
+
         printf("44444444444444\n");fflush(stdout);
         sprintf(tmp,"UPDATE process SET type='%s' WHERE name='%s'",ObjectsClass,ObjectsName);
         printf("DB update: >%s<\n",tmp);
@@ -1184,12 +1603,20 @@ printf("333333333333333\n");fflush(stdout);
           exit(0);
         }
         dbDisconnect(dbsock);
-	  }
+      }
 
 
 printf("CODA_Init 13: coda_constructor starts\n");fflush(stdout);
       coda_constructor();
 printf("CODA_Init 14: coda_constructor ends\n");fflush(stdout);
+
+#ifdef SSIPC
+#if defined(Linux_vme) || defined(Linux_x86_64) || defined(Linux_armv7l)
+      printf("coda_component/CODA_Init: Connecting to IPC server ..\n");fflush(stdout);
+      epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ", "daq", ObjectsName);
+      printf("coda_component/CODA_Init: done connecting to IPC server.\n");fflush(stdout);
+#endif
+#endif
     }
   }
 
@@ -1282,6 +1709,7 @@ CODA_bswap(int32_t *cbuf, int32_t ndata)
     int ii, jj, ix;
     int tlen, blen, dtype;
     int lwd;
+    int llwd;
     short shd;
     char cd;
     char *cp;
@@ -1324,11 +1752,11 @@ CODA_bswap(int32_t *cbuf, int32_t ndata)
 	  ii += blen;
 	  break;
 	case 3:
-	  /* double swap - Sergey: WRONG, use lpp... */
-	  lp = (long *)&cbuf[ii];
-	  for(jj=0; jj<blen; jj++) {
-	    lwd = LSWAP(*lp);
-	    *lp++ = lwd;
+	  /* Sergey: NEED CHECK !!! */
+	  llp = (int64_t *)&cbuf[ii];
+	  for(jj=0; jj<(blen>>1); jj++) {
+	    llwd = LLSWAP(*llp);
+	    *llp++ = llwd;
 	  }
 	  ii += blen;
 	  break;
@@ -1412,7 +1840,7 @@ typedef struct udpstruct
 
 } UDPSTRUCT;
 
-#define MAXUDPS 4
+#define MAXUDPS 10
 static UDPSTRUCT udpstr[MAXUDPS];
 
 
@@ -1434,8 +1862,8 @@ UDP_establish(char *host, int port)
   hp = gethostbyname(host);
   if(hp == 0 && (sin.sin_addr.s_addr = inet_addr(host)) == -1)
   {
-	printf("UDP_establish: unknown host >%s<\n",host);
-	return(0);
+    printf("UDP_establish: unknown host >%s<\n",host);
+    return(0);
   }
   if(hp != 0) bcopy(hp->h_addr, &sin.sin_addr, hp->h_length);
   sin.sin_port = htons(port);
@@ -1453,7 +1881,6 @@ UDP_establish(char *host, int port)
     socketnum = s;
     printf("UDP_establish: socket # %d\n",socketnum);
   }
-
 
 
 #if 0
@@ -1484,19 +1911,19 @@ UDP_establish(char *host, int port)
   {
     int optval, lbytes;
 
-	optval = 1; /* 1-yes, 0-no */
-	/*make sence for TCP only, not for UDP
+    optval = 1; /* 1-yes, 0-no */
+    /*make sence for TCP only, not for UDP
     if(setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0)
-	{
-	  printf("UDP_establish: setsockopt SO_KEEPALIVE failed\n");
-	  return(0);
-	}
+    {
+      printf("UDP_establish: setsockopt SO_KEEPALIVE failed\n");
+      return(0);
+    }
 
     optval = 0;
     lbytes = 4;
     getsockopt(s, SOL_SOCKET, SO_KEEPALIVE, (int *) &optval, &lbytes);
     printf("UDP_establish: keepAlive is %d\n",optval);
-	*/
+    */
   }
 
 #ifdef VXWORKS_needheaderfiles
@@ -1504,13 +1931,12 @@ UDP_establish(char *host, int port)
     int optval = 0;
     if(setsockopt (s, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof (optval)) < 0)
     {
-	  printf("UDP_establish: setsockopt TCP_NODELAY failed\n");
+      printf("UDP_establish: setsockopt TCP_NODELAY failed\n");
       return(0);
     }
   }
 #endif
 #endif /*if 0*/
-
 
 
 
@@ -1577,18 +2003,7 @@ UDP_standard_request(char *name, char *state)
   strcat(tmp," ");
   strcat(tmp,state);
 
-  printf("UDP_standard_request >%s<",tmp);
-  printf("\n");
-  printf("UDP_standard_request >%s<",tmp);
-  printf("\n");
-  printf("UDP_standard_request >%s<",tmp);
-  printf("\n");
-  printf("UDP_standard_request >%s<",tmp);
-  printf("\n");
-  printf("UDP_standard_request >%s<",tmp);
-  printf("\n");
-  printf("UDP_standard_request >%s<",tmp);
-  printf("\n");
+  printf("UDP_standard_request >%s<\n",tmp);
 
   UDP_request(tmp);
 
@@ -1611,19 +2026,22 @@ UDP_user_request(int msgclass, char *name, char *message)
   strcat(tmp," ");
   strcat(tmp,message);
 
-  printf("UDP_user_request >%s<",tmp);
-  printf("\n");
- 
+  printf("UDP_user_request >%s<\n",tmp);
+
   /* start message sending, will be send once per second, see UDP_loop() */
   UDP_request(tmp);
-
-  /* stop message sending after 2 seconds, if it is NOT error message
-    (error message will be stopped by calling UDP_cancel_errors()) */
-  if(msgclass != MSGERR)
-  {  
+  
+  if(msgclass != MSGERR) /* stop message sending after 2 seconds, if it is NOT error message */
+  {
     sleep(2);
     UDP_cancel(tmp);
   }
+  //error message will be stopped by calling UDP_cancel_errors() from Reset, Configure or Download transitions
+  //else
+  //{
+  //  sleep(20);
+  //  UDP_cancel(tmp);
+  //}
 
   return(0);
 }
@@ -1651,7 +2069,7 @@ UDP_reset()
   /* cancel all messages */
   for(i=0; i<MAXUDPS; i++)
   {
-    printf("UDP_cancel: cancel >%s<\n",udpstr[i].message);
+    //printf("UDP_reset: cancel >%s<\n",udpstr[i].message);
     udpstr[i].active = 0;
     udpstr[i].message[0] = '\0'; /* just in case */
   }
@@ -1669,12 +2087,13 @@ UDP_cancel_errors()
 
   pthread_mutex_lock(&udp_lock);
 
+  printf("UDP_cancel_errors reached\n");
   /* cancel all error messages */
   for(i=0; i<MAXUDPS; i++)
   {
     if(!strncmp(udpstr[i].message, "err:", 4))
     {
-      printf("UDP_cancel: cancel >%s<\n",udpstr[i].message);
+      //printf("UDP_cancel_errors: cancel >%s<\n",udpstr[i].message);
       udpstr[i].active = 0;
       udpstr[i].message[0] = '\0'; /* just in case */
       /*break;*/ /*scan whole structure in case if more then one message*/
@@ -1694,14 +2113,18 @@ UDP_cancel(char *str)
 
   pthread_mutex_lock(&udp_lock);
 
-  /* cancel all messages with identical key (first 4 characters) */
+  printf("UDP_cancel: request to cancel >%s<\n",str);
   for(i=0; i<MAXUDPS; i++)
   {
-    if(!strncmp(udpstr[i].message, str, 4))
+    //printf("UDP_cancel: checking [%d] >%s<\n",i,udpstr[i].message);
+
+    /* cancel requested message; if it starts from 'sta:', cancel all existing messages starting from 'sta:' - only one 'sta:' message can be active at any moment */
+    if( (!strcmp(udpstr[i].message, str)) || ( (!strncmp(str, "sta:", 4)) && (!strncmp(udpstr[i].message, "sta:", 4)) ) )
     {
-      printf("UDP_cancel: cancel >%s<\n",udpstr[i].message);
+      //printf("  UDP_cancel: canceling: [%d] >%s<\n",i,udpstr[i].message);
       udpstr[i].active = 0;
       udpstr[i].message[0] = '\0'; /* just in case */
+      //printf("    UDP_cancel: canceled: [%d] >%s<\n",i,udpstr[i].message);
       /*break;*/ /*scan whole structure in case if more then one message*/
     }
   }
@@ -1716,8 +2139,11 @@ int
 UDP_request(char *str)
 {
   int i, found;
+  
+  printf("UDP_request: request >%s<\n",str);
 
-  /* cancel all messages with the same key (first 4 characters) */
+  /* cancel message if already exist; it will take care of 'sta:' messages as well */
+  printf("UDP_request: calling UDP_cancel for >%s<\n",str);
   UDP_cancel(str);
 
   pthread_mutex_lock(&udp_lock);
@@ -1725,11 +2151,13 @@ UDP_request(char *str)
   found = 0;
   for(i=0; i<MAXUDPS; i++)
   {
+    //printf("UDP_request: checking [%d] >%s<, active=%d\n",i,udpstr[i].message,udpstr[i].active);
     if(udpstr[i].active == 0)
     {
       found = 1;
       udpstr[i].active = 1;
       strcpy(udpstr[i].message, str);
+      //printf("UDP_request: registered [%d] >%s<, active=%d\n",i,udpstr[i].message,udpstr[i].active);
       break;
     }
   }
@@ -1750,10 +2178,10 @@ UDP_send(int socket)
 {
   char tmp[1000], tmpp[1000];
   char name[100];
-  int i, nevents, len, eventdiff;
-  int64_t nlongs;
-  time_t newtime, timediff;
-  float event_rate, data_rate;
+  int i, nevents=0, len, eventdiff;
+  int64_t nlongs=0L;
+  time_t newtime, timediff=0;
+  float event_rate=0.0, data_rate=0.0;
   float data[4];
   static int oldevents;
   static int64_t oldlongs;
@@ -1773,6 +2201,7 @@ UDP_send(int socket)
   {
     /*printf("UDP_send[%d]: active=%d\n",i,udpstr[i].active);*/
     if(udpstr[i].active==0) continue;
+    /*printf("UDP_send[%d]: message >%s<\n",i,udpstr[i].message);*/
 
     /* for the message started from 'sta:' update statistic info */
     if( !strncmp(udpstr[i].message,"sta:",4) )
@@ -1790,7 +2219,7 @@ UDP_send(int socket)
       /*printf("timediff: %u (%u - %u)\n",timediff,newtime,oldtime);*/
       if(timediff != 0)
       {
-        if(eventdiff != 0)
+	if(eventdiff != 0)
 	{
           event_rate = eventdiff/timediff;
   	  /*printf("event_rate: %f (%u - %u)\n",event_rate,nevents,oldevents);*/
@@ -1804,26 +2233,37 @@ UDP_send(int socket)
 	  strcpy(tmp,udpstr[i].message);
           sprintf(tmpp," %d %9.3f %lld %12.3f",nevents,event_rate,nlongs,data_rate);
           strcat(tmp,tmpp);
-	  /*printf("tmp1=>%s<=\n",tmp);*/
+	  //printf("tmp1=>%s<=\n",tmp);
 	}
         else if(timediff>=3) /* if 3 seconds without rate, send message with zero rates: */
 	{                    /* have to send something to make runcontrol happy          */
+
+          /*event rate can be 0 but data rate not for streaming daq !*/
+          data_rate = 4.0*(((float)nlongs) - ((float)oldlongs)) / ((float)timediff);
+          oldlongs = nlongs;
+          oldevents = nevents;
+          oldtime = newtime;
+
 	  strcpy(tmp,udpstr[i].message);
+
           sprintf(tmpp," %d %9.3f %lld %12.3f",nevents,event_rate,nlongs,data_rate);
+
           strcat(tmp,tmpp);
-	  /*printf("tmp2=>%s<=\n",tmp);*/
+	  //printf("tmp2=>%s<=\n",tmp);
 	}
         else
 	{
           tmp[0] = '\0'; /* do not send anything */
+	  //printf("tmp3=>%s<=\n",tmp);
 	}
       }
       else
       {
         tmp[0] = '\0'; /* do not send anything */
-      }
+ 	//printf("tmp4=>%s<=\n",tmp);
+     }
 
-
+#ifdef SSIPC
 #if defined(Linux_vme) || defined(Linux_x86_64) || defined(Linux_armv7l)
       /* send AMQ message */
       sprintf(name,"STA:%s",localobject->name);
@@ -1831,9 +2271,11 @@ UDP_send(int socket)
       data[1] = event_rate;
       data[2] = (float)((nlongs*4)/1048576);
       data[3] = data_rate/1048576;
+      //printf("Sending >%s<\n",name);fflush(stdout);
       epics_json_msg_send(name, "float", 4, data);
+      //printf("Sent >%s<\n",name);fflush(stdout);
 #endif
-
+#endif
 
     }
     else
@@ -1841,10 +2283,10 @@ UDP_send(int socket)
       strcpy(tmp,udpstr[i].message); /* not 'sta:' messages */
     }
 
-    /*
+	/*
     printf("UDP_send[%d] >%s<\n",i,tmp);
     printf(" udpport=%d\n",udpport);
-    */
+	*/
 
     nbytes = strlen(tmp);
     if(nbytes == 0)
@@ -1856,7 +2298,6 @@ UDP_send(int socket)
     nbytes++; /* add one char for the end of string sign */
     rembytes = nbytes;
     buffer2 = tmp;
-    /*printf("UDP_send: rembytes=%d\n",rembytes);*/
     while(rembytes)
     {
 retry3:
@@ -1871,7 +2312,6 @@ retry3:
         {
           printf("UDP_send: Operation would block 2: retry ...\n");
           goto retry3;
-
         }
 
         /*printf("UDP_send: socket=%d\n",socket);*/
@@ -1884,7 +2324,7 @@ retry3:
           while mv5100 does not !!!; I think mv5100 is right and others are
           wrong, but must figure it out ... */
 
-          /* following message will be printed if rcServer killed, very annoying - comment it out */
+          /* following message will be printed if rcServer killed, vety annoying - comment it out */
 		  /*
           printf("UDP_send: Connection to host %s port %d refused (udpsocket=%d, errno=%d)\n",udphost,udpport,udpsocket,errno);
 		  */
@@ -1920,7 +2360,7 @@ netStackSysPoolShow
 exit3:
     ;
 
-
+#ifdef SSIPC
 #if defined(Linux_vme) || defined(Linux_x86_64) || defined(Linux_armv7l)
     if((iteration%10)==0) /*send message on every 10th iteration*/
     {
@@ -1945,7 +2385,7 @@ exit3:
       }
     }
 #endif
-
+#endif
 
   } /* for() */
 
@@ -1982,7 +2422,7 @@ codaUpdateStatus(char *status)
     printf("cannot connect to the database 7 - exit\n");
     exit(0);
   }
-printf("codaUpdateStatus: dbConnect done\n");fflush(stdout);
+  printf("codaUpdateStatus: dbConnect done\n");fflush(stdout);
 
 /* update state in 'process' table */
   sprintf(tmp,"UPDATE process SET state='%s' WHERE name='%s'",
@@ -2008,22 +2448,1144 @@ printf("codaUpdateStatus: dbConnect done\n");fflush(stdout);
     }
   }
 
-printf("codaUpdateStatus: dbDisconnecting ..\n");fflush(stdout);
+  printf("codaUpdateStatus: dbDisconnecting ..\n");fflush(stdout);
   dbDisconnect(dbsock);
-printf("codaUpdateStatus: dbDisconnect done\n");fflush(stdout);
-  
-  /* update request record */
-printf("codaUpdateStatus: updating request ..\n");fflush(stdout);
-  UDP_standard_request(localobject->name,status);
-printf("codaUpdateStatus: updating request done\n");fflush(stdout);
+  printf("codaUpdateStatus: dbDisconnect done\n");fflush(stdout);
 
+  /* update request record */
+  printf("codaUpdateStatus: updating request ..\n");fflush(stdout);
+  UDP_standard_request(localobject->name,status);
+  printf("codaUpdateStatus: updating request done\n");fflush(stdout);
 
   /* TODO: need also to keep status in some local variable .. */
   /*tcpState ? rocp->state ? */
   strcpy(localobject->state,status);
 
+  return(CODA_OK);
+}
+
+
+
+int
+codaGetReadoutLists(char *confname, char *compname, char names[MAX_NUM_ROLS][LISTARGV2], char params[MAX_NUM_ROLS][LISTARGV2])
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  MYSQL_ROW row;
+  int numRows;
+  char tmp[1000];
+  int ii, nrols;
+  int listArgc;
+  char listArgv[LISTARGV1][LISTARGV2];
+  int tmpArgc;
+  char tmpArgv[LISTARGV1][LISTARGV2];
+    
+  /* connect to database */
+  printf("codaGetReadoutLists: dbConnecting ..\n");fflush(stdout);
+  dbsock = dbConnect(mysql_host, expid);
+  if(dbsock==NULL)
+  {
+    printf("codaGetReadoutLists: cannot connect to the database 7 - exit\n");
+    exit(0);
+  }
+  printf("codaGetReadoutLists: dbConnect done\n");fflush(stdout);
+
+  /* get the list of readout-lists from the database */
+  sprintf(tmp,"SELECT code FROM %s WHERE name='%s'",confname,compname);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("codaGetReadoutLists: ERROR: cannot select code from %s\n",confname);
+    return(CODA_ERROR);
+  }
+  else
+  {
+    printf("codaGetReadoutLists: code selected, query >%s<\n",tmp);
+  }
+
+  /* gets results from previous query */
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("codaGetReadoutLists: ERROR in mysql_store_result()\n");
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    printf("codaGetReadoutLists: nrow=%d\n",numRows);
+    if(numRows == 1)
+    {
+      row = mysql_fetch_row(result);
+      printf("codaGetReadoutLists: code >%s<\n",row[0]);
+	  
+      strcpy(tmp, row[0]);
+      if((strcmp (tmp, "{}") == 0)||(strcmp (tmp, "") == 0))
+      {
+        printf("codaGetReadoutLists: ERROR: row[0] >%s<\n",row[0]);
+        printf("codaGetReadoutLists: ERROR: this component is not used in run type %s\n",confname);
+        return(CODA_ERROR);
+      }
+    }
+    else
+    {
+      printf("codaGetReadoutLists: ERROR: unknown nrow=%d\n",numRows);
+      return(CODA_ERROR);
+    }
+
+    mysql_free_result(result);
+  }
+
+  /* disconnect from database */
+  dbDisconnect(dbsock);
+
+  /* extract readout lists */
+  if(listSplit1(tmp, 1, &listArgc, listArgv))
+  {
+    printf("codaGetReadoutLists: ERROR in first listSplit1()\n");
+    return(CODA_ERROR);
+  }
+
+  /* some checks */
+  if(listArgc<1 || listArgc>MAX_NUM_ROLS)
+  {
+    printf("codaGetReadoutLists: ERROR: the number of ROLs = %d\n",listArgc);
+    return(CODA_ERROR);
+  }
+
+  /* split list into rol object file and user string */
+  nrols = 0;
+  for(ii=0; ii<listArgc; ii++)
+  {
+    if(listSplit1(listArgv[ii], 0, &tmpArgc, tmpArgv))
+    {
+      printf("codaGetReadoutLists: ERROR in second listSplit1()\n");
+      return(CODA_ERROR);
+    }
+
+    /* first element can be 'none', therwise it must be only two elements */
+    if( (tmpArgc==1) && (strcmp(tmpArgv[0],"none")==0) )
+    {
+      strcpy(names[nrols],"none");
+      strcpy(params[nrols],"usr");
+      nrols ++;
+    }
+    else if(tmpArgc != 2)
+    {
+      printf("codaGetReadoutLists: ERROR: Incorrect number of arguments (%d) passed to ROL\n",tmpArgc);
+      return(CODA_ERROR);
+    }
+    else
+    {
+      strcpy(names[nrols],tmpArgv[0]);
+      strcpy(params[nrols],tmpArgv[1]);
+      nrols ++;
+    }
+  }
+  
+  return(nrols);
+}
+
+
+
+/********************************************************************/
+/* update daq database 'Ports' table with port number and host name */
+/********************************************************************/
+int
+codaPortTableUpdate(char *name_in, char *host_in, int port_in, int port_out)
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  int numRows;
+  char tmp[1000], *ch;
+  int res, len;
+
+  dbsock = dbConnect(mysql_host, "daq");
+
+  /* trying to select our name from 'Ports' table */
+  sprintf(tmp,"SELECT Name FROM Ports WHERE Name='%s'",name_in);
+  printf("query >%s<\n",tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("mysql error (%s)\n",mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+
+  /* gets results from previous query */
+  /* we assume that numRows=0 if our Name does not exist,
+     or numRows=1 if it does exist */
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("ERROR in mysql_store_result (%)\n",mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    mysql_free_result(result);
+
+    printf("nrow=%d\n",numRows);
+    if(numRows == 0)
+    {
+      sprintf(tmp,"INSERT INTO Ports (Name,Host,Daq_udp,Daq_tcp) VALUES ('%s','%s',%d,%d)",name_in,host_in,port_in,port_out);
+      printf("query >%s<\n",tmp);
+    }
+    else if(numRows == 1)
+    {
+      sprintf(tmp,"UPDATE Ports SET Host='%s',Daq_udp=%d,Daq_tcp=%d WHERE Name='%s'",host_in,port_in,port_out,name_in);
+      printf("query >%s<\n",tmp);
+    }
+    else
+    {
+      printf("ERROR: unknown nrow=%d",numRows);
+      return(CODA_ERROR);
+    }
+
+    if(mysql_query(dbsock, tmp) != 0)
+    {
+      printf("ERROR\n");
+      return(CODA_ERROR);
+    }
+    else
+    {
+      printf("query >%s< succeeded\n",tmp);
+    }
+  }
+
+  dbDisconnect(dbsock);
+
+  return(0);
+}
+
+
+int
+codaGetPorts(char *myname, char host[128], int *DAQ_udp, int *DAQ_tcp, int *tcpClient_tcp, int *Trigger_tcp)
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  MYSQL_ROW row;
+  char tmp[1000], chport[100];
+  int i, numRows;
+
+  /* update daq database 'Ports' table with port number and host name */
+  dbsock = dbConnect(mysql_host, "daq");
+
+  sprintf(tmp,"SELECT Host,Daq_udp,Daq_tcp,tcpClient_tcp,Trigger_tcp FROM Ports WHERE name='%s'",myname);
+  printf("Query: %s",tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("ERROR: cannot select Ports for name >%s<\n",myname);
+    return(CODA_ERROR);
+  }
+
+  /* gets results from previous query */
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("ERROR in mysql_store_result()\n");
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    printf("nrow=%d\n",numRows);
+
+    if(numRows == 1)
+    {
+      row = mysql_fetch_row(result);
+      for(i=0; i<5; i++)
+      {
+        printf("fields [%1d] >>>%s<<<\n",i,row[i]);
+      }
+
+      strcpy(host,row[0]);
+      strcpy(chport,row[1]);
+      *DAQ_udp = atoi(chport);
+      strcpy(chport,row[2]);
+      *DAQ_tcp = atoi(chport);
+
+	  /*
+      strcpy(chport,row[3]);
+      *tcpClient_tcp = atoi(chport);
+      strcpy(chport,row[4]);
+      *Trigger_tcp = atoi(chport);
+	  */
+      *tcpClient_tcp=0;
+      *Trigger_tcp=0;
+
+      printf("results: name=>%s< host=>%s< ports=%d %d %d %d\n",
+        myname, host, *DAQ_udp, *DAQ_tcp, *tcpClient_tcp, *Trigger_tcp);
+  
+    }
+    else
+    {
+      printf("ERROR: unknown nrow=%d",numRows);
+      return(CODA_ERROR);
+    }
+
+    mysql_free_result(result);
+  }
+
+  dbDisconnect(dbsock);
+  
+  return(CODA_OK);
+}
+
+
+/**************************************************************************/
+/* update config table 'next' field, used as IP if different from default */
+/**************************************************************************/
+int
+codaConfigTableUpdateIP(char *config, char *name, char *ip_name)
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  int numRows;
+  char tmp[1000], *ch;
+  int res, len;
+
+  dbsock = dbConnect(mysql_host, expid);
+  if(dbsock==NULL)
+  {
+    printf("codaConfigTableUpdateIP: cannot connect to the database - exit\n");
+    exit(0);
+  }
+
+  /* trying to select Next field from config table for specified name */
+  sprintf(tmp,"SELECT Next FROM %s WHERE Name='%s'",config,name);
+  printf("query >%s<\n",tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("mysql error (%s)\n",mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+
+  /* gets results from previous query */
+  /* we assume that numRows=0 if our Name does not exist,
+     or numRows=1 if it does exist */
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("ERROR in mysql_store_result (%)\n",mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    mysql_free_result(result);
+
+    printf("nrow=%d\n",numRows);
+    if(numRows == 0)
+    {
+      printf("codaConfigTableUpdateIP: ERROR - name >%s< does not exist in configuration >%s<\n",name,config);
+      printf("query >%s<\n",tmp);
+    }
+    else if(numRows == 1)
+    {
+      sprintf(tmp,"UPDATE %s SET Next='%s' WHERE Name='%s'",config,ip_name,name);
+      printf("query >%s<\n",tmp);
+    }
+    else
+    {
+      printf("ERROR: unknown nrow=%d",numRows);
+      return(CODA_ERROR);
+    }
+
+    if(mysql_query(dbsock, tmp) != 0)
+    {
+	  printf("ERROR\n");
+      return(CODA_ERROR);
+    }
+    else
+    {
+      printf("query >%s< succeeded\n",tmp);
+    }
+  }
+
+  dbDisconnect(dbsock);
+
+  return(0);
+}
+
+
+int
+codaConfigTableGetIP(char *config, char *name, char *ip_name)
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  MYSQL_ROW row;
+  char tmp[1000], chport[100];
+  int i, numRows;
+
+  dbsock = dbConnect(mysql_host, expid);
+  if(dbsock==NULL)
+  {
+    printf("codaConfigTableGetIP: cannot connect to the database - exit\n");
+    exit(0);
+  }
+
+  /* trying to select Next field from config table for specified name */
+  sprintf(tmp,"SELECT Next FROM %s WHERE Name='%s'",config,name);
+  printf("query >%s<\n",tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("mysql error (%s)\n",mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+
+
+  /* gets results from previous query */
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("ERROR in mysql_store_result()\n");
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    printf("nrow=%d\n",numRows);
+
+    if(numRows == 1)
+    {
+      row = mysql_fetch_row(result);
+      printf("fields [%1d] >>>%s<<<\n",i,row[0]);
+
+      strcpy(ip_name,row[0]);
+
+      printf("results: config=>%s< name=>%s< ip_name=>%s<\n",config,name,ip_name);
+  
+    }
+    else
+    {
+      printf("ERROR: unknown nrow=%d",numRows);
+      return(CODA_ERROR);
+    }
+
+    mysql_free_result(result);
+  }
+
+  dbDisconnect(dbsock);
+  
+  return(CODA_OK);
+}
+
+int
+codaLinksTableGetHostPort(char *name, char *host, int *port)
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  MYSQL_ROW row;
+  char tmp[1000], chport[100];
+  int i, numRows;
+
+  dbsock = dbConnect(mysql_host, expid);
+  if(dbsock==NULL)
+  {
+    printf("codaLinksTableGetHostPort: cannot connect to the database - exit\n");
+    exit(0);
+  }
+
+  sprintf(tmp,"SELECT host,port FROM links WHERE name LIKE '%s%%' ",name);
+  printf("query >%s<\n",tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("mysql error (%s)\n",mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+
+
+  /* gets results from previous query */
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("ERROR in mysql_store_result()\n");
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    printf("nrow=%d\n",numRows);
+
+    if(numRows == 1)
+    {
+      row = mysql_fetch_row(result);
+      printf("fields [%1d] >%s< >%s<\n",i,row[0],row[1]);
+
+      strcpy(host,row[0]);
+      *port = atoi(row[1]);
+
+      printf("results for name=>%s< : host=>%s<, port=%d\n",name,host,*port);
+  
+    }
+    else
+    {
+      printf("ERROR: unknown nrow=%d",numRows);
+      return(CODA_ERROR);
+    }
+
+    mysql_free_result(result);
+  }
+
+  dbDisconnect(dbsock);
+  
+  return(CODA_OK);
+}
+
+
+
+
+
+
+/**********************************************/
+/* handle 'daq_daq' database 'Streamin' table */
+/**********************************************/
+
+int
+codaStreaminTableCleanup(char *name)
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  int numRows;
+  char tmp[1000], *ch;
+  int res, len, slot;
+  char ch_port_in[80];
+
+  dbsock = dbConnect(mysql_host, "daq");
+
+  /* check if table exist; if not, create it */
+  sprintf(tmp,"SHOW TABLES LIKE 'Streamin'");
+  printf("[%s] query >%s<\n",name,tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("[%s] mysql error (%s)\n",name,mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("[%s] ERROR in mysql_store_result (%)\n",name,mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    mysql_free_result(result);
+
+    /*printf("nrow=%d\n",numRows);*/
+    if(numRows == 0) /*table does not exist - create it*/
+    {
+      printf("[%s] table does not exist - do nothing\n",name);
+     dbDisconnect(dbsock);
+     return(0);
+    }
+  }
+
+
+  /* delete all rows, containing name with any extensions */
+  sprintf(tmp,"DELETE FROM Streamin WHERE Name LIKE '%s%%'",name);
+  printf("[%s] query >%s<\n",name,tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("[%s] mysql error (%s)\n",name,mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+
+  dbDisconnect(dbsock);
+
+  return(0);
+}
+
+int
+codaStreaminTableUpdate(char *name, char *host, int port_in, char *host_in)
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  int numRows;
+  char tmp[1000], *ch;
+  int res, len, slot;
+  char ch_port_in[80];
+
+  dbsock = dbConnect(mysql_host, "daq");
+
+  /* check if table exist; if not, create it */
+  sprintf(tmp,"SHOW TABLES LIKE 'Streamin'");
+  printf("[%s] query >%s<\n",name,tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("[%s] mysql error (%s)\n",name,mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("[%s] ERROR in mysql_store_result (%)\n",name,mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    mysql_free_result(result);
+
+    /*printf("nrow=%d\n",numRows);*/
+    if(numRows == 0) /*table does not exist - create it*/
+    {
+      sprintf(tmp,"CREATE TABLE Streamin (\n");
+      strcat(tmp, "Name text not null,\n");
+      strcat(tmp, "Host text not null,\n");
+      strcat(tmp, "Port_in text not null,\n");
+      strcat(tmp, "Host_in text not null\n");
+      strcat(tmp,")");
+      printf("[%s] query >%s<\n",name,tmp);
+
+      if(mysql_query(dbsock, tmp) != 0)
+      {
+	printf("[%s] mysql query error (%s)\n",name,mysql_error(dbsock));
+        return(CODA_ERROR);
+      }
+      else
+      {
+        printf("[%s] mysql query succeeded, table created !\n",name);
+      }
+    }
+  }
+
+  /* convert port numbers to strings */
+  sprintf(ch_port_in,"%d",port_in);
+
+  /* delete all rows with this particular host_in and port_in */
+  sprintf(tmp,"DELETE FROM Streamin WHERE Port_in='%s' AND Host_in='%s'",ch_port_in,host_in);
+  printf("[%s] query >%s<\n",name,tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("[%s] mysql error (%s)\n",name,mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+
+  /* trying to select our name from 'Streamin' table (should never find - it must be deleted on previous step) */
+  sprintf(tmp,"SELECT Name FROM Streamin WHERE Name='%s'",name);
+  printf("[%s] query >%s<\n",name,tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("[%s] mysql error (%s)\n",name,mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+
+  /* gets results from previous query */
+  /* we assume that numRows=0 if our Name does not exist,
+     or numRows=1 if it does exist */
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("[%s] ERROR in mysql_store_result (%)\n",name,mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    mysql_free_result(result);
+
+    printf("[%s] nrow=%d\n",name,numRows);
+    if(numRows == 0)
+    {
+      sprintf(tmp,"INSERT INTO Streamin (Name,Host,Port_in,Host_in) VALUES ('%s','%s','%s','%s')",name,host,ch_port_in,host_in);
+      /*printf("query >%s<\n",tmp);*/
+    }
+    else if(numRows == 1)
+    {
+      sprintf(tmp,"UPDATE Streamin SET Host='%s',Port_in='%s',Host_in='%s' WHERE Name='%s'",host,ch_port_in,host_in,name);
+      /*printf("query >%s<\n",tmp);*/
+    }
+    else
+    {
+      printf("[%s] ERROR: unknown nrow=%d",name,numRows);
+      return(CODA_ERROR);
+    }
+
+    printf("[%s] query >%s<\n",name,tmp);
+
+    if(mysql_query(dbsock, tmp) != 0)
+    {
+      printf("[%s] mysql query error (%s)\n",name,mysql_error(dbsock));
+      return(CODA_ERROR);
+    }
+    else
+    {
+      printf("[%s] mysql query succeeded !\n",name);
+    }
+  }
+
+  dbDisconnect(dbsock);
+
+  return(0);
+}
+
+int
+codaGetStreamin(char *myname, char host[128], int *port_in, char host_in[128])
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  MYSQL_ROW row;
+  char tmp[1000], chport[1000];
+  int i, numRows, nslot;
+
+  /* update daq database 'Ports' table with port number and host name */
+  dbsock = dbConnect(/*mysql_host*/"clondb1", "daq");
+
+  sprintf(tmp,"SELECT Host,Port_in,Host_in FROM Streamin WHERE name='%s'",myname);
+  /*printf("Query: %s",tmp);*/
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("ERROR: cannot select Streamin for name >%s<\n",myname);
+    return(CODA_ERROR);
+  }
+
+  /* gets results from previous query */
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("ERROR in mysql_store_result()\n");
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    /*printf("nrow=%d\n",numRows);*/
+
+    if(numRows == 1)
+    {
+      row = mysql_fetch_row(result);
+      /*for(i=0; i<3; i++) printf("fields [%1d] >>>%s<<<\n",i,row[i]);*/
+
+      strcpy(host,row[0]);
+
+      strcpy(chport,row[1]);
+      *port_in = atoi(chport);
+
+      strcpy(host_in,row[2]);
+      /*
+      printf("codaGetStreamin results: name=>%s< host=>%s< port_in=%d host_in=>%s<\n",myname, host, *port_in, host_in);
+      */
+    }
+    else
+    {
+      printf("ERROR: unknown nrow=%d",numRows);
+      return(CODA_ERROR);
+    }
+
+    mysql_free_result(result);
+  }
+
+  dbDisconnect(dbsock);
+  
+  return(CODA_OK);
+}
+
+
+
+/***********************************************/
+/* handle 'daq_daq' database 'Streamout' table */
+/***********************************************/
+
+int
+codaStreamoutTableUpdate(char *name, char *host, int port_out)
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  int numRows;
+  char tmp[1000], ch_port[80];
+  int res, len, slot;
+
+  dbsock = dbConnect(mysql_host, "daq");
+
+  /* check if table exist; if not, create it */
+  sprintf(tmp,"SHOW TABLES LIKE 'Streamout'");
+  printf("query >%s<\n",tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("mysql error (%s)\n",mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("ERROR in mysql_store_result (%)\n",mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    mysql_free_result(result);
+
+    /*printf("nrow=%d\n",numRows);*/
+    if(numRows == 0) /*table does not exist - create it*/
+    {
+      sprintf(tmp,"CREATE TABLE Streamout (\n");
+      strcat(tmp, "Name text not null,\n");
+      strcat(tmp, "Host text not null,\n");
+      strcat(tmp, "Port_out text not null\n");
+      strcat(tmp,")");
+      printf("query >%s<\n",tmp);
+
+      if(mysql_query(dbsock, tmp) != 0)
+      {
+	    printf("mysql query error (%s)\n",mysql_error(dbsock));
+        return(CODA_ERROR);
+      }
+      else
+      {
+        printf("mysql query succeeded, table created !\n");
+      }
+    }
+  }
+
+  /* trying to select our name from 'Streamin' table */
+  sprintf(tmp,"SELECT Name FROM Streamout WHERE Name='%s'",name);
+  printf("query >%s<\n",tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("mysql error (%s)\n",mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+
+  /* gets results from previous query */
+  /* we assume that numRows=0 if our Name does not exist,
+     or numRows=1 if it does exist */
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("ERROR in mysql_store_result (%)\n",mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    mysql_free_result(result);
+
+    /* convert port numbers to strings */
+    sprintf(ch_port,"%d",port_out);
+
+    /*printf("nrow=%d\n",numRows);*/
+    if(numRows == 0)
+    {
+      sprintf(tmp,"INSERT INTO Streamout (Name,Host,Port_out) VALUES ('%s','%s','%s')",name,host,ch_port);
+      /*printf("query >%s<\n",tmp);*/
+    }
+    else if(numRows == 1)
+    {
+      sprintf(tmp,"UPDATE Streamout SET Host='%s',Port_out='%s' WHERE Name='%s'",host,ch_port,name);
+      /*printf("query >%s<\n",tmp);*/
+    }
+    else
+    {
+      printf("ERROR: unknown nrow=%d",numRows);
+      return(CODA_ERROR);
+    }
+
+    printf("query >%s<\n",tmp);
+
+    if(mysql_query(dbsock, tmp) != 0)
+    {
+      printf("mysql query error (%s)\n",mysql_error(dbsock));
+      return(CODA_ERROR);
+    }
+    else
+    {
+      printf("mysql query succeeded !\n");
+    }
+  }
+
+  dbDisconnect(dbsock);
+
+  return(0);
+}
+
+int
+codaGetStreamout(char *myname, char host[128], int *port_out)
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  MYSQL_ROW row;
+  char tmp[1000], ch_port[80];
+  int i, numRows;
+
+  /* update daq database 'Ports' table with port number and host name */
+  dbsock = dbConnect(/*mysql_host*/"clondb1", "daq");
+
+  sprintf(tmp,"SELECT Host,Port_out FROM Streamout WHERE name='%s'",myname);
+  /*printf("Query: %s",tmp);*/
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("ERROR: cannot select Streamout for name >%s<\n",myname);
+    return(CODA_ERROR);
+  }
+
+  /* gets results from previous query */
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("ERROR in mysql_store_result()\n");
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    //printf("nrow=%d\n",numRows);
+
+    if(numRows == 1)
+    {
+      row = mysql_fetch_row(result);
+      //for(i=0; i<3; i++) printf("fields [%1d] >>>%s<<<\n",i,row[i]);
+
+      strcpy(host,row[0]);
+
+      strcpy(ch_port,row[1]);
+      *port_out = atoi(ch_port);
+
+      //printf("codaGetStreamout results: name=>%s< host=>%s< port_out=>%s<\n",myname, host, port_out);
+    }
+    else
+    {
+      printf("ERROR: unknown nrow=%d",numRows);
+      return(CODA_ERROR);
+    }
+
+    mysql_free_result(result);
+  }
+
+  dbDisconnect(dbsock);
 
   return(CODA_OK);
+}
+
+
+
+
+
+
+
+
+/***********************************************************************/
+/* update daq database 'Streams' table with port numbers and host name */
+/***********************************************************************/
+int
+codaStreamTableUpdate(char *name_in, char *host_in, int port_in, int port_out[21], char *host_out)
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  int numRows;
+  char tmp[1000], *ch;
+  int res, len, slot;
+  char ch_port_in[80], ch_port_out[512];
+
+  /* convert port numbers to strings */
+  sprintf(ch_port_in,"%d",port_in);
+  sprintf(ch_port_out,"%d",port_out[0]);
+  for(slot=1; slot<21; slot++)
+  {
+    len = strlen(ch_port_out);
+    sprintf((char *)&ch_port_out[len],":%d",port_out[slot]);
+  }
+
+  dbsock = dbConnect(mysql_host, "daq");
+
+  /* trying to select our name from 'Streams' table */
+  sprintf(tmp,"SELECT Name FROM Streams WHERE Name='%s'",name_in);
+  printf("query >%s<\n",tmp);
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+	printf("mysql error (%s)\n",mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+
+  /* gets results from previous query */
+  /* we assume that numRows=0 if our Name does not exist,
+     or numRows=1 if it does exist */
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("ERROR in mysql_store_result (%)\n",mysql_error(dbsock));
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    mysql_free_result(result);
+
+    /*printf("nrow=%d\n",numRows);*/
+    if(numRows == 0)
+    {
+      sprintf(tmp,"INSERT INTO Streams (Name,Host,Ports_in,Ports_out,Host_out) VALUES ('%s','%s','%s','%s','%s')",name_in,host_in,ch_port_in,ch_port_out,host_out);
+      /*printf("query >%s<\n",tmp);*/
+    }
+    else if(numRows == 1)
+    {
+      sprintf(tmp,"UPDATE Streams SET Host='%s',Ports_in='%s',Ports_out='%s',Host_out='%s' WHERE Name='%s'",host_in,ch_port_in,ch_port_out,host_out,name_in);
+      /*printf("query >%s<\n",tmp);*/
+    }
+    else
+    {
+      printf("ERROR: unknown nrow=%d",numRows);
+      return(CODA_ERROR);
+    }
+
+    printf("query >%s<\n",tmp);
+
+    if(mysql_query(dbsock, tmp) != 0)
+    {
+	  printf("mysql query error (%s)\n",mysql_error(dbsock));
+      return(CODA_ERROR);
+    }
+    else
+    {
+      printf("mysql query succeeded !\n");
+    }
+  }
+
+  dbDisconnect(dbsock);
+
+  return(0);
+}
+
+int
+codaGetStreams(char *myname, char host[128], int *port_in, int port_out[21], char host_out[128])
+{
+  MYSQL *dbsock;
+  MYSQL_RES *result;
+  MYSQL_ROW row;
+  char tmp[1000], chport[1000];
+  int i, numRows, nslot;
+
+  /* update daq database 'Ports' table with port number and host name */
+  dbsock = dbConnect(/*mysql_host*/"clondb1", "daq");
+
+  sprintf(tmp,"SELECT Host,Ports_in,Ports_out,Host_out FROM Streams WHERE name='%s'",myname);
+  /*printf("Query: %s",tmp);*/
+  if(mysql_query(dbsock, tmp) != 0)
+  {
+    printf("ERROR: cannot select Streams for name >%s<\n",myname);
+    return(CODA_ERROR);
+  }
+
+  /* gets results from previous query */
+  if( !(result = mysql_store_result(dbsock)) )
+  {
+    printf("ERROR in mysql_store_result()\n");
+    return(CODA_ERROR);
+  }
+  else
+  {
+    numRows = mysql_num_rows(result);
+    /*printf("nrow=%d\n",numRows);*/
+
+    if(numRows == 1)
+    {
+      row = mysql_fetch_row(result);
+      /*for(i=0; i<4; i++) printf("fields [%1d] >>>%s<<<\n",i,row[i]);*/
+
+      strcpy(host,row[0]);
+
+      strcpy(chport,row[1]);
+      *port_in = atoi(chport);
+
+      strcpy(chport,row[2]);
+      /* parse port string (separator is ":") */
+	  {
+	    char *p, *separator = ":", chtmp[30];
+
+        nslot = 0;
+        p = strtok(chport,separator);
+        while(p != NULL)
+        {
+          strcpy(chtmp, p);
+          port_out[nslot] = atoi(chtmp);
+          nslot ++;
+          if(nslot > 21)
+	      {
+            printf("codaGetStreams ERROR: too many slots, nslot=%d\n",nslot);
+            return(0);
+	      }
+          p = strtok(NULL,separator);
+        }
+	  }
+
+      strcpy(host_out,row[3]);
+	  /*
+      printf("codaGetStreams results: name=>%s< host=>%s< port_in=%d port_out=%d %d %d ... %d %d (nslot=%d) host_out=>%s<\n",
+			 myname, host, *port_in, port_out[0],port_out[1],port_out[2],port_out[19],port_out[20],nslot,host_out);
+	  */
+    }
+    else
+    {
+      printf("ERROR: unknown nrow=%d",numRows);
+      return(CODA_ERROR);
+    }
+
+    mysql_free_result(result);
+  }
+
+  dbDisconnect(dbsock);
+  
+  return(CODA_OK);
+}
+
+
+
+
+
+
+
+
+#define FNLEN     256       /* length of config. file name */
+#define STRLEN    256       /* length of str_tmp */
+#define ROCLEN    256       /* length of ROC_name */
+
+static int
+isBlankLine(char *str)
+{
+  char *ch;
+  int is_blank = 1;
+
+  for(ch=str; *ch != '\0'; ++ch)
+  {
+    if(!isspace(*ch)) /* found non-whitespace character */
+	{
+      is_blank = 0;
+      break;
+	}
+  }
+
+  return(is_blank);
+}
+
+
+static int
+writeStringToFile(char *str_tmp, FILE *fdout)
+{
+  static char str[STRLEN];
+  static int first=1;
+
+
+  if(str_tmp != NULL)
+  {
+    fputs(str_tmp,fdout);
+    /*printf("== writing %s\n",str);*/
+  }
+
+
+#if 0
+  /* if string is NULL, rearm */
+  if(str_tmp==NULL)
+  {
+    first=1;
+    printf("writeStringToFile rearmed\n");
+    return(0);
+  }
+
+  if(isBlankLine(str_tmp))
+  {
+    printf("== skipping blank line\n");
+    return(0);
+  }
+
+  if(first==0)
+  {
+    fputs(str,fdout);
+    /*printf("== writing %s\n",str);*/
+  }
+
+  strcpy(str,str_tmp);
+
+  if(first==1) first=0;
+#endif
+
+  return(0);
 }
 
 
@@ -2102,7 +3664,7 @@ UDP_start()
   if(dbGetInt(dbsock, tmpp, &udpport)==CODA_ERROR) return(CODA_ERROR);
 
   printf("114\n");fflush(stdout);
-  printf("UDP_start: UDP host is >%s< port id %d\n",udphost,udpport);fflush(stdout);
+  printf("download: UDP host is >%s< port id %d\n",udphost,udpport);fflush(stdout);
 
   dbDisconnect(dbsock);
 
@@ -2165,22 +3727,22 @@ UDP_start()
 
 
     while((udp_loop_ready==0) && (iii>0))
-    {
+	{
       printf("UDP_start: waiting for udp_loop to start %d sec ...\n",iii);
       sleep(1);
       iii --;
-    }
+	}
 
     if(udp_loop_ready) printf("UDP_start: udp_loop started\n");
     else
-    {
+	{
       printf("FATAL ERROR: UDP_start: udp_loop could not start !!!!!!!!!!!!\n");
       printf("FATAL ERROR: UDP_start: udp_loop could not start !!!!!!!!!!!!\n");
       printf("FATAL ERROR: UDP_start: udp_loop could not start !!!!!!!!!!!!\n");
       printf("FATAL ERROR: UDP_start: udp_loop could not start !!!!!!!!!!!!\n");
       printf("FATAL ERROR: UDP_start: udp_loop could not start !!!!!!!!!!!!\n");
       return(-1);
-    }
+	}
 
   }
 
@@ -2239,7 +3801,7 @@ CODAtcpServer(void)
   int sockAddrSize;              /* size of socket address structure */ 
   int sFd;                       /* socket file descriptor */ 
   int ix = 0;                    /* counter for work task names */
-  int portnum = SERVER_PORT_NUM; /* desired port number; can be changed if that number in use etc */
+  int portnum = SERVER_PORT_NUM; /* desired port number; can be changed if that number in use enc */
   char workName[16];             /* name of work task */ 
   static TWORK targ;
   MYSQL *dbsock;
@@ -2267,11 +3829,6 @@ CODAtcpServer(void)
   serverAddr.sin_addr.s_addr = htonl(INADDR_ANY); /* create a TCP-based socket (???) */ 
 
 
-  /*NOTE: Another option is to specify port 0 to bind(). That will allow you to bind to a specific IP address
-          (in case you have multiple installed) while still binding to a random port. If you need to know which
-           port was picked, you can use getsockname() after the binding has been performed.
-  */
-
   /* bind socket to local address */
   while(bind(sFd, (struct sockaddr *)&serverAddr, sockAddrSize) == ERROR)
   {
@@ -2282,14 +3839,13 @@ CODAtcpServer(void)
     printf(" ... trying port %d\n",portnum);
     if((portnum-SERVER_PORT_NUM) > 200)
     {
-      printf("CODAtcpServer: Tried 200 ports - gave up and returned\n");fflush(stdout);
       close(sFd); 
       return(ERROR);
     }
 
     serverAddr.sin_port = htons(portnum);
   }
-  printf("CODAtcpServer: bind on port %d\n",portnum);fflush(stdout);
+  printf("CODAtcpServer: bind on port %d\n",portnum);
 
   /* create queue for client connection requests */ 
   if(listen(sFd, SERVER_MAX_CONNECTIONS) == ERROR)
@@ -2298,22 +3854,27 @@ CODAtcpServer(void)
     close(sFd); 
     return(ERROR); 
   }
-  printf("CODAtcpServer: listening on port %d\n",portnum);fflush(stdout);
 
   /* update database with port number */
   dbsock = dbConnect(mysql_host, expid);
+  if(dbsock==NULL)
+  {
+    printf("CODAtcpServer: cannot connect to the database\n");fflush(stdout);
+    return(ERROR);
+  }
+
   sprintf(temp,"%d",portnum);
 
   /* use 'inuse' field; replace 'inuse' by 'port' when DP_ask not in use !!! */
-  sprintf(tmp,"UPDATE process SET inuse='%s' WHERE name='%s'",temp,localobject->name);
+  sprintf(tmp,"UPDATE process SET inuse='%s' WHERE name='%s'",
+    temp,localobject->name);
 
   printf("CODAtcpServer: DB update: >%s<\n",tmp);
   if(mysql_query(dbsock, tmp) != 0)
   {
-    printf("CODAtcpServer: DB update: ERROR\n");fflush(stdout);
+    printf("CODAtcpServer: DB update: ERROR\n");
     return(ERROR);
   }
-  printf("CODAtcpServer: DB updated\n");fflush(stdout);
   dbDisconnect(dbsock);
 
   coda_request_in_progress = 0;
@@ -2326,7 +3887,7 @@ CODAtcpServer(void)
     many requests may create network buffer shortage */
     if(coda_request_in_progress)
     {
-      printf("CODAtcpServer: wait: coda request >%s< in progress\n",coda_current_message);
+      //printf("CODAtcpServer: wait: coda request >%s< in progress\n",coda_current_message);
       sleep(1);
 
       continue;
@@ -2354,17 +3915,16 @@ printf("WorkTask: alloc 0x%08x\n",targ.address);fflush(stdout);
 
     coda_request_in_progress = 1;
     printf("CODAtcpServer: start work thread\n");
-	{
+    {
       int ret;
-	  pthread_t id;
+      pthread_t id;
       pthread_attr_t detached_attr;
 
       pthread_attr_init(&detached_attr);
       pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED);
       pthread_attr_setscope(&detached_attr, PTHREAD_SCOPE_SYSTEM);
 
-      printf("CODAtcpServer: befor: socket=%d address>%s< port=%d\n",
-        targ.newFd,targ.address,targ.port); fflush(stdout);
+      printf("CODAtcpServer: befor: socket=%d address>%s< port=%d\n",targ.newFd,targ.address,targ.port); fflush(stdout);
 
       /* block annoying IP address(es) */
 	  /* is it better ???
@@ -2376,38 +3936,39 @@ printf("WorkTask: alloc 0x%08x\n",targ.address);fflush(stdout);
           strncmp(address,"129.57.29.",10) )
 	  */
       if(!strncmp(targ.address,"129.57.71.",10))
-	  {
-        printf("CODAtcpServer: WARN: ignore request from %s\n",targ.address);
+      {
+	printf("1\n");fflush(stdout);
+        printf("CODAtcpServer: WARN: ignore request from %s\n",targ.address);fflush(stdout);
         close(targ.newFd);
         coda_request_in_progress = 0;
-	  }
+      }
       else
-	  {
+      {
+	printf("2\n");fflush(stdout);
         ret = pthread_create(&id, &detached_attr, (void *(*)(void *)) CODAtcpServerWorkTask, &targ);
+	printf("3\n");fflush(stdout);
         if(ret!=0)
         {
-          printf("CODAtcpServer: ERROR: pthread_create(CODAtcpServerWorkTask) returned %d\n",
-            ret);
+ 	  printf("4\n");fflush(stdout);
+          printf("CODAtcpServer: ERROR: pthread_create(CODAtcpServerWorkTask) returned %d\n",ret);
           close(targ.newFd);
           coda_request_in_progress = 0;
         }
-		/*
-		else
-		{
+	else
+	{
+	  printf("CODAtcpServer: INFO: pthread CODAtcpServerWorkTask created\n");fflush(stdout);
 #ifdef Linux
-      pthread_setname_np(&id, "coda_er");
+          //pthread_setname_np(&id, "coda_er");
 #endif
-	      ;
-		}
-		*/
-	  }
 	}
- 
+      }
+    }
   }
 
   /* here we will remove port number from DB ??? */ 
   /* or do it in destructor ?? */
-
+  printf("CODAtcpServer done\n");fflush(stdout);
+  
   return(0);
 }
 
@@ -2429,6 +3990,11 @@ CODAtcpServerWorkTask(TWORK *targ)
   int itmp;
 #ifdef Linux
   char thread_name[1024];
+  
+  printf("11\n");fflush(stdout);
+
+  printf("CODAtcpServerWorkTask reached\n");fflush(stdout);
+  
   sprintf(thread_name,"w%s:%d\0",(char *)&targ->address[6], targ->port);
   prctl(PR_SET_NAME,thread_name);
   /*prctl(PR_SET_NAME,"coda_er1");*/
@@ -2501,8 +4067,7 @@ CODAtcpServerWorkTask(TWORK *targ)
 /* flag=0: use ' ' as dividers */
 /* flag=1: use {} as dividers */
 int
-listSplit1(char *list, int flag,
-           int *argc, char argv[LISTARGV1][LISTARGV2])
+listSplit1(char *list, int flag, int *argc, char argv[LISTARGV1][LISTARGV2])
 {
   int i, i1, i2, len, k, ll;
 
@@ -2695,13 +4260,13 @@ gethrtimetest()
      ./tcpClient EB5 'download test_ts2'
 */
 
-int codaInit(char *confname);
-int codaDownload(char *confname);
-int codaPrestart();
-int codaGo();
-int codaEnd();
-int codaPause();
-int codaExit();
+extern int codaInit(char *confname);
+extern int codaDownload(char *confname);
+extern int codaPrestart();
+extern int codaGo();
+extern int codaEnd();
+extern int codaPause();
+extern int codaExit();
 
 /* example
 
@@ -2810,6 +4375,9 @@ codaExecute(char *command)
   else if( !strncmp(message, "exit", 4) )
   {
     printf("codaExecute: 'exit' transition\n");
+
+    UDP_cancel_errors(); /*clean all error messages*/
+
     codaExit();
   }
   else if( !strncmp(message, "alive", 5) )
@@ -2827,11 +4395,18 @@ codaExecute(char *command)
 }
 
 
+
+
+
+
+
+
+/*************************************************************/
+/******************** LONG WORDS FUNCTIONS *******************/
 /* to handle 128-bit words, needed by event building process */
 
 #define MY_INT_BIT 32
 
-/*print highest bit on the right !*/
 static void
 Print32(unsigned int k)
 {
@@ -2854,15 +4429,14 @@ Print32(unsigned int k)
   return;
 }
 
-/*print highest bit on the right !*/
 void
 Print128(WORD128 *hw)
 {
   int i;
   uint32_t *w;
   w = (uint32_t *)hw->words;
-  printf("128> ");
-  for(i=3; i>=0; i--) {Print32(w[i]); printf(" ");}
+  printf("> ");
+  for(i=(NINTS-1); i>=0; i--) {Print32(w[i]); printf(" ");}
   printf("\n");
 
   return;
@@ -2874,9 +4448,13 @@ String128(WORD128 *hw, char *str, int len)
   int i;
   uint32_t *w;
   w = (uint32_t *)hw->words;
-  if(len>50)
+  if(len>90)
   {
+#ifdef USE_128
     sprintf(str,"0x%08x 0x%08x 0x%08x 0x%08x",w[3],w[2],w[1],w[0]);
+#else
+    sprintf(str,"0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x",w[7],w[6],w[5],w[4],w[3],w[2],w[1],w[0]);
+#endif
   }
   else
   {
@@ -2892,7 +4470,7 @@ Copy128(WORD128 *hws, WORD128 *hwd)
   int i;
   uint32_t *a = (uint32_t *)hws->words;
   uint32_t *b = (uint32_t *)hwd->words;
-  for(i=0; i<4; i++) b[i] = a[i];
+  for(i=0; i<NINTS; i++) b[i] = a[i];
   return;
 }
 
@@ -2903,7 +4481,7 @@ AND128(WORD128 *hwa, WORD128 *hwb, WORD128 *hwc)
   uint32_t *a = (uint32_t *)hwa->words;
   uint32_t *b = (uint32_t *)hwb->words;
   uint32_t *c = (uint32_t *)hwc->words;
-  for(i=0; i<4; i++) c[i] = a[i] & b[i];
+  for(i=0; i<NINTS; i++) c[i] = a[i] & b[i];
   return;
 }
 
@@ -2914,7 +4492,7 @@ OR128(WORD128 *hwa, WORD128 *hwb, WORD128 *hwc)
   uint32_t *a = (uint32_t *)hwa->words;
   uint32_t *b = (uint32_t *)hwb->words;
   uint32_t *c = (uint32_t *)hwc->words;
-  for(i=0; i<4; i++) c[i] = a[i] | b[i];
+  for(i=0; i<NINTS; i++) c[i] = a[i] | b[i];
   return;
 }
 
@@ -2925,7 +4503,7 @@ XOR128(WORD128 *hwa, WORD128 *hwb, WORD128 *hwc)
   uint32_t *a = (uint32_t *)hwa->words;
   uint32_t *b = (uint32_t *)hwb->words;
   uint32_t *c = (uint32_t *)hwc->words;
-  for(i=0; i<4; i++) c[i] = a[i] ^ b[i];
+  for(i=0; i<NINTS; i++) c[i] = a[i] ^ b[i];
   return;
 }
 
@@ -2953,6 +4531,7 @@ SetBit128(WORD128 *hw, int n)
   whatword = n / MY_INT_BIT;
   whatbit = n % MY_INT_BIT;
   mask <<= whatbit;
+  //printf("SetBit128: n=%d, whatword=%d, whatbit=%d, mask=0x%x\n",n,whatword,whatbit,mask);fflush(stdout);
   w[whatword] |= mask;
 
   return;
@@ -2964,9 +4543,9 @@ EQ128(WORD128 *hwa, WORD128 *hwb)
   int i;
   uint32_t *a = (uint32_t *)hwa->words;
   uint32_t *b = (uint32_t *)hwb->words;
-  for(i=0; i<4; i++)
+  for(i=0; i<NINTS; i++)
   {
-	/*printf("i=%d->%d %d\n",i,a[i],b[i]);*/
+    /*printf("i=%d->%d %d\n",i,a[i],b[i]);*/
     if(a[i]!=b[i]) return(0);
   }
   return(1);
@@ -2977,7 +4556,7 @@ IFZERO128(WORD128 *hwa)
 {
   int i;
   uint32_t *a = (uint32_t *)hwa->words;
-  for(i=0; i<4; i++)
+  for(i=0; i<NINTS; i++)
   {
     if(a[i]!=0) return(0);
   }
@@ -2998,6 +4577,255 @@ Negate128(WORD128 *hw)
   int i;
   uint32_t *w;
   w = hw->words;
-  for(i=0; i<4; i++) w[i] = ~w[i];
+  for(i=0; i<NINTS; i++) w[i] = ~w[i];
   return;
 }
+
+
+/******************** LONG WORDS FUNCTIONS *******************/
+/*************************************************************/
+
+/* some service routines */
+
+
+/* swap big buffer; called by network thread on receiving buffer from ROC */
+int
+bufferSwap(unsigned int *cbuf, int nlongs)
+{
+  unsigned int lwd, t1, t2;
+  int ii, jj, kk, ix;
+  int tlen, blen, dtype, typ, num;
+  short shd;
+  char cd;
+  char *cp;
+  short *sp;
+  unsigned int *lp;
+
+  ii = 0;
+
+  /* swap buffer header: BBHEAD words */
+  lp = (unsigned int *)&cbuf[ii];
+  for(jj=0; jj<BBHEAD; jj++)
+  {
+    lwd = LSWAP(*lp);
+    *lp++ = lwd;
+  }
+  ii += BBHEAD;
+
+  /*
+#ifdef DEBUG
+  printf("\nbufferSwap: buffer header: length=%d words, buffer#=%d, rocid=%d, #events=%d, fd/magic=0x%08x, end=%d\n",
+		 cbuf[BBIWORDS],cbuf[BBIBUFNUM],cbuf[BBIROCID],cbuf[BBIEVENTS],cbuf[BBIFD],cbuf[BBIEND]);
+#endif
+  */
+
+#ifdef DEBUG
+  /* print CODA fragments 
+  kk = ii;
+  while(kk<nlongs)
+  {
+    lp = (unsigned int *)&cbuf[kk];
+
+    lwd = LSWAP(*lp);
+    lp++;
+    blen = lwd - 1;
+	t1=lwd;
+	
+	printf("CODA fragment: length = %d, current kk=%d, ",blen+1,kk);
+	
+    lwd = LSWAP(*lp);
+    lp++;
+    num = lwd&0xff;
+    dtype = (lwd>>8)&0x3f;
+    typ = (lwd>>16)&0xff;
+	t2=lwd;
+	
+	printf("2nd word(0x%08x): tag=%d, dtype=%d, num=%d\n",lwd,typ,dtype,num);
+	
+    kk += 2;
+
+    if(blen == 0) continue;
+
+    if(dtype != DT_BANK)
+    {
+	  switch(dtswap[dtype])
+      {
+        case 0:
+		  printf("case 0: no swap\n");
+	      kk += blen;
+	    break;
+
+        case 1:
+		  printf("case 1: short swap\n");
+	      kk += blen;
+	      break;
+
+        case 2:
+		  printf("case 2: int swap, deflt=%d\n",deflt);
+	      kk += blen;
+	      break;
+
+        case 3:
+		  printf("case 3: double swap\n");
+	      kk += blen;
+	      break;
+
+        case 4:
+		  printf("case 4: composite swap, blen=%d\n",blen);fflush(stdout);
+	      kk += blen;
+		  break;
+
+        case 5:
+		  printf("case 5: bank of banks swap - do nothing (header swapped already)\n");
+		  break;
+
+        default:
+		  printf("default: no swap\n");
+	      kk += blen;
+      }
+    }
+    else
+    {
+      printf("DT_BANK: dtype=0x%08x\n",dtype);
+    }
+  }
+  */
+#endif
+
+
+  /* swap CODA fragments */
+  while(ii<nlongs)
+  {
+    lp = (unsigned int *)&cbuf[ii];
+
+    lwd = LSWAP(*lp);    /* Swap the CODA fragment length */
+    *lp++ = lwd;
+    blen = lwd - 1;
+    t1=lwd;
+	
+#ifdef DEBUG
+    printf("bufferSwap: length = %d, current ii=%d, ",blen+1,ii);
+#endif
+	
+    lwd = LSWAP(*lp);    /* Swap the CODA fragment header */
+    *lp++ = lwd;
+    num = lwd&0xff;
+    dtype = (lwd>>8)&0x3f/*0xff*/;
+    typ = (lwd>>16)&0xff;
+    t2=lwd;
+	
+#ifdef DEBUG
+    printf("bufferSwap: 2nd word(0x%08x): tag=%d, dtype=%d, num=%d\n",lwd,typ,dtype,num);
+#endif
+	
+    ii += 2;
+
+    if(blen == 0) continue; /* nothing to do with empty fragment */
+
+    if(dtype != DT_BANK)
+    {
+      switch(dtswap[dtype])
+      {
+        case 0:
+#ifdef DEBUG
+	  printf("bufferSwap: case 0: no swap\n");
+#endif
+	  /*
+	  printf("ii=%d nlongs=%d 0x%08x 0x%08x)\n",ii,nlongs,t1,t2);
+	  {
+            FILE *fd;
+            int iii;
+            fd = fopen("/home/boiarino/abc.txt","w");
+            for(iii=0; iii<ii; iii++) fprintf(fd,"[%6d] 0x%08x\n",iii,cbuf[iii]);
+            fclose(fd);
+	  }
+	  exit(0);
+	  */
+	  /* No swap */
+	  ii += blen;
+	  break;
+
+        case 1:
+#ifdef DEBUG
+	  printf("bufferSwap: case 1: short swap\n");
+#endif
+	  /* short swap */
+	  sp = (short *)&cbuf[ii];
+	  for(jj=0; jj<(blen<<1); jj++)
+          {
+	    shd = SSWAP(*sp);
+	    *sp++ = shd;
+	   }
+	   ii += blen;
+	   break;
+
+        case 2:
+#ifdef DEBUG
+	  printf("bufferSwap: case 2: int swap, deflt=%d\n",deflt);
+#endif
+          /* int swap */
+          lp = (unsigned int *)&cbuf[ii];
+          for(jj=0; jj<blen; jj++)
+          {
+            lwd = LSWAP(*lp);
+            *lp++ = lwd;
+          }
+	  ii += blen;
+	  break;
+
+        case 3:
+#ifdef DEBUG
+	  printf("bufferSwap: case 3: double swap\n");
+#endif
+	  /* double swap */
+	  lp = (unsigned int *)&cbuf[ii];
+	  for(jj=0; jj<blen; jj++)
+          {
+	    lwd = LSWAP(*lp);
+	    *lp++ = lwd;
+	  }
+	  ii += blen;
+	  break;
+
+        case 4:
+#ifdef DEBUG
+	  printf("bufferSwap: case 4: composite swap, blen=%d\n",blen);fflush(stdout);
+#endif
+
+	  /*
+lp = (unsigned int *)&cbuf[ii+blen];
+printf("befor: 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",lp[0],lp[1],lp[2],lp[3],lp[4],lp[5],lp[6],lp[7],lp[8],lp[9]);
+	  */
+	  lp = (unsigned int *)&cbuf[ii];
+          swap_composite_t(lp, 1, NULL);
+	  /*
+          printf("case 4: composite swap done\n");fflush(stdout);
+	  */
+	  /*
+lp = (unsigned int *)&cbuf[ii+blen];
+printf("after: 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",lp[0],lp[1],lp[2],lp[3],lp[4],lp[5],lp[6],lp[7],lp[8],lp[9]);
+	  */
+	  ii += blen;
+	  break;
+
+        case 5:
+#ifdef DEBUG
+	  printf("bufferSwap: case 5: bank of banks swap - do nothing (header swapped already)\n");
+#endif
+	  break;
+
+        default:
+	  printf("bufferSwap: default: no swap\n");
+	  /* No swap */
+	  ii += blen;
+      }
+    }
+    else
+    {
+      /*printf("bufferSwap: DT_BANK: dtype=0x%08x\n",dtype)*/;
+    }
+  }
+
+  return(0);
+}
+

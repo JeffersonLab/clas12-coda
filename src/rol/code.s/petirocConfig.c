@@ -8,8 +8,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <ctype.h>
+
 #include "petirocConfig.h"
 #include "xxxConfig.h"
+#include "codautil.h"
 
 static int active;
 static int npetiroc;
@@ -92,10 +94,9 @@ petirocReadConfigFile(char *filename_in)
   char *clonparms;
   int do_parsing, error, argc;
 
-  gethostname(host,ROCLEN);  /* obtain our hostname */
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
   printf("CLON_PARMS=>%s< from environment\n",clonparms);fflush(stdout);
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");

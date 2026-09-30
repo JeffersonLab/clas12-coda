@@ -1666,7 +1666,7 @@ codaDownload(char *conf)
   */
   {
     int  arg1c;
-    char arg1v[10][256];
+    char arg1v[LISTARGV1][LISTARGV2];
     char *p_sl;
     listSplit2(tmpp,(char *)" ",&arg1c,arg1v);
     printf("\nfirst split, arg1c=%d, first piece >%s<\n",arg1c,arg1v[0]);

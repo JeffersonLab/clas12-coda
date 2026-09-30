@@ -21,8 +21,10 @@
 #include "jvme.h"
 #endif
 
-#define MYCLOCK NANOMICRO
+//now in Makefile
+//#define USE_SRO 
 
+#define MYCLOCK NANOMICRO
 
 static pthread_t iTaskROL;
 static pthread_t iTaskPROC;
@@ -43,6 +45,50 @@ int tcpServer(char *name, char *mysqlhost);
 
 #include "roc_process.h"
 #include "roc_network.h"
+
+#define ABS(x)   ((x) < 0 ? -(x) : (x))
+
+#define TIMERL_VAR \
+  static hrtime_t startTim, stopTim, dTim; \
+  static int nTim; \
+  static hrtime_t Tim, rmsTim, minTim=10000000, maxTim, normTim=1
+
+#define TIMERL_START \
+{ \
+  startTim = gethrtime(); \
+}
+
+#define TIMERL_STOP(whentoprint_macros,id_macros) \
+{ \
+  stopTim = gethrtime(); \
+  if(stopTim > startTim) \
+  { \
+    nTim ++; \
+    dTim = stopTim - startTim; \
+    /*if(histid_macros >= 0)   \
+    { \
+      uthfill(histi, histid_macros, (int)(dTim/normTim), 0, 1); \
+    }*/														\
+    Tim += dTim; \
+    rmsTim += dTim*dTim; \
+    minTim = minTim < dTim ? minTim : dTim; \
+    maxTim = maxTim > dTim ? maxTim : dTim; \
+    /*logMsg("good: %d %ud %ud -> %d\n",nTim,startTim,stopTim,Tim,5,6);*/ \
+    if(nTim == whentoprint_macros) \
+    { \
+      printf("coda_roc[%d]: %7llu microsec (min=%7llu max=%7llu rms**2=%7llu)\n", id_macros, \
+                Tim/nTim/normTim,minTim/normTim,maxTim/normTim, \
+                ABS(rmsTim/nTim-Tim*Tim/nTim/nTim)/normTim/normTim);	\
+      nTim = Tim = 0; \
+    } \
+  } \
+  else \
+  { \
+    /*logMsg("bad:  %d %ud %ud -> %d\n",nTim,startTim,stopTim,Tim,5,6);*/ \
+  } \
+}
+
+
 
 
 static unsigned int tloop1=0;
@@ -309,16 +355,6 @@ rocIdprint()
 
 
 
-
-
-
-
-
-
-
-
-
-
 /****************************************************************************/
 /************************************ ROC ***********************************/
 
@@ -326,8 +362,8 @@ int
 roc_constructor()
 {
   int ix, res;
-  unsigned int maxAvailBytes = 0;
-  unsigned int maxNeededBytes = 0;
+  uint64_t maxAvailBytes = 0;
+  uint64_t maxNeededBytes = 0;
   rocParam rocp;
   char tmp[400];
 
@@ -346,8 +382,10 @@ roc_constructor()
 
 
 #ifdef Linux_vme
+#if 0
   printf("\n\n ======= clear dma memory ===================================\n");
   bb_dma_free();
+#endif
 
   printf("\n\n coda_roc: ======= Close the default VME windows =========\n\n");
   /*vmeCloseA32Slave();*/
@@ -363,14 +401,21 @@ roc_constructor()
 
   /* memory size we need */
   maxNeededBytes =
-    SEND_BUF_SIZE*NUM_SEND_BUFS*2 /* multiply by 2 because need pool for proc and net */
+    ((uint64_t)SEND_BUF_SIZE) * NUM_SEND_BUFS * 2 /* multiply by 2 because need pool for proc and net */
     + MIN_MEM_LEFT;
-  printf("min=0x%08x (bufs 0x%08x x %d x 2, mem=0x%08x)\n",
+  printf("min=0x%lx (bufs 0x%lx x %d x 2, mem=0x%lx)\n",
     maxNeededBytes,SEND_BUF_SIZE,NUM_SEND_BUFS,MIN_MEM_LEFT);
 
-  maxAvailBytes = SEND_BUF_SIZE * NUM_SEND_BUFS;
+
+
+
+  //printf("Available memory = %lu\n",mem_avail());
+
+
+  maxAvailBytes = ((uint64_t)SEND_BUF_SIZE) * NUM_SEND_BUFS;
+
   tsendBufSize = SEND_BUF_SIZE;
-  printf("INFO: wants=0x%08x, maxAvailBytes=0x%08x, create=0x%08x\n",
+  printf("INFO: wants=0x%lx, maxAvailBytes=0x%lx, create=0x%lx\n",
       maxNeededBytes, maxAvailBytes, tsendBufSize);
 
   /* create input 'big' buffer pools for 'proc' and 'net'; input to the 'net' will be
@@ -416,12 +461,12 @@ bla1
   }
   else
   {
-    printf("bb_new: gbigBUF allocated at 0x%08x\n",gbigBUF);
+    printf("bb_new: gbigBUF allocated at 0x%08x, size %d MByte\n",(gbigBUF,2*NUM_SEND_BUFS*tsendBufSize)/1024/1024);
   }
 
 
 
-  printf("=== %d %d\n",tcpState,rocp->state);
+  printf("roc_constructor === %d %d\n",tcpState,rocp->state);
 
   if(codaUpdateStatus("booted") != CODA_OK) return(CODA_ERROR);
 
@@ -737,10 +782,11 @@ codaDownload(char *confname)
   MYSQL *dbsock;
   MYSQL_RES *result;
   MYSQL_ROW row;
-  char tmp[1000], tmpp[1000];
+  char tmp[1000], tmpp[1000], *ch;
   rocParam rocp;
   ROLPARAMS *rolP;
-  int res, ix, state;
+  int res, ix, jx, state;
+  char rolnames[MAX_NUM_ROLS][LISTARGV2], rolparams[MAX_NUM_ROLS][LISTARGV2];
 
   TRANSITION_LOCK;
   if(codaUpdateStatus("downloading") != CODA_OK)
@@ -795,19 +841,19 @@ codaDownload(char *confname)
     }
 
     if(ii<0)
-	{
+    {
       printf("WARN: cannot exit rols_loop gracefully, will kill it\n");
       /* TODO: delete rols_loop thread */
       sleep(1);
 
       rols_loop_exit = 0; /* to let new ROLS_LOOP to start */
-	}
+    }
 
     TRANSITION_LOCK;
 
     /* cleanup ROL1 */
     if((rolP = rocp->rolPs[0]) != NULL)
-	{
+    {
       /* ROL1: Delete buffer pools */
       if(rolP->inited)
       {
@@ -824,7 +870,7 @@ codaDownload(char *confname)
       }
 
       rocp->rolPs[0] = NULL;
-	}
+    }
   }
 
 printf("31: >%s< >%s<\n",mysql_host, expid);fflush(stdout);
@@ -902,7 +948,7 @@ printf("3123: tmpp>%s<\n",tmpp);fflush(stdout);
     printf("nrow=%d\n",numRows);
 
     if(numRows == 1)
-	{
+    {
       row = mysql_fetch_row(result);
       printf("download: name >%s<\n",row[0]);
       strcpy(tmpp, row[0]);
@@ -925,239 +971,166 @@ printf("3123: tmpp>%s<\n",tmpp);fflush(stdout);
   }
 
 
-  /***************************************************/
-  /* get the list of readout-lists from the database */
-  /***************************************************/  
-  sprintf(tmpp,"SELECT code FROM %s WHERE name='%s'",confname,object->name);
-  if(mysql_query(dbsock, tmpp) != 0)
-  {
-    printf("ERROR: cannot select code from %s\n",confname);
-    TRANSITION_UNLOCK;
-    return(CODA_ERROR);
-  }
-  else
-  {
-    printf("code selected\n");
-  }
 
 
 
-  /* gets results from previous query */
-  if( !(result = mysql_store_result(dbsock)) )
+  /*get readout lists from database*/
+  nrols = codaGetReadoutLists(confname, object->name, rolnames, rolparams);
+  if(nrols<=0) exit(0);
+  printf("[%2d] download: name=%s, nrols=%d\n",ix,object->name,nrols);fflush(stdout);
+  for(ii=0; ii<nrols; ii++) printf("download:   rol[%d]: name=%s, usr=%s\n",ii,rolnames[ii],rolparams[ii]);fflush(stdout);
+  
+    
+  /* the number of ROLs for coda_roc.c cannot exceed 2 */
+  if(nrols==0)
   {
-    printf("download: ERROR in mysql_store_result()\n");
-    TRANSITION_UNLOCK;
-    return(CODA_ERROR);
+    printf("codaDownload: ERROR: cannot download readout list(s) - exit\n");
+    exit(0);
   }
-  else
+  else if(nrols>2)
   {
-    numRows = mysql_num_rows(result);
-    printf("nrow=%d\n",numRows);
-    if(numRows == 1)
+    printf("codaDownload: INFO: nrols=%d, set it to 2\n",nrols);
+    nrols = 2;
+  }
+
+  /* if second rol is 'none', ignore it */
+  if( (nrols==2) && (strcmp(rolnames[1],"none")==0) )
+  {
+    printf("codaDownload: INFO: second rol is 'none', set nrols to 1\n");
+    nrols = 1;
+  }
+
+  /* set ROCid */
+  this_roc_id = object->codaid;
+  bigproc.rocid = this_roc_id;
+  bignet.rocid = this_roc_id;
+  printf("codaDownload: set this_roc_id = %d, rocId() can be called from now on\n",this_roc_id);
+
+  
+  /* loop over readout lists */
+  for(ix=0, jx=0; ix<nrols; ix++, jx++)
+  {
+    rolP = rocp->rolPs[jx] = rolPs[jx];
+    if(rolP == NULL)
     {
-      row = mysql_fetch_row(result);
-      printf("download: code >%s<\n",row[0]);
-	  
-      strcpy(tmpp, row[0]);
-      if((strcmp (tmpp, "{}") == 0)||(strcmp (tmpp, "") == 0))
-      {
-        printf("ERROR: This component is not used in run type %s\n",
-          confname);
-        TRANSITION_UNLOCK;
-        return(CODA_ERROR);
-      }
-    }
-    else
-    {
-      printf("download: ERROR: unknown nrow=%d",numRows);
+      printf("download: malloc error - return\n");
       TRANSITION_UNLOCK;
       return(CODA_ERROR);
     }
 
-    mysql_free_result(result);
-  }
+    /* cleanup rolP structure */
+    memset((char *) rolP, 0, sizeof(ROLPARAMS));
 
 
-dbDisconnect(dbsock);
-
-
-
-  /********************************************/
-  /* decode configuration string and download */
-  /********************************************/
-  strcpy(tmp, tmpp);
-  if(!((strcmp (tmp, "{}") == 0)||(strcmp (tmp, "") == 0)))
-  {
-    int ix, jx;
-    int listArgc;
-    char listArgv[LISTARGV1][LISTARGV2];
-    int tmpArgc;
-    char tmpArgv[LISTARGV1][LISTARGV2];
-    char name[20];
-	/**
-    ROL_MEM_PART **last_output;
-	**/
-
-
-
-    if(listSplit1(tmp, 1, &listArgc, listArgv))
+    if(ix==0) /*for the first readout list only*/
     {
-      TRANSITION_UNLOCK;
-      return(CODA_ERROR);
+      /* set parent component name in readout list */
+      char name[20];
+      rolP->name = object->name;
+      sprintf(name,"rol%d",jx);
+      strcpy(rolP->tclName,name);
+      strncpy(rolP->confFile,confFile,255);
+
+      /* initialize rol parameters structure, memory partitions */
+      rolP->pid = object->codaid;
+
+      /*set classid based on object class so rols will know if they 'master' or 'slave'*/
+      if(!strcmp(object->className,"ROC"))     rolP->classid = 0; /* slave */
+      else if(!strcmp(object->className,"TS")) rolP->classid = 1; /* master */
+      else                                     rolP->classid = 2; /* standalone */
+
+      /* setup pointers to global ROC information */
+      rolP->nevents = (uint32_t *) &(object->nevents);
+      /* NOT IN USE !!!???
+      rolP->async_roc = &(rocp->async_roc_flag);
+      */
+
+      /* load ROL1 */
+      res = codaLoadROL(rolP, rolnames[0], rolparams[0]);
+      if(res)
+      {
+        TRANSITION_UNLOCK;
+        return(CODA_ERROR);
+      }
+
+      printf("coda_roc 1\n"); fflush(stdout);
+
+      /* execute ROL init procedure (described in 'rol.h') */
+      rolP->daproc = DA_INIT_PROC;
+      printf("coda_roc 11\n"); fflush(stdout);
+      printf("coda_roc 12: 0x%08x\n",rolP); fflush(stdout);
+      printf("coda_roc 13: 0x%016x 0x%016x\n",rolP->rol_code,*(rolP->rol_code)); fflush(stdout);
+      (*(rolP->rol_code)) (rolP);
+
+      printf("coda_roc 2\n"); fflush(stdout);
+
+      /* check if initialization was successful */
+      if(rolP->inited != 1)
+      {
+        tcpState = rocp->state = DA_CONFIGURED;
+        printf ("ERROR: ROL initialization failed\n");
+        TRANSITION_UNLOCK;
+        return(CODA_ERROR);
+      }
+
+      printf("coda_roc 3\n"); fflush(stdout);
+
+      /* for readout lists with option 'ip=...' */
+      ch = strstr(rolP->usrString,"ip=");
+      if(ch != NULL)
+      {
+        strcpy(tmp,ch+strlen("ip="));
+        printf("coda_roc: will use output port >%s< instead of default one\n",tmp);
+        codaConfigTableUpdateIP(configname, object->name, tmp);
+      }
+      else
+      {
+        printf("coda_roc: clean 'next' field\n");
+        codaConfigTableUpdateIP(configname, object->name, "");
+      }
+
+      /* execute ROL1 download procedure */
+      rolP->daproc = DA_DOWNLOAD_PROC;
+      (*(rolP->rol_code)) (rolP);
+
+      printf("coda_roc 4\n"); fflush(stdout);
     }
 
-    /* the number of ROLs cannot exceed 2 */
-    if(listArgc>2)
-	{
-      printf("roc_component ERROR: listArgc=%d, set it to 2\n",listArgc);
-      listArgc = 2;
-	}
-    nrols = listArgc;
-
-    for(ix=0; ix<nrols; ix++) printf("nrols [%1d] >%s<\n",ix,listArgv[ix]);
-
-printf("codaDownload: listArgc=%d listArgv >%s< >%s<\n",listArgc,listArgv[0],listArgv[1]);
-if(listArgc<=0)
-{
-  printf("ERROR: cannot download readout list(s) - exit\n");
-  exit(0);
-}
-
-    /* set ROCid */
-    this_roc_id = object->codaid;
-    bigproc.rocid = this_roc_id;
-    bignet.rocid = this_roc_id;
-    printf("codaDownload: set this_roc_id = %d, rocId() can be called from now on\n",this_roc_id);
-
-    /* zero output pointer; will be used to link ROLs */
-	/**
-    last_output = (ROL_MEM_PART **) NULL;
-	**/
-
-
-    /* loop over readout lists */
-    for(ix=0, jx=0; ix<nrols; ix++, jx++)
+    
+    if(ix==1) /*for second readout list only*/
     {
-      rolP = rocp->rolPs[jx] = rolPs[jx];
-      if(rolP == NULL)
-      {
-        printf("download: malloc error - return\n");
-        TRANSITION_UNLOCK;
-        return(CODA_ERROR);
-      }
-
-      /* cleanup rolP structure */
-      memset((char *) rolP, 0, sizeof(ROLPARAMS));
-
-      /* Split list into rol object file and user string */
-      if(listSplit1(listArgv[ix], 0, &tmpArgc, tmpArgv))
-      {
-        TRANSITION_UNLOCK;
-        return(CODA_ERROR);
-	  }
-
-      if(tmpArgc != 2)
-      {
-        printf("ERROR: Incorrect number of Arguments passed for ROL = %d\n",
-                 tmpArgc);
-        TRANSITION_UNLOCK;
-        return(CODA_ERROR);
-      }
-
-      if(ix==0)
-      {
-        /* set parent component name in readout list */
-        rolP->name = object->name;
-        sprintf(name,"rol%d",jx);
-        strcpy(rolP->tclName,name);
-        strncpy(rolP->confFile,confFile,255);
-
-        /* initialize rol parameters structure, memory partitions */
-        rolP->pid = object->codaid;
-
-        /*set classid based on object class so rols will know if they 'master' or 'slave'*/
-        if(!strcmp(object->className,"ROC"))     rolP->classid = 0; /* slave */
-        else if(!strcmp(object->className,"TS")) rolP->classid = 1; /* master */
-        else                                     rolP->classid = 2; /* standalone */
-
-        /* setup pointers to global ROC information */
-        rolP->nevents = (uint32_t *) &(object->nevents);
-		/* NOT IN USE !!!???
-        rolP->async_roc = &(rocp->async_roc_flag);
-		*/
-
-        /* load ROL1 */
-        res = codaLoadROL(rolP, tmpArgv[0], tmpArgv[1]);
-        if(res)
-	    {
-          TRANSITION_UNLOCK;
-          return(CODA_ERROR);
-	    }
-
-		printf("coda_roc 1\n"); fflush(stdout);
-
-        /* execute ROL init procedure (described in 'rol.h') */
-        rolP->daproc = DA_INIT_PROC;
-		printf("coda_roc 11\n"); fflush(stdout);
-		printf("coda_roc 12: 0x%08x\n",rolP); fflush(stdout);
-		printf("coda_roc 13: 0x%016x 0x%016x\n",rolP->rol_code,*(rolP->rol_code)); fflush(stdout);
-        (*(rolP->rol_code)) (rolP);
-
-		printf("coda_roc 2\n"); fflush(stdout);
-
-        /* check if initialization was successful */
-        if(rolP->inited != 1)
-        {
-          tcpState = rocp->state = DA_CONFIGURED;
-          printf ("ERROR: ROL initialization failed\n");
-          TRANSITION_UNLOCK;
-          return(CODA_ERROR);
-        }
-
-		printf("coda_roc 3\n"); fflush(stdout);
-
-        /* execute ROL1 download procedure */
-        rolP->daproc = DA_DOWNLOAD_PROC;
-        (*(rolP->rol_code)) (rolP);
-
-		printf("coda_roc 4\n"); fflush(stdout);
-
-	  }
-
-      if(ix==1)
-      {
-        /* copy rol2's name into BIGNET structures to be executed from 'proc' */
-        strncpy(bigproc.rolname,tmpArgv[0],255);
-        strncpy(bigproc.rolparams,tmpArgv[1],127);
-        strncpy(bignet.rolname,tmpArgv[0],255);
-        strncpy(bignet.rolparams,tmpArgv[1],127);
-      }
-
+      /* copy rol2's name into BIGNET structures to be executed from 'proc' */
+      strncpy(bigproc.rolname,rolnames[1],255);
+      strncpy(bigproc.rolparams,rolparams[1],127);
+      strncpy(bignet.rolname,rolnames[1],255);
+      strncpy(bignet.rolparams,rolparams[1],127);
     }
-
-    printf("codaDownload: downloaded\n");
+ 
   }
-  else
+
+  printf("codaDownload: downloaded\n");
+
+
+
+
+
+  
+  
+
+  /* connect to database */
+  printf("mysql_host >%s<\n",mysql_host);fflush(stdout);
+  dbsock = dbConnect(mysql_host, expid);
+  printf("3123-1: dbsock=%d\n",dbsock);fflush(stdout);
+  if(dbsock==NULL)
   {
-    printf("WARN: no readout lists in current configuration\n");
+    printf("cannot connect to the database 3 - exit\n");
+    exit(0);
   }
-
-
-/* connect to database */
-printf("mysql_host >%s<\n",mysql_host);fflush(stdout);
-dbsock = dbConnect(mysql_host, expid);
-printf("3123-1: dbsock=%d\n",dbsock);fflush(stdout);
-if(dbsock==NULL)
-{
-  printf("cannot connect to the database 3 - exit\n");
-  exit(0);
-}
 
 
   /* Sergey: define 'rocp->async_roc_flag'  using DB where that information
   exists; that setting was removed from ROL1's Download() procedure */
-  sprintf(tmpp,"SELECT outputs FROM %s WHERE name='%s'",
-    confname,object->name);
+  sprintf(tmpp,"SELECT outputs FROM %s WHERE name='%s'",confname,object->name);
 
   printf("query >%s<\n",tmpp);
   if(dbGetStr(dbsock, tmpp, tmp)==CODA_ERROR)
@@ -1187,15 +1160,32 @@ if(dbsock==NULL)
     rocp->async_roc_flag = 0;
   }
 
-  printf("++++++++++++++++++++ outputs >%s< -> async_flag=%d\n",
-    tmp,rocp->async_roc_flag);
+  printf("++++++++++++++++++++ outputs >%s< -> async_flag=%d\n",tmp,rocp->async_roc_flag);
+
+
+
+
+
+
+
+/* for streaming, must set rocp->async_roc_flag=1 !!!!!!!!!!!!!!!!!!!!!!!! */
+/* PROBABLY CAN CHECK IF THERE IS SRO, THEN SET IT TO 1 ???*/
+#ifdef USE_SRO
+  rocp->async_roc_flag = 1;
+#endif
+
+
+
+
+  /*for VTP with rol1 inside firmware, check ... table ... */
+  //rocp->async_roc_flag = 1;
+
 
 
 
   /*sergey temporary ???????????????????????????
 rocp->output_switch = 0;
   */
-
 
 /* let NIOS to be async 
 #ifndef Linux_nios2
@@ -1388,18 +1378,18 @@ informEB(objClass object, unsigned int mTy, unsigned int mA, unsigned int mB)
       {
         if( rolP->classid > 0 )
         {
-	      chbuf = loadwholefile(confFile, &len_in_words);
+	  chbuf = loadwholefile(confFile, &len_in_words);
           if(chbuf == NULL)
-	      {
+	  {
             printf("ERROR: coda_roc: cannot read conffile - does not insert it into data stream !!!\n");
-	      }
+	  }
           else
-	      {
+	  {
             strncpy((char *)&bigbuf[BBHEAD+5],chbuf,(len_in_words<<2));
             free(chbuf);
 
             len += len_in_words;
-	      }
+	  }
         }
       }
     }
@@ -1409,6 +1399,7 @@ informEB(objClass object, unsigned int mTy, unsigned int mA, unsigned int mB)
 
   bigbuf[BBIWORDS] = (BBHEAD_BYTES+(len*4))>>2;
   bigbuf[BBIBUFNUM] = -1;
+  bigbuf[BBIHEAD]   = 8;
   bigbuf[BBIROCID]  = object->codaid;
   bigbuf[BBIEVENTS] = 1;  /* # events in buffer = 1 */
   bigbuf[BBIFD]     = rocp_primefd;
@@ -1420,6 +1411,7 @@ informEB(objClass object, unsigned int mTy, unsigned int mA, unsigned int mB)
   {
     bigbuf[BBIEND]  = 0;
   }
+
   bigbuf[BBHEAD]    = (len-1);  /* event starts here; contains # words in event */
   bigbuf[BBHEAD+1]  = CTL_BANK_HDR(mTy);  /* control bank header */
   bigbuf[BBHEAD+2]  = 1200; /* some junk */
@@ -1519,15 +1511,34 @@ codaPrestart()
   bignet.token_interval = token_interval;
 
 
+
+
+
+  /* not sure if we need it */
+
   /* get rocMask from database's options table; it must be set by EB;
   will be used in TS ROC only, other ROCs do not need that information */
   sprintf(tmpp,"SELECT value FROM %s_option WHERE name='rocMask'",configname);
   if(dbGetInt(dbsock, tmpp, &rocMask)==CODA_ERROR)
   {
+#ifdef USE_SRO
+    printf("WARN: Cannot get rocMask from 'options' table, proceed anyway\n",rocMask);
+#else
     TRANSITION_UNLOCK;
     return(CODA_ERROR);
+#endif
   }
-  printf("rocMask=0x%08x\n",rocMask);
+  else
+  {
+    printf("Got rocMask=0x%08x from 'options' table\n",rocMask);
+  }
+
+
+
+
+
+
+
 
 
   /* open TCP link to the Event Builder */
@@ -1546,6 +1557,9 @@ codaPrestart()
   /* disconnect from database */
   dbDisconnect(dbsock);
 
+
+
+  printf("rocp->async_roc_flag=%d\n",rocp->async_roc_flag);
 
 
   if(rocp->async_roc_flag == 0)
@@ -1570,10 +1584,10 @@ codaPrestart()
     printf("!!!!!!!!!!!!! for rocOpenLink: >%s< >%s<\n",object->name,tmp);
 
     /* open TCP to EB here */
-	{
+    {
       ret = rocOpenLink(object->name, tmp, host, &port, &socketnum);
       if(ret<0)
-	  {
+      {
         /*REDO IT USING UDP_user_request !!!*/
         char tmpp[1000];
         strcpy(tmpp,"err:");
@@ -1586,18 +1600,27 @@ codaPrestart()
 
         printf("roc_component ERROR: CANNOT ESTABLISH TCP TO EB !!!\n");
         return(CODA_ERROR);
-	  }
-      if(socketnum>0)
-	  {
-        /* why needs that ???*/
-        bigproc.socket = socketnum;
-        bignet.socket = socketnum;
-        bigproc.port = port;
-        strcpy((char *)bigproc.host, host);
-        bignet.port = port;
-        strcpy((char *)bignet.host, host);
-	  }
-	}
+      }
+      else if(ret==1)
+      {
+        printf("We will not extablish link to EB - probably it will be done by rol1 ...\n");
+        rocp->async_roc_flag = 1;
+        printf("Set rocp->async_roc_flag = %d\n",rocp->async_roc_flag);
+      }
+      else
+      {
+        if(socketnum>0)
+        {
+          /* why needs that ???*/
+          bigproc.socket = socketnum;
+          bignet.socket = socketnum;
+          bigproc.port = port;
+          strcpy((char *)bigproc.host, host);
+          bignet.port = port;
+          strcpy((char *)bignet.host, host);
+        }
+      }
+    }
   }
   else
   {
@@ -1616,7 +1639,7 @@ codaPrestart()
 
   if(nrols>1)
   {
-	printf("calling proc_prestart\n");fflush(stdout);
+    printf("calling proc_prestart\n");fflush(stdout);
     proc_prestart(rocId());
     printf("proc_prestart done\n");fflush(stdout);
   }
@@ -1629,13 +1652,13 @@ codaPrestart()
   if(rocp->async_roc_flag == 0)
   {
     if(nrols>1) /* have rol2 -> input to coda_net goes from gbigBUF */
-	{
+    {
       bignet.gbigin = gbigBUF;
-	}
+    }
     else
-	{
+    {
       bignet.gbigin = gbigDMA; /* no rol2 -> input to coda_net goes from gbigDMA */
-	}
+    }
     bignet.gbigout = NULL; /* no output from coda_net */
     bb_init(&bignet.gbigin);
     bignet.failure = 0;
@@ -1651,8 +1674,8 @@ codaPrestart()
     sleep(1);
 
     /* have rol2 -> start proc thread */
-	if(nrols>1)
-	{
+    if(nrols>1)
+    {
       bb_init(&bigproc.gbigin);
       bigproc.failure = 0;
 
@@ -1662,7 +1685,7 @@ codaPrestart()
       iii=pthread_create( /*(unsigned int *)*/ &iTaskPROC, &detached_attr,
 		   (void *(*)(void *)) proc_thread, (void *) &bigproc);
       printf("codaPrestart: proc thread returned %d\n",iii);
-	}
+    }
   }
 
 
@@ -1705,6 +1728,7 @@ codaPrestart()
   }
 
   if(codaUpdateStatus("paused") != CODA_OK)
+  //if(codaUpdateStatus("prestarted") != CODA_OK) ???
   {
     TRANSITION_UNLOCK;
     return(CODA_ERROR);
@@ -1852,7 +1876,7 @@ codaEnd()
 
 
 
-  if((rocp->async_roc_flag == 1))
+  if(rocp->async_roc_flag == 1)
   {
     printf("codaEnd: go to Downloaded for async roc\n");fflush(stdout);
     if(codaUpdateStatus("downloaded") != CODA_OK)
@@ -1943,14 +1967,14 @@ codaPause()
 
   rocp->active = 2;
 
-  if((rocp->async_roc_flag == 1))
+  if(rocp->async_roc_flag == 1)
   {
     tcpState = rocp->state = DA_PAUSED;
     if(codaUpdateStatus("paused") != CODA_OK)
     {
       TRANSITION_UNLOCK;
       return(CODA_ERROR);
-	}
+    }
   }
   else
   {
@@ -1959,7 +1983,7 @@ codaPause()
     {
       TRANSITION_UNLOCK;
       return(CODA_ERROR);
-	}
+    }
   }
 
   TRANSITION_UNLOCK;
@@ -1981,8 +2005,11 @@ codaGo()
   ROLPARAMS  *rolP;
   int         ix, state, ticks;
 
+  printf("coda_roc: codaGo 1\n");fflush(stdout);
+
   TRANSITION_LOCK;
 
+  printf("coda_roc: codaGo 2\n");fflush(stdout);
   rocp = (rocParam) object->privated;
 
   printf("activating ..\n");
@@ -1992,6 +2019,7 @@ codaGo()
     informEB(object, (unsigned int) EV_GO, (unsigned int) 0, (unsigned int) object->nevents);
   }
 
+  printf("coda_roc: codaGo 3\n");fflush(stdout);
 
 
   g_events_in_buffer = 0;
@@ -2001,19 +2029,19 @@ codaGo()
   dabufp = bb_write_current(&gbigDMA);
   if(dabufp == NULL)
   {
-    printf("ERROR in bb_write_current: FAILED\n");
+    printf("ERROR in bb_write_current: FAILED\n");fflush(stdout);
     TRANSITION_UNLOCK;
     return(CODA_ERROR);
   }
   dabufp += BBHEAD;
-  printf("1-1: dabufp set to 0x%x\n",dabufp);
+  printf("1-1: dabufp set to 0x%x\n",dabufp);fflush(stdout);
 
 
   /* Go ROL1 - old location */
 
   if(nrols>1)
   {
-    printf("calls 'proc_go', rocid=%d\n",rocId());
+    printf("calls 'proc_go', rocid=%d\n",rocId());fflush(stdout);
     proc_go(rocId());
   }
 
@@ -2035,14 +2063,25 @@ codaGo()
     }    
   }
 
+  printf("coda_roc: codaGo: rocp->async_roc_flag = %d\n",rocp->async_roc_flag);fflush(stdout);
+  printf("coda_roc: codaGo: rocp->active = %d\n",rocp->active);fflush(stdout);
 
-  rocp->active = 2; /* will start ROLS_LOOP */
+
+  if(rocp->async_roc_flag == 0) /* start loop ONLY if we will run rol1 here */
+  {
+    rocp->active = 2; /* will start ROLS_LOOP */
+  }
+
+printf("coda_roc: codaGo 5\n");fflush(stdout);
   tcpState = rocp->state = DA_ACTIVE;
+printf("coda_roc: codaGo 6\n");fflush(stdout);
   if(codaUpdateStatus("active") != CODA_OK)
   {
+printf("coda_roc: codaGo 7\n");fflush(stdout);
     TRANSITION_UNLOCK;
     return(CODA_ERROR);
   }
+printf("coda_roc: codaGo 8\n");fflush(stdout);
   printf("active, events so far %d\n",object->nevents);fflush(stdout);
 
 
@@ -2054,7 +2093,8 @@ codaGo()
       probably have to give a time to rols_loop to start after setting 'rocp->active=2'
       and before first interrupt; need to synchronize them better ... */
       sleep(1);
-      rolP->daproc = DA_GO_PROC;
+printf("coda_roc: codaGo 5\n");fflush(stdout);
+     rolP->daproc = DA_GO_PROC;
       (*rolP->rol_code) (rolP);
     }
   }
@@ -2076,13 +2116,13 @@ codaGo()
 #define SET_TIMEOUT(cba) \
     if(object->nevents < 10) \
     { \
-      timeout = gethrtime() + 1*100000; \
-	  /*printf("SET_TIMEOUT 3: timeout=%lld\n",timeout);*/	\
+      timeout = gethrtime() + 1000000; /*1 sec */ 		\
+      /*printf("SET_TIMEOUT_1(%d): timeout=%lld\n",cba,timeout);*/	\
     } \
     else \
     { \
-      timeout = gethrtime() + (token_interval/60)*100000;	/*1000000 - 1sec*/	\
-	  /*printf("SET_TIMEOUT 4: timeout=%lld\n",timeout);*/				\
+      timeout = gethrtime() + (token_interval/60)*1000000; /*1 sec*/	\
+      /*printf("SET_TIMEOUT_2(%d): timeout=%lld\n",cba,timeout);*/	\
     }
 
 /*
@@ -2117,10 +2157,12 @@ void
 rols_loop()
 {
   objClass object = localobject;
+
+  printf("rols_loop started ?\n");fflush(stdout);
 #ifdef Linux
   prctl(PR_SET_NAME,"coda_rols");
 #endif
-  printf("rols_loop started\n");
+  printf("rols_loop started !\n");fflush(stdout);
 
   /* some initialization */
   icycle3=0;
@@ -2227,12 +2269,14 @@ output_proc_network(int dummy)
   rocParam rocp;
   ROLPARAMS *rolP;
   int i, lockKey, status, len, ii;
-  int itmp;
+  int itmp, nloops;
   char tmpp[1000];
-
+  TIMERL_VAR;
+  
 /* timing */
 #ifndef Darwin
-  static hrtime_t start, end, time1, time2, time03, nevent;
+  static hrtime_t start, end, time1, time2, time03;
+  int nevent1, nevent2;
   static int nev;
   static hrtime_t sum;
 #endif
@@ -2301,19 +2345,22 @@ else bb_cleanup(&bignet.gbigin);
     /**********************************************/
     /**********************************************/
     /**********************************************/
-    nevent = time1 = time2 = 0;
-    do
-    {
+    nevent1 = object->nevents;
+    time1 = gethrtime();
+
+    nloops = 0;
+    do {
+      nloops ++;
       tloop2++;
       start = gethrtime();
       setHeartBeat(HB_ROL,3,5);
 
-	  /*
-	  printf("11: rocp->active=%d\n",rocp->active);fflush(stdout);
+      /*
+      printf("11: rocp->active=%d\n",rocp->active);fflush(stdout);
       rocStatus();fflush(stdout);
-	  */
+      */
 
-	  /*****************/
+      /*****************/
       /* start of ROL1 */
       setHeartBeat(HB_ROL,4,5);
       if(rocp->state != DA_ENDING)
@@ -2321,6 +2368,9 @@ else bb_cleanup(&bignet.gbigin);
         /* Do we actually need to poll ?? 
         Don't poll if this is an interrupt driven list
         Don't poll if we have no free buffers ('pool->list.c' is # of event bufs) */
+
+TIMERL_START;
+
         if(rolP->poll/* && rolP->pool->list.c*/)
         {
           setHeartBeat(HB_ROL,21,5);
@@ -2332,55 +2382,22 @@ bla2
 #endif
 #endif
 
-      tloop3++;
+          tloop3++;
 TRANSITION_LOCK;
           rolP->daproc = DA_POLL_PROC;
-	      /*printf("11: befor ROL1\n");fflush(stdout);*/
-      tloop4++;
+	  /*printf("11: befor ROL1\n");fflush(stdout);*/
+          tloop4++;
           (*rolP->rol_code) (rolP); /* pseudo-trigger cdopoll */
-      tloop5++;
-	      /*printf("11: after ROL1\n");fflush(stdout);*/
+          tloop5++;
+	  /*printf("11: after ROL1\n");fflush(stdout);*/
 TRANSITION_UNLOCK;
-      tloop6++;
+          tloop6++;
 
           setHeartBeat(HB_ROL,22,5);
         }
 
 
-		/*
-..........................................
-[1] bb_write_current (in):  write=4 read=8
-[1] bb_write_current (out): write=4 read=8
-[1] bb_write (in):          write=4 read=8
-[1] bb_write (out):         write=5 read=8
-
-[1] bb_write_current (in):  write=5 read=8
-[1] bb_write_current (out): write=5 read=8
-[1] bb_write (in):          write=5 read=8
-[1] bb_write (out):         write=6 read=8
-
-[1] bb_write_current (in):  write=6 read=8
-[1] bb_write_current (out): write=6 read=8
-[1] bb_write (in):          write=6 read=8
-[1] bb_write (out):         write=7 read=8
-
-[1] bb_write_current (in):  write=7 read=8
-[1] bb_write_current (out): write=7 read=8
-[1] bb_write (in):          write=7 read=8
-
-  3: ROLS_LOOP LOCKed, waiting to send buffer ...
-  1 SEND_BUFFER_ROC 3 (0x00000000)
-  [1] bb_write_current (in):  write=7 read=8
-  [1] bb_write_current (out): write=7 read=8
-  coda_roc: calling 'bb_write', MAY WAIT INSIDE FOREVER IF THERE IS NO SPACE !!!!!!!!!!!!!!!!!!!
-  [1] bb_write (in):          write=7 read=8
-
-setHeartError: 0 >sys 0, mask 22<
-WARN: HeartBeat[0]: heartbeat=1469225947(1469225947) heartmask=22
-UDP_cancel: cancel >inf:adcecal5 sys 0, mask 22<
-
-		*/
-
+TIMERL_STOP(1000000,0);
 
 
         /* 'delayed' done */
@@ -2411,64 +2428,56 @@ TRANSITION_UNLOCK;
       setHeartBeat(HB_ROL,25,5);
 
       /* end of ROL1 */
-	  /***************/
+      /***************/
 
       /* update statistics: 'object_nlongs' updated by ROL1, we just copying to old location*/
-	  object->nlongs = object_nlongs;
+      object->nlongs = object_nlongs;
 
 
-
-
-
-
-
-	  /* need following to send buffer on 'timeout' for low datarate crates, otherwise it will never send anything
-		 because high datarate crates will fill EB buffers and ... ???????? */
+      /* need following to send buffer on 'timeout' for low datarate crates, otherwise it will never send anything
+	 because high datarate crates will fill EB buffers and ... ???????? */
 
       /*if(rocp->state == DA_ENDING)*/
       {
         /* check for timeout - NEED TO SYNCHRONIZE WITH ROL1 !!! */
         /* on timeout condition we are sending ONLY if buffer is not empty - this is what we want ? */
         currenttime = gethrtime();
+	//printf("currenttime=%lld,  timeout=%lld\n",currenttime,timeout);
         if(currenttime > timeout)
         {
-/*prints all the time
-		  printf("coda_roc: currenttime=%lld timeout=%lld dataInBuf=%d\n",currenttime,timeout,dataInBuf);fflush(stdout);
-*/
+          /*prints all the time
+	  printf("coda_roc: currenttime=%lld timeout=%lld dataInBuf=%d\n",currenttime,timeout,dataInBuf);fflush(stdout);
+          */
           if(dataInBuf > BBHEAD_BYTES)
           {
-/*prints all the time
-		    printf("coda_roc: ..sent ! dataInBuf=%d BBHEAD_BYTES=%d\n",dataInBuf,BBHEAD_BYTES);
-*/
+            /*prints all the time
+	    printf("coda_roc: ..sent on timeout ! dataInBuf=%d BBHEAD_BYTES=%d\n",dataInBuf,BBHEAD_BYTES);
+            */
             clear_to_send  = 1;
             SENDBUFFER_LOCK;
-/*prints all the time
+            /*prints all the time
             printf("4: ROLS_LOOP LOCKed, waiting to send buffer ...\n");fflush(stdout);
-*/
+            */
             SEND_BUFFER_(4);
-/*prints all the time
+            /*prints all the time
             printf("4: ROLS_LOOP LOCKed, buffer sent\n");fflush(stdout);
-*/
+            */
             SENDBUFFER_UNLOCK;
-/*prints all the time
+            /*prints all the time
             printf("4: ROLS_LOOP UNLOCKed\n");fflush(stdout);
-*/
+            */
           }
           else
-		  {
+	  {
             SET_TIMEOUT(89);
-		  }
-/*prints all the time
-          printf(" ..break, timeout=%lld\n",timeout);fflush(stdout);
-*/
+	  }
+          /*prints all the time*/
+          //printf(" ..break, timeout=%lld\n",timeout);fflush(stdout);
+          
           break;
         }
         setHeartBeat(HB_ROL,26,5);
       }
-
-
-
-
 
 
     } while(1); /* 'do' loop */
@@ -2476,23 +2485,26 @@ TRANSITION_UNLOCK;
     /**********************************************/
     /**********************************************/
 
+    time2 = gethrtime();
+    nevent2 = object->nevents;
+    
     setHeartBeat(HB_ROL,7,1);
 
 #ifndef Darwin
-    if(nevent!=0)
+    //printf("nevent2=%d, nevent1=%d, icycle=%d\n",nevent2,nevent1,icycle);
+    if((nevent2-nevent1)>0)
     {
       icycle ++;
-      if(icycle>=cycle)
+      //if(icycle>=cycle)
       {
-        printf("rols_thread: waiting=%7llu processing=%7llu microsec per event (nev=%d)\n",
-          time1/nevent,time2/nevent,nevent);
+        printf("rol_thread: spending=%7d microsec per event (nev=%d) (nloops=%d)\n",
+	       ((int)(time2-time1))/(nevent2-nevent1),(nevent2-nevent1),nloops);
         icycle = 0;
       }
-      nevent = time1 = time2 = 0;
     }
     else
     {
-      /*printf("rols_thread: nevent==0 !!! (end=???) %d %d\n")*/;
+      /*printf("rol_thread: nevent==0 !!! (end=???) %d %d\n")*/;
     } 
 #endif
 
@@ -2519,7 +2531,7 @@ TRANSITION_UNLOCK;
     /*printf("DA_DOWNLOADED\n");*/
     sleep(1);
     TRANSITION_LOCK;
-	/* ERRORRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR */
+    /* ERRORRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR */
     setHeartBeat(HB_ROL,10,5);
     if((rocp->output_switch == 0) && (bignet.doclose == 1))
     {
@@ -2651,8 +2663,10 @@ __attribute__((destructor)) void end (void)
 {
   printf("__attribute__\n");fflush(stdout);
 #ifdef Linux_vme
+#if 0
   printf("coda_roc is exiting, clear dma memory\n");
   bb_dma_free();
+#endif
 
   printf("\n\n coda_roc: ======= Close the default VME windows =========\n\n");
   /*vmeCloseA32Slave();*/

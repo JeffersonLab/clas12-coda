@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+
+#ifndef Linux_armv7l
+
 #include "marocLib.h"
 #include "marocConfig.h"
 
@@ -140,3 +143,12 @@ exit(0);
   exit(0);
 }
 
+#else
+
+int
+main()
+{
+  exit(0);
+}
+
+#endif

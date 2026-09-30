@@ -120,6 +120,14 @@ rcRocMenuWindow::rcRocMenuWindow (Widget parent, char* name, rcClientHandler& ha
   printf ("         Creating rcRocMenuWindow Class Object\n");
 #endif
 
+  /*sergey - testing ...*/
+  rcClient* client_ = &netHandler_.clientHandler ();
+  //rcClient& client_ = netHandler_.clientHandler ();
+  daqData data ((char *)"RCS", (char *)"command", (char *)"unknown");
+  //int status = client_.sendCmdCallback (DALOADDBASE, data, (rcCallback)&(rcRocMenuWindow::loadRcDbaseCbk), (void *)this);
+  /*sergey - testing ...*/
+
+  
   // register this panel to net handler
   netHandler_.addPanel (this);
   exit_ = 0;
@@ -160,6 +168,30 @@ rcRocMenuWindow::rcRocMenuWindow (Widget parent, char* name, rcClientHandler& ha
   printf ("         Created rcRocMenuWindow Class Object\n");
 #endif
 }
+
+
+//sergey
+void
+rcRocMenuWindow::loadRcDbaseCbk (int status, void* arg, daqNetData* data)
+{
+  printf("c44\n");fflush(stdout);
+#if 0
+  rcConfigure* obj = (rcConfigure *)arg;
+  if (status != CODA_SUCCESS && status != CODA_IGNORED)
+  {
+    obj->reportErrorMsg ((char *)"rcConfigure::loadRcDbaseCbk: Loading database failed !!!");
+    rcAudio ((char *)"rcConfigure::loadRcDbaseCbk: loading database failed");
+  }
+  else
+  { 
+    /* sergey: popup runtype dialog window */
+    obj->infoPanel_->runTypeDialog()->popup ();
+  }
+#endif
+}
+
+
+
 
 rcRocMenuWindow::~rcRocMenuWindow (void)
 {
@@ -367,8 +399,8 @@ rcRocMenuWindow::destroyHandler(Widget w,void *data,XEvent *eventPtr,Boolean *b)
       if (self->xtermsFrame_[ix] == w) {
 	printf("program \"%s\" has unexpectedly quit\n", self->tabLabels_[ix]);
 	
-	if (strcmp(self->tabLabels_[ix],"cedit") == 0) {
-	  sprintf (temp2,"(echo \"start cedit\"; sleep 1; %s/codaedit )&",getenv("CODA_BIN"));
+	if (strcmp(self->tabLabels_[ix],"codaedit") == 0) {
+	  sprintf (temp2,"(echo \"start codaedit\"; sleep 1; %s/codaedit )&",getenv("CODA_BIN"));
 	  system(temp2);
     	}
 
@@ -842,6 +874,8 @@ rcRocMenuWindow::configTokenInterval (int interval)
 void
 rcRocMenuWindow::configRcsMsgToDbase (int state)
 {
+  // serey: message to dbase ???
+  
   serverMsgToDbase_->setState (state);
 }
 
@@ -892,7 +926,7 @@ rcRocMenuWindow::ConfigSelPopup (void)
   /* remove old database information */
   for (i = 0; i < iconfigSel.numConfigs_; i++) free (iconfigSel.configs_[i]);
 
-  /* get all database names */
+  /* get all configuration names from database */
   status = listAllConfigs (iconfigSel.configs_, &(iconfigSel.numConfigs_));
 
   if (status == 0)
@@ -901,13 +935,13 @@ rcRocMenuWindow::ConfigSelPopup (void)
     {
       for (i = 0; i < iconfigSel.numConfigs_; i++)
       {
-	    ac = 0;
-	    t = XmStringCreateSimple (iconfigSel.configs_[i]);
-	    XtSetArg (arg[ac], XmNlabelString, t); ac++;
-	    XtSetValues (iconfigSel.pushb[i], arg, ac);
-	    ac = 0;
-	    XmStringFree (t);
-	    XtManageChild (iconfigSel.pushb[i]);
+	ac = 0;
+	t = XmStringCreateSimple (iconfigSel.configs_[i]);
+	XtSetArg (arg[ac], XmNlabelString, t); ac++;
+	XtSetValues (iconfigSel.pushb[i], arg, ac);
+	ac = 0;
+	XmStringFree (t);
+	XtManageChild (iconfigSel.pushb[i]);
       }
     }
     else
@@ -1014,21 +1048,24 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
   char *mysqlhost;
   char *expid;
   char *session;
-
+  
   mysqlhost = option->msqldhost();
   expid = option->dbasename();
   session = option->session();
-  printf("\n>>> Will use expid(dbasename) >%s<, session name >%s<\n\n",expid,session);
+  printf("\n>>> Will use expid(dbasename) >%s<, session name >%s<, config >%s<\n\n",expid,session,currconfig);
 
+  /*sergey: before do anything, update 'process' table from 'config' table - too late here !!! */
+  updateProcessTableFromConfigTable(currconfig);
+  
   /* cleanup previously opened components if any */
   if(ncomp_)
   {
     printf("rcRocMenuWindow::ConfigSelOk: CLEANUP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     for(ii=0; ii<ncomp_; ii++)
-	{
+    {
       ret = kill(proc_id[ii], SIGTERM);
       printf("[%2d] pid=%d, kill() returned %d\n",ii,proc_id[ii],ret);
-	}
+    }
   }
   ncomp_ = 0;
 
@@ -1043,32 +1080,42 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
   }
   else
   {
-	printf("ConfigSelOk: currconfig >%s<\n",currconfig); fflush(stdout);
+    printf("ConfigSelOk: currconfig >%s<\n",currconfig); fflush(stdout);
 
+
+    /*sergey: IMPORTANT: have to do config->process update here, because process table contains components info from previously used config !!!*/
+
+    
     /*XcodaEditorShowConfigName (currconfig);*/
     /* in following call sometimes have popup gui with message:
     Get all components failed: Lost connection to MySQL server during query
-      it comes from Editor_converter.c calling Editor_database.c
-      ( routine createRcNetCompsFromDbase() )
-	*/
-    if ( (ret=constructRcnetCompsWithConfig (currconfig, 
-											 daq_list, &num_comps,
-											 configs, &num_configs)) == 0)
+    it comes from Editor_converter.c calling Editor_database.c
+    ( routine createRcNetCompsFromDbase() )
+    */
+    if ( (ret=constructRcnetCompsWithConfig (currconfig, daq_list, &num_comps, configs, &num_configs)) == 0)
     {
-	  /*	  
+      /*
       printf("\nConfigSelOk: num_comps=%d\n",num_comps);
       for(ii=0; ii<num_comps; ii++)
-	  {
-        printf("   [%d] comp name >%s<, node name >%s< type %d, id_num=%d, status=%d, boot_string >%s<\n",
+      {
+        printf("PPPPP[%d] comp name >%s<, node name >%s< type=%d, id_num=%d, status=%d, boot_string >%s<,",
           ii,daq_list[ii]->daq.comp_name,daq_list[ii]->daq.node_name,
 			   daq_list[ii]->daq.type,daq_list[ii]->daq.id_num,daq_list[ii]->daq.status,daq_list[ii]->daq.boot_string);
-		printf("       code >%s< >%s< >%s<\n",daq_list[ii]->daq.code[0],daq_list[ii]->daq.code[1],daq_list[ii]->daq.code[2]);
-	  }
+		printf(" code >%s< >%s< >%s<\n",daq_list[ii]->daq.code[0],daq_list[ii]->daq.code[1],daq_list[ii]->daq.code[2]);
+      }
       printf("\nConfigSelOk: num_configs=%d\n",num_configs);
-	  */
+      */
+
+      
+      /*sergey:trying to load 'process' table again, it can be changed by previous call(s) */
+      //rcConfigure::loadRcDbase (option->dbasename (), option->session ());
+      /*sergey*/
+      
+
+
+      
       for(ii=0; ii<num_configs; ii++)
-	  {
-		
+      {	
         printf("  Comp[%d] name >%s<\n",ii,configs[ii]->comp_name);
         printf("      code0 >%s<\n",configs[ii]->code[0]);
         printf("      code1 >%s<\n",configs[ii]->code[1]);
@@ -1076,59 +1123,66 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
         printf("      code3 >%s<\n",configs[ii]->code[3]);
         printf("   num_inputs=%d\n",configs[ii]->num_inputs);
         for(jj=0; jj<configs[ii]->num_inputs; jj++)
-		{
+	{
           printf("     input:comp_name >%s<, input:port_name >%s<\n",
 				 configs[ii]->inputs[jj]->comp_name,configs[ii]->inputs[jj]->port_name);
         }
         printf("   num_outputs=%d\n",configs[ii]->num_outputs);
         for(jj=0; jj<configs[ii]->num_outputs; jj++)
-		{
+	{
           printf("     output:comp_name >%s<, output:port_name >%s<\n",
 				 configs[ii]->outputs[jj]->comp_name,configs[ii]->outputs[jj]->port_name);
         }
-		
+        /*sergey: will crash on older configs where those fields do not exist*/
+        //printf("      cmd >%s<\n",configs[ii]->comp_cmd);
+        //printf("     type >%s<\n",configs[ii]->comp_type);
+	/*sergey*/
 
+
+
+	
+	
         /* skip coda_xxx, we will not start xterm for it */
         if(!strncmp(configs[ii]->comp_name,"coda_",5))
-		{
+	{
           printf("Skip component >%s<\n",configs[ii]->comp_name);
           continue;
-		}
+	}
 
         /* skip file_xxx, we will not start xterm for it */
         if(!strncmp(configs[ii]->comp_name,"file_",5))
-		{
+	{
           printf("Skip component >%s<\n",configs[ii]->comp_name);
           continue;
-		}
+	}
 
         /* fill structure which will be used to start processes */
         comp[ncomp_].comp_name = configs[ii]->comp_name; /* component unique name */
         /*get the rest from 'daq_list'*/
         ncomp_old = ncomp_;
         for(jj=0; jj<num_comps; jj++)
-		{
+	{
           if( !strcmp(daq_list[jj]->daq.comp_name, comp[ncomp_].comp_name) )
-		  {
+	  {	    
             comp[ncomp_].type = daq_list[jj]->daq.type;               /* component type                  */
             comp[ncomp_].node_name = daq_list[jj]->daq.node_name;     /* default address                 */
             comp[ncomp_].id_num = daq_list[jj]->daq.id_num;           /* unique id number within a class */
-            comp[ncomp_].status = 0/*daq_list[jj]->daq.status*/;           /* component status from RC        */
+            comp[ncomp_].status = 0/*daq_list[jj]->daq.status*/;      /* component status from RC        */
             comp[ncomp_].boot_string = daq_list[jj]->daq.boot_string; /* boot string, how to start       */
 
-		    /* backward conversion from number to name, see Editor_converter.c, change it here it changed there !!!!!!!!!! */
+	    /* backward conversion from number to name, see Editor_converter.c, change it here if changed there !!!!!!!!!! */
             if(comp[ncomp_].type == CODA_ROC)           {type_name[ncomp_] = (char *)"ROC";      bg_name[ncomp_] = (char *)"lightgreen";}
-			else if(comp[ncomp_].type == CODA_EB)       {type_name[ncomp_] = (char *)"EB";       bg_name[ncomp_] = (char *)"yellow";}
-			else if(comp[ncomp_].type == CODA_ET)       {type_name[ncomp_] = (char *)"ET";       bg_name[ncomp_] = (char *)"yellow";}
+	    else if(comp[ncomp_].type == CODA_EB)       {type_name[ncomp_] = (char *)"EB";       bg_name[ncomp_] = (char *)"yellow";}
+	    else if(comp[ncomp_].type == CODA_ET)       {type_name[ncomp_] = (char *)"ET";       bg_name[ncomp_] = (char *)"yellow";}
             else if(comp[ncomp_].type == CODA_ETT)      {type_name[ncomp_] = (char *)"ETT";      bg_name[ncomp_] = (char *)"yellow";}
             else if(comp[ncomp_].type == CODA_SRO)      {type_name[ncomp_] = (char *)"SRO";      bg_name[ncomp_] = (char *)"yellow";}
-            else if(comp[ncomp_].type == CODA_TRIG)     {type_name[ncomp_] = (char *)"TS";       bg_name[ncomp_] = (char *)"lightblue";}  
+            else if(comp[ncomp_].type == CODA_TRIG)     {type_name[ncomp_] = (char *)"TS";       bg_name[ncomp_] = (char *)"lightcyan";}  
             else if(comp[ncomp_].type == CODA_RCS)      {type_name[ncomp_] = (char *)"RCS";      bg_name[ncomp_] = (char *)"white";}
             else if(comp[ncomp_].type == CODA_ER)       {type_name[ncomp_] = (char *)"ER";       bg_name[ncomp_] = (char *)"yellow";}
-            else if(comp[ncomp_].type == CODA_SPR)       {type_name[ncomp_] = (char *)"SPR";       bg_name[ncomp_] = (char *)"white";}
+            else if(comp[ncomp_].type == CODA_SPR)      {type_name[ncomp_] = (char *)"SPR";      bg_name[ncomp_] = (char *)"white";}
             else if(comp[ncomp_].type == CODA_L3)       {type_name[ncomp_] = (char *)"L3";       bg_name[ncomp_] = (char *)"yellow";}
             else if(comp[ncomp_].type == CODA_LOG)      {type_name[ncomp_] = (char *)"LOG";      bg_name[ncomp_] = (char *)"white";}
-            else if(comp[ncomp_].type == CODA_SC)       {type_name[ncomp_] = (char *)"SC";       bg_name[ncomp_] = (char *)"white";}
+            else if(comp[ncomp_].type == CODA_TSROC)    {type_name[ncomp_] = (char *)"TSROC";    bg_name[ncomp_] = (char *)"lightblue";}
             else if(comp[ncomp_].type == CODA_FILE)     {type_name[ncomp_] = (char *)"FILE";     bg_name[ncomp_] = (char *)"white";}
             else if(comp[ncomp_].type == CODA_CODAFILE) {type_name[ncomp_] = (char *)"CODAFILE"; bg_name[ncomp_] = (char *)"white";}
             else if(comp[ncomp_].type == CODA_DEBUG)    {type_name[ncomp_] = (char *)"DEBUG";    bg_name[ncomp_] = (char *)"white";}
@@ -1137,40 +1191,40 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
             else                                        {type_name[ncomp_] = (char *)"UNKNOWN";  bg_name[ncomp_] = (char *)"white";}
 
             /* set window title*/
-			sprintf(temp,"%s on %s",comp[ncomp_].comp_name,comp[ncomp_].node_name);
+	    sprintf(temp,"%s on %s",comp[ncomp_].comp_name,comp[ncomp_].node_name);
             XmString t = XmStringCreateSimple(temp);
             XtVaSetValues (xtermsLabel[ncomp_], XmNlabelString, t, NULL);
             XmStringFree (t);
 
             ncomp_ ++;
             if(ncomp_ >= MAX_NUM_COMPS)
-			{
+	    {
               printf("MAX_NUM_COMPS=%d is not enough, increase it in Editor.h !!!\n");fflush(stdout);
               exit(0);
-			}
+	    }
             break;
-		  }
-		}
+	  }
+	}
         if(ncomp_ == ncomp_old)
-		{
+	{
           printf("ERROR: cannot find component >%s< - exit\n",comp[ncomp_].comp_name);fflush(stdout);
           ncomp_ = 0;
-		  return;
-	    }
-	  }
+	  return;
+	}
+      }
 
 
 
-	  /* we are not interest of the fate of our children, so we are letting kernel to recycle <defunct> after child killed */
+      /* we are not interest of the fate of our children, so we are letting kernel to recycle <defunct> after child killed */
       /* otherwise we'd call 'wait' or 'waitpid' */
       signal(SIGCHLD, SIG_IGN);
 
-	  /*ncomp_=1;*/
+      /*ncomp_=1;*/
 
       /* start components */
       printf("\nFollowing %d components will be started:\n\n",ncomp_);
       for(kk=0; kk<ncomp_; kk++)
-	  {
+      {
         printf("   [%2d] name  >%s<\n",kk,comp[kk].comp_name);
         printf("   [%2d] host  >%s<\n",kk,comp[kk].node_name);
         printf("   [%2d] id     %d\n",kk,comp[kk].id_num);
@@ -1186,7 +1240,7 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
           exit(0);
         }
         else if(pid == 0) /* child */
-		{
+	{
           printf("[%2d] child process id = %d\n",kk,getpid());
           /*printf("[%d] child only: parent id = %d, process id = %d\n", kk, getppid(), getpid());*/
 
@@ -1201,13 +1255,13 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
 
 		  
           if(logging)
-		  {
+	  {
             myargv[myargc++] = strdup( "-l" );
             myargv[myargc++] = strdup( "-lf" );
             sprintf(temp,"/data/log/%s.log",comp[kk].comp_name);
             printf("log filename >%s<\n",temp);
             myargv[myargc++] = strdup( temp );
-		  }
+	  }
 		  
           myargv[myargc++] = strdup( "-bg" );
           myargv[myargc++] = strdup( bg_name[kk] );
@@ -1233,56 +1287,54 @@ rcRocMenuWindow::RocsSelectConfig(char *currconfig)
 
 
           printf("myargc=%d, myargv >",myargc);
-		  for(ii=0; ii<myargc; ii++) printf("%s ",myargv[ii]);
+	  for(ii=0; ii<myargc; ii++) printf("%s ",myargv[ii]);
           printf("<\n");
 
-		  /* use following while-sleep if execl commented out, otherwise nested forking will occur !
-		  while(1) sleep(1);
-		  */
+	  /* use following while-sleep if execl commented out, otherwise nested forking will occur !
+	  while(1) sleep(1);
+	  */
 
-		  /*
+	  /*
           sprintf(temp2,"%s/cterm",getenv("CODA_BIN"));
           printf("command >%s<\n",temp2);
           execl(temp2,
                 myargv[0], myargv[1], myargv[2], myargv[3], myargv[4],
                 myargv[5], myargv[6], myargv[7], myargv[8], myargv[9], myargv[10],
                 (char *)NULL);
-		  */
+	  */
 
           ctermlib(myargc, myargv);
 
-		}
+	}
         else
-		{
+	{
           proc_id[kk] = pid; /* remember child's pid */
           /*printf("[%d] parent only: pid=%d\n",kk,pid)*/;
-		}
+	}
 
-	  }
+      }
 
 
-	  printf("OUT OF FORK LOOP\n");fflush(stdout);
+      printf("OUT OF FORK LOOP\n");fflush(stdout);
       for(i=0; i<ncomp_; i++)
-	  {
+      {
         printf("[%2d] pid=%d\n",i,proc_id[i]);
-	  }
+      }
 
-	  /* if have ssh error 'ssh_exchange_identification: Connection closed by remote host', increase following
+      /* if have ssh error 'ssh_exchange_identification: Connection closed by remote host', increase following
 grep MaxStartups /etc/ssh/sshd_config
-	  */
+      */
 
-	  /*	  
+      /*	  
       system("codaterm -geometry 80x11 -into 00_00 -expect 'ssh adcecal5:adcecal5' 'stop_coda_process -p coda_roc_gef -match \"adcecal0 ROC\"' 'coda_roc_gef -s clastest -o \"adcecal0 ROC\":ROC'  &");
-	  */
+      */
 
-
-
-	  /*
+      /*
       XcodaEditorConstructGraphFromConfig(&coda_graph, daq_list, num_comps,
 					  configs, num_configs);
       (*coda_graph.redisplay)(&coda_graph, sw_geometry.draw_area, 
 			      cbs->event);
-	  */
+      */
 
 
 
@@ -1290,13 +1342,11 @@ grep MaxStartups /etc/ssh/sshd_config
       for (i = 0; i < num_comps; i++) freeRcNetComp (daq_list[i]);
       for (i = 0; i < num_configs; i++) freeConfigInfo (configs[i]);
     }
-	else
-	{
+    else
+    {
       printf("rcRocMenuWindow::RocsSelectConfig: ERROR in constructRcnetCompsWithConfig(), returned %d\n",ret);fflush(stdout);
       printf("rcRocMenuWindow::RocsSelectConfig: rocs windows were NOT created !!!\n");fflush(stdout);
-	}
-
-
+    }
 
   }
   /*
@@ -1332,6 +1382,18 @@ rcRocMenuWindow::ConfigSelOk (Widget w, XtPointer data, /*temporary: XmAnyCallba
   }
   currconfig = sel->configs_[i];
 
+
+
+
+  /*sergey - testing ...*/
+  //client_ = netHandler_.clientHandler ();
+  /*sergey - testing ...*/
+
+
+
+
+
+  
   RocsSelectConfig(currconfig);  
 }
 

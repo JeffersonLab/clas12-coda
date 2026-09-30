@@ -117,7 +117,10 @@ typedef struct v1190_struct
 #define V1190_BOARD_ID   0x000004A6
 #define V1290_BOARD_ID   0x0000050A
 
-#define V1190_FIRMWARE_REV   0x05 /* v1190core0.5.rbf or v1190core0.6.rbf */
+#define V1190_FIRMWARE_REV05   0x05 /* v1190core_0.5.rbf */
+#define V1190_FIRMWARE_REV06   0x06 /* v1190core_0.6.rbf */
+#define V1190_FIRMWARE_REV09   0x09 /* v1190core_0.9.rbf */
+#define V1190_FIRMWARE_REV11   0x11 /* v1190core_1.1.rbf */
 
 /* address to be installed in A32 rotary switches,
    and to be used in CBLT */

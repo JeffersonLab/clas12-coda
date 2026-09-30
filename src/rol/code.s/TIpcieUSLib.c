@@ -37,6 +37,9 @@
 #include <pthread.h>
 #include <errno.h>
 #include <stdint.h>
+
+#define TRUE  1
+#define FALSE 0
 #include "TIpcieUSLib.h"
 
 /* Mutex to guard TI read/writes */

@@ -126,6 +126,7 @@ static String fallback_resources[]={
 };
 
 extern int hide_controls;
+extern int main_is_codaedit;
 
 //Manager manager;          /* x-window layout manager */
 XtAppContext app_context;
@@ -183,6 +184,8 @@ main(int argc, char **argv)
   char cmd[100];
 #endif
   
+  main_is_codaedit = 1;
+
   for(ix=1;ix < argc;ix++)
   {
     if(argv[ix] &&  (strcmp(argv[ix],"-noedit") == 0))

@@ -64,8 +64,13 @@ private:
 
 #if defined (_CODA_2_0_T) || defined (_CODA_2_0)
 #include "libdb.h"
-#define DBASE_MAX_SESSIONS    100
-#define DBASE_MAX_CONFIGS     200
+
+#include "Editor_database.h" /*to get EDITOR_MAX_CONFIGS*/
+
+/*sergey: DBASE_MAX_SESSIONS must be equal to EDITOR_MAX_CONFIGS in codaaedit !!! */
+#define DBASE_MAX_SESSIONS     EDITOR_MAX_CONFIGS
+//#define DBASE_MAX_SESSIONS    200
+
 #define DBASE_MAX_DBASES      100
 #define MAX_PROC_TABLE_STRING 4096 /*sergey*/
 #define DBASE_SESSION_TABLE   "sessions"

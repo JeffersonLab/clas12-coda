@@ -14,15 +14,16 @@
 #define DAQ_READ_CONF_FILE  {daqSetExpid(expid);  daqConfig("");  if(strncasecmp(rol->confFile,"none",4)) daqConfig(rol->confFile);}
 #define TS_READ_CONF_FILE   {tsSetExpid(expid);   tsConfig("");   if(strncasecmp(rol->confFile,"none",4)) tsConfig(rol->confFile);}
 #define DSC2_READ_CONF_FILE {dsc2SetExpid(expid); dsc2Config(""); if(strncasecmp(rol->confFile,"none",4)) dsc2Config(rol->confFile);}
+#define SSP_READ_CONF_FILE  {sspSetExpid(expid);     sspInitGlobals();  sspConfig("");     if(strncasecmp(rol->confFile,"none",4)) sspConfig(rol->confFile);}
 
 
 #include <stdio.h>
 #include <libdb.h>
 
-#include "../jvme/jlabgef.h"
-#include "../jvme/jvme.h"
+#include "jvme.h"
+#include "usrvme.h"
 
-#include "../code.s/tsLib.h"
+#include "tsLib.h"
 
 extern char *mysql_host; /* defined in coda_component.c */
 extern char *expid; /* defined in coda_component.c */
@@ -93,13 +94,15 @@ TSPRIMARY_int_handler(int arg)
 
 
 
-static unsigned int i2_from_rol1;
+static unsigned long int i2_from_rol1;
 static int ntd;
 
 static void
 tsprimarytinit(int code)
 {
-  int ii, i1, i2, i3, ret;
+  int ii, ret;
+  unsigned long i1, i2;
+  int32_t i3;
   unsigned int slavemask=0, connectmask=0;
 
   /*int overall_offset=0x80;*/
@@ -113,13 +116,13 @@ vmeCheckMutexHealth(1); /*- use 'mutexclean' command if needed !!!!!!!!!!!!!!!!!
   usrVmeDmaMemory(&i1, &i2, &i3);
 
   i2_from_rol1 = i2;
-  printf("tsprimarytinit: i2_from_rol1 = 0x%08x\n",i2_from_rol1);
+  printf("tsprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);
 
-  i2_from_rol1 = (i2_from_rol1 & 0xFFFFFFF0);
-  printf("tsprimarytinit: i2_from_rol1 = 0x%08x\n",i2_from_rol1);
+  i2_from_rol1 = (i2_from_rol1 & 0xFFFFFFFFFFFFFFF0LL);
+  printf("tsprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);
 
   i2_from_rol1 = i2_from_rol1 + 0x10;
-  printf("tsprimarytinit: i2_from_rol1 = 0x%08x\n",i2_from_rol1);
+  printf("tsprimarytinit: i2_from_rol1 = 0x%lx\n",i2_from_rol1);
 
 
   /* Disable IRQ for VME Bus Errors
@@ -173,7 +176,7 @@ vmeBusLock();
   /* enable 3rd bitpattern word */
   tsSetBeforePrescaleReadout(1);
 
-  /*tsSetTrigCoinWindow();*/
+  /*tsSetTrigCoinWindow(1);*/
 
   tsLoadTriggerTable();
 
@@ -237,19 +240,19 @@ vmeBusUnlock();
   {
     i1 = slavemask&(1<<ii);
     if(i1)
-	{
+    {
       i2 = (i1 & connectmask) >> ii;
       printf("======> ii=%d i2=%d\n",ii,i2);
       if(i2==0)
-	  {
+      {
         printf("Fiber %d lost connection - trying to recover\n");
 vmeBusLock();
-		tsResetMGT();
+	tsResetMGT();
 vmeBusUnlock();
         taskDelay(10);
         goto try_again1;
-	  }
-	}
+      }
+    }
   }
 
   taskDelay(200);

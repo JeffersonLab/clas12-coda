@@ -90,14 +90,14 @@ daqSystem::~daqSystem (void)
   // remove all subsystems from the list
   subsysLocked_ = 1;
   {
-	codaSlistIterator ite (subsystems_);
-	daqSubSystem* subsys = 0;
+    codaSlistIterator ite (subsystems_);
+    daqSubSystem* subsys = 0;
 
-	for (ite.init (); !ite; ++ite)
+    for (ite.init (); !ite; ++ite)
     {
-	  subsys = (daqSubSystem *)ite ();
-	  delete subsys;
-	}
+      subsys = (daqSubSystem *)ite ();
+      delete subsys;
+    }
   }
   subsysLocked_ = 0;
   // remove state transition graph
@@ -126,8 +126,8 @@ daqSystem::abort (int wanted)
 
   for (ite.init (); !ite; ++ite)
   {
-	subsys = (daqSubSystem *)ite ();
-	subsys->abort (wanted);
+    subsys = (daqSubSystem *)ite ();
+    subsys->abort (wanted);
   }
   setState (wanted);
 }
@@ -186,56 +186,56 @@ daqSystem::allComponents (daqComponent* cs[], int bufsize)
   /* First time is for the ER */
   for (ite.init (); !ite; ++ite)
   {
-	comp = (daqComponent *)ite ();
-	daqScriptComp *scomp = (daqScriptComp *)comp;
-	daqSubSystem& subsys = scomp->subSystem ();
+    comp = (daqComponent *)ite ();
+    daqScriptComp *scomp = (daqScriptComp *)comp;
+    daqSubSystem& subsys = scomp->subSystem ();
 
-	if ((strstr (comp->title (), CODA_USER_SCRIPT) == 0) && (strcmp (subsys.title (), "ER") == 0))
+    if ((strstr (comp->title (), CODA_USER_SCRIPT) == 0) && (strcmp (subsys.title (), "ER") == 0))
     {
-	  cs[count++] = comp;
-	}
-	if (count >= bufsize)
-	{
+      cs[count++] = comp;
+    }
+    if (count >= bufsize)
+    {
       printf("\nERROR: daqSystem::allComponents: count=%d >= bufsize=%d - return -1\n",count,bufsize);
       printf("  (may need to increase MAX_NUM_COMPONENTS to accomodate bigger 'process' table)\n\n");
-	  return(-1);
-	}
+      return(-1);
+    }
   }
 
   /* Second is for EB */
   for (ite.init (); !ite; ++ite)
   {
-	comp = (daqComponent *)ite ();
-	daqScriptComp *scomp = (daqScriptComp *)comp;
-	daqSubSystem& subsys = scomp->subSystem ();
-	if ((strstr (comp->title (), CODA_USER_SCRIPT) == 0) && (strcmp (subsys.title (), "EB") == 0))
+    comp = (daqComponent *)ite ();
+    daqScriptComp *scomp = (daqScriptComp *)comp;
+    daqSubSystem& subsys = scomp->subSystem ();
+    if ((strstr (comp->title (), CODA_USER_SCRIPT) == 0) && (strcmp (subsys.title (), "EB") == 0))
     {
-	  cs[count++] = comp;
-	}
-	if (count >= bufsize)
-	{
+      cs[count++] = comp;
+    }
+    if (count >= bufsize)
+    {
       printf("\nERROR: daqSystem::allComponents: count=%d >= bufsize=%d - return -1\n",count,bufsize);
       printf("  (may need to increase MAX_NUM_COMPONENTS to accomodate bigger 'process' table)\n\n");
-	  return -1;
-	}
+      return -1;
+    }
   }
 
   /* Third is for everything else */
   for (ite.init (); !ite; ++ite)
   {
-	comp = (daqComponent *)ite ();
-	daqScriptComp *scomp = (daqScriptComp *)comp;
-	daqSubSystem& subsys = scomp->subSystem ();
-	if ((strstr (comp->title (), CODA_USER_SCRIPT) == 0) && (strcmp (subsys.title (), "ER") != 0) && (strcmp (subsys.title (), "EB") != 0))
-	{
-	  cs[count++] = comp;
-	}
-	if (count >= bufsize)
-	{
+    comp = (daqComponent *)ite ();
+    daqScriptComp *scomp = (daqScriptComp *)comp;
+    daqSubSystem& subsys = scomp->subSystem ();
+    if ((strstr (comp->title (), CODA_USER_SCRIPT) == 0) && (strcmp (subsys.title (), "ER") != 0) && (strcmp (subsys.title (), "EB") != 0))
+    {
+      cs[count++] = comp;
+    }
+    if (count >= bufsize)
+    {
       printf("\nERROR: daqSystem::allComponents: count=%d >= bufsize=%d - return -1\n",count,bufsize);
       printf("  (may need to increase MAX_NUM_COMPONENTS to accomodate bigger 'process' table)\n\n");
-	  return -1;
-	}
+      return -1;
+    }
   }
 
 #ifdef _TRACE_OBJECTS
@@ -259,11 +259,11 @@ daqSystem::allComponents (char* cs[], int bufsize)
 
   for (ix=0; ix<counttemp; ix++)
   {
-	comp = cstemp[ix];
-	cs[count] = new char[::strlen (comp->title()) + 1];
-	::strcpy (cs[count++], comp->title());
+    comp = cstemp[ix];
+    cs[count] = new char[::strlen (comp->title()) + 1];
+    ::strcpy (cs[count++], comp->title());
 
-	if (count >= bufsize) return(-1);
+    if (count >= bufsize) return(-1);
   }
 
 #ifdef _TRACE_OBJECTS
@@ -291,10 +291,10 @@ daqSystem::allEnabledComponents (daqComponent* cs[], int bufsize)
 
   for (ix=0; ix<counttemp; ix++)
   {
-	comp = cstemp[ix];
-	if (comp->enabled ()) cs[count++] = comp;
+    comp = cstemp[ix];
+    if (comp->enabled ()) cs[count++] = comp;
 
-	if (count >= bufsize) return -1;
+    if (count >= bufsize) return -1;
   }
 
 #ifdef _TRACE_OBJECTS
@@ -321,13 +321,13 @@ daqSystem::allEnabledComponents (char* cs[], int bufsize)
 
   for(ix=0; ix<counttemp; ix++)
   {
-	comp = cstemp[ix];
-	if (comp->enabled ())
+    comp = cstemp[ix];
+    if (comp->enabled ())
     {
-	  cs[count] = new char[::strlen (comp->title()) + 1];
-	  ::strcpy (cs[count++], comp->title());
-	}
-	if(count >= bufsize) return(-1);
+      cs[count] = new char[::strlen (comp->title()) + 1];
+      ::strcpy (cs[count++], comp->title());
+    }
+    if(count >= bufsize) return(-1);
   }
 
 #ifdef _TRACE_OBJECTS
@@ -348,8 +348,8 @@ daqSystem::disableAllComponents (void)
 
   for (ite.init (); !ite; ++ite)
   {
-	comp = (daqComponent *)ite();
-  	comp->disable ();
+    comp = (daqComponent *)ite();
+    comp->disable ();
   }
 }
 
@@ -392,8 +392,12 @@ daqSystem::removeAllScriptComp (void)
 int
 daqSystem::addSubSystem (daqSubSystem* subsys)
 {
-  if (subsystems_.includes (subsys->title ()))
-		return CODA_WARNING;
+  printf("daqSystem::addSubSystem reached: subsys->title() = %s\n",subsys->title());
+  if (subsystems_.includes (subsys->title()))
+  {
+    //printf("daqSystem::addSubSystem WARN\n");
+    return CODA_WARNING;
+  }
   subsystems_.add ((void *)subsys);
   return CODA_SUCCESS;
 }
@@ -410,26 +414,28 @@ daqSystem::removeSubSystem (daqSubSystem* subsys)
 int
 daqSystem::has (daqComponent *comp)
 {
-  if (components_.find (comp->title (), (void *)comp))
-		return CODA_SUCCESS;
+  //printf("daqSystem::has(1) reached: comp->title() = %s\n",comp->title());
+  if (components_.find (comp->title (), (void *)comp)) return CODA_SUCCESS;
   return CODA_ERROR;
 }
 
 int
 daqSystem::has (char* title, daqComponent* &comp)
 {
+  //printf("daqSystem::has(2) reached\n");
   codaSlist& list = components_.bucketRef (title);
   codaSlistIterator ite (list);
   daqComponent* tcomp = 0;
 
   for (ite.init (); !ite; ++ite)
   {
-	tcomp = (daqComponent *)ite ();
-	if (::strcmp (title, tcomp->title ()) == 0)
+    tcomp = (daqComponent *)ite ();
+    //printf("daqSystem::has(2): tcomp->title() = %s\n",tcomp->title());
+    if (::strcmp (title, tcomp->title ()) == 0)
     {
-	  comp = tcomp;
-	  return CODA_SUCCESS;
-	}
+      comp = tcomp;
+      return CODA_SUCCESS;
+    }
   }
   comp = 0;
   return CODA_ERROR;
@@ -438,18 +444,19 @@ daqSystem::has (char* title, daqComponent* &comp)
 int
 daqSystem::locateSystem (char *className, daqSubSystem* &sys)
 {
+  //printf("daqSystem::locateSystem reached: className >%s<\n",className);
   // subsystem's className == subsystem's title
   codaSlistIterator ite (subsystems_);
   daqSubSystem* subsys = 0;
 
   for (ite.init (); !ite; ++ite)
   {
-	subsys = (daqSubSystem *)ite ();
-	if (::strcmp (className, subsys->title()) == 0)
+    subsys = (daqSubSystem *)ite ();
+    if (::strcmp (className, subsys->title()) == 0)
     {
-	  sys = subsys;
-	  return CODA_SUCCESS;
-	}
+      sys = subsys;
+      return CODA_SUCCESS;
+    }
   }
   sys = 0;
   return CODA_ERROR;

@@ -4,14 +4,16 @@
 #define _GNU_SOURCE
 #define DEVEL
 
-#include <sys/prctl.h>
-#include <unistd.h>
-#include "jvme.h"
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 #include "beusspLib.h"
 #include <pthread.h>
+#include <sys/prctl.h>
+#include <unistd.h>
+
+#include "jvme.h"
+#include "usrvme.h"
 
 // Log file pointer to be set from outside
 extern FILE *sys_log_fptr;
@@ -205,9 +207,9 @@ void tokenize(char * line, int * pargc, char ** argv, unsigned int max_arguments
 //  RETURNS: OK if successful, otherwise ERROR.
 //
 //------------------------------------------------------------------------------------------------
-int  beusspInit(unsigned int vmebaseaddr, volatile struct BEUSSP_A24RegStruct  * * BEUSSPreg, volatile unsigned int * *BEUSSPfifo, BeuSspConf  * BEUSSPconf){
+int  beusspInit(unsigned long int vmebaseaddr, volatile struct BEUSSP_A24RegStruct  * * BEUSSPreg, volatile unsigned int * *BEUSSPfifo, BeuSspConf  * BEUSSPconf){
 
-	unsigned int laddr=0;
+	unsigned long int laddr=0;
 	unsigned int rval=0;
 	int stat=0;
 
@@ -505,7 +507,7 @@ int beusspSendSlowControl(volatile struct BEUSSP_A24RegStruct * BEUSSPreg, unsig
 int  beusspDisplayAllReg(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
 {
   unsigned int reg_num=0;
-  unsigned int memadr;
+  unsigned long int memadr;
   unsigned int data, ddata;
   
   if(BEUSSPreg == NULL) 
@@ -514,7 +516,7 @@ int  beusspDisplayAllReg(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
       return ERROR;
     }
 	
-	memadr =  ( unsigned int ) BEUSSPreg;
+	memadr =  ( unsigned long int ) BEUSSPreg;
 	
 	BEUSSPLOCK;
 	
@@ -627,7 +629,7 @@ int  beusspSetTargetFeuAndDisplayAllReg(volatile struct BEUSSP_A24RegStruct *BEU
 int  beusspSetTargetFeuAndDumpAllReg(volatile struct BEUSSP_A24RegStruct *BEUSSPreg, int numFeu, FILE *fptr)
 {
   unsigned int reg_num=0;
-  unsigned int memadr;
+  unsigned long int memadr;
   unsigned int data, ddata;
   int old_numFeu;	
   
@@ -637,7 +639,7 @@ int  beusspSetTargetFeuAndDumpAllReg(volatile struct BEUSSP_A24RegStruct *BEUSSP
 		return ERROR;
 	}
 	
-	memadr =  ( unsigned int ) BEUSSPreg;
+	memadr =  ( unsigned long int ) BEUSSPreg;
 	
 
 	if((numFeu < 0)||(numFeu > 31))
@@ -981,9 +983,9 @@ int  beusspFlushPipeline(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg)
  *
  */
 
-int beusspSetAdr32(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  volatile unsigned int * * BEUSSPfifo,  unsigned int a32base)
+int beusspSetAdr32(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  volatile unsigned int * * BEUSSPfifo,  unsigned long int a32base)
 {
-  unsigned int laddr=0;
+  unsigned long int laddr=0;
   int res=0,a32Enabled=0;
 
   if(BEUSSPreg == NULL) 
@@ -2630,7 +2632,7 @@ int  beusspSetAdr32m(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg, unsigned i
 //------------------------------------------------------------------------------------------------
 int beusspInitMblk(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg[], volatile unsigned int * * BEUSSPmblk){
 
-	unsigned int laddr,vmeaddr;
+	unsigned long int laddr,vmeaddr;
 	int stat;
 	
 // Need to verify that all ssp boards involved in the MBLK transfer are correctly configured.
@@ -2665,7 +2667,7 @@ int beusspInitMblk(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg[], volatile u
 //------------------------------------------------------------------------------------------------
 int beusspInitMblkTESTMODE(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg, volatile unsigned int * * BEUSSPmblk){
 
-	unsigned int laddr,vmeaddr;
+	unsigned long int laddr,vmeaddr;
 	int stat;
 	
 // Need to verify that all ssp boards involved in the MBLK transfer are correctly configured.

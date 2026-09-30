@@ -240,9 +240,9 @@ class MessageActionEVIO2ET : public MessageAction {
 
 
     void set_run_status(char *run_status_)
-	{
+    {
       run_status = strdup(run_status_);
-	}
+    }
 
     void set_run_number(int run_number_)
 	{
@@ -666,7 +666,7 @@ printf("filled et event length=%d\n",len);
         run_status = get_run_status(database,session);
         printf("Run status is '%s'\n",run_status);
         if(!strcmp(run_status,"active"))
-		{
+	{
           status = et_event_put(et_system_id,et_attach_id,et_event_ptr);
           if(status==ET_OK)
           {
@@ -678,9 +678,9 @@ printf("filled et event length=%d\n",len);
             if(debug==1) std::cerr << "?unable to put event, status is: " << status << std::endl;
             nev_no_et++;
           }
-		}
-		else
-		{
+	}
+	else
+	{
           printf("Run status is '%s' - dump ET event\n",run_status);
           status = et_event_dump(et_system_id,et_attach_id,et_event_ptr);
           if(status==ET_OK)
@@ -691,13 +691,13 @@ printf("filled et event length=%d\n",len);
           {
             if(debug==1) std::cerr << "?unable to dump event, status is: " << status << std::endl;
           }
-		}
+	}
       }
 
 
 
   
-	}
+    }
 
 
 

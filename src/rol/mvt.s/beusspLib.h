@@ -199,10 +199,10 @@ void tokenize( char * line, int * pargc, char ** argv, unsigned int max_argument
 // ------------------------------------------------------------------------------------------------
 //
 // ------------------------------------------------------------------------------------------------
-int beusspInit(unsigned int vmebaseaddr, volatile struct BEUSSP_A24RegStruct  * * BEUSSPreg, volatile unsigned int * * BEUSSPfifo, BeuSspConf  * BEUSSPconf);
+int beusspInit(unsigned long int vmebaseaddr, volatile struct BEUSSP_A24RegStruct  * * BEUSSPreg, volatile unsigned int * * BEUSSPfifo, BeuSspConf  * BEUSSPconf);
 int beusspInitCtrlRegs(volatile struct BEUSSP_A24RegStruct * BEUSSPreg);
 int beusspWriteConf(volatile struct BEUSSP_A24RegStruct  * BEUSSPreg, volatile unsigned int * * BEUSSPfifo, BeuSspConf  * BEUSSPconf);
-int beusspSetAdr32(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  volatile unsigned int * * BEUSSPfifo,  unsigned int a32base);
+int beusspSetAdr32(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg,  volatile unsigned int * * BEUSSPfifo,  unsigned long int a32base);
 int beusspSetAdr32m(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg, unsigned int A32mMin, unsigned int A32mMax, unsigned int MblkRank);
 int beusspSetSampleBlock(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg, unsigned int NbOfSamples, unsigned int NbofEventsPerBlock);
 int beusspSetActiveLinks(volatile struct BEUSSP_A24RegStruct  *BEUSSPreg, unsigned int rol_enb);

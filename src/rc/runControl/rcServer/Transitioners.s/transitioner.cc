@@ -76,6 +76,8 @@
 #include <dplite.h>
 */
 
+//#define _TRACE_OBJECTS
+
 // timer interval for ping transitioning components, 1000 msec
 int transitioner::tickInterval_ = 1000;
 // transition timeout value 15 seconds
@@ -123,12 +125,38 @@ transitioner::build (void)
     subsys = (daqSubSystem *)ite ();
     if (subsys->enabled ())
     {
+#ifdef _TRACE_OBJECTS
+      printf("transitioner::build: subsystem %s\n",subsys->title());
+#endif
       subsys->priorityByAction (action ());
       transitionList_.add ((void *)subsys);
     }
   }
 }
 
+/*
+.....
+transitioner::confirmTransition 11
+transitioner::confirmTransition 12
+transitioner::confirmTransition 13
+daqScriptSystem::script(2)
+exec script 1
+!!!!!!!!!! transitioner::execute 1
+transitioner::build: subsystem TS
+daqSubSystem::priorityByAction: priority_ = -27 (action=3)
+transitioner::build: subsystem ROC
+daqSubSystem::priorityByAction: priority_ = 11 (action=3)
+transitioner::build: subsystem ET
+daqSubSystem::priorityByAction: priority_ = 0 (action=3)
+transitioner::build: subsystem EB
+daqSubSystem::priorityByAction: priority_ = 15 (action=3)
+!!!!!!!!!! transitioner::execute 2
+!!!!!!!!!! transitioner::execute 3
+!!!!!!!!!! transitioner::execute 4
+!!!!!!!!!! transitioner::execute 5
+!!!!!!!!!! transitioner::execute 6
+.....
+*/
 
 /* check whether a transition is finished by comparing final state with the sucess state */
 int
@@ -334,21 +362,26 @@ transitioner::confirmTransition (void)
   }
 
 
+#ifdef _TRACE_OBJECTS
   printf("transitioner::confirmTransition 11\n");
-
+#endif
 
   /* if success, call 'setupSuccess' which will call 'successState' from corresponding class */
   if (!failed)
   {
+#ifdef _TRACE_OBJECTS
     printf("transitioner::confirmTransition 12\n");
-
+#endif
+    
 #if 0
     /* declare transition succeeded; if for example doing 'Configure', 'Download' button will show up after that */
     /* sergey: move it below to wait for user script to finish */
     setupSuccess ();
 #endif
 
+#ifdef _TRACE_OBJECTS
     printf("transitioner::confirmTransition 13\n");
+#endif
     
     // run a script here in blocked mode so all scripts should be short
     // This is a global script to be executed at the end of a Transition
@@ -362,9 +395,13 @@ transitioner::confirmTransition (void)
 
     if(child_) //sergey: execute 'transitioner::execute(void)' function from this file, it does actual transition operations
     {
+#ifdef _TRACE_OBJECTS
       printf("exec script 1\n");fflush(stdout);
+#endif
       child_->execute();
+#ifdef _TRACE_OBJECTS
       printf("exec script 2\n");fflush(stdout);
+#endif
       child_ = 0;
     }
     else
@@ -375,7 +412,9 @@ transitioner::confirmTransition (void)
       {
         reporter->cmsglog (CMSGLOG_INFO, " ... user script executed\n");
 
+#ifdef _TRACE_OBJECTS
         printf("success 2\n");fflush(stdout);
+#endif
         setupSuccess ();
         sendTransitionResult (CODA_SUCCESS);
       }
@@ -384,7 +423,9 @@ transitioner::confirmTransition (void)
         //sergey: if user script returns different error numbers, we can print here different messages
 	reporter->cmsglog (CMSGLOG_ERROR, "USER SCRIPT FAILED, PROBABLY RICH PROBLEM\n");
 
+#ifdef _TRACE_OBJECTS
         printf("failure 2\n");fflush(stdout);
+#endif
         setupFailure();
         sendTransitionResult (CODA_ERROR); // send failure to daq run
       }
@@ -393,7 +434,9 @@ transitioner::confirmTransition (void)
   }
   else
   {
+#ifdef _TRACE_OBJECTS
     printf("failure 1\n");fflush(stdout);
+#endif
     setupFailure();
     sendTransitionResult (CODA_ERROR); // send failure to daq run
   }
@@ -468,32 +511,44 @@ transitioner::execute (void)
   /* set current transitioner to the system */
   system_->currTransitioner (this);
 
+#ifdef _TRACE_OBJECTS
   printf("!!!!!!!!!! transitioner::execute 1\n");fflush(stdout);
-
+#endif
+  
   /* first build transition list */
   build();
 
+#ifdef _TRACE_OBJECTS
   printf("!!!!!!!!!! transitioner::execute 2\n");fflush(stdout);
-
+#endif
+  
   /* set state information (Download button appears after that !!!!!!!!!!!!!!!!) */
   system_->setState (transitionState ());
 
+#ifdef _TRACE_OBJECTS
   printf("!!!!!!!!!! transitioner::execute 3\n");fflush(stdout);
-
+#endif
+  
   status_ = CODA_SUCCESS;
 
+#ifdef _TRACE_OBJECTS
   printf("!!!!!!!!!! transitioner::execute 4\n");fflush(stdout);
-
+#endif
+  
   /* extra system wide parameter set up */
   extraRunParmSetup ();
 
+#ifdef _TRACE_OBJECTS
   printf("!!!!!!!!!! transitioner::execute 5\n");fflush(stdout);
-
+#endif
+  
   /* move cursor to the begginning of the list */
   tranListIte_.init();
 
+#ifdef _TRACE_OBJECTS
   printf("!!!!!!!!!! transitioner::execute 6\n");fflush(stdout);
-
+#endif
+  
   /* now start engine */
   doTransition ();
 }
@@ -523,13 +578,16 @@ void
 transitioner::setupSuccess (void)
 {
 #ifdef _TRACE_OBJECTS
-  printf("transitioner::setupSuccess\n");
-#endif
   printf("transitioner::setupSuccess 11\n");
+#endif
+  
   /*sergey: calling 'successState' from corresponding class, like 'configurer::successState' etc */
   system_->setState (successState ());
-  printf("transitioner::setupSuccess 12\n");
 
+#ifdef _TRACE_OBJECTS
+  printf("transitioner::setupSuccess 12\n");
+#endif
+  
   reporter->cmsglog (CMSGLOG_INFO,"transition %s succeeded !\n",title());
   status_ = CODA_SUCCESS;
 }
@@ -763,9 +821,9 @@ transitioner::runUserSuccessScript (void)
   ::sprintf (realscript, "setenv DISPLAY %s; ", run->controlDisplay());
   ::strcat  (realscript, script);
 
-  //#ifdef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner::runUserSuccessScript: State finished real script is: %s\n", realscript);fflush(stdout);
-  //#endif
+#endif
   
   // start up a child process 
   ::fflush (stdout);
@@ -793,8 +851,11 @@ transitioner::runUserSuccessScript (void)
     close(2); dup (tty);
     close(tty);
 
+#ifdef _TRACE_OBJECTS
     printf("111 transitioner::runUserSuccessScript >%s<\n",realscript);
-	//sleep(10);
+#endif
+
+    //sleep(10);
 	//printf("222\n");
 
     execlp("csh", "csh", "-c", realscript, (char *)0);
@@ -836,9 +897,9 @@ transitioner::runUserSuccessScript (void)
   // Hysterical past - Ask Jie Chen, I don't know - RWM!
   estatus = (signed char) (status>>8)&0xff;
 
-  //#ifdef _TRACE_OBJECTS
+#ifdef _TRACE_OBJECTS
   printf("transitioner.cc: script terminated with status 0x%x, estatus = %d\n",status,estatus);
-  //#endif
+#endif
 
   if((wpid == -1) || (estatus == -2))
   {

@@ -26,7 +26,7 @@
 /* low level functions */
 
 int
-scaler7201readfifo(int addr)
+scaler7201readfifo(unsigned long int addr)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) (addr + 0x100);
@@ -34,7 +34,7 @@ scaler7201readfifo(int addr)
   return(*bufptr);
 }
 void
-scaler7201writefifo(int addr, int value)
+scaler7201writefifo(unsigned long int addr, int value)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) (addr + 0x10);
@@ -43,7 +43,7 @@ scaler7201writefifo(int addr, int value)
 }
 
 int
-scaler7201status(int addr)
+scaler7201status(unsigned long int addr)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) addr;
@@ -51,7 +51,7 @@ scaler7201status(int addr)
   return(*bufptr);
 }
 void
-scaler7201control(int addr, int value)
+scaler7201control(unsigned long int addr, int value)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) addr;
@@ -60,7 +60,7 @@ scaler7201control(int addr, int value)
 }
 
 void
-scaler7201mask(int addr, int value)
+scaler7201mask(unsigned long int addr, int value)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) (addr + 0xc);
@@ -69,7 +69,7 @@ scaler7201mask(int addr, int value)
 }
 
 void
-scaler7201clear(int addr)
+scaler7201clear(unsigned long int addr)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) (addr + 0x20);
@@ -77,7 +77,7 @@ scaler7201clear(int addr)
   *bufptr = 0x0; /* arbitrary data ! */
 }
 void
-scaler7201nextclock(int addr)
+scaler7201nextclock(unsigned long int addr)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) (addr + 0x24);
@@ -85,7 +85,7 @@ scaler7201nextclock(int addr)
   *bufptr = 0x0; /* arbitrary data ! */
 }
 void
-scaler7201enablenextlogic(int addr)
+scaler7201enablenextlogic(unsigned long int addr)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) (addr + 0x28);
@@ -93,7 +93,7 @@ scaler7201enablenextlogic(int addr)
   *bufptr = 0x0; /* arbitrary data ! */
 }
 void
-scaler7201disablenextlogic(int addr)
+scaler7201disablenextlogic(unsigned long int addr)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) (addr + 0x2c);
@@ -101,7 +101,7 @@ scaler7201disablenextlogic(int addr)
   *bufptr = 0x0; /* arbitrary data ! */
 }
 void
-scaler7201reset(int addr)
+scaler7201reset(unsigned long int addr)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) (addr + 0x60);
@@ -109,7 +109,7 @@ scaler7201reset(int addr)
   *bufptr = 0x0; /* arbitrary data ! */
 }
 void
-scaler7201testclock(int addr)
+scaler7201testclock(unsigned long int addr)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) (addr + 0x68);
@@ -120,7 +120,7 @@ scaler7201testclock(int addr)
 /* "high" level functions */
 
 void
-scaler7201ledon(int addr)
+scaler7201ledon(unsigned long int addr)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) addr;
@@ -128,7 +128,7 @@ scaler7201ledon(int addr)
   *bufptr = 0x00000001;
 }
 void
-scaler7201ledoff(int addr)
+scaler7201ledoff(unsigned long int addr)
 {
   volatile unsigned int *bufptr;
   bufptr = (volatile unsigned int *) addr;
@@ -137,7 +137,7 @@ scaler7201ledoff(int addr)
 }
 
 int
-scaler7201almostread(int addr, int *value)
+scaler7201almostread(unsigned long int addr, int *value)
 {
   int *outbuf;
 
@@ -151,7 +151,7 @@ scaler7201almostread(int addr, int *value)
 }
 
 int
-scaler7201read(int addr, int *value)
+scaler7201read(unsigned long int addr, int *value)
 {
   int *outbuf, len;
 
@@ -175,7 +175,7 @@ scaler7201read(int addr, int *value)
 /* special readout for eg1 run */
 
 int
-scaler7201readHLS(int addr, int *ring, int counter)
+scaler7201readHLS(unsigned long int addr, int *ring, int counter)
 {
   int k, dataword, ret;
 
@@ -206,7 +206,7 @@ scaler7201readHLS(int addr, int *ring, int counter)
 
 
 int
-scaler7201restore(int addr, int mask)
+scaler7201restore(unsigned long int addr, int mask)
 {
   /*logMsg("scaler7201restore reached\n",1,2,3,4,5,6);*/
 

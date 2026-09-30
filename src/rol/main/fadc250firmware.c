@@ -91,7 +91,7 @@ int
 main(int argc, char *argv[]) 
 {
 
-    GEF_STATUS status;
+    int status;
     int fpga_choice, firmware_choice=0;
     char *mcs_filename;
     int inputchar=10;
@@ -194,7 +194,7 @@ main(int argc, char *argv[])
 
 
     status = vmeCloseDefaultWindows();
-    if (status != GEF_SUCCESS)
+    if (status != 0)
     {
       printf("vmeCloseDefaultWindows failed: code 0x%08x\n",status);
       return -1;

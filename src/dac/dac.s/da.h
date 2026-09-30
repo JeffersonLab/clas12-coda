@@ -106,14 +106,76 @@
 #define EV_BANK_ID 0xc0010100
 #define EV_HDR_LEN 4
 
+
 /* define some things for byte swapping */
+
+#undef SSWAP
+#define SSWAP(x)        ((((x) & 0x00ff) << 8) | \
+                         (((x) & 0xff00) >> 8))
+
+#undef LSWAP
 #define LSWAP(x)        ((((x) & 0x000000ff) << 24) | \
                          (((x) & 0x0000ff00) <<  8) | \
                          (((x) & 0x00ff0000) >>  8) | \
                          (((x) & 0xff000000) >> 24))
 
-#define SSWAP(x)        ((((x) & 0x00ff) << 8) | \
-                         (((x) & 0xff00) >> 8))
+#undef LLSWAP
+#define LLSWAP(x)       ((((x) & 0x00000000FFFFFFFF) << 32) | \
+                         (((x) & 0xFFFFFFFF00000000) >> 32) | \
+                         (((x) & 0x0000FFFF0000FFFF) << 16) | \
+                         (((x) & 0xFFFF0000FFFF0000) >> 16) | \
+                         (((x) & 0x00FF00FF00FF00FF) << 8)  | \
+                         (((x) & 0xFF00FF00FF00FF00) >> 8))
+
+
+
+#if 0 //from the web, need check !!!
+
+//! Byte swap unsigned short
+uint16_t swap_uint16( uint16_t val ) 
+{
+    return (val << 8) | (val >> 8 );
+}
+
+//! Byte swap short
+int16_t swap_int16( int16_t val ) 
+{
+    return (val << 8) | ((val >> 8) & 0xFF);
+}
+
+//! Byte swap unsigned int
+uint32_t swap_uint32( uint32_t val )
+{
+    val = ((val << 8) & 0xFF00FF00 ) | ((val >> 8) & 0xFF00FF ); 
+    return (val << 16) | (val >> 16);
+}
+
+//! Byte swap int
+int32_t swap_int32( int32_t val )
+{
+    val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF ); 
+    return (val << 16) | ((val >> 16) & 0xFFFF);
+}
+
+
+int64_t swap_int64( int64_t val )
+{
+    val = ((val << 8) & 0xFF00FF00FF00FF00ULL ) | ((val >> 8) & 0x00FF00FF00FF00FFULL );
+    val = ((val << 16) & 0xFFFF0000FFFF0000ULL ) | ((val >> 16) & 0x0000FFFF0000FFFFULL );
+    return (val << 32) | ((val >> 32) & 0xFFFFFFFFULL);
+}
+
+uint64_t swap_uint64( uint64_t val )
+{
+    val = ((val << 8) & 0xFF00FF00FF00FF00ULL ) | ((val >> 8) & 0x00FF00FF00FF00FFULL );
+    val = ((val << 16) & 0xFFFF0000FFFF0000ULL ) | ((val >> 16) & 0x0000FFFF0000FFFFULL );
+    return (val << 32) | (val >> 32);
+}
+
+#endif
+
+
+
 
 
 #define DT_BANK    0x10
@@ -202,16 +264,41 @@ hrtime_t/*uint64_t*/ gethrtime(void);
 
 
 
-#define USE_128
 
-/* to handle 128-bit words, needed by event building process */
+/* to handle long words, needed by event building process */
+
+/* by default, WORD128 (historically) will be 256-bit; if USE_128 is set, it will be 128-bit */
+//#define USE_128
+
+#ifdef USE_128
+#define NINTS 4
+#else
+#define NINTS 8
+#endif
 
 typedef struct
 {
-  uint32_t words[4]; /* words[0] is least significant */  
-
+  uint32_t words[NINTS]; /* words[0] is least significant */  
 } WORD128;
 
+
+
+
+#define MAXFRAME    16384        /*maximum streaming frame size in 4ns ticks (64us)*/
+
+#define MAXROCS     128          /* maximum posiible number of VTPs (=maxrocid=128) */
+#define NROCS       20//38       /* maximum number of VTPs in configuration*/
+
+#define MAXFBS      4 //8            /* maximum number of Frame Builders */
+#define MAXOUTS     8 //16           /* the maximum number of outputs/processes connected to every Frame Builder (maximum 64 - for now !!!) */
+
+
+
+#define MAXLINKS    (NROCS*2)     /* the maximum number of links from all VTPs (currently up to 2 links from one VTP) */
+#define MAXSTRLEN   128
+#define MAGIC       0xc0da0100
+
+#define MAX_NUM_ROLS 3 /* MUST BE CONSISTENT WITH #include "Editor.h" !!! */
 
 
 /* function prototypes */
@@ -229,6 +316,9 @@ int IFZERO128(WORD128 *hwa);
 void Clear128(WORD128 *hw);
 void Negate128(WORD128 *hw);
 
+
+
+
 char *dacGetExpid();
 
 int tcpServer(char *name, char *mysqlhost);
@@ -240,6 +330,7 @@ int checkHeartBeats();
 int codaFindFreeTcpPort();
 char *loadwholefile(char *file, int *size, int *padding);
 int codaLoadROL(ROLPARAMS *rolP, char *rolname, char *params);
+int codaLoadROL3(ROLPARAMS *rolP, char *rolname, char *params);
 int codaUnloadROL(ROLPARAMS *rolP);
 int isBigEndian(void);
 void debug_printf(int level, char *fmt,...);
@@ -265,6 +356,23 @@ int UDP_request(char *str);
 int UDP_send(int socket);
 void UDP_show();
 int codaUpdateStatus(char *status);
+int codaGetReadoutLists(char *confname, char *compname, char names[MAX_NUM_ROLS][LISTARGV2], char params[MAX_NUM_ROLS][LISTARGV2]);
+int codaPortTableUpdate(char *name_in, char *host_in, int port_in, int port_out);
+int codaGetPorts(char *myname, char host[128], int *DAQ_udp, int *DAQ_tcp, int *tcpClient_tcp, int *Trigger_tcp);
+int codaConfigTableUpdateIP(char *config, char *name, char *ip_name);
+int codaConfigTableGetIP(char *config, char *name, char *ip_name);
+int codaLinksTableGetHostPort(char *name, char *host, int *port);
+
+
+int codaStreaminTableCleanup(char *name);
+int codaStreaminTableUpdate(char *name, char *host, int port_in, char *host_in);
+int codaGetStreamin(char *myname, char host[128], int *port_in, char host_in[128]);
+int codaStreamoutTableUpdate(char *name, char *host, int port_out);
+int codaGetStreamout(char *myname, char host[128], int *port_out);
+
+int codaStreamTableUpdate(char *name_in, char *host_in, int port_in, int port_out[21], char *host_out);
+int codaGetStreams(char *myname, char host[128], int *port_in, int port_out[21], char host_out[128]);
+
 void UDP_loop();
 int UDP_start();
 int listSplit1(char *list, int flag, int *argc, char argv[LISTARGV1][LISTARGV2]);
@@ -272,6 +380,9 @@ hrtime_t gethrtime(void);
 void gethrtimetest();
 
 int dacgethostbyname(char *hostname, char *ipaddress);
+
+int bufferSwap(unsigned int *cbuf, int nlongs);
+void microsleep(unsigned long usec);
 
 
 #endif /* _CODA_DA_H */

@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+
+#ifndef Linux_armv7l
+
 #include "petirocLib.h"
 #include "petirocConfig.h"
 #include "TIpcieUSLib.h"
@@ -63,3 +66,12 @@ CLOSE:
   exit(0);
 }
 
+#else
+
+int main()
+{
+  printf("Not supported on that architecture\n");
+  exit(0);
+}
+
+#endif

@@ -21,6 +21,12 @@
  *
  * </pre>
  *----------------------------------------------------------------------------*/
+
+#include <stdio.h>
+#include <string.h>
+#include <pthread.h>
+//#include <math.h>
+
 #if defined(VXWORKS) || defined(Linux_vme) /*sergey*/
 
 #ifdef VXWORKS
@@ -35,11 +41,11 @@
 #else
 #include <sys/prctl.h>
 #include <unistd.h>
-#endif
-#include <stdio.h>
-#include <string.h>
-#include <pthread.h>
 #include "jvme.h"
+#include "usrvme.h"
+#endif
+
+
 #include "tsLib.h"
 
 /** Mutex to guard TS read/writes */
@@ -2961,7 +2967,7 @@ tsGetPrescale()
  *  @return Set prescale factor, otherwise ERROR.
  */
 int
-tsSetTriggerPrescale(int type, int chan, unsigned int prescale)
+tsSetTriggerPrescale(int type, int chan, /*sergey unsigned*/ int prescale)
 {
   int rval=OK;
   int bank=0,bitshift=0,chanmask=0xFFFF;
@@ -3073,8 +3079,73 @@ tsGetTriggerPrescale(int type, int chan)
   rval = rval >> bitshift;
   TSUNLOCK;
 
+  //printf("tsGetTriggerPrescale: type=%d, chan=%2d, prescale=%d\n",type,chan,rval);
+
   return rval;
 }
+
+/*sergey*/
+/*
+ report real prescale factors, using formula (2**(ix-1) + 1)
+ report prescale 0 if channel is masked off
+*/
+static int
+ipow(int base, int exponent)
+{
+  int i, result = 1;
+  for (i=0; i<exponent; i++)
+  {
+    result = result * base;
+  }
+  return(result);
+}
+
+int
+tsGetGTPTriggerPrescale(volatile unsigned int *data)
+{
+  int chan, ix;
+  unsigned int mask;
+  mask = tsGetGTPInput();
+  //printf("tsGetGTPTriggerPrescale: mask=0x%08x\n",mask);
+  for(chan=0; chan<32; chan++)
+  {
+    if( (mask>>chan)&0x1 ) /*channel enabled*/
+    {
+      ix = tsGetTriggerPrescale(1, chan);
+      if(ix==0) data[chan] = 1;
+      else      data[chan] = 1 + ipow(2, (ix-1));
+    }
+    else /*channel disabled*/
+    {
+      data[chan] = 0;
+    }
+  }
+  return(32);
+}
+int
+tsGetFPTriggerPrescale(volatile unsigned int *data)
+{
+  int chan, ix;
+  unsigned int mask;
+  mask = tsGetFPInput();
+  //printf("tsGetFPTriggerPrescale: mask=0x%08x\n",mask);
+  for(chan=0; chan<32; chan++)
+  {
+    if( (mask>>chan)&0x1 ) /*channel enabled*/
+    {
+      ix = tsGetTriggerPrescale(2, chan);
+      if(ix==0) data[chan] = 1;
+      else      data[chan] = 1 + ipow(2, (ix-1));
+    }
+    else /*channel disabled*/
+    {
+      data[chan] = 0;
+    }
+  }
+  return(32);
+}
+/*sergey*/
+
 
 
 /**
@@ -3840,6 +3911,33 @@ tsSetBeforePrescaleReadout(int enable)
 
   return OK;
 }
+
+
+//sergey from TI
+/**
+ * @ingroup Status
+ * @brief Return geographic address as provided from a VME-64X crate.
+ * @return Geographic Address if successful, otherwise ERROR.  0 would indicate that the TS is not in a VME-64X crate.
+ */
+
+int
+tsGetGeoAddress()
+{
+  int rval=0;
+  if(TSp==NULL)
+    {
+      printf("%s: ERROR: TS not initialized\n",__FUNCTION__);
+      return ERROR;
+    }
+
+  TSLOCK;
+  rval = (vmeRead32(&TSp->adr24) & TS_ADR24_GEOADDR_MASK)>>10;
+  TSUNLOCK;
+
+  return rval;
+}
+
+
 
 /*************************************************************
 

@@ -36,6 +36,7 @@ extern char configname[128]; /* coda_component.c (need to add it in rolInt.h/ROL
 
 /* Put any global user defined variables needed here for GEN readout */
 
+#include "daqLib.h"
 #include "TIpcieUSLib.h"
 #include "tipusConfig.h"
 extern int tipusDoAck;

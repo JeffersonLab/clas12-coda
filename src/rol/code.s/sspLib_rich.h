@@ -433,4 +433,7 @@ int sspRich_GInit();
 int sspRich_GReboot(int image);
 int sspRich_GScanFibers();
 
+//sergey
+int sspRich_FirmwareUpdateVerifyAll(int id, const char *filename);
+
 #endif

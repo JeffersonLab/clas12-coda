@@ -1,5 +1,5 @@
 
-/* rol2.c - second readout list for VXS crates with FADC250 boards */
+/* rol2mvt.c - second readout list for VXS crates with MVT readout */
 
 #include <math.h>
 #include <stdio.h>
@@ -34,6 +34,11 @@ static char ssname[80];
 #endif
 
 #include "circbuf.h"
+
+#include "daqLib.h"
+int getTdcTypes(int *typebyslot);
+int getTdcSlotNumbers(int *slotnumbers);
+
 
 /****************************************************
  * USE_MVT
@@ -140,8 +145,8 @@ int mynev; /*defined in tttrans.c */
 #define CCCLOSE \
 { \
   unsigned int padding; \
-  dataout = (unsigned int *) ( ( ((unsigned int)b08+3)/4 ) * 4); \
-  padding = (unsigned int)dataout - (unsigned int)b08; \
+  dataout = (unsigned int *) ( ( ((unsigned long int)b08+3)/4 ) * 4); \
+  padding = (unsigned long int)dataout - (unsigned long int)b08; \
   /*dataout_save1[1] |= (padding&0x3)<<14;*/ \
   dataout_save2[1] |= (padding&0x3)<<14; \
   /*printf("CCCLOSE: 0x%08x %d --- 0x%08x %d --> padding %d\n",dataout,dataout,b08,b08,((dataout_save2[1])>>14)&0x3);*/ \
@@ -782,7 +787,7 @@ rol2trig(int a, int b)
   int a_tdc, a_edge;
   int a_slot_old;
   int a_channel_old;
-  int npedsamples, atleastoneslot, atleastonechannel[21];
+  int npedsamples, atleastoneslot, atleastonechannel[NSLOTS];
   time_t now;
   int error, status;
   int ndnv, nw;

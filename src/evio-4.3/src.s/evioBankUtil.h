@@ -90,6 +90,8 @@ extern "C" {
 
   int evOpenFrag(unsigned int *buf, int fragtag, int fragnum);
   int evOpenBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum, int banktype, char *fmt, int *ind_data);
+
+  int evCloseFrag(unsigned int *buf, int fragtag, int fragnum);
   int evCloseBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum, unsigned char *b08);
 
   int evLinkFrag(unsigned int *buf, int fragtag, int fragnum);
@@ -100,6 +102,9 @@ extern "C" {
 
   int evDropFrag(unsigned int *buf, int fragtag, int fragnum);
   int evDropBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum);
+
+  int evIndexSet(unsigned int *buf);
+  int evIndexGet(unsigned int *buf);
 
 #ifdef __cplusplus
 }

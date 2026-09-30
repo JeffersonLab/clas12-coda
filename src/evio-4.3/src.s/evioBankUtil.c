@@ -98,6 +98,7 @@ evOpenBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum
 }
 
 
+/*if bank was opened by evOpenBank(), but it was no data, evCloseBank() will remove that bank */
 int
 evCloseBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum, unsigned char *b08)
 {
@@ -129,6 +130,26 @@ evCloseBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknu
     return(0);
   }
 
+
+  if( ((unsigned char *)&buf[ind_data]) == b08)
+  {
+#ifdef DEBUG
+    printf("\n=========evCloseBank============= &buf[ind_data]=0x%llx, b08=0x%llx\n\n",&buf[ind_data],b08);
+    printf("evOpenBank() was called, but it was no data -> remove that bank\n");
+#endif
+    nw = buf[ind] + 1; /*the number of words written by evOpenBank()*/
+    buf[0] -= nw; /*update event length*/
+    buf[ind_frag] -= nw; /*update fragment length*/
+    
+    return(0);
+  }
+
+
+
+
+
+
+  
   bank_start = (unsigned int *) &buf[ind]; /*remember bank header location*/
 #ifdef DEBUG
   printf("evCloseBank: bank_start = 0x%08x, full bank length=%d\n",bank_start,bank_start[0]+1);fflush(stdout);
@@ -179,13 +200,14 @@ evCloseBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknu
 }
 
 
+typedef unsigned int (*index_t)[0xFF];
 
 
 /* return index of the bank header; WILL SKIP BANK_OF_BANKS inside BANK_OF_BANKS !!?? */
 int
 evLinkBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum, int *nbytes, int *ind_data)
 {
-  int len, nw, tag1, pad1, typ1, num1, len2, pad3, ind_save, ind, ind2, ind3;
+  int len, nw, tag1, pad1, typ1, num1, len2, pad3, ind_save, ind, ind2, ind3, indexptr;
 
   *nbytes = 0;
   *ind_data = 0;
@@ -193,6 +215,27 @@ evLinkBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum
 #ifdef DEBUG
   printf("evLinkBank: fragtag=0x%08x fragnum=%d banktag=0x%08x banknum=%d\n",fragtag,fragnum,banktag,banknum);
 #endif
+
+
+
+
+#if 0
+  indexptr = evIndexGet(buf);
+  /*if any fragnum and any banknum requested, use indexes*/
+  if(indexptr>0 && fragtag<=0xFF && fragnum==-1 /*&& banknum==-1*/)
+  {
+    index_t index = (index_t)&buf[indexptr];
+    index_t length = (index_t)&buf[indexptr+0xFF*0xFF];
+    
+    *ind_data = index[fragtag][banktag&0xFF];
+    *nbytes = length[fragtag][banktag&0xFF];
+    //printf("evLinkBank: *ind_data=%d *nbytes=%d (index search)\n",*ind_data,*nbytes);fflush(stdout);
+    return(1);
+  }
+#endif
+
+
+  
   if( (ind = evLinkFrag(buf, fragtag, fragnum)) <= 0)
   {
 #ifdef DEBUG
@@ -236,14 +279,15 @@ evLinkBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum
     if(tag1==banktag && num1==banknum)
     {
       if(typ1!=0xf)
-	  {
+      {
 #ifdef DEBUG
         printf("evLinkBank: >>> found base type bank: header index %d\n",ind);
 #endif
         *nbytes = (nw-2)<<2;
         *ind_data = ind+2;
+	//printf("evLinkBank: *ind_data=%d *nbytes=%d (search1)\n",*ind_data,*nbytes);fflush(stdout);
         return(ind);
-	  }
+      }
       else
       {
         ind2 = ind+2; /* index of the tagsegment (contains format description) */
@@ -251,14 +295,15 @@ evLinkBank(unsigned int *buf, int fragtag, int fragnum, int banktag, int banknum
         ind3 = ind2 + len2; /* index of the internal bank */
         pad3 = (buf[ind3+1]>>14)&0x3; /* padding from internal bank */
 #ifdef DEBUG
-		printf("evLinkBank: >>> found composite bank: tag=%d, type=%d, exclusive len=%d (padding from internal bank=%d)\n",((buf[ind2]>>20)&0xfff),((buf[ind2]>>16)&0xf),len2-1,pad3);
+	printf("evLinkBank: >>> found composite bank: tag=%d, type=%d, exclusive len=%d (padding from internal bank=%d)\n",((buf[ind2]>>20)&0xfff),((buf[ind2]>>16)&0xf),len2-1,pad3);
         printf("evLinkBank: return composite bank data index %d\n",ind3+2);
 #endif
         *nbytes = ((nw-(2+len2+2))<<2)-pad3; /* bank_length - bank_header_length(2) - tagsegment_length(len2) - internal_bank_header_length(2) */
         *ind_data = ind+2+len2+2;
 #ifdef DEBUG
-	    printf("evLinkBank: >>> nbytes=%d\n",*nbytes);
+	printf("evLinkBank: >>> nbytes=%d\n",*nbytes);
 #endif
+	//printf("evLinkBank: *ind_data=%d *nbytes=%d (search1)\n",*ind_data,*nbytes);fflush(stdout);
         return(ind);
       }
     }
@@ -343,15 +388,15 @@ evLinkFrag(unsigned int *buf, int fragtag, int fragnum)
 
     /*check if it is right fragment*/
     if(typ1==0xe || typ1==0x10)
-	{
-	  if(tag1==fragtag && (num1==fragnum || fragnum<0))
+    {
+      if(tag1==fragtag && (num1==fragnum || fragnum<0))
       {
 #ifdef DEBUG
         printf("evLinkFrag: right frag, return ind=%d\n",ind);fflush(stdout);
 #endif
         return(ind);
       }
-	}
+    }
 
     /* jump to the next fragment */
     if(typ1==0xe || typ1==0x10) ind += 2; /* if fragment, jump to the next header, can be another fragment */
@@ -360,6 +405,58 @@ evLinkFrag(unsigned int *buf, int fragtag, int fragnum)
 
   return(0);
 }
+
+
+
+
+
+
+
+
+
+int
+evCloseFrag(unsigned int *buf, int fragtag, int fragnum)
+{
+  int status, ind1, nw;
+
+  /* if input fragment does not exist - return */
+  if( (ind1 = evLinkFrag(buf, fragtag, fragnum)) <= 0)
+  {
+    printf("evCloseFrag ERROR: input fragment tag=%d num=%d does not exist\n",fragtag,fragnum);
+    return(-1);
+  }
+
+#ifdef DEBUG
+  printf("evCloseFrag: input frag ind=%d, header=%d 0x%08x\n",ind1,buf[ind1],buf[ind1+1]);
+#endif
+
+  nw = buf[ind1]+1; /*fragment length*/
+#ifdef DEBUG
+  printf("evCloseFrag: nw=%d (ind1=%d, buf[0]=%d\n",nw,ind1,buf[0]);
+#endif
+  
+  /* if fragment is empty, and it was last fragment in event --> remove it*/
+  if(nw==2)
+  {
+    if( (ind1+1) == buf[0])
+    {
+#ifdef DEBUG
+      printf("evCloseFrag: remove last fragment\n");
+#endif
+      buf[0] -= 2;
+    }
+  }
+  
+  return(0);
+}
+
+
+
+
+
+
+
+
 
 int
 evCopyFrag(unsigned int *buf, int fragtag, int fragnum, unsigned int *bufout)
@@ -507,4 +604,143 @@ int
 evGarbageCollection(unsigned int *buf)
 {
   return(0);
+}
+
+
+
+//#define DEBUG
+
+
+const int magic[4] = {0x00010203,0x04050607,0x08090a0b,0x0c0d0e0f};
+  
+/*scan event and fill index array(s); place index array(s) in the end of 'buf' after last bank, and returns index of that array*/
+int
+evIndexSet(unsigned int *buf)
+{
+  int index[0xFF][0xFF] = {0}; /*data index [fragment#][banktag#]*/
+  int length[0xFF][0xFF] = {0}; /*data length in bytes [fragment#][banktag#]*/
+  int ii, len, nw, tag1, pad1, typ1, num1, len2, pad3, ind, num, nbytes, banktag;
+  int fragtag = -1;
+  int fragindex, bankindex, dataindex;
+
+#ifdef DEBUG
+  printf("\n\nevIndex reached\n");
+  printf("evIndex: 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
+		 buf[0],buf[1],buf[2],buf[3],buf[4],buf[5]);
+  printf("evIndex: %d %d %d %d %d %d\n",
+		 buf[0],buf[1],buf[2],buf[3],buf[4],buf[5]);
+#endif
+
+  len = buf[0]+1;
+
+  /*
+  if(buf[len]==magic[0]&&buf[len+1]==magic[1]&&buf[len+2]==magic[2]&&buf[len+3]==magic[3])
+  {
+#ifdef DEBUG
+    printf("evIndex: index already exist - do nothing\n");
+#endif
+    return(len+4);
+  }
+  */
+
+  ii = 2;
+  while(ii<len)
+  {
+    nw = buf[ii] + 1;
+    tag1 = (buf[ii+1]>>16)&0xffff;
+    pad1 = (buf[ii+1]>>14)&0x3;
+    typ1 = (buf[ii+1]>>8)&0x3f;
+    num1 =  buf[ii+1]&0xff;
+#ifdef DEBUG
+    printf("[%5d] nw=%d, tag1=0x%04x, pad1=0x%02x, typ1=0x%02x, num1=0x%02x\n",ii,nw,tag1,pad1,typ1,num1);
+#endif
+    
+    if(typ1==0xe || typ1==0x10) /*fragment (bank of banks)*/
+    {
+      fragtag = tag1;
+      fragindex = ii;
+#ifdef DEBUG
+      printf("fragindex=%d\n",fragindex);
+#endif
+    }
+    else if(fragtag!=-1)  /*we've seen fragment already, and this is not fragment (we assume there are no bank-of-banks inside fragment)*/
+    {
+      if(typ1!=0xf) /*non-composite bank*/
+      {
+        banktag = tag1 & 0xFF; /*remove 0xe100*/
+	bankindex = ii;
+	dataindex = ii+2;
+        nbytes = (nw-2)<<2;
+#ifdef DEBUG
+	printf("-> non-composite bank\n");
+#endif
+      }
+      else /*composite bank*/
+      {
+        len2 = (buf[ii+2]&0xffff) + 1; /* tagsegment length (tagsegment contains format description) */
+        ind = ii + len2+2; /* internal bank */
+        pad3 = (buf[ind+1]>>14)&0x3; /* padding from internal bank */
+#ifdef DEBUG
+	printf(">>> found composite bank: tag=%d, type=%d, exclusive len=%d (padding from internal bank=%d)\n",((buf[ii+2]>>20)&0xfff),((buf[ii+2]>>16)&0xf),len2-1,pad3);
+#endif
+        banktag = tag1 & 0xFF; /*remove 0xe100*/
+	bankindex = ii;
+	dataindex = ii+2+len2+2;
+        nbytes = ((nw-(2+len2+2))<<2)-pad3;
+#ifdef DEBUG
+	printf("-> composite bank\n");
+#endif
+      }
+
+      if(fragtag<0 || banktag<0)
+      {
+	printf("evIndex error: fragtag=%d, banktag=%d --> exit\n",fragtag,banktag);
+	exit(0);
+      }
+      if(fragtag<0xFF && banktag<0xFF)
+      {
+        index[fragtag][banktag] = dataindex;
+        length[fragtag][banktag] = nbytes;
+#ifdef DEBUG
+        printf("---> frag=%3d, bank=0x%02x, fragindex=%d, bankindex=%d, dataindex=%d, nbytes=%d\n",fragtag,banktag,fragindex,bankindex,dataindex,nbytes);
+#endif
+      }
+#ifdef DEBUG
+      else
+      {
+	printf("---> frag=%3d, bank=0x%08x -> ignore\n",fragtag,banktag);
+      }
+#endif
+
+    }
+
+    if(typ1==0xe || typ1==0x10) ii += 2; /* bank of banks */
+    else ii += nw;
+  }
+
+
+#ifdef DEBUG
+  printf("=====> first empty index=%6d (len=%6d)\n\n",ii,len);
+#endif
+
+  /*write index array(s) after the last bank*/
+#ifdef DEBUG
+  printf("evIndex: creating new index at %d\n",len+4);
+#endif
+  buf[len  ] = magic[0];
+  buf[len+1] = magic[1];
+  buf[len+2] = magic[2];
+  buf[len+3] = magic[3];
+  memcpy(&buf[len+4],&index[0][0],0xFF*0xFF*4);
+  memcpy(&buf[len+4+0xFF*0xFF],&length[0][0],0xFF*0xFF*4);
+  
+  return(len+4);
+}
+
+int
+evIndexGet(unsigned int *buf)
+{
+  int len;
+  len = buf[0]+1;
+  return(len+4);
 }

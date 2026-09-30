@@ -30,6 +30,7 @@
 #include "vxLib.h"
 #else
 #include "jvme.h"
+#include "usrvme.h"
 #endif
 #include "stdio.h"
 #include "string.h"
@@ -96,7 +97,7 @@ SEM_ID v767Sem;                               /* Semephore for Task syncronizati
  */
 
 STATUS 
-v767Init (UINT32 addr, UINT32 addr_inc, int nadc, UINT16 crateID)
+v767Init (unsigned long int addr, UINT32 addr_inc, int nadc, UINT16 crateID)
 {
   int ii, res, rdata, errFlag = 0;
   UINT32 boardID = 0;
@@ -158,7 +159,7 @@ v767Init (UINT32 addr, UINT32 addr_inc, int nadc, UINT16 crateID)
 #endif
       if(res < 0) 
 	{
-	  printf("v767Init: ERROR: No addressable board at addr=0x%x\n",(UINT32) v767p[ii]);
+	  printf("v767Init: ERROR: No addressable board at addr=0x%x\n",(unsigned long int)v767p[ii]);
 	  v767p[ii] = NULL;
 	  errFlag = 1;
 	  break;
@@ -181,7 +182,7 @@ v767Init (UINT32 addr, UINT32 addr_inc, int nadc, UINT16 crateID)
       printf("Initialized TDC ID %d at address 0x%08x \n",ii,(UINT32) v767p[ii]);
 #else
       printf("Initialized TDC ID %d at VME (USER) address 0x%08x (0x%08x) \n",ii,
-	     (UINT32) v767p[ii] - v767MemOffset, (UINT32) v767p[ii]);
+	     (unsigned long int)v767p[ii] - v767MemOffset, (unsigned long int)v767p[ii]);
 #endif
     }
 
@@ -283,7 +284,7 @@ v767Status( int id, int reg, int sflag)
   printf("STATUS for TDC id %d at base address 0x%x \n",id,(UINT32) v767p[id]);
 #else
   printf("STATUS for TDC id %d at VME base address 0x%.8x \n",id,
-	 (UINT32) v767p[id]- v767MemOffset);
+	 (unsigned long int)v767p[id]- v767MemOffset);
 #endif
   printf("---------------------------------------------- \n");
 
@@ -1118,7 +1119,7 @@ v767ReadBlock(int id, volatile UINT32 *data, int nwrds)
   /*sergey
   retVal = vmeDmaSend((UINT32)data,(UINT32)(v767p[id]->data) - v767MemOffset,(nwrds<<2));
   */
-  retVal = usrVme2MemDmaStart((UINT32)(v767p[id]->data) - v767MemOffset, (UINT32)data, (nwrds<<2));
+  retVal = usrVme2MemDmaStart((unsigned long int)(v767p[id]->data) - v767MemOffset, (unsigned long int)data, (nwrds<<2));
 
   if(retVal < 0) 
     {

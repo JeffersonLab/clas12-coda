@@ -95,6 +95,10 @@ public:
 
 protected:
 
+  //sergey
+  static void loadRcDbaseCbk (int status, void* arg, daqNetData* data);
+
+  
   // enter and leaving window event handler
   static void crossEventHandler (Widget w, XtPointer, XEvent*, Boolean);
   virtual Widget createMenuWindow (Widget );
@@ -115,6 +119,10 @@ private:
 
   // network handler
   rcClientHandler& netHandler_;
+
+  //sergey
+  //rcClient& client_;
+  rcClient* client_;
 
   // file menu
   rcExit*        exit_;

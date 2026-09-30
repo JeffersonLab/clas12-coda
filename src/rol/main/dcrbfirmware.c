@@ -11,11 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "dcrbLib.h"
-
-
 #ifdef Linux_vme
 
+#include "dcrbLib.h"
 #include "jvme.h"
 
 int

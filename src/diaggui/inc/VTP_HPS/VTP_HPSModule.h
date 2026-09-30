@@ -16,7 +16,7 @@ public:
     TGCompositeFrame *tFrame;
     AddFrame(pTabs = new TGTab(this), new TGLayoutHints(kLHintsBottom | kLHintsRight | kLHintsExpandX | kLHintsExpandY));
 
-    tFrame = pTabs->AddTab("TrgHist");   tFrame->AddFrame(new VTP_HPS_TrgHist(tFrame, this), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+//    tFrame = pTabs->AddTab("TrgHist");   tFrame->AddFrame(new VTP_HPS_TrgHist(tFrame, this), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 //    tFrame = pTabs->AddTab("PairTrg");   tFrame->AddFrame(new VTP_HPS_PairTrg(tFrame, this), new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
     strSlotIdentifier.Form("SWA");
@@ -63,6 +63,22 @@ public:
         {NULL, 0},
       {NULL, 0},
 
+      {"MPD7", 0},
+        {"GTX_CTRL",            REGMEM_DESC_FLAGS_HEX,    {0xA1C0, 0,32,32}},
+        {"POLARITY_REG",        REGMEM_DESC_FLAGS_HEX,    {0xA1C4, 0,32,32}},
+        {"GTX_STATUS_REG",      REGMEM_DESC_FLAGS_HEX,    {0xA1D0, 0,32,32}},
+        {"EB_CTRL_REG",         REGMEM_DESC_FLAGS_HEX,    {0xA1E0, 0,32,32}},
+        {"STATE0_REG",          REGMEM_DESC_FLAGS_HEX,    {0xA1E8, 0,32,32}},
+        {"STATE1_REG",          REGMEM_DESC_FLAGS_HEX,    {0xA1EC, 0,32,32}},
+        {"APV_HIST_BIN0_REG",   REGMEM_DESC_FLAGS_HEX,    {0xA1F0, 0,32,32}},
+        {"APV_OFFSET_REG",      REGMEM_DESC_FLAGS_HEX,    {0xA1F4, 0,32,32}},
+        {"APV_THR_REG",         REGMEM_DESC_FLAGS_HEX,    {0xA1F8, 0,32,32}},
+        {"APV_HIST_BIN1_REG",   REGMEM_DESC_FLAGS_HEX,    {0xA1FC, 0,32,32}},
+        {NULL, 0},
+      {NULL, 0},
+
+
+/*
       {"PayloadDecoder", 0},
         {"RXLatency", 0},
           {"Sl3,PP15",        REGMEM_DESC_FLAGS_UINT, {0x1E34, 16, 12, 32}},
@@ -709,7 +725,8 @@ public:
           {"EnergyDist",        REGMEM_DESC_FLAGS_UINT,   {0x5DEC, 0,32,32}},
         {NULL, 0},
       {NULL, 0},
-    };
+*/ 
+   };
 
     pRegEditor->AddSet(regs, sizeof(regs)/sizeof(regs[0]));
   }

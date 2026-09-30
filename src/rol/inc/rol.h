@@ -132,7 +132,7 @@ static int event_number;
 #define CPCLOSE \
 { \
   uint32_t padding; \
-  /*printf("CPCLOSE: dataout before = 0x%016x, b08=0x%016x (0x%016x)\n",dataout,b08,(uint64_t)b08);*/ \
+  /*printf("CPCLOSE: dataout before = 0x%016x, b08=0x%016x (0x%016x)\n",dataout,b08,(unsigned long int)b08);*/ \
   dataout = (uint32_t *) ( ( ((unsigned long int)b08+3)/4 ) * 4); \
   padding = (unsigned long int)dataout - (unsigned long int)b08; \
   dataout_save1[1] |= (padding&0x3)<<14; /*update bank header (2nd word) with padding info*/ \
@@ -799,10 +799,12 @@ cdopolldispatch()
 
 #else
 
+
   tdisp1++;
   if(!poolEmpty)
   {
     tdisp2++;
+
     if(syncTRtns) /*for VME_source.h it is vmettest*/
     {
       tdisp3++;

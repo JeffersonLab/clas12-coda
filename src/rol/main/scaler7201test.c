@@ -1,12 +1,11 @@
 /* test scaler7201 board using internal tests */
 
-#if defined(VXWORKS) || defined(Linux_vme)
-
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+#if defined(VXWORKS) || defined(Linux_vme)
 
 #include <jvme.h>
 #include "scaler7201.h"
@@ -22,8 +21,8 @@ main(int argc, char *argv[])
   unsigned int i, len, value, buffer[100];
   volatile unsigned int *bufptr;
   int res;
-  unsigned int address = atoi(argv[1]);
-  unsigned int addr;
+  unsigned long int address = atoi(argv[1]);
+  unsigned long int addr;
   printf("argc=%d, argv[0]=>%s, argv[1]=>%s<\n",argc,argv[0],argv[1]);
 
 address = 0x900000;

@@ -56,4 +56,8 @@ int  SysConfig_SetLogFilePointer( FILE *fptr );
 void SysConfig_SetVerbosity( int ver_level );
 int  SysDumpFeuOptLnk();
 
+//sergey
+int SysConfig_ClrLogFilePointer();
+
 #endif // #ifndef H_SysConfiguration
+

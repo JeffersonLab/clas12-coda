@@ -167,6 +167,10 @@ rcConnect::connect (void)
   printf("rcConnect::connect reached\n");
 #endif
 
+
+  /********************************************/
+  /*sergey: normally following is not executed*/
+  /********************************************/
   if(::getenv("DEFAULT_RUN") != 0)
   {
     rcClient& client = netHandler_.clientHandler ();
@@ -184,7 +188,8 @@ rcConnect::connect (void)
     // free memory
     delete []temp[0]; 
     delete []temp[1];
-    
+
+    printf("rcConnect::connect: sending command 'DALOADDBASE'  to rcServer's daqRun.cc\n");fflush(stdout);
     int status = client.sendCmdCallback (DALOADDBASE, data, 
 					 (rcCallback)&(rcConnect::configureCallback), 
 					 (void *)this);

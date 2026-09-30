@@ -222,7 +222,9 @@ rcRunTypeDialog::configure (void)
 void
 rcRunTypeDialog::popup (void)
 {
+  printf("rcRunTypeDialog::popup 1\n");fflush(stdout);
   option_->setAllEntries ();
+  printf("rcRunTypeDialog::popup 2\n");fflush(stdout);
   XcodaFormDialog::popup (); // popup run type configuration dialog
 }
 

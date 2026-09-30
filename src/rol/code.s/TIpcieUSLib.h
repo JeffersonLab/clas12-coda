@@ -17,8 +17,6 @@
 #define TIPCIEUS_H
 
 #define STATUS int
-#define TRUE  1
-#define FALSE 0
 #define OK    0
 #define ERROR -1
 #ifndef _ROLDEFINED

@@ -8,5 +8,12 @@
 #control_process_manager     stop           >& /dev/null &
 #control_procmgr_manager     stop           >& /dev/null &
 #control_ipc_process_manager stop clasprod  >& /dev/null &
-control_ipc_process_manager stop clasrun  >& /dev/null &
+control_ipc_process_manager stop clasrun
 
+#
+# also, stop all managed processes
+#
+control_ipcbank2et stop clasrun
+control_epics_monitor stop clasrun
+control_run_log_update stop clasrun
+control_dbrouter stop clasrun

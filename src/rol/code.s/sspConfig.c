@@ -125,7 +125,7 @@
 # SSP_HPS_PULSER   F
 #    F:     Pulser frequency (0 to 125MHz)
 #
-# SSP_HPS_SET_IO_SRC   OUTPUT_PIN     SIGNAL_SEL
+# SSP_SET_IO_SRC   OUTPUT_PIN     SIGNAL_SEL
 #    OUTPUT_PIN selection:
 #       LVDSOUT0        0
 #       LVDSOUT1        1
@@ -185,9 +185,11 @@
 #include <ctype.h>
 
 #include "jvme.h"
+#include "usrvme.h"
 #include "sspConfig.h"
 #include "sspLib.h"
 #include "xxxConfig.h"
+#include "codautil.h"
 
 #undef DEBUG
 //#define DEBUG
@@ -208,6 +210,11 @@ static SSP_CONF ssp[NBOARD+1];
           &msk[12], &msk[13], &msk[14], &msk[15])
 
 static char *expid = NULL;
+
+SSP_CONF *sspConfig_GetCONF()
+{
+  return ssp;
+}
 
 void
 sspSetExpid(char *string)
@@ -400,6 +407,24 @@ sspInitGlobals()
     ssp[jj].gtc.cndctof.cnd_width = 0;
     ssp[jj].gtc.cndctof.ctof_width = 0;
 
+    // PRAD
+    ssp[jj].prad.trg_latency = 0;
+    ssp[jj].prad.trg_width = 0;
+    for(ii=0; ii<8; ii++)
+    {
+      ssp[jj].prad.trg_prescale[ii] = 0;
+      ssp[jj].prad.dly_csum[ii] = 0;
+      ssp[jj].prad.dly_cmult[ii] = 0;
+      ssp[jj].prad.dly_esum[ii] = 0;
+      ssp[jj].prad.cmult_min[ii] = 0;
+      ssp[jj].prad.csum_min[ii] = 0;
+      ssp[jj].prad.esum_min[ii] = 0;
+      sprintf(ssp[jj].prad.short_name[ii], "\"nouse%02d\"", ii);
+      sprintf(ssp[jj].prad.long_name[ii], "\"nouse%02d\"", ii);
+      ssp[jj].prad.flags[ii][0] = 0;
+      ssp[jj].prad.flags[ii][1] = 0;
+    }
+
     // CLAS12 RICH
     ssp[jj].rich.disable_evtbuild = 0;
     ssp[jj].rich.disable_fiber = 0;
@@ -455,8 +480,8 @@ sspReadConfigFile(char *filename_in)
   char   fname[FNLEN] = { "" };  /* config file name */
   int    ii, jj, ch;
   char   str_tmp[STRLEN], str2[STRLEN], keyword[ROCLEN];
-  char   host[ROCLEN], ROC_name[ROCLEN];
-  int    args, i1, i2, i3, i4, i5, msk[16];
+  char   host[ROCLEN], ROC_name[ROCLEN],s1[STRLEN], s2[STRLEN];
+  int    args, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, msk[16];
   long long ll1;
   int    slot, slot1=0, slot2=-1, chan;
   int    fiber, fiber1=0, fiber2=-1;
@@ -468,9 +493,8 @@ sspReadConfigFile(char *filename_in)
   char *clonparms;
   int do_parsing, error, argc;
 
-  gethostname(host,ROCLEN);  /* obtain our hostname */
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");
@@ -811,13 +835,13 @@ sspReadConfigFile(char *filename_in)
             ssp[slot].hps.p[i1].ed_en = i4;
           }
         }
-        else if(!strcmp(keyword,"SSP_HPS_PULSER"))
+        else if(!strcmp(keyword,"SSP_HPS_PULSER") || !strcmp(keyword,"SSP_PULSER"))
         {
           sscanf (str_tmp, "%*s %d", &i1);
           for(slot=slot1; slot<slot2; slot++)
             ssp[slot].pulser_freq = i1;
         }
-        else if(!strcmp(keyword,"SSP_HPS_SET_IO_SRC"))
+        else if(!strcmp(keyword,"SSP_SET_IO_SRC"))
         {
           sscanf (str_tmp, "%*s %d %d", &i1, &i2);
           if((i1 < 0) || (i1 >= SD_SRC_NUM))
@@ -1276,6 +1300,34 @@ sspReadConfigFile(char *filename_in)
           for(slot=slot1; slot<slot2; slot++) ssp[slot].gtc.ctrg[ctrg_bit].cnd_width = i1;
         }
  
+        ///////////////////////////////////////////////////////////////////        
+        // PRAD 
+        ///////////////////////////////////////////////////////////////////
+        else if(!strcmp(keyword,"SSP_PRAD_TRIGGER"))
+        {
+          sscanf (str_tmp, "%*s %d %d",&i1,&i2);
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].prad.trg_latency=i1;
+          for(slot=slot1; slot<slot2; slot++) ssp[slot].prad.trg_width=i2;
+        }
+        else if(!strcmp(keyword,"SSP_PRAD_TRGBIT"))
+        {        
+          sscanf(str_tmp, "%*s %d %d %d %d %d %d %d %d %d %d %250s %250s",&i1,&i2,&i3,&i4,&i5,&i6,&i7,&i8,&i9,&i10,s1,s2);
+          if((i1>=0) && (i1<8))
+          {
+            for(slot=slot1; slot<slot2; slot++) ssp[slot].prad.trg_prescale[i1]=i2;
+            for(slot=slot1; slot<slot2; slot++) ssp[slot].prad.dly_cmult[i1]=i3;
+            for(slot=slot1; slot<slot2; slot++) ssp[slot].prad.dly_csum[i1]=i4;
+            for(slot=slot1; slot<slot2; slot++) ssp[slot].prad.dly_esum[i1]=i5;
+            for(slot=slot1; slot<slot2; slot++) ssp[slot].prad.cmult_min[i1]=i6;
+            for(slot=slot1; slot<slot2; slot++) ssp[slot].prad.csum_min[i1]=i7;
+            for(slot=slot1; slot<slot2; slot++) ssp[slot].prad.esum_min[i1]=i8;
+            for(slot=slot1; slot<slot2; slot++) ssp[slot].prad.flags[i1][0]=i9;
+            for(slot=slot1; slot<slot2; slot++) ssp[slot].prad.flags[i1][1]=i10;
+            for(slot=slot1; slot<slot2; slot++) sprintf(ssp[slot].prad.short_name[i1], "\"%s\"",s1);
+            for(slot=slot1; slot<slot2; slot++) sprintf(ssp[slot].prad.long_name[i1], "\"%s\"",s2);
+          }
+        }
+
         ///////////////////////////////////////////////////////////////////        
         // RICH 
         ///////////////////////////////////////////////////////////////////
@@ -2158,6 +2210,39 @@ sspDownloadAll()
     /****** CONFIGURATION END:   TYPE=HPS *****/
     /******************************************/
     
+    /******************************************/
+    /****** CONFIGURATION START: TYPE=PRAD ****/
+    /******************************************/
+    if(ssp[slot].fw_type == SSP_CFG_SSPTYPE_PRAD)
+    {
+      sspPRAD_SetTrigger(slot,
+            ssp[slot].prad.trg_latency,
+            ssp[slot].prad.trg_width
+        );
+      
+      for(jj=0; jj<8; jj++)
+      {
+        sspPRAD_SetTriggerName(slot, jj,
+            ssp[slot].prad.flags[jj][0],
+            ssp[slot].prad.flags[jj][1],
+            ssp[slot].prad.short_name[jj],
+            ssp[slot].prad.long_name[jj]
+          );
+
+        sspPRAD_SetTriggerBit(slot, jj,
+            ssp[slot].prad.trg_prescale[jj],
+            ssp[slot].prad.dly_cmult[jj],
+            ssp[slot].prad.dly_csum[jj],
+            ssp[slot].prad.dly_esum[jj],
+            ssp[slot].prad.cmult_min[jj],
+            ssp[slot].prad.csum_min[jj],
+            ssp[slot].prad.esum_min[jj]
+          );
+      }
+    }
+    /******************************************/
+    /****** CONFIGURATION END:   TYPE=PRAD ****/
+    /******************************************/
     
     /******************************************/
     /****** CONFIGURATION START: TYPE=RICH *****/
@@ -2456,6 +2541,32 @@ sspUploadAll(char *string, int length)
     /******************************************/
     
     /******************************************/
+    /****** CONFIGURATION START: TYPE=PRAD ****/
+    /******************************************/
+    if(ssp[slot].fw_type == SSP_CFG_SSPTYPE_PRAD)
+    {
+      sspPRAD_GetTrigger(slot,
+            &ssp[slot].prad.trg_latency,
+            &ssp[slot].prad.trg_width
+        );
+      for(jj=0; jj<8; jj++)
+      {
+        sspPRAD_GetTriggerBit(slot, jj,
+            &ssp[slot].prad.trg_prescale[jj],
+            &ssp[slot].prad.dly_cmult[jj],
+            &ssp[slot].prad.dly_csum[jj],
+            &ssp[slot].prad.dly_esum[jj],
+            &ssp[slot].prad.cmult_min[jj],
+            &ssp[slot].prad.csum_min[jj],
+            &ssp[slot].prad.esum_min[jj]
+          );
+      }
+    }
+    /******************************************/
+    /****** CONFIGURATION END:   TYPE=PRAD ****/
+    /******************************************/
+    
+    /******************************************/
     /****** CONFIGURATION START: TYPE=RICH *****/
     /******************************************/
     if(ssp[slot].fw_type == SSP_CFG_SSPTYPE_HALLBRICH)
@@ -2601,7 +2712,7 @@ sspUploadAll(char *string, int length)
       sprintf(sss,"SSP_HPS_PULSER %d\n", ssp[slot].pulser_freq); ADD_TO_STRING;
       for(i = SD_SRC_P2_LVDSOUT0; i <= SD_SRC_P2_LVDSOUT7; i++)
       {
-        sprintf(sss,"SSP_HPS_SET_IO_SRC %d %d\n",i,ssp[slot].ssp_io_mux[i]); ADD_TO_STRING;
+        sprintf(sss,"SSP_SET_IO_SRC %d %d\n",i,ssp[slot].ssp_io_mux[i]); ADD_TO_STRING;
       }
       /******************************************/
       /****** CONFIGURATION END:   TYPE=ALL *****/
@@ -2766,6 +2877,28 @@ sspUploadAll(char *string, int length)
       /****** CONFIGURATION END:   TYPE=HPS *****/
       /******************************************/
       
+      /******************************************/
+      /****** CONFIGURATION START: TYPE=PRAD ****/
+      /******************************************/
+      if(ssp[slot].fw_type == SSP_CFG_SSPTYPE_PRAD)
+      {
+        sprintf(sss,"SSP_PRAD_TRIGGER %d %d\n", ssp[slot].prad.trg_latency, ssp[slot].prad.trg_width); ADD_TO_STRING;
+        for(i=0; i<8; i++)
+        {
+          sprintf(sss,"SSP_PRAD_TRGBIT %d %d %d %d %d %d %d %d\n",i,
+              ssp[slot].prad.trg_prescale[i],
+              ssp[slot].prad.dly_cmult[i],
+              ssp[slot].prad.dly_csum[i],
+              ssp[slot].prad.dly_esum[i],
+              ssp[slot].prad.cmult_min[i],
+              ssp[slot].prad.csum_min[i],
+              ssp[slot].prad.esum_min[i]
+            ); ADD_TO_STRING;
+        }
+      }
+      /******************************************/
+      /****** CONFIGURATION END:   TYPE=PRAD ****/
+      /******************************************/
       
       /******************************************/
       /****** CONFIGURATION START: TYPE=RICH *****/

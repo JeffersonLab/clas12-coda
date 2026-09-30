@@ -85,9 +85,7 @@
  *     component  comp                                        *
  *************************************************************/
 static void
-change_num_ports(Widget w, 
-			     XtPointer data, 
-			     XtPointer callback_data)
+change_num_ports(Widget w, XtPointer data, XtPointer callback_data)
 {
   Widget value_label = (Widget)data;
   int type;
@@ -138,9 +136,7 @@ change_num_ports(Widget w,
 }
 
 static void
-popdown_resize_shell (Widget w, 
-				  XtPointer data, 
-				  XtPointer callback_data)
+popdown_resize_shell (Widget w, XtPointer data, XtPointer callback_data)
 {
   Widget shell = (Widget)data;
   XtDestroyWidget(shell);
@@ -239,16 +235,9 @@ resize_comp (Widget w, XtPointer data, XtPointer callback_data)
   XtDestroyWidget(shell);
 }
 
-#if defined (__STDC__)
-void popup_resize_selection(XcodaEditorGraph* graph, 
-			    drawComp* comp, 
-			    Widget draw_area)
-#else
-void popup_resize_selection(graph, comp, draw_area)
-     XcodaEditorGraph *graph;
-     drawComp         *comp;
-     Widget           draw_area;
-#endif
+
+void
+popup_resize_selection(XcodaEditorGraph* graph, drawComp* comp, Widget draw_area)
 {
   Widget d_shell, form, label, frame;
   Widget mid_form,value_label;
@@ -402,18 +391,14 @@ void popup_resize_selection(graph, comp, draw_area)
  *     popup dialog box to enter a name for this port's ip_addrs          *
  **************************************************************************/
 static void
-popdown_name_entry_shell(Widget w, 
-				     XtPointer data, 
-				     XtPointer callback_data)
+popdown_name_entry_shell(Widget w, XtPointer data, XtPointer callback_data)
 {
   Widget shell = (Widget)data;
   XtPopdown(shell);
 }
 
 static void
-assign_port_name(Widget w, 
-			     XtPointer data, 
-			     XtPointer callback_data)
+assign_port_name(Widget w, XtPointer data, XtPointer callback_data)
 {
   ipPort* port = (ipPort *)data;
   Widget shell = XtParent(XtParent(w));
@@ -506,7 +491,7 @@ popup_ipport_attributes (ipPort* port,
   XtSetArg(args[ac], XmNrightOffset, 20); ac++;
   text_w = XtCreateManagedWidget("text_f_w", xmTextFieldWidgetClass,
 				 ipAttrForm, args, ac);
-  XtAddCallback(text_w, XmNactivateCallback, assign_port_name,port);
+  XtAddCallback(text_w, XmNactivateCallback, assign_port_name, port);
   ac = 0;
 
   /* Action buttons */
@@ -630,8 +615,9 @@ popdown_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
 
 
 
+/************************************************************************/
+/* Ok button callback - gets all information from codaedit's config gui */
 
-/* Ok button callback */
 static void
 setup_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
 {
@@ -652,6 +638,10 @@ setup_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
   XtGetValues (w, arg, ac);
   ac = 0;
 
+
+  /******************/
+  /* component name */
+  
   str = XmTextFieldGetString(widgets->name_widget);
   if(!str || !*str)
   {
@@ -681,6 +671,10 @@ setup_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
   {
     (*comp->write_name)(comp, xgc.dpy, XtWindow(sw_geometry.draw_area));
   }
+
+  
+  /*************/
+  /* host name */
   
   str = XmTextFieldGetString(widgets->host_widget);
   if(!str || !*str)
@@ -708,11 +702,10 @@ setup_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
     daq->node_name = strsave(str);
     (*comp->write_hostname)(comp, xgc.dpy, XtWindow(sw_geometry.draw_area));
     if (!type) /* add new node mode add default port name */
-	{
+    {
       for (i = 0; i < comp->num_ports; i++)
       {
-	    if (comp->ip_port[i].ip_addr == NULL)
-	      comp->ip_port[i].ip_addr = strsave (daq->node_name);
+	if (comp->ip_port[i].ip_addr == NULL) comp->ip_port[i].ip_addr = strsave (daq->node_name);
       }
     }
     XtFree(str);
@@ -724,6 +717,10 @@ setup_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
     comp->num_ports = 1;
     comp->ip_port[0].ip_addr = strdup(daq->comp_name);
   }
+
+
+  /**********/
+  /* roc id */
   
   str = XmTextFieldGetString(widgets->id_widget);
   if(!str || !*str)
@@ -757,6 +754,10 @@ setup_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
   daq->id_num = id_num;
   XtFree(str);
 
+  
+  /***************/
+  /* boot string */
+  
   str = XmTextFieldGetString(widgets->boot_widget);
   /* allow empty boot string */
   if(daq->boot_string != NULL)
@@ -767,9 +768,11 @@ setup_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
     daq->boot_string = strsave (str);
   XtFree(str);
 
+  
+  /**********************/
+  /* rol1 for ROCs, etc */
+  
   str = XmTextFieldGetString(widgets->code_widget[0]);
-
-  printf("setup_comp_attr: coda_widget[0] (ROL1) >%s<\n",str);
 
   if(daq->type == CODA_ROC)
   {
@@ -797,7 +800,14 @@ setup_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
     free(daq->code[1]);
     daq->code[1] = 0;
   }
+
+  
+  /**********************/
+  /* rol2 for ROCs, etc */
+
   str = XmTextFieldGetString(widgets->code_widget[1]);
+  //printf("setup_comp_attr: coda_widget[1] (ROL2) >%s<\n",str);
+  
   if (str && *str) 
     daq->code[1] = strsave(str);
   else
@@ -809,13 +819,44 @@ setup_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
     free(daq->code[2]);
     daq->code[2] = 0;
   }
+
+  
+  /******************************/
+  /* type for ROCs (TS/ROC/etc) */
+
   str = XmTextFieldGetString(widgets->code_widget[2]);
-  if (str && *str) 
+  //printf("setup_comp_attr: coda_widget[2] (TYPE) >%s<\n",str);
+
+  if (str && *str)
+  {
     daq->code[2] = strsave(str);
+    if(daq->type == CODA_ROC || daq->type == CODA_TRIG || daq->type == CODA_TSROC)
+    {
+      printf("\nSUBTYPE >%s<\n\n",daq->code[2]);
+
+      /*change coompoonent type to specified in config gui*/
+      if( !strncmp(daq->code[2],"TSROC",5) )    daq->type = CODA_TSROC;
+      else if( !strncmp(daq->code[2],"TS",2) )  daq->type = CODA_TRIG;
+      else if( !strncmp(daq->code[2],"ROC",3) ) daq->type = CODA_ROC;
+      else
+      {
+	printf("ERROR: unknown type, can be 'ROC', 'TS' or 'TSROC' - set type to default CODA_ROC\n");
+	daq->type = CODA_ROC; // set type to default, otherwise previous setting will stick (probably from process table)
+      }
+      printf("++++++++++ COMP_TYPE >%s< -> set daq->type=%d\n",daq->code[2],daq->type);
+    }
+  }
   else
+  {
     daq->code[2] = 0;
+    daq->type = CODA_ROC; // set type to default, otherwise previous setting will stick (probably from process table)
+  }
   XtFree(str);
 
+
+  /***************/
+  /***************/
+  
   if (type) /* editing mode */
   {
     updateInfoToIconList(comp);
@@ -826,6 +867,8 @@ setup_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
 
   /* split coda_ebana into two parts, one eb and one ana */
   if (daq->type == CODA_EBANA) SplitEbana (comp);
+
+
 }
 
 
@@ -841,9 +884,7 @@ setup_comp_attr(Widget w, XtPointer data, XtPointer callback_data)
 static AttrWidgets atw;
 
 static void
-codaXmProcessTraversal(Widget w, 
-				 XtPointer data, 
-				 XtPointer callback_data)
+codaXmProcessTraversal(Widget w, XtPointer data, XtPointer callback_data)
 {
   XmTraversalDirection dir = (XmTraversalDirection)data;
   XmProcessTraversal(w, dir);
@@ -851,10 +892,7 @@ codaXmProcessTraversal(Widget w,
 
 
 void
-popup_comp_attributes(drawComp* comp, 
-			          Widget base, 
-			          XEvent* event,
-			          int type)
+popup_comp_attributes(drawComp* comp, Widget base, XEvent* event, int type)
 {
   Position ret_x, ret_y;
   Arg      args[20];
@@ -1264,19 +1302,13 @@ popup_comp_attributes(drawComp* comp,
 
 
   /* OK button callback */
-  XtAddCallback(atw.ok_widget, XmNactivateCallback,
-				setup_comp_attr,
-				&atw);
+  XtAddCallback(atw.ok_widget, XmNactivateCallback, setup_comp_attr, &atw); //register 'setup_comp_attr' callback routine
 
   /* Dismiss button callback */
-  XtAddCallback(atw.cancel_widget, XmNactivateCallback, 
-				popdown_comp_attr,
-				&atw);
+  XtAddCallback(atw.cancel_widget, XmNactivateCallback, popdown_comp_attr, &atw);
 
   /* Script button callback */
-  XtAddCallback(atw.script_widget, XmNactivateCallback,
-				script_dialog,
-				&atw);
+  XtAddCallback(atw.script_widget, XmNactivateCallback, script_dialog, &atw);
 		
 
 
@@ -1296,7 +1328,7 @@ popup_comp_attributes(drawComp* comp,
   /*
 printf("comp->comp.type = %d\n",comp->comp.type);
   */
-  if ((comp->comp.type == CODA_ROC) || (comp->comp.type == CODA_TRIG))
+  if ((comp->comp.type == CODA_ROC) || (comp->comp.type == CODA_TRIG) || (comp->comp.type == CODA_TSROC))
   {
     if(comp->comp.boot_string != NULL)
       XmTextFieldSetString(text_w3, comp->comp.boot_string);
@@ -1308,30 +1340,30 @@ printf("comp->comp.type = %d\n",comp->comp.type);
     /*sergey: for CODA_ROC and CODA_TRIG suggests default readout lists,
       user can change it if necessary*/
 
-	printf("444\n");fflush(stdout);
+    printf("444\n");fflush(stdout);
 
     /*if(comp->comp.boot_string == NULL)*/
     if(comp->comp.code[0] == NULL)
-	{
-	printf("5\n");fflush(stdout);
+    {
+      printf("5\n");fflush(stdout);
       for(i=0; i<3; i++) rols[i] = (char *) calloc(128,1);
-	printf("6\n");fflush(stdout);
+      printf("6\n");fflush(stdout);
       if(comp->comp.type == CODA_TRIG)
-	  {
+      {
         res = getDefaultCodeFromDbase ("TS", rols);
-	  }
-	  else
-	  {
+      }
+      else
+      {
 
-		/*
+	/*
         res = getDefaultCodeFromDbase ("ROC", rols);
-		*/
+	*/
 
-		/* distinguish ROC and VTP by name: VTP names ends on 'vtp' */
-        /* we can do it only is ROC name is set already (when component is selected from existing components menu) */
+	/* distinguish ROC and VTP by name: VTP names ends on 'vtp' */
+        /* we can do it only if ROC name is set already (when component is selected from existing components menu) */
 
         if(comp->comp.node_name != NULL)
-		{
+	{
           int len;
           char tmp[128];
 
@@ -1345,28 +1377,71 @@ printf("comp->comp.type = %d\n",comp->comp.type);
 
           if(!strncmp(tmp,"vtp",3)) res = getDefaultCodeFromDbase ("VTP", rols);
           else                      res = getDefaultCodeFromDbase ("ROC", rols);
-		}
+	}
         else
-		{
+	{
           res = getDefaultCodeFromDbase ("ROC", rols);
-		}
-	  }
-	printf("7\n");fflush(stdout);
+	}
+      }
+      printf("7\n");fflush(stdout);
 #if 1
       if(res==0)
-	  {
-	    printf("--> rols[0] >%s< rols[1] >%s<\n",rols[0],rols[1]);
+      {
+	printf("--> rols[0] >%s< rols[1] >%s<\n",rols[0],rols[1]);
 
         XmTextFieldSetString(atw.code_widget[0], rols[0]);
         XmTextFieldSetString(atw.code_widget[1], rols[1]);
         XmTextFieldSetString(atw.code_widget[2], rols[2]);
-	  }
+      }
 #endif
       //printf("8\n");fflush(stdout);
       for(i=0; i<3; i++) free(rols[i]);
       //printf("9\n");fflush(stdout);
-	}
+    }
 
+
+
+
+
+
+    
+
+    /*sergey*/
+
+    /* replace label 'Readout List 3' by desired one */
+    t = XmStringCreateSimple("Type (TS/ROC/TSROC):");
+    ac = 0;
+    XtSetArg(args[ac], XmNlabelString, t); ac++;
+    XtSetValues (label_w6, args, ac);
+    XmStringFree(t);
+    if(comp->comp.code[2] != NULL) printf("TS/ROC/etc: comp->comp.code[2] = >%s<\n",comp->comp.code[2]);fflush(stdout);
+    if(comp->comp.code[2] != NULL)
+    {
+      if( (!strncmp(comp->comp.code[2],"TSROC",5)) || (!strncmp(comp->comp.code[2],"TS",2)) || (!strncmp(comp->comp.code[2],"ROC",3)) )
+      {
+        XmTextFieldSetString(text_w6, comp->comp.code[2]);
+      }
+      else
+      {
+        comp->comp.code[2] = NULL;
+	XtVaSetValues(text_w6, XmNvalue, "", NULL);
+      }
+    }
+    //else XmTextFieldSetString(text_w6, "ROC");
+    
+    //comp->comp.type == CODA_TRIG
+
+    /*sergey*/
+
+    
+
+
+
+
+    
+
+
+    
   }
   else if (comp->comp.type == CODA_EB)
   {
@@ -1435,7 +1510,7 @@ printf("comp->comp.type = %d\n",comp->comp.type);
     XtUnmanageChild(label_w6);
     XtUnmanageChild(text_w6);
   }
-
+  
   else if (comp->comp.type == CODA_ETT)
   {
     if(comp->comp.boot_string != NULL)
@@ -1991,9 +2066,7 @@ void popup_ipport_name(from_port, to_port, base)
 
 /********************Dialog Box For EB and ANA component name*/
 static void
-register_ebana_name (Widget w, 
-				 XtPointer client_data, 
-				 XtPointer callback_data)
+register_ebana_name (Widget w, XtPointer client_data, XtPointer callback_data)
 {
   Arc      *arc = (Arc *)client_data;
   XmSelectionBoxCallbackStruct* cbs = (XmSelectionBoxCallbackStruct *)callback_data;
@@ -2116,13 +2189,8 @@ void popup_ebanaName_entry (ana, eb, new_arc, type)
 }
 
 /********************Error and warning popups*****************/
-#if defined (__STDC__)
-void pop_error_message(char* error, Widget base)
-#else
-void pop_error_message(error, base)
-     char *error;
-     Widget base;
-#endif
+void
+pop_error_message(char* error, Widget base)
 {
   Widget dialog;
   XmString t = XmStringCreateSimple(error);

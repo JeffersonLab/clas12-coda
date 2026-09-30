@@ -40,23 +40,21 @@ CLON_FLAGS += -I./$(MAIN).s -I$(CODA)/common/include $(X11INCDIR)
 CLON_FLAGS += -I/usr/include/mysql
 
 CLON_FLAGS += -DUSE_CREG
+
+LIBNAMES =
+LIBNAMES += ./$(OSTYPE_MACHINE)/lib/lib$(MAIN).a
 LIBNAMES += $(CODA)/src/creg/$(OSTYPE_MACHINE)/lib/libcreg.a
 LIBNAMES += $(CODA)/src/codautil/$(OSTYPE_MACHINE)/lib/libcodautil.a
 
-ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+
+ifeq ("$(OSTYPE_PLATFORM)","Linux_armv7l")
   LIBNAMES += /usr/lib/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_x86_64")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
-  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-#  LIBNAMES += /usr/lib64/libmariadb.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_vme")
-  LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_i686_vme")
-    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_i686")
-    LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_PLATFORM)","Linux_i686")
+  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
 endif
+
 
 LIBNAMES += -lresolv
 LIBNAMES += $(X11LIBS)
@@ -69,7 +67,7 @@ LIBNAMES += $(SYSLIBS)
 install: install_lib install_bin
 	rm -rf tmp
 	mkdir tmp
-	cp $(MAIN).s/codaedit.h tmp/cedit.h
+	cp $(MAIN).s/codaedit.h tmp/
 	chmod 664 tmp/*
 	-mkdir -p $(CODA)/common/include
 	cp tmp/* $(CODA)/common/include

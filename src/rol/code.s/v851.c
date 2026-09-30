@@ -223,7 +223,7 @@ v851Init(unsigned long addr, int id)
 
   if(boardID != V851_MODULE_ID) {
     printf("v851Init: ERROR: Invalid Module ID (0x%x) at address 0x%x\n",
-	   boardID,(int)v851p[id]);
+	   boardID,(long int)v851p[id]);
     v851p[id]=0;
     return(ERROR);
   }

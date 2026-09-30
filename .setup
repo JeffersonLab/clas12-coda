@@ -10,85 +10,24 @@ else
 endif
 
 
-
-#
-# setting environment variables OSTYPE, MACHINE, PLATFORM etc - used to be in main .setup
-#
-set TESTFILE = /proc/vmeinfo
-set REDHATFILE = /etc/redhat-release
-set ARCHFILE = /etc/os-release
-setenv OSTYPE     `uname|sed 's/-/_/'`
-
-
-
-
-#obtain Linux release number (works on RHEL at least ..)
-
-if ( $OSTYPE == "Linux") then
-if ( -e $REDHATFILE ) then
-    setenv OSRELEASE `cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 7`
-  if ( $OSRELEASE == "7") then
-  else
-    setenv OSRELEASE `cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 6`
-  endif
-endif
-endif
-
-#if ( $OSTYPE == "Linux") then
-#if ( -e $REDHATFILE ) then
-#  setenv OSRELEASE `cat /etc/redhat-release | cut -d "." -f 1 | cut -d " " -f 6`
-#endif
-#endif
-
-
-
-
-if ( $OSTYPE == "Darwin" ) then
-  setenv MACHINE    `uname -p`
-  setenv PLATFORM    `uname -p`
-else if ( -e $TESTFILE ) then
-  setenv MACHINE    `uname -m`_vme
-  setenv PLATFORM   `uname -m`
-else
-  setenv MACHINE    `uname -m`
-  setenv PLATFORM   `uname -m`
-endif
-
-#for 64bit RHEL6, use different naming scheme
-if ( $OSTYPE == "Linux") then
-if ( $MACHINE == "x86_64") then
-if ( $OSRELEASE == "9") then
-  setenv MACHINE x86_64_RHEL9
-endif
-endif
-endif
-
-
-
-
-
-
-
-
-    setenv OSTYPE_MACHINE ${OSTYPE}_${MACHINE}
-
-	setenv CODA_BIN $CODA/$OSTYPE_MACHINE/bin
-	setenv CODA_LIB $CODA/$OSTYPE_MACHINE/lib
-	setenv CODA_ROL $CODA/$OSTYPE_MACHINE/rol
+setenv CODA_BIN $CODA/$OSTYPE_MACHINE/bin
+setenv CODA_LIB $CODA/$OSTYPE_MACHINE/lib
+setenv CODA_ROL $CODA/$OSTYPE_MACHINE/rol
 
 # update LD_LIBRARY_PATH
-	if ($?LD_LIBRARY_PATH) then
-        setenv LD_LIBRARY_PATH  "${LD_LIBRARY_PATH}:${CODA_LIB}"
-	else
-        setenv LD_LIBRARY_PATH  ${CODA_LIB}
-	endif
+if ($?LD_LIBRARY_PATH) then
+  setenv LD_LIBRARY_PATH  "${LD_LIBRARY_PATH}:${CODA_LIB}"
+else
+  setenv LD_LIBRARY_PATH  ${CODA_LIB}
+endif
 
 # update PATH
-   setenv PATH "$PATH":${CODA_BIN}
-   setenv PATH "$PATH":${CODA}/common/scripts
+setenv PATH "$PATH":${CODA_BIN}
+setenv PATH "$PATH":${CODA}/common/scripts
 
 # set coda database
-	setenv MYSQL_HOST clondb1
+setenv MYSQL_HOST clondb1
+###setenv MYSQL_HOST clondb2
 
 
 #skip cdev for Mac
@@ -103,7 +42,7 @@ endif
 # ARM
 #
 if ( ($OSTYPE == "Linux") && ($MACHINE == "i686" || $MACHINE == "i686_vme") ) then
-    setenv PATH "/apps/Xilinx/SDK/2013.2/gnu/arm/lin/bin:$PATH"
+  setenv PATH "/apps/Xilinx/SDK/2013.2/gnu/arm/lin/bin:$PATH"
 endif
 
 

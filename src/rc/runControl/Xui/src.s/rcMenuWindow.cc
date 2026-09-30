@@ -371,8 +371,8 @@ rcMenuWindow::destroyHandler(Widget w,void *data,XEvent *eventPtr,Boolean *b)
       if (self->tabChildren_[ix] == w) {
 	printf("program \"%s\" has unexpectedly quit\n", self->tabLabels_[ix]);
 	
-	if (strcmp(self->tabLabels_[ix],"cedit") == 0) {
-	  sprintf (temp2,"(echo \"start cedit\"; sleep 1; %s/codaedit )&",getenv("CODA_BIN"));
+	if (strcmp(self->tabLabels_[ix],"codaedit") == 0) {
+	  sprintf (temp2,"(echo \"start codaedit\"; sleep 1; %s/codaedit )&",getenv("CODA_BIN"));
 	  system(temp2);
     	}
 

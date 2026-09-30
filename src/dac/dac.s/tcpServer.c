@@ -361,7 +361,7 @@ TcpServer(void)
   sprintf(tmp,"SELECT Name FROM Ports WHERE Name='%s'",myname);
   if(mysql_query(dbsock, tmp) != 0)
   {
-	printf("mysql error (%s)\n",mysql_error(dbsock));
+    printf("mysql error (%s)\n",mysql_error(dbsock));
     return(ERROR);
   }
 
@@ -378,8 +378,8 @@ TcpServer(void)
     numRows = mysql_num_rows(result);
     mysql_free_result(result);
 
-	hname = getenv("HOST");
-	printf("TcpServer(external): hname befor >%s<\n",hname);
+    hname = getenv("HOST");
+    printf("TcpServer(external): hname befor >%s<\n",hname);
     /* remove everything starting from first dot */
     ch = strstr(hname,".");
     if(ch != NULL) *ch = '\0';
@@ -388,7 +388,7 @@ TcpServer(void)
     /*else ch = hname[strlen(hname)];
 	printf("TcpServer(external): hname after >%s<\n",hname);
 	*/
-    printf("TcpServer(external): hname after >%s<\n",ch);
+    printf("TcpServer(external): hname after >%s<\n",hname);
 
 
     /*printf("nrow=%d\n",numRows);*/
@@ -409,7 +409,7 @@ TcpServer(void)
 
     if(mysql_query(dbsock, tmp) != 0)
     {
-	  printf("ERROR\n");
+      printf("ERROR\n");
       return(ERROR);
     }
     else
@@ -431,14 +431,13 @@ TcpServer(void)
     many requests may create network buffer shortage */
     if(request_in_progress)
     {
-      printf("TcpServer(external): wait: request in progress\n");
+      printf("TcpServer(external): request in progress from IP = %s, port = %d\n",targ.address,targ.port);
       sleep(1);
       continue;
     }
 
     /*printf("before accept\n");*/
-    if((targ.newFd = accept (sFd, (struct sockaddr *) &clientAddr, &sockAddrSize))
-          == ERROR)
+    if((targ.newFd = accept (sFd, (struct sockaddr *) &clientAddr, &sockAddrSize)) == ERROR)
     {
       perror ("accept"); 
       close (sFd); 
@@ -450,16 +449,16 @@ TcpServer(void)
     targ.port = ntohs (clientAddr.sin_port);
 
     sprintf (workName, "tTcpWork%d", ix++);
-	/*
-usrNetStackSysPoolStatus("tcpServer",1);
-usrNetStackDataPoolStatus("tcpServer",1);
-	*/
+    /*
+    usrNetStackSysPoolStatus("tcpServer",1);
+    usrNetStackDataPoolStatus("tcpServer",1);
+    */
     request_in_progress = 1;
     /* spawn with floating point flag VX_FP_TASK, just in case if some code needs it */
     /*printf("TcpServer: start work thread\n");*/
-	{
+    {
       int ret;
-	  pthread_t id;
+      pthread_t id;
       pthread_attr_t detached_attr;
 
       pthread_attr_init(&detached_attr);
@@ -481,13 +480,13 @@ usrNetStackDataPoolStatus("tcpServer",1);
           strncmp(address,"129.57.29.",10) )
 	  */
       if(!strncmp(targ.address,"129.57.71.",10))
-	  {
+      {
         printf("TcpServer(external): WARN: ignore request from %s\n",targ.address);
         close(targ.newFd);
         request_in_progress = 0;
-	  }
+      }
       else
-	  {
+      {
         ret = pthread_create(&id, &detached_attr, (void *(*)(void *)) tcpServerWorkTask, &targ);
         if(ret!=0)
         {
@@ -496,8 +495,8 @@ usrNetStackDataPoolStatus("tcpServer",1);
           close(targ.newFd);
           request_in_progress = 0;
         }
-	  }
-	}
+      }
+    }
 	/*
 usrNetStackSysPoolStatus("tcpServer",2);
 usrNetStackDataPoolStatus("tcpServer",2);
@@ -519,7 +518,7 @@ usrNetStackDataPoolStatus("tcpServer",2);
 
 static void
 tcpServerWorkTask(TWORK *targ)
-	 /*int sFd, char *address, unsigned short port) */
+/*int sFd, char *address, unsigned short port) */
 {
   int ret;
   TREQUEST clientRequest;            /* request/message from client */ 
@@ -545,22 +544,28 @@ tcpServerWorkTask(TWORK *targ)
     /* store it to be used later for debugging */
     strcpy(current_message, message);
 
+
+
+    
     /* try Executing the message (each component must provide codaExecute() function */
     /*do not print: message may contains bad characters, it will be checked inside codaExecute
            printf("Executing >%s< (len=%d)\n",message,strlen(message));*/
+    printf("Executing >%s< (len=%d)\n",current_message,strlen(current_message));
 
+
+    
 
     fflush(stdout);
 
     oldstdout = dup(STDOUT_FILENO); /*save stdout*/
     dup2(targ->newFd,STDOUT_FILENO); /*redirect stdout*/
 
-	/*close(targ->newFd);*/
+    /*close(targ->newFd);*/
 
-	/* check if message makes sence */
+    /* check if message makes sence */
     my_execute(message);
 
-	dup2(oldstdout, STDOUT_FILENO); /*restore stdout*/
+    dup2(oldstdout, STDOUT_FILENO); /*restore stdout*/
 
     ret = close(oldstdout);  /* close server socket connection */ 
     if(ret<0) perror("close oldstdout: ");

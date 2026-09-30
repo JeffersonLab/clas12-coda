@@ -1,4 +1,3 @@
-#if defined(VXWORKS) || defined(Linux_vme)
 
 /*
  * File:
@@ -10,12 +9,14 @@
  *
  */
 
-
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+
+#if defined(VXWORKS) || defined(Linux_vme)
+
 #include "jvme.h"
 #include "dmaPList.h"
 #include "hdLib.h"
@@ -130,7 +131,7 @@ main(int argc, char *argv[])
   if (stat != OK)
     {
       printf("vmeCloseDefaultWindows failed: code 0x%08x\n",stat);
-      return -1;
+      exit(1);
     }
 
   exit(0);
@@ -148,7 +149,7 @@ main(int argc, char *argv[])
 int
 main()
 {
-  return;
+  exit(0);
 }
 
 #endif

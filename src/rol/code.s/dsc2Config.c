@@ -56,6 +56,7 @@ DSC2_SCALER_REFPRESCALE 1250 <- reference clock = 125000000 / DSC2_SCALER_REFPRE
 #include <logLib.h>
 #else
 #include "jvme.h"
+#include "usrvme.h"
 #endif
 
 #include <stdio.h>
@@ -68,6 +69,7 @@ DSC2_SCALER_REFPRESCALE 1250 <- reference clock = 125000000 / DSC2_SCALER_REFPRE
 #include "dsc2Lib.h"
 #include "dsc2Config.h"
 #include "xxxConfig.h"
+#include "codautil.h"
 
 
 /* Global variables */
@@ -320,9 +322,8 @@ dsc2ReadConfigFile(char *filename)
   char *getenv();
   char *clonparms;
 
-  gethostname(host,ROCLEN);  /* obtain our hostname */
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");

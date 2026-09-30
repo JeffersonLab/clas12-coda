@@ -28,7 +28,9 @@
 #endif
 #include <pthread.h>
 #include <stdio.h>
+
 #include "jvme.h"
+#include "usrvme.h"
 
 #include "hdLib.h"
 

@@ -46,7 +46,7 @@
 #include "sdLib.h"
 
 #include "jvme.h"
-#include "jlabgef.h"
+#include "usrvme.h"
 
 /********************************************
  * Function for non-blocking keyboard input *
@@ -90,7 +90,7 @@ FILE *run_fptr = (FILE *)NULL;
 int verbose = 0; // if >0 some debug output
 
 // big dma memory
-unsigned int i2_from_rol1;
+unsigned long int i2_from_rol1;
 unsigned int *dma_dabufp;
 // big out buffer for disentaglement
 unsigned int *out_dabufp = (unsigned int *)NULL;
@@ -178,12 +178,12 @@ static unsigned int *StartOfEvent;
 #define CPCLOSE \
 { \
   uint32_t padding; \
-  /*printf("CPCLOSE: dataout before = 0x%016x, b08=0x%016x (0x%016x)\n",dataout,b08,(uint64_t)b08);*/ \
-  dataout = (uint32_t *) ( ( ((uint64_t)b08+3)/4 ) * 4); \
-  padding = (uint64_t)dataout - (uint64_t)b08; \
+  /*printf("CPCLOSE: dataout before = 0x%016x, b08=0x%016x (0x%016x)\n",dataout,b08,(unsigned long int)b08);*/ \
+  dataout = (uint32_t *) ( ( ((unsigned long int)b08+3)/4 ) * 4); \
+  padding = (unsigned long int)dataout - (unsigned long int)b08; \
   dataout_save1[1] |= (padding&0x3)<<14; /*update bank header (2nd word) with padding info*/ \
   /*printf("CPCLOSE: 0x%016x(%d) --- 0x%016x(%d) --> padding %d\n",dataout,dataout,b08,b08,((dataout_save1[1])>>14)&0x3);*/ \
-  *dataout_save1 = ((uint64_t)dataout-(uint64_t)dataout_save1)/4 - 1; /*write bank length in 32bit words*/ \
+  *dataout_save1 = ((unsigned long int)dataout-(unsigned long int)dataout_save1)/4 - 1; /*write bank length in 32bit words*/ \
   /*printf("CPCLOSE: *dataout_save1 = 0x%016x (0x%016x 0x%016x)\n",*dataout_save1,dataout,dataout_save1);*/ \
   lenout += (*dataout_save1+1); \
   lenev += (*dataout_save1+1); \
@@ -274,8 +274,8 @@ static unsigned int *StartOfEvent;
 #define CCCLOSE \
 { \
   unsigned int padding; \
-  dataout = (unsigned int *) ( ( ((unsigned int)b08+3)/4 ) * 4); \
-  padding = (unsigned int)dataout - (unsigned int)b08; \
+  dataout = (unsigned int *) ( ( ((unsigned long int)b08+3)/4 ) * 4); \
+  padding = (unsigned long int)dataout - (unsigned long int)b08; \
   /*dataout_save1[1] |= (padding&0x3)<<14;*/ \
   dataout_save2[1] |= (padding&0x3)<<14; \
   /*printf("CCCLOSE: 0x%08x %d --- 0x%08x %d --> padding %d\n",dataout,dataout,b08,b08,((dataout_save2[1])>>14)&0x3);*/ \
@@ -377,10 +377,6 @@ static unsigned int *StartOfBank;
 
 #define DEF_OUT_BUF_SIZE ( MAXEVENT * MAXBLOCK*MAXFEU * ( 1 + 4 + 8 + 4 + MAXCHAN*(2+4+MAXSAMPLES*2) ) / sizeof( int ) )
 
-#define LSWAP(x)        ((((x) & 0x000000ff) << 24) | \
-                         (((x) & 0x0000ff00) <<  8) | \
-                         (((x) & 0x00ff0000) >>  8) | \
-                         (((x) & 0xff000000) >> 24))
 
 #ifdef PASS_AS_IS
 	int nASIS;
@@ -1924,7 +1920,8 @@ int main( int argc, char* *argv )
 	// rol1 local variables
 	int block_level;
 	// VME variables
-	int i1, i2, i3;
+	unsigned long int i1, i2;
+        int i3;
 
 	// rol1 end variables
 	int iwait;
@@ -2658,7 +2655,7 @@ unsigned int *bptr;
 	}
 
 	/* always clear exceptions */
-	jlabgefClearException(1);
+	vmeClearException(1);
 
 	// Only in case of composite output
 	if( do_out == 2 )

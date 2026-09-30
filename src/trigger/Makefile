@@ -40,9 +40,11 @@ ifneq ("$(OSTYPE)","VXWORKS")
 
 
 
-ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l")
+ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l_Arch")
   LIBNAMES += /usr/lib/libmysqlclient.so
-else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64")
+else ifeq ("$(OSTYPE_MACHINE)","Linux_armv7l_RHEL7")
+  LIBNAMES += /usr/lib/mysql/libmysqlclient.so
+else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL7")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so
 else ifeq ("$(OSTYPE_MACHINE)","Linux_x86_64_RHEL9")
   LIBNAMES += /usr/lib64/mysql/libmysqlclient.so

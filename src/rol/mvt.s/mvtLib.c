@@ -26,11 +26,16 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#include "codautil.h" //sergey
+#include "tiLib.h" //sergey
+#include "sdLib.h" //sergey
+
 #include "mvtLib.h"
 #include "Parser.h"
 #include "SysConfig.h"
 #include "ReturnCodes.h"
 #include "BeuConfig.h"
+#include "tiUtils.h" //sergey
 
 // For the moment an ugly declaration
 extern SysParams *sys_params_ptr; // DEFINED IN SysConfig.c
@@ -938,7 +943,7 @@ int mvtConfig( char *sys_conf_params_filename, int run_number, int bec_id )
 	/**********************
 	 * Read configuration *
 	 **********************/
-	gethostname( host_name, 128);
+	get_hostname( host_name, 128);
 	clonparms = getenv( "CLON_PARMS" );
 	expid = getenv( "EXPID" );
 	if( strlen(sys_conf_params_filename) !=0 ) /* filename specified */

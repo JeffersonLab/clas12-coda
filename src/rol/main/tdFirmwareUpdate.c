@@ -24,7 +24,7 @@
   UNIX:
 
 slot 3:  TD-103 (replaced by QSFP's TD-193)
-slot 4:  TD-110 (replaced by QSFP's TD-188)
+slot 4:  TD-110 (replaced by QSFP's TD-191)
 slot 5:  TD-106
 slot 6:  TD-107
 slot 7:  TD-109
@@ -32,6 +32,7 @@ slot 8:  TD-108
 slot 9:  TD-102
 slot 10: TD-101
 slot 13: TD-104
+slot 14: TD-188
 
      cd $CLON_PARMS/firmwares
      tdFirmwareUpdate 0 tdp73.svf
@@ -49,6 +50,7 @@ slot 13: TD-104
      tdFirmwareUpdate 0x00480000 tdp81.svf
      tdFirmwareUpdate 0x00500000 tdp81.svf
      tdFirmwareUpdate 0x00680000 tdp81.svf
+     tdFirmwareUpdate 0x00700000 tdp81.svf
 
      (tdFirmwareUpdate xxxxxxxxx tdp73.svf)
 

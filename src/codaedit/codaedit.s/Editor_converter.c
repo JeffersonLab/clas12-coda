@@ -80,6 +80,8 @@
 
 #define DEBUG
 
+int main_is_codaedit = 0;
+
 /* global file and debugger number */
 int outputFileNum = 0;
 int codaFileNum = 0;
@@ -339,9 +341,7 @@ static void findDefaultDrawCompPosition(graph, dc, row, col)
  *      Create graph draw component from rcNetwork component                      *
  *********************************************************************************/
 static drawComp *
-createDrawCompFromRcnetComp(XcodaEditorGraph* graph, 
-					     rcNetComp* rc, 
-					     ConfigInfo* cinfo)
+createDrawCompFromRcnetComp(XcodaEditorGraph* graph, rcNetComp* rc, ConfigInfo* cinfo)
 {
   drawComp *p;
   daqComp  *daq;
@@ -704,15 +704,24 @@ ConfigInfo *newConfigInfo ()
   return cinfo;
 }
 
-#if defined (__STDC__)
+
 void setConfigInfoName (ConfigInfo* cinfo, char* name) 
-#else
-void setConfigInfoName (cinfo, name)
-     ConfigInfo* cinfo;
-     char* name;
-#endif
 {
   cinfo->comp_name = strsave (name);
+}
+
+/*sergey: new function*/
+void
+setConfigInfoCmd (ConfigInfo* cinfo, char* cmd) 
+{
+  cinfo->comp_cmd = strsave (cmd);
+}
+
+/*sergey: new function*/
+void
+setConfigInfoType (ConfigInfo* cinfo, char* type) 
+{
+  cinfo->comp_type = strsave (type);
 }
 
 
@@ -1093,46 +1102,9 @@ setRcNetComp (rcNetComp* comp,
     comp->daq.boot_string = strsave (cmd);
   else
     comp->daq.boot_string = (char *)0;
-
-  if(strcasecmp(comp_type, "ROC") == 0)
-    comp->daq.type = CODA_ROC;
-  else if(strcasecmp(comp_type, "EB") == 0)
-    comp->daq.type = CODA_EB;
-  else if(strcasecmp(comp_type, "ET") == 0)
-    comp->daq.type = CODA_ET;
-  else if(strcasecmp(comp_type, "ETT") == 0)
-    comp->daq.type = CODA_ETT;
-  else if(strcasecmp(comp_type, "SRO") == 0)
-    comp->daq.type = CODA_SRO;
-  else if(strcasecmp(comp_type, "SPR") == 0)
-    comp->daq.type = CODA_SPR;
-  else if(strcasecmp(comp_type, "TS") == 0)
-    comp->daq.type = CODA_TRIG;    
-  /*else if(strcasecmp(comp_type, "RCS") == 0)
-    comp->daq.type = CODA_RCS;*/
-  else if(strcasecmp(comp_type,"ER") == 0)
-    comp->daq.type = CODA_ER;
-  /*else if(strcasecmp(comp_type,"UC") == 0)
-    comp->daq.type = CODA_UC;*/
-  else if(strcasecmp(comp_type,"L3") == 0)
-    comp->daq.type = CODA_L3;
-  else if(strcasecmp(comp_type,"LOG") == 0)
-    comp->daq.type = CODA_LOG;
-  else if(strcasecmp(comp_type,"SC") == 0)
-    comp->daq.type = CODA_SC;
-  else if(strcasecmp(comp_type,"FILE") == 0)
-    comp->daq.type = CODA_FILE;
-  else if(strcasecmp(comp_type, "CODAFILE") == 0)
-    comp->daq.type = CODA_CODAFILE;
-  else if(strcasecmp(comp_type,"DEBUG") == 0)
-    comp->daq.type = CODA_DEBUG;
-  else if(strcasecmp(comp_type,"MON") == 0)
-    comp->daq.type = CODA_MON;
-  else if(strcasecmp(comp_type,"NONE") == 0)
-    comp->daq.type = CODA_NONE;
-  else
-    comp->daq.type = CODA_UNKNOWN;
-
+  
+  comp->daq.type = compTypeInt(comp_type); //convert component type from string to int
+  
   comp->daq.status = 0;
 
   /* set initial port name */
@@ -1228,9 +1200,12 @@ static char* findNextComp (type, mesh, m, n, maxcol, maxrow)
   daqComp*  daq;
 
   /* find the same type of component from the next row */
-  for (i = m; i < maxcol; i++) {
-    for (j = n + 1; j < maxrow; j++) {
-      if (mesh[j][i] != 0){      
+  for (i = m; i < maxcol; i++)
+  {
+    for (j = n + 1; j < maxrow; j++)
+    {
+      if (mesh[j][i] != 0)
+      {      
 	comp = mesh[j][i];
 	daq = &(comp->comp);
 	/* component must have outputs to be in the list */
@@ -1338,7 +1313,7 @@ XcodaEditorWriteToConfig(char* config_name, XcodaEditorGraph* graph)
   
 
 
-  /* sort all these components according their x and y coor     */
+  /* sort all these components according to their x and y coor  */
   /* Reason: the component sequesnce should go like top->bottom */
   /*         left->right, this way, it is easy to assign        */
   /*         to a perticular component                          */
@@ -1368,95 +1343,96 @@ XcodaEditorWriteToConfig(char* config_name, XcodaEditorGraph* graph)
         comp = mesh[n][m];
         daq = &(comp->comp);
 
+	printf("\nBBBBBBBBBBBBB daq->type=%d\n\n",daq->type);
+	
         /* update position table first */
         err = insertValToPosTable (config_name, daq->comp_name, n+1, m+1);
 
         /* update script table */
-        err = insertValToScriptTable (config_name, daq->comp_name,
-				                         comp->scripts);
-
-	    /* update configuration table */
-	    inputs = XcodaEditorCompGetAllInputs(graph, comp, &num_inputs);
-	    if(num_inputs != 0)
+        err = insertValToScriptTable (config_name, daq->comp_name, comp->scripts);
+	
+        /******************************/
+	/* update configuration table */
+	inputs = XcodaEditorCompGetAllInputs(graph, comp, &num_inputs);
+	if(num_inputs != 0)
         {
-	      strcpy (inputStr, inputs[0]);
-	      for(i = 1; i < num_inputs; i++)
+	  strcpy (inputStr, inputs[0]);
+	  for(i = 1; i < num_inputs; i++)
           {
-	        strcat (inputStr, " ");
-	        strcat (inputStr,inputs[i]);
-	      }
-	    }
-	    else
-		{
-	      strcpy (inputStr, "");
-		}
+	    strcat (inputStr, " ");
+	    strcat (inputStr,inputs[i]);
+	  }
+	}
+	else
+	{
+	  strcpy (inputStr, "");
+	}
 
-	    outputs = XcodaEditorCompGetAllOutputs(graph, comp, &num_outputs);
-	    if(num_outputs != 0)
+	outputs = XcodaEditorCompGetAllOutputs(graph, comp, &num_outputs);
+	if(num_outputs != 0)
         {
-	      if (outputs[0]) strcpy (outputStr, outputs[0]);
-	      for(i = 1; i < num_outputs; i++)
+	  if (outputs[0]) strcpy (outputStr, outputs[0]);
+	  for(i = 1; i < num_outputs; i++)
           {
-	        strcat (outputStr, " ");
-	        if (outputs[i]) strcat (outputStr,outputs[i]);
-	      }
-	    }
-	    else
-		{
-	      strcpy (outputStr, "");
-		}
+	    strcat (outputStr, " ");
+	    if (outputs[i]) strcat (outputStr,outputs[i]);
+	  }
+	}
+	else
+	{
+	  strcpy (outputStr, "");
+	}
 
-	    if (daq->code[0]) sprintf (c[0], "{%s}", daq->code[0]);
-	    else              sprintf (c[0], "");
+	if (daq->code[0]) sprintf (c[0], "{%s}", daq->code[0]);
+	else              sprintf (c[0], "");
 
-	    if (daq->code[1]) sprintf (c[1], "{%s}", daq->code[1]);
-	    else              sprintf (c[1], "");
+	if (daq->code[1]) sprintf (c[1], "{%s}", daq->code[1]);
+	else              sprintf (c[1], "");
 
-	    if (daq->code[2]) sprintf (c[2], "{%s}", daq->code[2]);
-	    else              sprintf (c[2], "");
+	if (daq->code[2]) sprintf (c[2], "{%s}", daq->code[2]);
+	else              sprintf (c[2], "");
 
-	    sprintf (code, "%s %s %s", c[0], c[1], c[2]);
+	sprintf (code, "%s %s %s", c[0], c[1], c[2]);
 
-	    /* find next the same type of component on the list */
-	    nextComp = findNextComp (daq->type, mesh, m, n, maxcol, maxrow);
+	/* find next the same type of component on the list */
+	nextComp = findNextComp (daq->type, mesh, m, n, maxcol, maxrow);
 
-	    /* find whether this component is the first one */
-	    fComp = firstComp (daq->type, mesh, m, n);
+	/* find whether this component is the first one */
+	fComp = firstComp (daq->type, mesh, m, n);
 
-	    /* update the configuration table */
+	/* update the configuration table */
 #ifdef DEBUG
         printf("Editor_converter::XcodaEditorWriteToConfig: insertValToConfigTable(%s,%s,%s,%s,%s)\n",config_name, daq->comp_name, code, inputStr, outputStr);
 #endif
-	    err = insertValToConfigTable (config_name, daq->comp_name, code, inputStr, outputStr, nextComp, fComp, order_num); /*sergey: 'order_num' added */
+	/*sergey: 'order_num' and 'daq->boot_string' added */
+	err = insertValToConfigTable (config_name, daq->comp_name, code, inputStr, outputStr, nextComp, fComp, order_num, daq->boot_string, daq->type); 
         order_num ++;	
 
 
 
-		/* probably do not need it any more, since _option drop problem fixed ? */
-		/* sergey: if name starts from "coda_", use daq->code[0] as filename to update _option table (assume coda_0 or coda_1 etc) */
+	/* probably do not need it any more, since _option drop problem fixed ? */
+	/* sergey: if name starts from "coda_", use daq->code[0] as filename to update _option table (assume coda_0 or coda_1 etc) */
         if(!strncmp(daq->comp_name,"coda_",5))
-		{
+	{
 #ifdef DEBUG
           printf("Editor_converter::XcodaEditorWriteToConfig:insertValToOptionTable(%s,%s,%s)\n",config_name,"dataFile",daq->code[0]);
 #endif
           insertValToOptionTable (config_name,"dataFile",daq->code[0]);
-		}
+	}
 
 
 
-	    /* free memories */
-	    if (num_inputs)
+	/* free memories */
+	if (num_inputs)
         {
-	      for (i = 0; i < num_inputs; i++)
-	        free (inputs[i]);
-	      free (inputs);
-	    }
-	    if (num_outputs)
+	  for (i = 0; i < num_inputs; i++) free (inputs[i]);
+	  free (inputs);
+	}
+	if (num_outputs)
         {
-	      for (i = 0; i < num_outputs; i++)
-	        free (outputs[i]);
-	      free (outputs);
-	    }
+	  for (i = 0; i < num_outputs; i++) free (outputs[i]);
+	  free (outputs);
+	}
       }
     }
   }
@@ -1475,6 +1451,12 @@ XcodaEditorWriteToConfig(char* config_name, XcodaEditorGraph* graph)
   }
   /* reset graph modified flag */
   graph->modified = 0;
+
+
+
+  /*TEST: called from runcontrol*/
+  //updateProcessTableFromConfigTable(config_name);
+  /*TEST*/
 }
     
 
@@ -1495,10 +1477,8 @@ XcodaEditorInsertAllComps (XcodaEditorGraph* graph)
     daq = &(p->draw_comp->comp); 
     if (daq->type != CODA_DEBUG && daq->type != CODA_FILE && daq->type != CODA_CODAFILE)
     {
-      if (isDaqCompInProcTable (daq->comp_name)) 
-	    updateDaqCompToProcTable   (daq);
-      else
-	    insertDaqCompToProcTable   (daq);
+      if (isDaqCompInProcTable (daq->comp_name)) updateDaqCompToProcTable(daq);
+      else                                       insertDaqCompToProcTable(daq);
     }
   }
 }
@@ -1511,14 +1491,8 @@ XcodaEditorInsertAllComps (XcodaEditorGraph* graph)
  *     return 0: success, return -1: failure                     *
  *     callers have full control of memory of info               *
  ****************************************************************/
-#if defined (__STDC__)
+
 int getConfigurationInfo (char* config, ConfigInfo** cinfo, int* num)
-#else
-int getConfigurationInfo (config, cinfo, num)
-     char* config;
-     ConfigInfo** cinfo;
-     int* num;
-#endif
 {
   return retrieveConfigInfoFromDbase (config, cinfo, num);
 }
@@ -1526,13 +1500,11 @@ int getConfigurationInfo (config, cinfo, num)
 /**********************************************************************
  *      static void updateCompAuxInfo(cinfo, num_cinfo, comp)         *
  * Description:                                                       *
- *     Fill out information about component's code, user_string       *
- *     and port names                                                 *
+ *     Fill out information about component's code, user_string,      *
+ *     port names etc                                                 *
  *********************************************************************/
 static void
-updateCompAuxInfo(ConfigInfo** cinfo, 
-                  int num_cinfo, 
-			      rcNetComp* comp)
+updateCompAuxInfo(ConfigInfo** cinfo, int num_cinfo, rcNetComp* comp)
 {
   int        i, j, k;
   daqComp    *daq = &(comp->daq);
@@ -1544,29 +1516,34 @@ updateCompAuxInfo(ConfigInfo** cinfo,
   for(i=0; i<num_cinfo; i++)
   {
 #ifdef DEBUG
-    printf("updateCompAuxInfo[%d] 1>%s<\n",i,daq->comp_name);fflush(stdout);
-    printf("updateCompAuxInfo[%d] 2>%s<\n",i,cinfo[i]->comp_name);fflush(stdout);
+    //sergey: prints a lot ... need to check ...
+    //printf(">> updateCompAuxInfo[%d] 1>%s<\n",i,daq->comp_name);fflush(stdout);
+    //printf(">> updateCompAuxInfo[%d] 2>%s<\n",i,cinfo[i]->comp_name);fflush(stdout);
 #endif
 
     if(strcmp(daq->comp_name, cinfo[i]->comp_name)==0)
     {
-      if(daq->code[0] != NULL)
-	    free(daq->code[0]);
-      if(cinfo[i]->code[0] != NULL){
-	    daq->code[0] = strsave(cinfo[i]->code[0]);
+      if(daq->code[0] != NULL) free(daq->code[0]);
+      if(cinfo[i]->code[0] != NULL)
+      {
+	daq->code[0] = strsave(cinfo[i]->code[0]);
       }
 
-      if(daq->code[1] != NULL)
-	    free(daq->code[1]);
-      if(cinfo[i]->code[1] != NULL){
-	    daq->code[1] = strsave(cinfo[i]->code[1]);
+      if(daq->code[1] != NULL) free(daq->code[1]);
+      if(cinfo[i]->code[1] != NULL)
+      {
+	daq->code[1] = strsave(cinfo[i]->code[1]);
       }
 
-      if(daq->code[2] != NULL)
-	    free(daq->code[2]);
-      if(cinfo[i]->code[2] != NULL){
-	    daq->code[2] = strsave(cinfo[i]->code[2]);
+      if(daq->code[2] != NULL) free(daq->code[2]);
+      if(cinfo[i]->code[2] != NULL)
+      {
+	daq->code[2] = strsave(cinfo[i]->code[2]);
       }
+
+      /*sergey*/
+      /*sergey*/
+      
       break;
     }
   }
@@ -1579,31 +1556,31 @@ updateCompAuxInfo(ConfigInfo** cinfo,
       io = cinfo[i]->inputs[j];
       if(strcmp(daq->comp_name,io->comp_name) == 0)
       {
-	    for(k=0;k<comp->num_ports;k++)
+	for(k=0;k<comp->num_ports;k++)
         {
-	      if(strcmp(comp->port_name[k],io->port_name) == 0) break;
-	    }
-	    if(k >= comp->num_ports)
+	  if(strcmp(comp->port_name[k],io->port_name) == 0) break;
+	}
+	if(k >= comp->num_ports)
         {
-	      comp->port_name[k] = strsave(io->port_name);
-	      comp->num_ports = comp->num_ports + 1;
-	    }
+	  comp->port_name[k] = strsave(io->port_name);
+	  comp->num_ports = comp->num_ports + 1;
+	}
       }
     }
-    for(j=0;j<cinfo[i]->num_outputs;j++)
+    for(j=0; j<cinfo[i]->num_outputs; j++)
     {
       io = cinfo[i]->outputs[j];
       if(strcmp(daq->comp_name,io->comp_name) == 0)
       {
-	    for(k=0;k<comp->num_ports;k++)
+	for(k=0;k<comp->num_ports;k++)
         {
-	      if(strcmp(comp->port_name[k],io->port_name) == 0) break;
-	    }
-	    if (k >= comp->num_ports)
+	  if(strcmp(comp->port_name[k],io->port_name) == 0) break;
+	}
+	if (k >= comp->num_ports)
         {
-	      comp->port_name[k] = strsave(io->port_name);
-	      comp->num_ports = comp->num_ports + 1;
-	    }
+	  comp->port_name[k] = strsave(io->port_name);
+	  comp->num_ports = comp->num_ports + 1;
+	}
       }
     }
   }
@@ -1654,6 +1631,10 @@ constructRcnetComps(rcNetComp** comps, int* num)
 }
 
 
+
+
+/*!!! BASIC CALL FROM runcontrol !!!*/
+
 /************************************************************************
  *           int constructRcnetCompsWithConfig (char* configname,       *
  *                                   rcNetComp** comp, int* num)        *
@@ -1663,20 +1644,18 @@ constructRcnetComps(rcNetComp** comps, int* num)
  *     return 0: success. return -1: error                              *
  ***********************************************************************/
 int
-constructRcnetCompsWithConfig (char* config, 
-				   rcNetComp** comps, int* num,
-				   ConfigInfo** cinfos,
-				   int* num_cinfo)
+constructRcnetCompsWithConfig (char* config, rcNetComp** comps, int* num, ConfigInfo** cinfos, int* num_cinfo)
 {
   int  i, j;
 
-  /* sergey: get component information from 'process' table */
+  /* sergey: get components information, related to 'config', from 'process' table */
   if (createRcNetCompsFromDbase (comps, num) < 0)
   {
     printf("Editor_converter::constructRcnetCompsWithConfig error 1\n");
     return(-1);
   }
-
+  
+  /* sergey: get components information from 'config' table */
   if (getConfigurationInfo(config, cinfos, num_cinfo) == -1)
   {
     for(j = 0; j < *num; j++) free(comps[j]);
@@ -1688,66 +1667,89 @@ constructRcnetCompsWithConfig (char* config,
   }
 
 
+  printf("----- config table: first name >%s<\n",cinfos[0]->comp_name);
 
 
   /*sergey: IMPORTANT CHANGE:
-            will replace TS info obtained in 'createRcNetCompsFromDbase' from 'process' table,
-            by the info from 'config' considering first 'ROC' as 'TS' !!!; for all other
-            components with change 'TS' to 'ROC' */
+            replace info obtained in 'createRcNetCompsFromDbase' from 'process' table,
+            by the info from 'config' (like type, etc), and update 'process' table */
+  
   /* TO DO: make sure that 'constructRcnetComps' calls which does not have that correction
 	 do not create any problems; clicking 'Save' updates 'process' table with new settings .. */
 
-  /* NOTE: call 'setCompInuseField(daq->comp_name, 0)' sets 'inuse' field in 'process' table to 0,
-      after that 'netComponent::configure' will try to connect until connection works, it allows it
-      to make sure component has been started
+
+
+  
+  /* NOTE: if called from runcontrol, 'setCompInuseField(daq->comp_name, 0)' sets 'inuse' field in 'process' table to 0,
+      after that 'netComponent::configure' will try to connect until connection works, it allows
+      to make sure component has been started; WE DO NOT DO IT IF RUNNING codaedit program, it is only for runcontrol !!!
   */
-
-  printf("----- config table: first name >%s<\n",cinfos[0]->comp_name);
-
-  /* first component from 'config' table */
-  for(j = 0; j < *num; j++)
+  if(main_is_codaedit!=1)
   {
-    daqComp *daq = &(comps[j]->daq);
-
-    if(!strcmp(daq->comp_name,cinfos[0]->comp_name))
-	{
-      printf("+++++ process table: name >%s<, type >%d<\n",daq->comp_name,daq->type);
-      if(daq->type==CODA_ROC)
-	  {
-        daq->type = CODA_TRIG;
-        printf("+++++ change >%s< type from CODA_ROC to CODA_TRIG !!!\n",daq->comp_name);
-
-		/* sergey: UPDATE PROCESS TABLE HERE ???!!!*/
-	  }
-      setCompInuseField(daq->comp_name, 0);
-	}
-  }
-
-  for(i = 1; i < *num_cinfo; i++) /* all other components from 'config' table */
-  {
-    for(j = 0; j < *num; j++)
-    { 
-      daqComp *daq = &(comps[j]->daq);
-
-      if(!strcmp(daq->comp_name,cinfos[i]->comp_name))
-	  {
-        printf("+++++ process table: name >%s<, type >%d<\n",daq->comp_name,daq->type);
-        if(daq->type==CODA_TRIG)
-	    {
-          daq->type = CODA_ROC;
-          printf("+++++ change >%s< type from CODA_TRIG to CODA_ROC !!!\n",daq->comp_name);
-
-		  /* sergey: UPDATE PROCESS TABLE HERE ???!!!*/
-	    }
-        setCompInuseField(daq->comp_name, 0);
-	  }
+    for(i = 0; i < *num_cinfo; i++) /* loop over all components from 'config' table */
+    {
+      for(j = 0; j < *num; j++) /* loop over all components retrieved from 'process' table */
+      {
+        daqComp *daq = &(comps[j]->daq);
+        if(!strcmp(daq->comp_name,cinfos[i]->comp_name))
+        {
+          printf("+++++ from PROCESS table: name >%s<, type >%d<\n",daq->comp_name,daq->type);	
+          setCompInuseField(daq->comp_name, 0);
+        }
+        else
+        {
+	  ;
+        }
+      }
     }
   }
 
 
 
-  for(j = 0; j< *num; j++) updateCompAuxInfo(cinfos, *num_cinfo, comps[j]);
+  
+  for(j = 0; j< *num; j++)
+  {
+    daqComp *daq = &(comps[j]->daq);
+    
+    updateCompAuxInfo(cinfos, *num_cinfo, comps[j]);
 
+    /* update 'daq->type' in according to config info */
+    if(daq->code[2]==NULL)
+    {
+      daq->type = CODA_ROC; //if not specified, always set to default
+    }
+    else
+    {
+      if( !strncmp(daq->code[2],"TSROC",5) )    daq->type = CODA_TSROC;
+      else if( !strncmp(daq->code[2],"TS",2) )  daq->type = CODA_TRIG;
+      else if( !strncmp(daq->code[2],"ROC",3) ) daq->type = CODA_ROC;
+    }
+    
+    /*update 'process' table with components info from currently used 'config' */
+    for(i=0; i<*num_cinfo; i++)
+    {
+      if(strcmp(daq->comp_name, cinfos[i]->comp_name)==0)
+      {
+        if (daq->type != CODA_DEBUG && daq->type != CODA_FILE && daq->type != CODA_CODAFILE)
+        {
+          if (isDaqCompInProcTable (daq->comp_name)) updateDaqCompToProcTable(daq);
+          else                                       insertDaqCompToProcTable(daq);
+        }
+      }
+    }
+  }
+
+
+#if 0 //does not help ...
+  /* sergey: get component information from 'process' table SECOND time, since we just updated it*/
+  if (createRcNetCompsFromDbase (comps, num) < 0)
+  {
+    printf("Editor_converter::constructRcnetCompsWithConfig error 1\n");
+    return(-1);
+  }
+#endif
+
+  
   return(0);
 }
 
@@ -1761,10 +1763,10 @@ constructRcnetCompsWithConfig (char* config,
  ***************************************************************************/
 void
 XcodaEditorConstructGraphFromConfig(XcodaEditorGraph* graph, 
-					 rcNetComp** daq_list, 
-					 int num_daqs, 
-					 ConfigInfo** cinfo, 
-					 int num_cinfos)
+				    rcNetComp** daq_list, 
+				    int num_daqs, 
+				    ConfigInfo** cinfo, 
+				    int num_cinfos)
 {
   rcNetComp *rc;
   drawComp  *dc;
@@ -1819,12 +1821,8 @@ XcodaEditorConstructGraphFromConfig(XcodaEditorGraph* graph,
  *     rcDatabase or not                                                 *
  *     return 1: yes, 0: used                                            *
  ************************************************************************/
-#if defined (__STDC__)
-int compNotUsed (char *comp_name)
-#else
-int compNotUsed (comp_name)
-     char *comp_name;
-#endif
+int
+compNotUsed (char *comp_name)
 {
   int i;
 

@@ -20,6 +20,9 @@ v1495firmware 0x11A00000 URWELLTrigger.rbf
 URWELL (tdcftof6):
 v1495firmware 0x11980000 URWELLTrigger.rbf
 
+PRAD (trig0):
+##v1495firmware 0x11100000 PRADTrigger.rbf <- new jvme requires 6 digits for A24 !!!
+v1495firmware 0x700000 PRADTrigger_0105.rbf
 
 
 cd "/usr/local/clas12/release/0.1/parms/firmwares"
@@ -66,7 +69,7 @@ main(int argc, char *argv[])
 {
   int res;
   char myname[256];
-  unsigned int addr, laddr;
+  unsigned long int addr, laddr;
 
   if(argc==3)
   {

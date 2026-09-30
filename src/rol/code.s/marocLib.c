@@ -47,6 +47,29 @@ static int marocEventBufferRdPtr[MAROC_MAX_NUM];
 static int marocEventBufferSize[MAROC_MAX_NUM];
 static int marocEventBufferNBlocks[MAROC_MAX_NUM];
 
+
+/*******************************************************/
+/*sergey: temporary (!?) to customize starting address */
+
+static int maroc_ip_start = MAROC_IP_START;
+
+void marocSetIPStart(int ip)
+{
+  maroc_ip_start = ip;
+  printf("marocSetIPStart: maroc_ip_start = %d\n",maroc_ip_start);
+}
+
+int marocGetIPStart()
+{
+  printf("marocGetIPStart: maroc_ip_start = %d\n",maroc_ip_start);
+  return(maroc_ip_start);
+}
+
+/*******************************************************/
+/*******************************************************/
+
+
+
 /******************************************************/
 /** SOCKET functions **********************************/
 /******************************************************/
@@ -195,7 +218,7 @@ int maroc_open_register_socket(int devid)
   int n, val;
   char ip[20];
 
-  sprintf(ip, "%s%d", MAROC_SUBNET, MAROC_IP_START+devid);
+  sprintf(ip, "%s%d", MAROC_SUBNET, /*sergey MAROC_IP_START*/maroc_ip_start+devid);
 
   printf("%s: Connecting to %s (devid=%d, register socket) .. ",__func__,ip, devid);fflush(stdout);
   sockfd_reg[devid] = maroc_open_socket(ip, MAROC_REG_SOCKET);
@@ -224,7 +247,7 @@ int maroc_open_event_socket(int devid)
 {
   char ip[20];
 
-  sprintf(ip, "%s%d", MAROC_SUBNET, MAROC_IP_START+devid);
+  sprintf(ip, "%s%d", MAROC_SUBNET, /*sergey MAROC_IP_START*/maroc_ip_start+devid);
 
   printf("%s: Connecting to %s (devid=%d, event socket) .. ",__func__,ip,devid);fflush(stdout);
   sockfd_event[devid] = maroc_open_socket(ip, MAROC_EVT_SOCKET);
@@ -391,7 +414,7 @@ int marocSlot(int n)
 int marocInit(int devid_start, int n)
 {
   int i, devid;
-
+  
   nmaroc = 0;
   for(i=0;i<MAROC_MAX_NUM;i++)
   {

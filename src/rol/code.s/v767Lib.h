@@ -199,7 +199,7 @@ struct v767_struct
 #define WRITE_ENABLE_PATTERN     0x2500
 
 /* Function Prototypes */
-STATUS v767Init (UINT32 addr, UINT32 addr_inc, int nadc, UINT16 crateID);
+STATUS v767Init (unsigned long int addr, UINT32 addr_inc, int nadc, UINT16 crateID);
 void   v767Status( int id, int reg, int sflag);
 
 STATUS v767IntConnect (VOIDFUNCPTR routine, int arg, UINT16 level, UINT16 vector);

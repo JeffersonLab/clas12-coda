@@ -17,14 +17,8 @@
  *
  *----------------------------------------------------------------------------*/
 
-#if defined(VXWORKS) || defined(Linux_vme)
-
 /*sergey: 
-
-  UNIX:
      cd $CLON_PARMS/firmwares
-     #tsFirmwareUpdate 0x00A80000 tsp43.svf
-     #tsFirmwareUpdate 0x00A80000 tsp72.svf (hall D - 71)
      tsFirmwareUpdate 0x00A80000 tsp81.svf
 */
 
@@ -32,6 +26,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+//#define DEBUG
+//#define DEBUGFW
+
+#if defined(VXWORKS) || defined(Linux_vme)
+
 #ifdef VXWORKS
 #include "vxCompat.h"
 #else
@@ -55,7 +55,7 @@ extern unsigned int sysUnivSetLSI(unsigned short, unsigned short);
 
 
 extern volatile struct TS_A24RegStruct *TSp;
-unsigned int BoardSerialNumber;
+unsigned int BoardSerialNumber = 0;
 unsigned int firmwareInfo;
 char *programName;
 
@@ -71,12 +71,14 @@ tsFirmwareUpdate(unsigned int arg_vmeAddr, char *arg_filename)
 main(int argc, char *argv[])
 #endif
 {
-  int stat;
+  int stat = 0, badInit = 0;
   int BoardNumber;
   char *filename;
   int inputchar=10;
   unsigned int vme_addr=0;
-  
+  unsigned long laddr=0;
+  int geo = 0;
+
   printf("\nTS firmware update via VME\n");
   printf("----------------------------\n");
 
@@ -89,16 +91,16 @@ main(int argc, char *argv[])
   programName = argv[0];
 
   if(argc<3)
-    {
-      printf(" ERROR: Must specify two arguments\n");
-      tsFirmwareUsage();
-      return(-1);
-    }
+  {
+    printf(" ERROR: Must specify two arguments\n");
+    tsFirmwareUsage();
+    return(-1);
+  }
   else
-    {
-      vme_addr = (unsigned int) strtoll(argv[1],NULL,16)&0xffffffff;
-      filename = argv[2];
-    }
+  {
+    vme_addr = (unsigned int) strtoll(argv[1],NULL,16)&0xffffffff;
+    filename = argv[2];
+  }
 
   vmeSetQuietFlag(1);
   stat = vmeOpenDefaultWindows();
@@ -106,77 +108,87 @@ main(int argc, char *argv[])
     goto CLOSE;
 #endif
 
-  stat = tsInit(vme_addr,TS_READOUT_EXT_POLL,TS_INIT_SKIP_FIRMWARE_CHECK);
+  stat = tsInit(vme_addr,TS_READOUT_EXT_POLL,TS_INIT_SKIP_FIRMWARE_CHECK/* | TS_INIT_NO_INIT*/);
   if(stat != OK)
+  {
+    printf("\n");
+    printf("*** Failed to initialize TS ***\nThis may indicate (either):\n");
+    printf("   a) an incorrect VME Address provided\n");
+    printf("   b) new firmware must be loaded at provided VME address\n");
+    printf("\n");
+    printf("Proceed with the update with the provided VME address?\n");
+REPEAT:
+    printf(" (y/n): ");
+    inputchar = getchar();
+
+    if((inputchar == 'n') || (inputchar == 'N'))
     {
-      printf("\n");
-      printf("*** Failed to initialize TS ***\nThis may indicate (either):\n");
-      printf("   a) an incorrect VME Address provided\n");
-      printf("   b) new firmware must be loaded at provided VME address\n");
-      printf("\n");
-      printf("Proceed with the update with the provided VME address?\n");
-    REPEAT:
-      printf(" (y/n): ");
-      inputchar = getchar();
-
-      if((inputchar == 'n') || (inputchar == 'N'))
-	{
-	  printf("--- Exiting without update ---\n");
-	  goto CLOSE;
-	}
-      else if((inputchar == 'y') || (inputchar == 'Y'))
-	{
-	  printf("--- Continuing update, assuming VME address is correct ---\n");
-	}
-      else
-	{
-	  goto REPEAT;
-	}
+      printf("--- Exiting without update ---\n");
+      goto CLOSE;
     }
+    else if((inputchar == 'y') || (inputchar == 'Y'))
+    {
+      printf("--- Continuing update, assuming VME address is correct ---\n");
+      printf("\n");
+      badInit = 1;
+    }
+    else
+    {
+      goto REPEAT;
+    }
+  }
 
-  /* Read out the board serial number first */
-  BoardSerialNumber = tsGetSerialNumber(NULL);
-  printf(" Board Serial Number from PROM usercode is: 0x%08x (%d) \n", BoardSerialNumber,
-	 BoardSerialNumber&0xffff);
+  
+  if(badInit == 0)
+  {
+    /* Read out the board serial number first */
+    BoardSerialNumber = tsGetSerialNumber(NULL);
+    printf(" Board Serial Number from PROM usercode is: 0x%08x (%d) \n", BoardSerialNumber,
+    BoardSerialNumber&0xffff);
 
-  firmwareInfo = tsGetFirmwareVersion();
-  if(firmwareInfo>0)
+    firmwareInfo = tsGetFirmwareVersion();
+    if(firmwareInfo>0)
     {
       printf("  User ID: 0x%x \tFirmware (version - revision): 0x%X - 0x%03X\n",
 	     (firmwareInfo&0xFFFF0000)>>16, (firmwareInfo&0xF000)>>12, firmwareInfo&0xFFF);
     }
-  else
+    else
     {
       printf("  Error reading Firmware Version\n");
     }
-
+  }
+  else
+  {
+    BoardSerialNumber = 0;    
+  }
+  
   /* Check the serial number and ask for input if necessary */
   /* Force this program to only work for TS (not TD or TI) */
   if (!((BoardSerialNumber&0xffff0000) == 0x75000000))
-    { 
-      printf(" This TS has an invalid serial number (0x%08x)\n",BoardSerialNumber);
-      printf (" Enter a new board number (0-4095), or -1 to quit: ");
+  { 
+    printf(" This TS has an invalid serial number (0x%08x)\n",BoardSerialNumber);
+    printf (" Enter a new board number (0-4095), or -1 to quit: ");
 
-      scanf("%d",&BoardNumber);
+    scanf("%d",&BoardNumber);
 
-      if(BoardNumber == -1)
-	{
-	  printf("--- Exiting without update ---\n");
-	  goto CLOSE;
-	}
-
-      /* Add the TS board ID in the MSB */
-      BoardSerialNumber = 0x71000000 | (BoardNumber&0xfff);
-      printf(" The board serial number will be set to: 0x%08x (%d)\n",BoardSerialNumber,
-	     BoardSerialNumber&0xffff);
+    if(BoardNumber == -1)
+    {
+      printf("--- Exiting without update ---\n");
+      goto CLOSE;
     }
+
+    /* Add the TS board ID in the MSB */
+    BoardSerialNumber = 0x75000000 | (BoardNumber&0xfff);
+    printf(" The board serial number will be set to: 0x%08x (%d)\n",BoardSerialNumber,
+	   BoardSerialNumber&0xffff);
+  }
 
 
   printf("Press y to load firmware (%s) to the TS via VME...\n",
 	 filename);
   printf("\t or n to quit without update\n");
 
- REPEAT2:
+REPEAT2:
   printf("(y/n): ");
   inputchar = getchar();
   
@@ -194,7 +206,58 @@ main(int argc, char *argv[])
     goto REPEAT2;
 
 
+
+  
+
+  /*NEW*/
+  /* Check to see if the TI is in a VME-64X crate or Trying to recover corrupted firmware */
+  if(badInit == 0)
+    geo = tsGetGeoAddress();
+  else
+    geo = -1;
+
+  if(geo <= 0)
+    {
+      if(geo == 0)
+	{
+	  printf("  ...Detected non VME-64X crate...\n");
+
+	  /* Need to reset the Address to 0 to communicate with the emergency loading AM */
+	  vme_addr = 0;
+	}
+
+#ifdef VXWORKS
+      stat = sysBusToLocalAdrs(0x39,(char *)vme_addr,(char **)&laddr);
+      if (stat != 0)
+	{
+	  printf("%s: ERROR: Error in sysBusToLocalAdrs res=%d \n",__FUNCTION__,stat);
+	  goto CLOSE;
+	}
+#else
+      stat = vmeBusToLocalAdrs(0x39,(char *)(unsigned long)vme_addr,(char **)&laddr);
+      if (stat != 0)
+	{
+	  printf("%s: ERROR: Error in vmeBusToLocalAdrs res=%d \n",__FUNCTION__,stat);
+	  goto CLOSE;
+	}
+#endif
+      TSp = (struct TS_A24RegStruct *)laddr;
+    }
+
+  /*NEW*/
+
+
+
+
+
+
+
+
+
+  
+  printf("11\n");fflush(stdout);
   tsFirmwareEMload(filename);
+  printf("22\n");fflush(stdout);
 
  CLOSE:
 
@@ -233,24 +296,27 @@ Emergency(unsigned int jtagType, unsigned int numBits, unsigned long *jtagData)
 
 #ifdef DEBUG
   int numWord, i;
-  printf("type: %x, num of Bits: %x, data: \n",jtagType, numBits);
-  numWord = (numBits-1)/32+1;
-  for (i=0; i<numWord; i++)
+  printf("jtagType: %x, numBits: %x, data: \n",jtagType, numBits);
+  if(numBits>0)
+  {
+    numWord = (numBits-1)/32+1;
+    for (i=0; i<numWord; i++)
     {
       printf("%08x",jtagData[numWord-i-1]);
     }
-  printf("\n");
+    printf("\n");
+  }
 #endif
 
-  if (jtagType == 0) //JTAG reset, TMS high for 5 clcoks, and low for 1 clock;
+  if (jtagType == 0) //JTAG reset, TMS high for 5 clocks, and low for 1 clock;
+  {
+    for (iloop=0; iloop<5; iloop++)
     {
-      for (iloop=0; iloop<5; iloop++)
-	{
-	  vmeWrite32(&TSp->eJTAGLoad,1);
-	}
-
-      vmeWrite32(&TSp->eJTAGLoad,0);
+      vmeWrite32(&TSp->eJTAGLoad,1);
     }
+
+    vmeWrite32(&TSp->eJTAGLoad,0);
+  }
   else if (jtagType == 1) // JTAG instruction shift
     {
       // Shift_IR header:
@@ -542,7 +608,7 @@ tsFirmwareEMload(char *filename)
 	      //	    printf("RUNTEST delay: %d \n",nbits);
 	      if(nbits>100000)
 		{
-		  printf("Erasing: ..");
+		  printf("Erasing: ...");
 		  fflush(stdout);
 		}
 #ifdef VXWORKS

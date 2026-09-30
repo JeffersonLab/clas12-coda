@@ -14,12 +14,14 @@
 #endif
 
 
+#include "codautil.h"
 #include "daqLib.h"
 #include "xxxConfig.h"
 
 
 static int report_raw_data;
 static int external_vme_readout_interval;
+//static int block_sending_sta;
 
 int
 daqInit()
@@ -39,6 +41,12 @@ daqGetExternalVmeReadoutInterval()
   return(external_vme_readout_interval);
 }
 
+//int
+//daqGetBlockSta()
+//{
+//  return(block_sending_sta);
+//}
+
 
 /****************************************************************************
  *
@@ -49,9 +57,11 @@ config file format:
 
 DAQ_CRATE      <tdcecal1>     <- crate name, usually IP name
 
-DAQ_REPORT_RAW_DATA 0/1          # if 1, tell ROL2 to keep raw data banks
+DAQ_REPORT_RAW_DATA 0/1               # if 1, tell ROL2 to keep raw data banks
 
 DAQ_EXTERNAL_VME_READOUT_INTERVAL 1   # vme readout interval (seconds, 0 to 10) by DiagGuiServer, 0 means disable readout
+
+//DAQ_BLOCK_STA 1                       # if 1, blocks sending 'STA:...' messages with rates, assuming it will be sent by other components 
 
 DAQ_CRATE end
 */
@@ -107,6 +117,7 @@ daqInitGlobals()
 
   report_raw_data = 0;
   external_vme_readout_interval = 1;
+  //block_sending_sta = 0;
 
   return(0);
 }
@@ -120,7 +131,7 @@ daqReadConfigFile(char *filename)
   char   fname[FNLEN] = { "" };  /* config file name */
   int    ii, jj, ch;
   char   str_tmp[STRLEN], keyword[ROCLEN];
-  char   host[ROCLEN], ROC_name[ROCLEN];
+  char   host[ROCLEN], ROC_name[ROCLEN], STA_name[ROCLEN];
   char   str2[2];
   int    args, i1, i2, i3;
   int    slot, chan;
@@ -128,17 +139,8 @@ daqReadConfigFile(char *filename)
   char *getenv();
   char *clonparms;
   
-  gethostname(host,ROCLEN);  /* obtain our hostname */
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
-  for(jj=0; jj<strlen(host); jj++)
-  {
-    if(host[jj] == '.')
-    {
-      host[jj] = '\0';
-      break;
-    }
-  }
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");
@@ -229,6 +231,12 @@ daqReadConfigFile(char *filename)
         sscanf (str_tmp, "%*s %d", &i1);
         external_vme_readout_interval = i1;
       }
+      
+      //else if(active && (strcmp(keyword,"DAQ_BLOCK_STA")==0))
+      //{
+      //  sscanf (str_tmp, "%*s %d", &i1);
+      //  block_sending_sta = i1;
+      //}
 
       else
       {
@@ -290,6 +298,11 @@ daqUploadAll(char *string, int length)
     sprintf(sss,"DAQ_EXTERNAL_VME_READOUT_INTERVAL %d\n",external_vme_readout_interval);
     ADD_TO_STRING;
 
+#if 0
+    sprintf(sss,"DAQ_BLOCK_STA %d\n",block_sending_sta);
+    ADD_TO_STRING;
+#endif
+    
     CLOSE_STRING;
   }
 

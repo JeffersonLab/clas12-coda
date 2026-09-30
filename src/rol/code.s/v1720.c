@@ -15,6 +15,7 @@
 #include <vxLib.h>
 #else
 #include "jvme.h"
+#include "usrvme.h"
 #endif
 
 #include "v1720.h"
@@ -1454,7 +1455,7 @@ v1720ReadListStart(INT32 *adcbuf, INT32 *rlenbuf)
 {
   int ii, jj, nev;
   int iadcbuf;
-  static int destination[V1720_MAX_MODULES];
+  unsigned long int destination;
   int ndata_save;
   int extra_save;
 
@@ -1505,32 +1506,31 @@ TIMER_VAR;
   if(berr_fifo == 0x01) /* use FIFO reaout */
   {
     iadcbuf = 0;
+    destination = (unsigned long int)adcbuf;
     for(jj=0; jj<Nc1720; jj++)
     {
       /* get event length in words */
       ndata_save = v1720GetNextEventSize(jj);
 
       if(sngl_blt_mblt >= 0x04) /* 128 bit alignment */
-	  {
+      {
         extra_save = (4-(ndata_save%4));
         if(extra_save==4) extra_save=0;
-	  }
-	  else /* 64 bit alignment */
-	  {
+      }
+      else /* 64 bit alignment */
+      {
         if( (ndata_save%2) != 0 ) extra_save = 1;
         else                      extra_save = 0;
-	  }
+      }
 
       nbytes_save[jj] = (ndata_save+extra_save)<<2;
       rlenbuf[jj] = ndata_save+extra_save;
-
-      destination[jj] = (unsigned int)&adcbuf[iadcbuf];
 
       iadcbuf += rlenbuf[jj];
 
 	/*
 logMsg("[%d] ask=%d (%d bytes), got=%d (0x%08x to 0x%08x)\n",
- jj,ndata_save+extra_save,nbytes_save[jj],rlenbuf[jj],(unsigned int)c1720p[jj],destination[jj]);
+ jj,ndata_save+extra_save,nbytes_save[jj],rlenbuf[jj],(unsigned int)c1720p[jj],destination);
 	*/
 
     }
@@ -1538,6 +1538,7 @@ logMsg("[%d] ask=%d (%d bytes), got=%d (0x%08x to 0x%08x)\n",
   else /* use BERR readout */
   {
     iadcbuf = 0;
+    destination = (unsigned long int)adcbuf;
     for(jj=0; jj<Nc1720; jj++)
     {
       ndata_save = V1720_MAX_WORDS_PER_BOARD;
@@ -1546,10 +1547,8 @@ logMsg("[%d] ask=%d (%d bytes), got=%d (0x%08x to 0x%08x)\n",
       nbytes_save[jj] = ndata_save<<2;
       rlenbuf[jj] = ndata_save;
 
-      destination[jj] = (unsigned int)&adcbuf[iadcbuf];
-
       iadcbuf += rlenbuf[jj];
-	} 
+    } 
   }
 
 

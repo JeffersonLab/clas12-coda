@@ -549,7 +549,7 @@ rocOpenLink(char *fromname, char *toname, char host_return[128], int *port_retur
   char tmp[1000], tmpp[1000], *ch, host[128];
   int port = 0;
 
-  printf("rocOpenLinks reached\n");
+  printf("rocOpenLink reached\n");
 
   /* get host name (actually target name) */
   if(gethostname(tmp,999) < 0)
@@ -590,6 +590,7 @@ waiting1:
   if(mysql_query(dbsock, tmpp) != 0)
   {
     printf("rocOpenLink ERROR: cannot select name from %s\n",name);
+    printf("rocOpenLink ERROR: query was >%s<\n",tmpp);
     return(-1);
   }
   else
@@ -607,7 +608,7 @@ waiting1:
   else
   {
     numRows = mysql_num_rows(result);
-    printf("nrow=%d\n",numRows);
+    printf("numRows=%d\n",numRows);
 
     if(numRows == 1)
     {
@@ -619,8 +620,9 @@ waiting1:
     }
     else
     {
-      printf("rocOpenLinks: ERROR: unknown nrow=%d",numRows);
-      return(-1);
+      printf("rocOpenLink: ERROR: unknown numRows=%d",numRows);
+      //return(-1);
+      return(1); //sergey: assume link will be opened from rol1 or wherever ...
     }
 
     mysql_free_result(result);
@@ -632,8 +634,7 @@ waiting1:
   strcpy(chport,row[3]);
   port = atoi(chport);
 
-  printf("parsing results: type=>%s< host=>%s< state=>%s< port=>%s< -> %d\n",
-    type,host,state,chport,port);
+  printf("parsing results: type=>%s< host=>%s< state=>%s< port=>%s< -> %d\n",type,host,state,chport,port);
   
 
   /*sergey: wait for state='waiting'*/
@@ -643,12 +644,12 @@ waiting1:
     sleep(1);
 
     if(nwaits++ > 10)   /* after N attempts, disconnect from database and return */
-	{
+    {
       dbDisconnect(dbsock);
       return(-1);
-	}
+    }
 
-	goto waiting1;
+    goto waiting1;
   }
 
 

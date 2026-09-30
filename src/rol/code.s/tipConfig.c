@@ -51,6 +51,7 @@ TIP_FIBER_IN 1                                  # fiber number to be used as inp
 #endif
 */
 
+#include "codautil.h"
 #include "tipConfig.h"
 #include "TIpcieLib.h"
 #include "xxxConfig.h"
@@ -166,18 +167,8 @@ tipReadConfigFile(char *filename)
   char *getenv();
   char *clonparms;
   
-  gethostname(host,ROCLEN);  /* obtain our hostname */
-  for(jj=0; jj<strlen(host); jj++)
-  {
-    if(host[jj] == '.')
-    {
-      host[jj] = '\0';
-      break;
-    }
-  }
-
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");

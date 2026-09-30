@@ -21,6 +21,8 @@ SD_TRIGOUTLOGIC 0  2      <- output trigger type and threshold
 #include <logLib.h>
 #else
 #include "jvme.h"
+#include "usrvme.h"
+#include "codautil.h"
 #endif
 
 #include <stdio.h>
@@ -131,9 +133,8 @@ sdReadConfigFile(char *filename)
   char *getenv();
   char *clonparms;
 
-  gethostname(host,ROCLEN);  /* obtain our hostname */
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");

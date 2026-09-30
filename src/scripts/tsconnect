@@ -6,10 +6,8 @@
 #
 # Check for drivers host
 #
-######if (`hostname` != $CLON_DAQ) then
-#if ((`hostname` != clon00)&&(`hostname` != clon10)) then
-######  echo "You should be logged into $CLON_DAQ to use this command."
-#  echo "You should be logged into clon00 or clon10 to use this command."
+#if (`hostname` != clon00) then
+#  echo "You should be logged into clon00 to use this command."
 #  exit -1;
 #endif
 

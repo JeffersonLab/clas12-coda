@@ -81,6 +81,7 @@ other delay scans:
 #include <unistd.h> 
 #include <stddef.h> 
 #include "jvme.h" 
+#include "usrvme.h" 
 #endif 
 
 #include <pthread.h> 
@@ -110,11 +111,12 @@ volatile unsigned int *SSPpf[MAX_VME_SLOTS + 1]; /* pointers to VSCM FIFO memory
 volatile unsigned int *SSPpmb;                   /* pointer to Multiblock Window */
 int sspSL[MAX_VME_SLOTS+1];                      /* array of slot numbers for SSPs */ 
 unsigned int sspAddrList[MAX_VME_SLOTS+1];       /* array of a24 addresses for SSPs */ 
-int sspFirmwareType[MAX_VME_SLOTS+1];            /* array of firmware type for SSPs */ 
+int sspFirmwareType[MAX_VME_SLOTS+1];            /* array of firmware type for SSPs */
 
 static unsigned int sspA32Base   =  0x08800000;  /* Minimum VME A32 Address for use by FADCs */
 static unsigned long sspA32Offset = 0x00080000;  /* Difference in CPU A32 Base - VME A32 Base */
 static unsigned long sspA24Offset=0;             /* Difference in Local A24 Base and VME A24 Base */ 
+
 
 static int minSlot = 21;
 static int maxSlot = 1;
@@ -530,9 +532,11 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
   /* Setup initial configuration */ 
   if(noBoardInit==0) 
   {
+    int firmware_type;
+    
     // Release reset of RICH transceivers together early to speed up initialization
     res = 0;
-    for(issp=0; issp<nSSP; issp++) 
+    for(issp=0; issp<nSSP; issp++)
     {
       printf("%s: slot %d - type = %d\n", __func__, sspSlot(issp), sspFirmwareType[sspSlot(issp)]);fflush(stdout);
       result = sspSetMode(sspSlot(issp),iFlag,0);
@@ -541,7 +545,8 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
         return ERROR;
       }
 
-      if(sspFirmwareType[sspSlot(issp)] == SSP_CFG_SSPTYPE_HALLBRICH)
+      firmware_type = sspFirmwareType[sspSlot(issp)];
+      if(firmware_type == SSP_CFG_SSPTYPE_HALLBRICH)
       {
         res = 1;
         SSPLOCK();
@@ -558,13 +563,16 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
       usleep(1000000);
 
     // SSP_CFG_SSPTYPE_HALLBRICH - call global function to configure in parallel
-    if(iFlag & SSP_INIT_REBOOT_FPGA)
+    //sergey: 'firmware_type' below - from the last slot in previous loop, we assume all of them ether RICH or all of them NOT RICH 
+    if(firmware_type == SSP_CFG_SSPTYPE_HALLBRICH)
     {
-      sspRich_GScanFibers();
-      sspRich_GReboot(1); // 0-primary image, 1-secondary (run) image
+      if(iFlag & SSP_INIT_REBOOT_FPGA)
+      {
+        sspRich_GScanFibers();
+        sspRich_GReboot(1); // 0-primary image, 1-secondary (run) image
+      }
+      sspRich_GInit();
     }
-    sspRich_GInit();
-
  
     for(issp=0; issp<nSSP; issp++) 
     { 
@@ -584,6 +592,12 @@ sspInit(unsigned int addr, unsigned int addr_inc, int nfind, int iFlag)
       {
         printf("SSP_CFG_SSPTYPE_HPS\n");
         sspPortEnable(sspSlot(issp), 0x003, 1);  // Enable serdes: Fiber0, Fiber1
+      }
+      else if(sspFirmwareType[sspSlot(issp)] == SSP_CFG_SSPTYPE_PRAD)
+      {
+        printf("SSP_CFG_SSPTYPE_PRAD\n");
+        sspPortEnable(sspSlot(issp), 0x07F, 1);  // Enable serdes: Fiber0-6
+        sspEnableBusError(sspSlot(issp));
       }
       else if(sspFirmwareType[sspSlot(issp)] == SSP_CFG_SSPTYPE_HALLBRICH)
       {
@@ -816,6 +830,8 @@ sspSetMode(int id, int iFlag, int pflag)
     sspPortEnable(id, (iFlag & SSP_INIT_FIBER_ENABLE_MASK)>>16, pflag);
   else if(sspFirmwareType[id] == SSP_CFG_SSPTYPE_HPS)
     sspPortEnable(id, (iFlag & SSP_INIT_FIBER_ENABLE_MASK)>>16, pflag); 
+  else if(sspFirmwareType[id] == SSP_CFG_SSPTYPE_PRAD)
+    sspPortEnable(id, (iFlag & SSP_INIT_FIBER_ENABLE_MASK)>>16, pflag); 
   else if(sspFirmwareType[id] == SSP_CFG_SSPTYPE_HALLBRICH)
   {
   }
@@ -955,8 +971,8 @@ sspStatus(int id, int rflag)
   printf(" Readout configuration: \n");
   printf("    Block size = %d\n", st.EB.BlockCfg);
   printf("    Bus error enabled = %d\n", st.EB.ReadoutCfg & 0x1);
-  printf("    Readout window width = %dns\n", st.EB.WindowWidth*4);
-  printf("    Readout lookback = %dns\n", st.EB.Lookback*4);
+  printf("    Readout window width = %dns\n", st.EB.WindowWidth);
+  printf("    Readout lookback = %dns\n", st.EB.Lookback);
   
   printf(" Event builder status: \n");
   printf("    FifoBlockCnt = %d\n", st.EB.FifoBlockCnt);
@@ -994,6 +1010,9 @@ sspStatus(int id, int rflag)
   
   if(sspFirmwareType[id] == SSP_CFG_SSPTYPE_HPS)
      sspPrintHpsConfig(id);
+     
+  if(sspFirmwareType[id] == SSP_CFG_SSPTYPE_PRAD)
+     sspPrintPRADConfig(id);
      
   if(sspFirmwareType[id] == SSP_CFG_SSPTYPE_HALLBGT)
      sspPrintGtConfig(id);
@@ -1643,7 +1662,7 @@ sspGSendScalers()
 
   if(read_daq_config)
   {
-    //printf("mysql_database=>%s< session=>%s<\n",mysql_database, session);fflush(stdout);
+    //printf("sspGSendScalers: mysql_database=>%s< session=>%s<\n",mysql_database, session);fflush(stdout);
     // connect to mysql database
     connNum = dbConnect(mysql_host, mysql_database);
 
@@ -1674,7 +1693,7 @@ sspGSendScalers()
         }
       }
     }
-    //printf("run_status is >%s<\n",runconfig);fflush(stdout);
+    //printf("sspGSendScalers: run_status is >%s<\n",runconfig);fflush(stdout);
 
 
     if(!strcmp(runconfig,"active")) run_is_active = 1;
@@ -1687,13 +1706,13 @@ sspGSendScalers()
     sprintf(query,"SELECT config FROM sessions WHERE name='%s'",session);
     if(mysql_query(connNum, query) != 0)
     {
-      printf("get_run_config: ERROR in mysql_query 1\n");fflush(stdout);
+      printf("sspGSendScalers: ERROR in mysql_query 1\n");fflush(stdout);
       dbDisconnect(connNum);
       return(-1);
     }
     if(!(result = mysql_store_result(connNum) ))
     {
-      printf("get_run_config: ERROR in mysql_store_result 1\n");fflush(stdout);
+      printf("sspGSendScalers: ERROR in mysql_store_result 1\n");fflush(stdout);
       dbDisconnect(connNum);
       return(-1);
     }
@@ -1702,13 +1721,13 @@ sspGSendScalers()
     if(row_out==NULL)
     {
       mysql_free_result(result);
-      printf("error in mysql_fetch_row\n");fflush(stdout);
+      printf("sspGSendScalers: error in mysql_fetch_row\n");fflush(stdout);
       dbDisconnect(connNum);
       return(-1);
     }
     strcpy(configname,row_out[0]);
     mysql_free_result(result);
-    //printf("config name is >%s<\n",configname);fflush(stdout);
+    //printf("sspGSendScalers: config name is >%s<\n",configname);fflush(stdout);
 
 
     /****************************/
@@ -1718,35 +1737,35 @@ sspGSendScalers()
     sprintf(query,"SELECT name,inuse FROM %s",configname);
     if(mysql_query(connNum, query) != 0)
     {
-      printf("ERROR: cannot select\n");fflush(stdout);
+      printf("sspGSendScalers: ERROR: cannot select, query >%s<\n",query);fflush(stdout);
       dbDisconnect(connNum);
       return(-1);
     }
     /* gets results from previous query */
     if( !(result = mysql_store_result(connNum)) )
     {
-      printf("ERROR in mysql_store_result()\n");fflush(stdout);
+      printf("sspGSendScalers: ERROR in mysql_store_result()\n");fflush(stdout);
       dbDisconnect(connNum);
       return(-1);
     }
 
     numRows = mysql_num_rows(result);
-    //printf("nrow=%d\n",numRows);fflush(stdout);
+    //printf("sspGSendScalers: nrow=%d\n",numRows);fflush(stdout);
     for(ii=0; ii<numRows; ii++)
     {
       row_out = mysql_fetch_row(result);
-      //printf("[%1d] received from DB >%s< >%s<\n",ii,row_out[0],row_out[1]);fflush(stdout);
+      //printf("sspGSendScalers: [%1d] received from DB >%s< >%s<\n",ii,row_out[0],row_out[1]);fflush(stdout);
 
       //if( strncmp(row_out[1],"no",2) != 0 ) /* 'inuse' != 'no' */
       if(isdigit(row_out[1][0]))
       {
-        //printf("  digit >%s<\n",row_out[1]);fflush(stdout);
+        //printf("  sspGSendScalers: digit >%s<\n",row_out[1]);fflush(stdout);
         roc_id = atoi(row_out[1]);
         if((roc_id>=0) && (roc_id<MAX_ROCS))
         {
           roc_is_active[roc_id] = 1;
           strncpy(roc_names[roc_id],row_out[0],39);
-          //printf("roc: id=%3d, name >%s<\n",roc_id,roc_names[roc_id]);fflush(stdout);
+          //printf("  sspGSendScalers: roc: id=%3d, name >%s<\n",roc_id,roc_names[roc_id]);fflush(stdout);
         }
       }
     }
@@ -1780,6 +1799,9 @@ sspSendScalers(int id)
 
   switch(sspFirmwareType[id])
   {
+    case SSP_CFG_SSPTYPE_PRAD:
+      r = sspPRADSendScalers(id);
+      break;
     case SSP_CFG_SSPTYPE_HALLBGT:
       if(run_is_active) sspGtSendErrors(id);
       r = sspGtSendScalers(id);
@@ -2497,15 +2519,7 @@ sspGtSendErrors(int id)
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGT))
     return ERROR;
 
-  gethostname(host,sizeof(host));
-  for(i=0; i<strlen(host); i++)
-  {
-    if(host[i] == '.')
-    {
-      host[i] = '\0';
-      break;
-    }
-  }
+  get_hostname(host,sizeof(host));
 
   SSPLOCK();
   for(i=0;i<8;i++)
@@ -4539,15 +4553,7 @@ sspGtcSendErrors(int id)
   if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_HALLBGTC))
     return ERROR;
 
-  gethostname(host,sizeof(host));
-  for(i=0; i<strlen(host); i++)
-  {
-    if(host[i] == '.')
-    {
-      host[i] = '\0';
-      break;
-    }
-  }
+  get_hostname(host,sizeof(host));
 
   SSPLOCK();
   for(i=0;i<8;i++)
@@ -6758,6 +6764,320 @@ void sspPrintHpsConfig(int id)
   printf("\n");
 }
 
+/*****************************************************************/
+/*****************************************************************/
+/*****************************************************************/
+int
+sspPRADSendScalers(int id)
+{
+  char *mmm[1];
+  char name[400], short_name[250], long_name[250];
+  float ref, data[8];
+  int idata[8];
+  unsigned int val;
+  int i,jj;
+
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_PRAD))
+    return ERROR;
+
+  SSPLOCK(); 
+  sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 1); 
+
+  // Read/normalize reference 
+  val = sspReadReg(&pSSP[id]->Sd.Scalers[SD_SCALER_SYSCLK]); 
+  if(!val) val = 1;
+  ref = 100000.0f / (float)val;
+
+  // Trigger bit scalers
+  for(i=0;i<8;i++)
+    data[i] = ref * ((float)sspReadReg(&pSSP[id]->Sd.Scalers[SD_SCALER_P2_LVDSOUT0+i]));
+  sprintf(name, "SSPPRAD_SLOT%d_TRIGGERBITS", id);
+  epics_json_msg_send(name, "float", 8, data);
+
+  // Trigger bit prescalers
+  for(i=0;i<8;i++)
+    idata[i] = sspReadReg(&pSSP[id]->Trigger.Prescale[i]);
+  sprintf(name, "SSPPRAD_SLOT%d_PRESCALES", id);
+  epics_json_msg_send(name, "int", 8, idata);
+  SSPUNLOCK(); 
+
+  // Trigger bit names
+  for(i=0;i<8;i++)
+  {
+    sspPRAD_GetTriggerName(id, i, &idata[0], &idata[1], short_name, long_name);
+
+    sprintf(name, "SSPPRAD_SLOT%d_TRIGGERBIT%02d_SHORTNAME", id, i);
+    mmm[0] = short_name;
+    epics_json_msg_send(name, "string", 1, (char **)mmm);
+
+    sprintf(name, "SSPPRAD_SLOT%d_TRIGGERBIT%02d_LONGNAME", id, i);
+    mmm[0] = long_name;
+    epics_json_msg_send(name, "string", 1, (char **)mmm);
+
+    sprintf(name, "SSPPRAD_SLOT%d_TRIGGERBIT%02d_FLAGS", id, i);
+    epics_json_msg_send(name, "int", 2, idata);
+  }
+
+  SSPLOCK(); 
+  sspWriteReg(&pSSP[id]->Sd.ScalerLatch, 0); 
+  SSPUNLOCK(); 
+
+  return OK;
+}
+int sspPRAD_SetTrigger(int id, int trg_latency, int trg_width)
+{
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_PRAD))
+    return ERROR;
+  
+  trg_latency/=4;
+  trg_latency&= 0x7FF;
+
+  trg_width/=4;
+  trg_width&= 0x0FF;
+  
+  SSPLOCK();
+  sspWriteReg(&pSSP[id]->Trigger.Latency, trg_latency);
+  sspWriteReg(&pSSP[id]->Trigger.Width, trg_width);
+  SSPUNLOCK();
+
+  return OK;
+}
+
+
+int  sspPRAD_GetTrigger(int id, int *trg_latency, int *trg_width)
+{
+  int val;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_PRAD))
+    return ERROR;
+  
+  SSPLOCK();
+  val = sspReadReg(&pSSP[id]->Trigger.Latency);
+  *trg_latency = ((val>> 0) & 0x7FF) * 4;
+
+  val = sspReadReg(&pSSP[id]->Trigger.Width);
+  *trg_width   = ((val>> 0) & 0x0FF) * 4;
+  SSPUNLOCK();
+
+  return OK;
+}
+
+int sspPRAD_ReadTrgNameChar(int id, int addr, char *c)
+{
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_PRAD))
+    return ERROR;
+
+  SSPLOCK();
+  sspWriteReg(&pSSP[id]->Trigger.TrgNameWr, (addr<<8) | 0x200000);
+  *c = sspReadReg(&pSSP[id]->Trigger.TrgNameRd) & 0xFF;
+  SSPUNLOCK();
+
+  return OK;
+}
+
+int sspPRAD_WriteTrgNameChar(int id, int addr, char c)
+{
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_PRAD))
+    return ERROR;
+
+  SSPLOCK();
+  sspWriteReg(&pSSP[id]->Trigger.TrgNameWr, c | (addr<<8) | 0x100000);
+  SSPUNLOCK();
+
+  return OK;
+}
+
+int sspPRAD_SetTriggerName(int id, int trgbit, int flag0, int flag1, char *short_name, char *long_name)
+{
+  int val,i;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_PRAD))
+    return ERROR;
+ 
+  // 4096 memory: 512 bytes per trigger bit (8)
+  // 0:249   - short name
+  // 250-499 - long name 
+  // 500     - flags0
+  // 501     - flags1
+  for(i=0;i<250;i++)
+  {
+    if(i!=249)
+    {
+      sspPRAD_WriteTrgNameChar(id,512*trgbit+i, short_name[i]);
+      sspPRAD_WriteTrgNameChar(id,512*trgbit+250+i, long_name[i]);
+    }
+    else
+    {
+      sspPRAD_WriteTrgNameChar(id,512*trgbit+i, 0);
+      sspPRAD_WriteTrgNameChar(id,512*trgbit+250+i,0);
+    }
+  }
+  sspPRAD_WriteTrgNameChar(id,512*trgbit+500,flag0);
+  sspPRAD_WriteTrgNameChar(id,512*trgbit+501,flag1);
+  return OK;
+}
+
+int sspPRAD_GetTriggerName(int id, int trgbit, int *flag0, int *flag1, char *short_name, char *long_name)
+{
+  char c;
+  int val, i;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_PRAD))
+    return ERROR;
+  
+  // 4096 memory: 512 bytes per trigger bit (8)
+  // 0:249   - short name
+  // 250-499 - long name 
+  // 500     - flags0
+  // 501     - flags1
+  for(i=0;i<250;i++)
+  {
+    if(i!=249)
+    {
+      sspPRAD_ReadTrgNameChar(id, 512*trgbit+i, &short_name[i]);
+      sspPRAD_ReadTrgNameChar(id, 512*trgbit+250+i, &long_name[i]);
+    }
+    else
+    {
+      short_name[i] = 0;
+      long_name[i] = 0;
+    }
+  }
+  sspPRAD_ReadTrgNameChar(id, 512*trgbit+500, &c);
+  *flag0 = c;
+  sspPRAD_ReadTrgNameChar(id, 512*trgbit+501, &c);
+  *flag1 = c;
+  return OK;
+}
+
+int  sspPRAD_SetTriggerBit(
+   int id, int trgbit, int trg_prescale,
+   int dly_cmult, int dly_csum, int dly_esum,
+   int cmult_min, int csum_min, int esum_min)
+{
+  int val;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_PRAD))
+    return ERROR;
+
+  trg_prescale&= 0xFFFF;
+
+  dly_csum/=4;
+  dly_csum&= 0xFF;
+
+  dly_cmult/=4;
+  dly_cmult&= 0xFF;
+
+  dly_esum/=4;
+  dly_esum&= 0xFF;
+
+  SSPLOCK();
+  sspWriteReg(&pSSP[id]->Trigger.Prescale[trgbit], trg_prescale);
+
+  val = (dly_esum<<16) | (dly_cmult<<8) | (dly_csum<<0);
+  sspWriteReg(&pSSP[id]->prad.trgbit[trgbit].Delay, val);
+
+  val = (csum_min<<0) | (cmult_min<<24);
+  sspWriteReg(&pSSP[id]->prad.trgbit[trgbit].ClusterTrg, val);
+
+  val = (esum_min<<0);
+  sspWriteReg(&pSSP[id]->prad.trgbit[trgbit].ESumTrg, val);
+  SSPUNLOCK(); 
+
+  return OK;
+}
+
+int  sspPRAD_GetTriggerBit(
+   int id, int trgbit, int *trg_prescale,
+   int *dly_cmult, int *dly_csum, int *dly_esum,
+   int *cmult_min, int *csum_min, int *esum_min)
+{
+  int val;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_PRAD))
+    return ERROR;
+  
+  SSPLOCK();
+  val = sspReadReg(&pSSP[id]->Trigger.Prescale[trgbit]);
+  *trg_prescale = ((val>> 0) & 0xFFFF);
+  
+  val = sspReadReg(&pSSP[id]->prad.trgbit[trgbit].Delay);
+  *dly_csum  = ((val>> 0) & 0xFF) * 4;
+  *dly_cmult = ((val>> 8) & 0xFF) * 4;
+  *dly_esum  = ((val>>16) & 0xFF) * 4;
+
+  val = sspReadReg(&pSSP[id]->prad.trgbit[trgbit].ClusterTrg);
+  *cmult_min = ((val>>24) & 0x0007F);
+  *csum_min  = ((val>> 0) & 0x7FFFF);
+  
+  val = sspReadReg(&pSSP[id]->prad.trgbit[trgbit].ESumTrg);
+  *esum_min  = ((val>> 0) & 0x7FFFF);
+  SSPUNLOCK(); 
+
+  return OK;
+}
+
+/*sergey on Ben's advise*/
+int
+sspPRAD_GetFiberLatency(int id, int *latency, int *fiber)
+{
+  int val;
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_PRAD))
+    return ERROR;
+  
+  SSPLOCK();
+  
+  val = sspReadReg(&pSSP[id]->FiberStatus);
+  *fiber   = (val>>0)&0x7F;
+  *latency = ((val>>16)&0x7FF) * 4;
+  
+  SSPUNLOCK(); 
+
+  if( (*latency) > 2000 ) return(-1); //latency should never exceed 500 ticks (2000 ns)
+  
+  return(0);
+}
+/*sergey on Ben's advise*/
+
+void sspPrintPRADConfig(int id)
+{
+  int trg_latency, trg_width, trg_prescale, dly_csum, dly_cmult, dly_esum, cmult_min, csum_min, esum_min;
+  int trgbit, status, status_latency;
+  int flag0, flag1;
+  char short_name[250], long_name[250];
+
+  if(sspIsNotInit(&id, __func__, SSP_CFG_SSPTYPE_PRAD))
+    return;
+
+  printf("*** PRADConfig ***\n");
+  sspPRAD_GetTrigger(id, &trg_latency, &trg_width);
+  status_latency = 0;//sspReadReg(&pSSP[id]->Trigger.Latency);
+  
+  printf("    Trigger latency          = %dns\n", trg_latency);
+  printf("    Trigger width            = %dns\n", trg_width);
+  printf("    Latency Status           = %dns\n", status_latency);
+  for(trgbit = 0; trgbit<8; trgbit++)
+  {
+    sspPRAD_GetTriggerBit(id, trgbit, &trg_prescale, &dly_cmult, &dly_csum, &dly_esum, &cmult_min, &csum_min, &esum_min);
+    sspPRAD_GetTriggerName(id, trgbit, &flag0, &flag1, short_name, long_name);
+    printf("   *** PRAD Trigger Bit %d ***\n", trgbit);
+    printf("      Short name           = %s\n", short_name);
+    printf("      Long name            = %s\n", long_name);
+    printf("      Flags                = %d %d\n", flag0, flag1);
+    printf("      Trigger prescale     = %d\n", trg_prescale);
+    printf("\n");
+    printf("      ClusterSum delay     = %dns\n", dly_csum);
+    printf("      ClusterMult delay    = %dns\n", dly_cmult);
+    printf("      ESum delay           = %dns\n", dly_esum);
+    printf("\n");
+    printf("      ClusterSum min       = %dMeV\n", csum_min);
+    printf("      ClusterMult min      = %d\n", cmult_min);
+    printf("      ESum min             = %dMeV\n", esum_min);
+    printf("\n");
+  }
+  printf("\n");
+}
+
+
+/*****************************************************************/
+/*****************************************************************/
+/*****************************************************************/
+
 void sspPrintGtcConfig(int id)
 {
   int trg, val, mask;
@@ -7475,7 +7795,7 @@ int
 sspSetWindowWidth(int id, int window_width)
 {
   if(id==0) id=sspSL[0]; 
-  vmeWrite32(&pSSP[id]->EB.WindowWidth, window_width/4);
+  vmeWrite32(&pSSP[id]->EB.WindowWidth, window_width);
   return(0);
 }
 
@@ -7484,7 +7804,7 @@ sspGetWindowWidth(int id)
 {
   int ret;
   if(id==0) id=sspSL[0];
-  ret = vmeRead32(&pSSP[id]->EB.WindowWidth) * 4;
+  ret = vmeRead32(&pSSP[id]->EB.WindowWidth);
   printf("sspGetWindowWidth returns %d\n",ret),fflush(stdout);
   return(ret);
 }
@@ -7494,7 +7814,7 @@ int
 sspSetWindowOffset(int id, int window_offset)
 {
   if(id==0) id=sspSL[0]; 
-  vmeWrite32(&pSSP[id]->EB.Lookback, window_offset/4);
+  vmeWrite32(&pSSP[id]->EB.Lookback, window_offset);
   return(0);
 }
 
@@ -7503,7 +7823,7 @@ sspGetWindowOffset(int id)
 {
   int ret;
   if(id==0) id=sspSL[0];
-  ret = vmeRead32(&pSSP[id]->EB.Lookback) * 4;
+  ret = vmeRead32(&pSSP[id]->EB.Lookback);
   printf("sspGetWindowOffset returns %d\n",ret),fflush(stdout);
   return(ret);
 }
@@ -7513,8 +7833,16 @@ void
 sspSetA32BaseAddress(unsigned int addr)
 {
   sspA32Base = addr;
-  printf("ssp A32 base address set to 0x%08X\n",sspA32Base);
+  printf("sspSetA32BaseAddress: ssp A32 base address set to 0x%08X\n",sspA32Base);
 }
+
+unsigned int
+sspGetA32BaseAddress()
+{
+  printf("sspGetA32BaseAddress: ssp A32 base address set to 0x%08X\n",sspA32Base);
+  return(sspA32Base);
+}
+/*sergey*/
 
 #endif
 

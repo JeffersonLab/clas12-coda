@@ -28,6 +28,8 @@
 struct SDStruct
 {
   /* 0x0000 */          unsigned int blankSD0[(0x3C00-0x0000)/4];
+
+#if 1 /* from Bryan Mar 2026 - look the same ...*/
   /* 0x3C00 */ volatile unsigned int system;  /* Device 1,  Address 0x0 */
   /* 0x3C04 */ volatile unsigned int status;             /* Address 0x1 */
   /* 0x3C08 */ volatile unsigned int payloadPorts;       /* Address 0x2 */
@@ -36,7 +38,19 @@ struct SDStruct
   /* 0x3C14 */ volatile unsigned int trigoutPorts;       /* Address 0x5 */
   /* 0x3C18 */ volatile unsigned int busyoutStatus;      /* Address 0x6 */
   /* 0x3C1C */ volatile unsigned int trigoutStatus;      /* Address 0x7 */
-  /* 0x3C20 */          unsigned int RFU0;      /* Address 0x8 */
+  /* 0x3C20 */          unsigned int RFU0;               /* Address 0x8 */
+#else
+  /* 0x3C00 */ volatile unsigned int system;  /* Device 1,  Address 0x0 */
+  /* 0x3C04 */ volatile unsigned int status;             /* Address 0x1 */
+  /* 0x3C08 */ volatile unsigned int payloadPorts;       /* Address 0x2 */
+  /* 0x3C0C */ volatile unsigned int tokenPorts;         /* Address 0x3 */
+  /* 0x3C10 */ volatile unsigned int busyoutPorts;       /* Address 0x4 */
+  /* 0x3C14 */ volatile unsigned int trigoutPorts;       /* Address 0x5 */
+  /* 0x3C18 */ volatile unsigned int busyoutStatus;      /* Address 0x6 */
+  /* 0x3C1C */ volatile unsigned int trigoutStatus;      /* Address 0x7 */
+  /* 0x3C20 */          unsigned int RFU0;               /* Address 0x8 */
+#endif
+
   /* 0x3C24 */ volatile unsigned int busyoutCounter[16]; /* Address 0x9-0x18 */
   /* 0x3C64 */ volatile unsigned int busyoutTest;        /* Address 0x19 */
   /* 0x3C68 */ volatile unsigned int sdLinkTest;         /* Address 0x1A */

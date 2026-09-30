@@ -45,6 +45,7 @@
 #include <string.h>
 #include <pthread.h>
 #include "jvme.h"
+#include "usrvme.h"
 #include "vfTDCLib.h"
 
 static unsigned int slot2a32[22] = 

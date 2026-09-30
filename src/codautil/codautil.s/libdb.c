@@ -90,7 +90,7 @@ dbConnectFull(const char *host, const char *database, const char *user, const ch
   unsigned int port = 0;
   const char *unix_socket = "";
   unsigned long client_flag = 0;
-  my_bool reconnect = 0;
+  /*sergey: my_bool*/int reconnect = 0;
 
   char dbaseServerHost[128];   /* database server host name */
   char db[128]; /* normally comes from EXPID, add 'daq_' */
@@ -145,7 +145,7 @@ perror("INFO(dbConnect1)");
   if(mysql == NULL) return(NULL);
 
   /* set mysql options */
-  mysql_options(mysql, MYSQL_OPT_RECONNECT, &reconnect);
+  //mysql_options(mysql, MYSQL_OPT_RECONNECT, &reconnect); deprecated in new mysql
 
   /* connect to database */
 
@@ -217,7 +217,7 @@ dbConnect(const char *host, const char *database)
   unsigned int port = 0;
   const char *unix_socket = "";
   unsigned long client_flag = 0;
-  my_bool reconnect = 0;
+  /*sergey: my_bool*/int reconnect = 0;
 
   char dbaseServerHost[128];   /* database server host name */
   char db[128]; /* normally comes from EXPID, add 'daq_' */
@@ -273,7 +273,7 @@ perror("INFO(dbConnect1)");
   if(mysql == NULL) return(NULL);
 
   /* set mysql options */
-  mysql_options(mysql, MYSQL_OPT_RECONNECT, &reconnect);
+  //mysql_options(mysql, MYSQL_OPT_RECONNECT, &reconnect); deprecated in new mysql
 
   /* connect to database */
 

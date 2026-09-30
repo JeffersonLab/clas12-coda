@@ -53,54 +53,53 @@ factory::createSubSystem (char* className)
   daqSubSystem* subsys = 0;
 
   if (system_.locateSystem (className, subsys) == CODA_SUCCESS)
+  {
+    printf("factory::createSubSystem: className=%s already exist\n",className);
     return subsys;
-  else {
+  }
+  else
+  {
+    printf("factory::createSubSystem: className=%s created\n",className);
     subsys = new daqSubSystem (className, system_);
     return subsys;
   }
 }
+
+
+
+/*sergey: it seems, following called on 'Connect' click for every component from 'process' table ?*/
     
 daqComponent*
-factory::createComponent (char* title, 
-			  int number,
-			  char* type,
-			  char* node,
-			  char* bootString)
+factory::createComponent (char* title, int number, char* type, char* node, char* bootString)
 {
   daqComponent* comp = 0;
+  
+  printf("factory::createComponent: title=%s, number=%d, type=%s, node=%s, bootString=%s\n",title,number,type,node,bootString);
+
   if (system_.has (title,comp) == CODA_SUCCESS)
+  {
     return comp;
-  else {
+  }
+  else
+  {
     daqSubSystem* subsys = createSubSystem (type);
-#if defined (_CODA_2_0_T) || defined (_CODA_2_0)
-    comp = new netComponent (title, number, exptid_, type,
-			     node, bootString, *subsys);
-#else
-    if (::strcasecmp (type, "LOG") == 0)
-      comp = new daqLogComp (title, number, exptid_, type,
-			     node, bootString, *subsys);
-    else
-      comp = new netComponent (title, number, exptid_, type,
-			       node, bootString, *subsys);
-#endif
+
+    comp = new netComponent (title, number, exptid_, type, node, bootString, *subsys);
     return comp;
   }
 }
 
+
 daqComponent*
-factory::createComponent (daqComponent* comp,
-			  char* action,
-			  char* script)
+factory::createComponent (daqComponent* comp, char* action, char* script)
 {
   char fullname[80];
   static int id = 0;
 
   int act = codaDaqActions->action (action);
-  if (act == CODA_ERROR)
-    return 0;
+  if (act == CODA_ERROR) return 0;
   
-  sprintf (fullname, "%s_%s_%s_%d",comp->title (), action, 
-	   CODA_USER_SCRIPT, id++);
+  sprintf (fullname, "%s_%s_%s_%d",comp->title (), action, CODA_USER_SCRIPT, id++);
 
   // since all comp must be netComponent, the followings are safe
   netComponent* ncomp = (netComponent *)comp;
@@ -122,6 +121,8 @@ factory::subSystemPriority (char* className, int priority)
 {
   daqSubSystem* subsys = 0;
 
+  //printf("OOOOO factory::subSystemPriority: className=%s, priority=%d\n",className,priority);
+  
   if (system_.locateSystem (className, subsys) == CODA_SUCCESS) 
     subsys->setDefaultPriority (priority);
 }

@@ -36,6 +36,8 @@ TS_HOLDOFF   rule   time  timescale            # rule: 1-4, time: 0-127, timesca
 
 TS_FIBER_IN 1                                  # fiber number to be used as input
 
+TS_TRIGGER_WINDOW  4                           # Size of the coincidence window in ns, will be down-rounded to 4ns
+
 */
 
 #include <stdio.h>
@@ -50,6 +52,7 @@ TS_FIBER_IN 1                                  # fiber number to be used as inpu
 #include "tsLib.h"
 #include "tsConfig.h"
 #include "xxxConfig.h"
+#include "codautil.h"
 
 #define FNLEN     128       /* length of config. file name */
 #define STRLEN    250       /* length of str_tmp */
@@ -73,6 +76,7 @@ static int random_prescale;
 static int holdoff_rules[4];
 static int holdoff_timescale[4];
 static int fiber_in;
+static int trigger_window;
 
 
 static char *expid= NULL;
@@ -137,6 +141,7 @@ tsInitGlobals()
   gtp_input_mask = 0xFFFFFFFF;
   fp_input_mask = 0xFFFFFFFF;
   fiber_in = 1;
+  trigger_window = 4;
 
   return(0);
 }
@@ -158,9 +163,8 @@ tsReadConfigFile(char *filename)
   char *getenv();
   char *clonparms;
   
-  gethostname(host,ROCLEN);  /* obtain our hostname */
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");
@@ -356,6 +360,13 @@ tsReadConfigFile(char *filename)
         sscanf (str_tmp, "%*s %d", &i1);
         fiber_in = i1;
       }
+      
+      else if(active && (strcmp(keyword,"TS_TRIGGER_WINDOW")==0))
+      {
+        sscanf (str_tmp, "%*s %d", &i1);
+	if(i1<4) i1 = 4; // enforce minimum 4ns
+        trigger_window = i1;
+      }
 
       else
       {
@@ -439,6 +450,8 @@ sleep(1);
 
   /*tsSetFiberIn_preInit(fiber_in);TS*/
 
+  tsSetTrigCoinWindow(trigger_window/4);
+  
   return(0);
 }
 
@@ -484,17 +497,22 @@ tsUploadAll(char *string, int length)
   fp_input_mask = tsGetFPInput();
   gtp_input_mask = tsGetGTPInput();
 
-  for(ii=0; ii<32; ii++)
-  {
-    gtp_prescale[ii] = tsGetTriggerPrescale(1, ii);
-    fp_prescale[ii] = tsGetTriggerPrescale(2, ii);
-  }
+  //reported wrong for masked channels ????
+  //for(ii=0; ii<32; ii++)
+  //{
+  //  gtp_prescale[ii] = tsGetTriggerPrescale(1, ii);
+  //  fp_prescale[ii] = tsGetTriggerPrescale(2, ii);
+  //}
+  tsGetGTPTriggerPrescale(gtp_prescale);
+  tsGetFPTriggerPrescale(fp_prescale);
 
   /*random_enabled = tsGetRandomTriggerEnable(1);TS*/
   /*random_prescale = tsGetRandomTriggerSetting(1);TS*/
 
   /*fiber_in = tsGetSlavePort();TS*/
 
+  trigger_window = tsGetTrigCoinWindow() * 4;
+  
   if(length)
   {
     str = string;
@@ -513,6 +531,9 @@ tsUploadAll(char *string, int length)
     ADD_TO_STRING;
 
     sprintf(sss,"TS_FIBER_IN %d\n",fiber_in);
+    ADD_TO_STRING;
+    
+    sprintf(sss,"TS_TRIGGER_WINDOW %d\n",trigger_window);
     ADD_TO_STRING;
 
     for(ii=0; ii<4; ii++)

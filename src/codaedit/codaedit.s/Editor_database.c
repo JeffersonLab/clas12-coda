@@ -87,14 +87,14 @@ static char* compTypeString[] = {
   "TS",
   "ROC",
   "EB",
-  "ET", /* sergey: was 'ANA' */
-  "ETT", /*sergey: was 'EBANA' */
-  "L3", /*sergey: was 'UT' */
+  "ET",    /* sergey: was 'ANA' */
+  "ETT",   /*sergey: was 'EBANA' */
+  "L3",    /*sergey: was 'UT' */
   "ER",
   "LOG",
-  "SC", 
-  "SPR", /*sergey: was 'UC' */
-  "SRO", /*sergey: was 'RCS' */
+  "TSROC", /*sergey: was 'SC' */
+  "SPR",   /*sergey: was 'UC' */
+  "SRO",   /*sergey: was 'RCS' */
   "FILE",
   "FILE",
   "DEBUG",
@@ -103,6 +103,34 @@ static char* compTypeString[] = {
   "NONE",
   "UNKNOWN"
 };
+
+int
+compTypeInt(char* comp_type)
+{
+  int type;
+  
+  if(strcasecmp(comp_type, "ROC") == 0)           type = CODA_ROC;
+  else if(strcasecmp(comp_type, "EB") == 0)       type = CODA_EB;
+  else if(strcasecmp(comp_type, "ET") == 0)       type = CODA_ET;
+  else if(strcasecmp(comp_type, "ETT") == 0)      type = CODA_ETT;
+  else if(strcasecmp(comp_type, "SRO") == 0)      type = CODA_SRO;
+  else if(strcasecmp(comp_type, "SPR") == 0)      type = CODA_SPR;
+  else if(strcasecmp(comp_type, "TS") == 0)       type = CODA_TRIG;    
+  /*else if(strcasecmp(comp_type, "RCS") == 0)    type = CODA_RCS;*/
+  else if(strcasecmp(comp_type,"ER") == 0)        type = CODA_ER;
+  /*else if(strcasecmp(comp_type,"UC") == 0)      type = CODA_UC;*/
+  else if(strcasecmp(comp_type,"L3") == 0)        type = CODA_L3;
+  else if(strcasecmp(comp_type,"LOG") == 0)       type = CODA_LOG;
+  else if(strcasecmp(comp_type,"TSROC") == 0)     type = CODA_TSROC;
+  else if(strcasecmp(comp_type,"FILE") == 0)      type = CODA_FILE;
+  else if(strcasecmp(comp_type, "CODAFILE") == 0) type = CODA_CODAFILE;
+  else if(strcasecmp(comp_type,"DEBUG") == 0)     type = CODA_DEBUG;
+  else if(strcasecmp(comp_type,"MON") == 0)       type = CODA_MON;
+  else if(strcasecmp(comp_type,"NONE") == 0)      type = CODA_NONE;
+  else                                            type = CODA_UNKNOWN;
+
+  return(type);
+}
 
 static char*
 configName (char* fullname)
@@ -375,35 +403,32 @@ createConfigTable (char* config)
   if (!databaseSelected()) return(-1);
 
   sprintf (queryString, "create table %s(\n", config);
-  strcat  (queryString, "name varchar(32) binary not null primary key,\n");
+  strcat  (queryString, "`name` varchar(32) COLLATE latin1_bin not null primary key,\n");
 
-/* sergey: problem on Linux, maybe newer mysql ???
-  strcat  (queryString, "code char(512) not null,\n");
-  strcat  (queryString, "inputs char(400) not null,\n");
-  strcat  (queryString, "outputs char(400) not null,\n");
-*/
-  strcat  (queryString, "code text not null,\n");
-  strcat  (queryString, "inputs text not null,\n");
-  strcat  (queryString, "outputs text not null,\n");
+  strcat  (queryString, "`code` text not null,\n");
+  strcat  (queryString, "`inputs` text not null,\n");
+  strcat  (queryString, "`outputs` text not null,\n");
 
-  strcat  (queryString, "first char(32) not null,\n");
-  strcat  (queryString, "next char(32) not null,\n");
-  strcat  (queryString, "inuse char(32) not null,\n");
+  strcat  (queryString, "`first` char(32) not null,\n");
+  strcat  (queryString, "`next` char(32) not null,\n");
+  strcat  (queryString, "`inuse` char(32) not null,\n");
 
-  strcat  (queryString, "order_num int not null\n"); /* sergey */
+  strcat  (queryString, "`order_num` int not null,\n"); /* sergey */
+  strcat  (queryString, "`cmd` text not null,\n"); /* sergey */
+  strcat  (queryString, "`type` char(32) not null\n"); /* sergey */
 
   strcat  (queryString,")");
   if (mysql_query (mysql, queryString) != 0)
   {
     printf ("ERROR in Creating >%s< config table, error: >%s<\n",config, mysql_error(mysql));
-    printf ("ERROR: query was >%s<\n",queryString);
+    printf ("ERROR: queryString >%s<\n",queryString);
     return(-1);
   }
   else
   {
-#ifdef _CODA_DEBUG
+    //#ifdef _CODA_DEBUG
     printf ("Create %s config table\n",config);
-#endif
+    //#endif
   }
 
   /* insert configuration name into the runtype table */
@@ -411,12 +436,12 @@ createConfigTable (char* config)
   if (num != -1)
   {
     sprintf (queryString, "insert into %s\n", RUNTYPE_TABLE_NAME);
-    sprintf (valString, "values ('%s', %d, 'no','')",
-	     config, num);
+    sprintf (valString, "values ('%s', %d, 'no','')",config, num);
     strcat  (queryString, valString);
     if (mysql_query(mysql, queryString) != 0)
     {
       printf ("Insert into runtype error: %s\n", mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
       return(-1);
     }
     else
@@ -441,13 +466,14 @@ createPositionTable (char* config)
   if (!databaseSelected()) return(-1);
 
   sprintf (queryString, "create table %s_pos(\n", config);
-  strcat  (queryString, "name varchar(32) binary not null primary key,\n");
-  strcat  (queryString, "row  int not null,\n");
-  strcat  (queryString, "col  int not null\n");
+  strcat  (queryString, " `name` varchar(32) COLLATE latin1_bin not null primary key,\n");
+  strcat  (queryString, " `row` int not null,\n");
+  strcat  (queryString, " `col` int not null\n");
   strcat  (queryString,")");
   if (mysql_query (mysql, queryString) != 0)
   {
     printf ("Create %s pos table Error: %s\n",config, mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
     return(-1);
   }
   else
@@ -470,18 +496,19 @@ createExpInfoTable (void)
   if (!databaseSelected ()) return -1;
 
   sprintf (queryString, "create table %s(\n", EXPINFO_TABLE_NAME);
-  strcat  (queryString, "name varchar(64) binary not null primary key,\n");
-  strcat  (queryString, "id int not null,\n");
-  strcat  (queryString, "owner char(32) not null,\n");
-  strcat  (queryString, "inuse char(32) not null,\n");
-  strcat  (queryString, "log_name char(32) not null,\n");
-  strcat  (queryString, "rc_name char(32) not null,\n");
-  strcat  (queryString, "runNumber int not null,\n");
-  strcat  (queryString, "config char(32) not null\n");
+  strcat  (queryString, "`name` varchar(64) COLLATE latin1_bin not null primary key,\n");
+  strcat  (queryString, "`id` int not null,\n");
+  strcat  (queryString, "`owner` char(64) not null,\n");
+  strcat  (queryString, "`inuse` char(32) not null,\n");
+  strcat  (queryString, "`log_name` char(32) not null,\n");
+  strcat  (queryString, "`rc_name` char(32) not null,\n");
+  strcat  (queryString, "`runNumber` int not null,\n");
+  strcat  (queryString, "`config` char(32) not null\n");
   strcat  (queryString,")");
   if (mysql_query (mysql, queryString) != 0)
   {
     fprintf (stderr, "Command failed: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
     return(-1);
   }
   return(0);
@@ -497,20 +524,25 @@ createProcessTable (void)
   if (!databaseSelected ()) return -1;
 
   sprintf (queryString, "create table %s(\n", PROCESS_TABLE_NAME);
-  strcat  (queryString, "name varchar(32) binary not null primary key,\n");
-  strcat  (queryString, "id int not null,\n");
-  strcat  (queryString, "cmd char(128) not null,\n");
-  strcat  (queryString, "type char(32) not null,\n");
-  strcat  (queryString, "host char(32) not null,\n");
-  strcat  (queryString, "port int not null,\n");
-  strcat  (queryString, "state char(32) not null,\n");
-  strcat  (queryString, "pid int not null,\n");
-  strcat  (queryString, "inuse char(32) not null,\n");
-  strcat  (queryString, "clone char(32) not null,\n");
-  strcat  (queryString, "code text not null\n");
+  strcat  (queryString, "`name` varchar(32) COLLATE latin1_bin not null primary key,\n");
+  strcat  (queryString, "`id` int not null,\n");
+  strcat  (queryString, "`cmd` char(128) not null,\n");
+  strcat  (queryString, "`type` char(32) not null,\n");
+  strcat  (queryString, "`host` char(32) not null,\n");
+  strcat  (queryString, "`port` int not null,\n");
+  strcat  (queryString, "`state` char(32) not null,\n");
+  strcat  (queryString, "`pid` int not null,\n");
+  strcat  (queryString, "`inuse` char(32) not null,\n");
+  strcat  (queryString, "`clone` char(32) not null,\n");
+  strcat  (queryString, "`code` text not null\n");
   strcat  (queryString,")");
 
-  if(mysql_query (mysql, queryString) != 0) return(-1);
+  if(mysql_query (mysql, queryString) != 0)
+  {
+    fprintf (stderr, "Command failed: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
+    return(-1);
+  }
   return(0);
 }
 
@@ -532,20 +564,17 @@ createOptionTable (char* config)
   {
 #ifdef _CODA_DEBUG
     printf ("Editor_database::createOptionTable: option table '%s_option' does not exist (%s), will create it\n", config, mysql_error(mysql));
-	/*Editor_database::createOptionTable: option table PROD66 does not exist (Table 'daq_hpsrun.PROD66_option' doesn't exist), will create it*/
 #endif
     sprintf (queryString, "create table %s_option(\n", config);
-    strcat  (queryString, "name char(32) not null,\n");
-
-    /*strcat  (queryString, "value  char(80) not null\n");sergey*/
-    strcat  (queryString, "value text not null\n");
-
+    strcat  (queryString, "`name` char(32) not null,\n");
+    strcat  (queryString, "`value` text not null\n");
     strcat  (queryString, ")");
     printf ("Editor_database::createOptionTable: executing query >%s<\n",queryString);
     if (mysql_query (mysql, queryString) != 0)
     {
 #ifdef _CODA_DEBUG
       printf ("Editor_database::createOptionTable: create %s option table error: %s\n", config, mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
 #endif
       return(-1);
     }
@@ -560,6 +589,7 @@ createOptionTable (char* config)
     {
 #ifdef _CODA_DEBUG
       printf ("Editor_database::createOptionTable: insert %s to option table failed: %s\n", config, mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
 #endif
     }
     
@@ -570,6 +600,7 @@ createOptionTable (char* config)
     if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
       printf ("Editor_database::createOptionTable: insert %s to option table failed: %s\n", config, mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
 #endif
     }
     
@@ -580,6 +611,7 @@ createOptionTable (char* config)
     if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
       printf ("Editor_database::createOptionTable: insert %s to option table failed: %s\n", config, mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
 #endif
     }
   }
@@ -605,14 +637,15 @@ createScriptTable (char* config)
   if (!databaseSelected ()) return(-1);
 
   sprintf (queryString, "create table %s_script(\n", config);
-  strcat  (queryString, "name char(32) not null,\n");
-  strcat  (queryString, "state char(32) not null,\n");
-  strcat  (queryString, "script char(128) not null\n");
+  strcat  (queryString, "`name` char(32) not null,\n");
+  strcat  (queryString, "`state` char(32) not null,\n");
+  strcat  (queryString, "`script` char(128) not null\n");
   strcat  (queryString, ")");
   if (mysql_query (mysql, queryString) != 0)
   {
 #ifdef _CODA_DEBUG
     printf ("Create %s script table error: %s\n", config, mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
 #endif
     return(-1);
   }
@@ -657,13 +690,14 @@ createPriorityTable (void)
   if (!databaseSelected ()) return -1;
 
   sprintf (queryString, "create table %s(\n", PRIORITY_TABLE_NAME);
-  strcat  (queryString, "class char(32) not null,\n");
-  strcat  (queryString, "priority int not null\n");
+  strcat  (queryString, "`class` char(32) not null,\n");
+  strcat  (queryString, "`priority` int not null\n");
   strcat  (queryString,")");
   if (mysql_query (mysql, queryString) != 0)
   {
 #ifdef _CODA_DEBUG
     printf ("create priority table error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
 #endif
     return -1;
   }
@@ -675,6 +709,7 @@ createPriorityTable (void)
   if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
     printf ("Insert priority value error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
 #endif
     return -1;
   }
@@ -685,6 +720,7 @@ createPriorityTable (void)
   if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
     printf ("Insert priority value error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
 #endif
     return -1;
   }
@@ -695,6 +731,7 @@ createPriorityTable (void)
   if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
     printf ("Insert priority value error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
 #endif
     return -1;
   }
@@ -715,6 +752,7 @@ createPriorityTable (void)
   if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
     printf ("Insert priority value error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
 #endif
     return -1;
   }
@@ -725,6 +763,7 @@ createPriorityTable (void)
   if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
     printf ("Insert priority value error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
 #endif
     return -1;
   }
@@ -735,6 +774,7 @@ createPriorityTable (void)
   if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
     printf ("Insert priority value error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
 #endif
     return -1;
   }
@@ -745,6 +785,18 @@ createPriorityTable (void)
   if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
     printf ("Insert priority value error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
+#endif
+    return -1;
+  }
+  
+  /* TSROC class */
+  sprintf (queryString, "insert into %s\n", PRIORITY_TABLE_NAME);  
+  strcat  (queryString, "values ('TSROC', -25)"); 
+  if (mysql_query (mysql, queryString) != 0) {
+#ifdef _CODA_DEBUG
+    printf ("Insert priority value error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
 #endif
     return -1;
   }
@@ -755,6 +807,7 @@ createPriorityTable (void)
   if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
     printf ("Insert priority value error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
 #endif
     return -1;
   }
@@ -765,6 +818,7 @@ createPriorityTable (void)
   if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
     printf ("Insert priority value error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
 #endif
     return -1;
   }
@@ -783,13 +837,18 @@ createRunTypeTable (void)
   if (!databaseSelected ()) return(-1);
 
   sprintf (queryString, "create table %s(\n", RUNTYPE_TABLE_NAME);
-  strcat  (queryString, "name varchar(32) binary not null primary key,\n");
-  strcat  (queryString, "id int not null,\n");
-  strcat  (queryString, "inuse char(32) not null,\n");
-  strcat  (queryString, "category char(32) not null\n");
+  strcat  (queryString, "`name` varchar(32) COLLATE latin1_bin not null primary key,\n");
+  strcat  (queryString, "`id` int not null,\n");
+  strcat  (queryString, "`inuse` char(32) not null,\n");
+  strcat  (queryString, "`category` char(32) not null\n");
   strcat  (queryString,")");
 
-  if(mysql_query (mysql, queryString) != 0) return(-1);
+  if(mysql_query (mysql, queryString) != 0)
+  {
+    printf ("Create value error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
+    return(-1);
+  }
   return(0);
 }
 
@@ -833,7 +892,7 @@ listAllTables (char* tables[], int* num)
 }
 
 
-/* select all types from 'runTupes' table */
+/* select all types (actually configuration names) from 'runTypes' table */
 
 int
 listAllConfigs (char* configs[], int* num)
@@ -848,8 +907,7 @@ listAllConfigs (char* configs[], int* num)
   *num = 0;
   if (databaseSelected ())
   {
-    /*sprintf (queryString, "select * from %s", RUNTYPE_TABLE_NAME);*/
-    sprintf (queryString, "select * from %s ORDER BY name", RUNTYPE_TABLE_NAME);
+    sprintf (queryString, "select * from %s ORDER BY `name`", RUNTYPE_TABLE_NAME);
 #ifdef _CODA_DEBUG
     printf ("listAllConfigs: QUERY: >%s<\n",queryString);
 #endif
@@ -857,6 +915,7 @@ listAllConfigs (char* configs[], int* num)
     {
 #ifdef _CODA_DEBUG
       printf ("listAllConfigs error: %s\n", mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
 #endif
       return(-1);
     }
@@ -894,12 +953,12 @@ numberConfigs(void)
 
   if (databaseSelected ())
   {
-    sprintf (queryString, "select * from %s", RUNTYPE_TABLE_NAME);
+    sprintf (queryString, "SELECT * from %s", RUNTYPE_TABLE_NAME);
     if (mysql_query (mysql, queryString) != 0)
     {
 #ifdef _CODA_DEBUG
-      printf ("select * from %s error: %s\n", RUNTYPE_TABLE_NAME,
-                                                 mysql_error(mysql));
+      printf ("select * from %s error: %s\n", RUNTYPE_TABLE_NAME,mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
 #endif
       return(-1);
     }
@@ -914,6 +973,7 @@ numberConfigs(void)
     {
 #ifdef _CODA_DEBUG
       printf ("Query in numberConfigs failed: %s \n", mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
 #endif
       return(-1);
     }
@@ -1069,7 +1129,7 @@ removeConfigTable (char* config)
     }
 
 
-	/*sergey: do not drop '_script' table
+	/*?????????????????? sergey: do not drop '_script' table
     sprintf (queryString, "drop table %s_script", config);
     if (mysql_query (mysql, queryString) != 0)
     {
@@ -1079,7 +1139,7 @@ removeConfigTable (char* config)
     }
 	*/
 
-	/*sergey: do not drop '_option' table
+	/*?????????????????? sergey: do not drop '_option' table
     sprintf (queryString, "drop table %s_option", config);
     if (mysql_query (mysql, queryString) != 0)
     {
@@ -1112,7 +1172,7 @@ removeConfigTable (char* config)
     { 
       for (i = 0; i < num; i++)
       {
-        sprintf (queryString, "update %s set id = %d where name = '%s'",
+        sprintf (queryString, "UPDATE %s set `id` = %d where `name` = '%s'",
 		  RUNTYPE_TABLE_NAME, i, configs[i]);
         if (mysql_query (mysql, queryString) != 0)
         {
@@ -1141,22 +1201,24 @@ insertValToPosTable (char* config, char* name, int row, int col)
 
   if (databaseSelected ())
   {
-    sprintf (queryString, "insert into %s_pos (name, row, col) ",config);
+    sprintf (queryString, "INSERT into %s_pos (`name`, `row`, `col`) ",config);
     sprintf (valString, "values ('%s', %d, %d)",name,row,col);
     strcat  (queryString, valString);
     if (mysql_query (mysql, queryString) != 0)
     {
-#ifdef _CODA_DEBUG
-      printf ("insert %s to position table failed: %s\n", config, mysql_error(mysql));
-#endif
+      //#ifdef _CODA_DEBUG
+      printf("insert %s to position table failed: %s\n", config, mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
+      //#endif
       return(-1);
     }
-	else
-	{
-#ifdef _CODA_DEBUG
-      printf ("insert %s to position table\n", config);
-#endif
-	}
+    else
+    {
+      //#ifdef _CODA_DEBUG
+      printf ("inserted %s to position table\n", config);
+      printf("queryString >%s<\n",queryString);
+      //#endif
+    }
     return(0);
   }
   return(-1);
@@ -1176,32 +1238,35 @@ insertValToOptionTable (char* config, char* name, char* value)
   if (databaseSelected ())
   {
     /* delete old entry */
-    sprintf (queryString, "delete from %s_option where name = '%s'",
-	     config, name);
+    sprintf (queryString, "delete from %s_option where `name` = '%s'",config, name);
     if(mysql_query (mysql, queryString) != 0)
     {
 #ifdef _CODA_DEBUG
       printf ("delete from %s_option table failed: %s\n", config, mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
 #endif
     }
 
     /* insert the new one */
     sprintf (queryString, "insert into %s_option\n",config);
     if (value != 0) 
-	{
+    {
       sprintf (valString, "values ('%s', '%s')", name, value);
       if(strlen(value)>255)
-	  {
+      {
         printf("ERROR: value string is too long to be inserted into _option table, must be <256 ('%s')\n",value);
         exit(1);
-	  }
-	}
+      }
+    }
     else
+    {
       sprintf (valString, "values ('%s', '')", name, value);
+    }
     strcat  (queryString, valString);
     if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
       printf ("insert %s to option table failed: %s\n", config, mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
 #endif
     }
   }
@@ -1237,9 +1302,10 @@ insertValToScriptTable (char* config, char* name, codaScript* list)
       if (mysql_query (mysql, queryString) != 0)
       {
 #ifdef _CODA_DEBUG
-	    printf ("insert %s to script table failed: %s\n", config, mysql_error(mysql));
+	printf ("insert %s to script table failed: %s\n", config, mysql_error(mysql));
+        printf("queryString >%s<\n",queryString);
 #endif
-	    return -1;
+	return -1;
       }
     }
     return 0;
@@ -1249,12 +1315,13 @@ insertValToScriptTable (char* config, char* name, codaScript* list)
 
 int 
 insertValToConfigTable (char* config, char* name, char* code,
-						char* inputs, char* outputs, char* next, int first, short order_num)
+			char* inputs, char* outputs, char* next,
+			int first, short order_num, char* cmd, int type)
 {
   char queryString[QUERY_LEN];
   char valString[VAL_LEN];  
-
-  printf("Editor_database: insertValToConfigTable(%s,%s, >%s<, %s,%s,%s,%d,%d)\n",config,name,code,inputs,outputs,next,first,order_num);
+  
+  printf("Editor_database: insertValToConfigTable(%s,%s, >%s<, %s,%s,%s,%d,%d,%s,%s)\n",config,name,code,inputs,outputs,next,first,order_num,cmd,compTypeString[type]);
 
   if (!databaseIsOpen ()) return(-1);
 
@@ -1264,19 +1331,20 @@ insertValToConfigTable (char* config, char* name, char* code,
 
     if (next)
     {
-      if (first) sprintf (valString, "values ('%s','%s','%s','%s','yes','%s','no','%d')",name, code, inputs, outputs, next, order_num);
-      else       sprintf (valString, "values ('%s','%s','%s','%s','no','%s','no','%d')",name, code, inputs, outputs, next, order_num);
+      if (first) sprintf (valString, "values ('%s','%s','%s','%s','yes','%s','no','%d','%s','%s')",name,code,inputs,outputs,next,order_num,cmd,compTypeString[type]);
+      else       sprintf (valString, "values ('%s','%s','%s','%s','no','%s','no','%d','%s','%s')",name,code,inputs,outputs,next,order_num,cmd,compTypeString[type]);
     }
     else
     {
-      if (first) sprintf (valString, "values ('%s','%s','%s','%s','yes','','no','%d')",name, code, inputs, outputs, order_num);
-      else       sprintf (valString, "values ('%s','%s','%s','%s','no','','no','%d')",name, code, inputs, outputs, order_num);
+      if (first) sprintf (valString, "values ('%s','%s','%s','%s','yes','','no','%d','%s','%s')",name,code,inputs,outputs,order_num,cmd,compTypeString[type]);
+      else       sprintf (valString, "values ('%s','%s','%s','%s','no','','no','%d','%s','%s')",name,code,inputs,outputs,order_num,cmd,compTypeString[type]);
     }
 
     strcat (queryString, valString);
     if (mysql_query (mysql, queryString) != 0)
     {
       printf ("insert %s to config table failed: %s\n", config, mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
       return -1;
     }
     return 0;
@@ -1316,12 +1384,13 @@ isDaqCompInProcTable (char* name)
   if (!databaseSelected ()) return -1;
 
   sprintf (queryString, "select * from %s\n",PROCESS_TABLE_NAME);
-  sprintf (keyString, "where name='%s'",name);
+  sprintf (keyString, "where `name`='%s'",name);
   strcat (queryString, keyString);
   if (mysql_query (mysql, queryString) != 0)
   {
 #ifdef _CODA_DEBUG
     printf ("Search component in the proc table error: %s\n", mysql_error(mysql));
+    printf("queryString >%s<\n",queryString);
 #endif
     return -1;
   }
@@ -1329,11 +1398,13 @@ isDaqCompInProcTable (char* name)
   if (!res)
     return 0;
   row = mysql_fetch_row (res);
-  if (!row) {
+  if (!row)
+  {
     mysql_free_result (res);
     return 0;
   }
-  if (strcmp (row[0], name) != 0) {
+  if (strcmp (row[0], name) != 0)
+  {
     mysql_free_result (res);
     return 0;
   }
@@ -1353,20 +1424,23 @@ insertDaqCompToProcTable (daqComp* comp)
   if (databaseSelected ()) {
     sprintf (queryString, "insert into %s\n", PROCESS_TABLE_NAME);
     if (comp->boot_string != 0)
-	{ 
+    { 
       sprintf (valString, "values ('%s',%d,'%s','%s','%s',0,'dormant',0,'no','no')",
 	       comp->comp_name, comp->id_num, comp->boot_string, 
 	       compTypeString [comp->type], comp->node_name);
-	}
+    }
     else
-	{
+    {
       sprintf (valString, "values ('%s',%d,'','%s','%s',0,'dormant',0,'no','no')",
 	       comp->comp_name, comp->id_num, 
 	       compTypeString [comp->type], comp->node_name);
-	}
+    }
     strcat (queryString, valString);
     if (mysql_query (mysql, queryString) != 0)
+    {
+      printf("ERROR in queryString >%s<\n",queryString);
       return -1;
+    }
     return 0;
   }
   return -1;
@@ -1379,25 +1453,30 @@ updateDaqCompToProcTable (daqComp* comp)
 
   if (!databaseIsOpen ()) return(-1);
 
-  if (databaseSelected ()) {
+  if (databaseSelected ())
+  {
     if (comp->boot_string != 0)
-	{ 
-      sprintf (queryString, "update %s set id = %d, cmd = '%s', type = '%s', host = '%s' where name = '%s'", 
+    { 
+      sprintf (queryString, "UPDATE %s set `id` = %d, `cmd` = '%s', `type` = '%s', `host` = '%s' where `name` = '%s'", 
 	       PROCESS_TABLE_NAME, comp->id_num, comp->boot_string, 
 	       compTypeString [comp->type], comp->node_name,
 	       comp->comp_name);
-	}
+    }
     else
-	{
-      sprintf (queryString, "update %s set id = %d, cmd = '', type = '%s', host = '%s' where name = '%s'", 
+    {
+      sprintf (queryString, "UPDATE %s set `id` = %d, `cmd` = '', `type` = '%s', `host` = '%s' where `name` = '%s'", 
 	       PROCESS_TABLE_NAME, comp->id_num, 
 	       compTypeString [comp->type], comp->node_name,
 	       comp->comp_name);
-	}
-    if (mysql_query (mysql, queryString) != 0) {
+    }
+    
+    //printf("\nAAAAAAAAAAAAAAAAAAAAA: queryString >%s<\n\n",queryString);
+    
+    if (mysql_query (mysql, queryString) != 0)
+    {
 #ifdef _CODA_DEBUG
-      printf ("Update %s component to process table error: %s\n", comp->comp_name,
-	      mysql_error(mysql));
+      printf("Update %s component to process table error: %s\n", comp->comp_name,mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
 #endif
       return(-1);
     }
@@ -1415,9 +1494,9 @@ updateDaqCompToProcTable (daqComp* comp)
 
 
 
-/*sergey: set 'inuse' field in 'process' table to 'no' for specified component; assumes that component exist */
+/*sergey: set 'inuse' field in 'process' table to '0' for specified component; assumes that component exist */
 /* have to do it before starting new components, so runcontrol can check if component is started,
-otherwise it will use old port number and may accidenty ping another component using that port */
+otherwise it will use old port number and may accidently ping another component using that port */
 int
 setCompInuseField(char *compname, int portnum)
 {
@@ -1427,19 +1506,19 @@ setCompInuseField(char *compname, int portnum)
 
   if (databaseSelected ())
   {
-    sprintf (queryString, "update %s set inuse = '%d' where name = '%s'", 
-			 PROCESS_TABLE_NAME, portnum, compname);
+    sprintf (queryString, "UPDATE %s set `inuse` = '%d' where `name` = '%s'", PROCESS_TABLE_NAME, portnum, compname);
     printf ("setCompInuseField: query >%s<\n",queryString);
 
     if (mysql_query (mysql, queryString) != 0)
     {
       printf ("setCompInuseField: setting %s component as inused in process table error: %s\n", compname, mysql_error(mysql));
+      printf("queryString >%s<\n",queryString);
       return(-1);
     }
     else
-	{
+    {
       printf ("setCompInuseField: setting %s component as inused in process table\n", compname);
-	}
+    }
     return(0);
   }
 
@@ -1517,8 +1596,7 @@ createRcNetCompsFromDbase (rcNetComp** comp, int *num)
     return(-1);
   }
 
-  /*sprintf (queryString, "select * from %s", PROCESS_TABLE_NAME);*/
-  sprintf (queryString, "select * from %s ORDER BY name", PROCESS_TABLE_NAME);
+  sprintf (queryString, "SELECT * from %s ORDER BY `name`", PROCESS_TABLE_NAME);
   if (mysql_query (mysql, queryString) != 0)
   {
 #ifdef _CODA_DEBUG
@@ -1562,7 +1640,117 @@ createRcNetCompsFromDbase (rcNetComp** comp, int *num)
 }
 
 
+/*sergey: call it from runcontrol in the VERY BEGINNING of Configure transition ! */
 
+int
+updateProcessTableFromConfigTable(char* config)
+{
+  char queryString[QUERY_LEN];
+  MYSQL_RES *res = 0, *res1 = 0;
+  MYSQL_ROW row, row1;
+  int  i = 0, j = 0;
+  int ncol, ncol1, nrow1;
+  
+  if (!databaseIsOpen ()) return(-1);
+
+  if (databaseSelected ())
+  {
+    /**************************/
+    /* get config information */
+
+    sprintf (queryString, "SELECT * from %s", config);
+    if (mysql_query (mysql, queryString) != 0)
+    {
+      printf("updateProcessTableFromConfigTable: get all from %s table error: %s\n", config, mysql_error(mysql));
+      return(-1);
+    }
+    res = mysql_store_result (mysql);
+    if (!res)
+    {
+      printf ("updateProcessTableFromConfigTable: Query get all from %s table error: %s\n", config, mysql_error(mysql));
+      return(-1);
+    }
+    ncol = mysql_num_fields(res);
+    printf("updateProcessTableFromConfigTable: ncol=%d\n",ncol);
+
+    i = 0;
+    while ((row = mysql_fetch_row (res)))
+    {
+      daqComp daq;
+	
+      printf ("updateProcessTableFromConfigTable:   [%d] config info:\n",i++);
+      for(j=0; j<ncol; j++) printf(" [%d]='%s'",j,row[j]);
+      printf("\n");
+
+      daq.comp_name = strsave(row[0]);     /*component unique name*/
+      
+      /*for current component, get info from 'process' table*/
+      sprintf (queryString, "SELECT * from %s WHERE name='%s'", PROCESS_TABLE_NAME,daq.comp_name);
+      if (mysql_query (mysql, queryString) != 0)
+      {
+        printf("updateProcessTableFromConfigTable: get all from %s table error: %s\n", PROCESS_TABLE_NAME, mysql_error(mysql));
+        return(-1);
+      }
+      res1 = mysql_store_result (mysql);
+      if (!res1)
+      {
+        printf ("updateProcessTableFromConfigTable: Query get all from %s table error: %s\n", PROCESS_TABLE_NAME, mysql_error(mysql));
+        return(-1);
+      }
+      nrow1 = mysql_num_rows(res1);
+      ncol1 = mysql_num_fields(res1);
+      printf("updateProcessTableFromConfigTable: ncol1=%d, nrow1=%d\n",ncol1,nrow1);
+
+      if(nrow1==1)
+      {
+	printf("updateProcessTableFromConfigTable: found name '%s' in process table\n",daq.comp_name);
+	if(row1 = mysql_fetch_row (res1))
+	{
+	  printf("   updateProcessTableFromConfigTable: proocess info (name,id,cmd,type,host,port,state,pid,inuse,clone):\n");
+          printf("     ");
+          for(j=0; j<ncol1; j++) printf(" [%d]='%s'",j,row1[j]);
+          printf("\n");
+
+	  
+          /*********************************************************/
+	  /*update whatever needed by information from config table*/
+	  
+          if(ncol>8 && row[8]!=NULL) //boot_script
+	  {
+	    sprintf (queryString, "UPDATE %s SET `cmd` = '%s' where `name` = '%s'", PROCESS_TABLE_NAME, row[8], daq.comp_name);
+ 	    printf("QUERY >%s<\n",queryString);
+            if (mysql_query (mysql, queryString) != 0)
+            {
+              printf("updateProcessTableFromConfigTable: ERROR updating 'boot_script' in 'process': %s\n", mysql_error(mysql));
+	      printf("QUERY >%s<\n",queryString);
+              return(-1);
+	     }
+	  }
+	  
+          if(ncol>9 && row[9]!=NULL) //type
+	  {
+	    sprintf (queryString, "UPDATE %s SET `type` = '%s' where `name` = '%s'", PROCESS_TABLE_NAME, row[9], daq.comp_name);
+  	    printf("QUERY >%s<\n",queryString);
+            if (mysql_query (mysql, queryString) != 0)
+            {
+              printf("updateProcessTableFromConfigTable: ERROR updating 'type' in 'process': %s\n", mysql_error(mysql));
+ 	      printf("QUERY >%s<\n",queryString);
+              return(-1);
+            }
+	  }
+	  
+	  
+	}
+      }  
+
+    }
+    
+    mysql_free_result (res);
+    mysql_free_result (res1);
+  }
+
+  return(0);
+}
 
 
 
@@ -1575,7 +1763,7 @@ retrieveConfigInfoFromDbase (char* config, ConfigInfo** cinfo, int* num)
   MYSQL_RES *res = 0;
   MYSQL_ROW row;
   int  i = 0, j = 0;
-  char      errmsg[256];
+  char errmsg[256];
   int ncol;
 
   *num = 0;
@@ -1589,7 +1777,7 @@ retrieveConfigInfoFromDbase (char* config, ConfigInfo** cinfo, int* num)
   /**************************/
   /* get config information */
 
-  sprintf (queryString, "select * from %s", config);
+  sprintf (queryString, "SELECT * from %s", config);
   if (mysql_query (mysql, queryString) != 0)
   {
     printf("get all from %s table error: %s\n", config, mysql_error(mysql));
@@ -1608,20 +1796,20 @@ retrieveConfigInfoFromDbase (char* config, ConfigInfo** cinfo, int* num)
 
 
 
-  if(ncol==8) /* select again sorting by 'order_num' */
+  if(ncol>7) /* select again sorting by 'order_num'; IT WILL BE BETTER CHECK IF 'order_num' COLUMN EXISTS !!! */
   {
     mysql_free_result (res); /* free 'res' after previous 'select' */
 
-    sprintf (queryString, "select * from %s order by order_num", config);
+    sprintf (queryString, "SELECT * FROM %s ORDER BY order_num ASC", config);
     if (mysql_query (mysql, queryString) != 0)
     {
       printf ("get all from %s table error: %s\n", config, mysql_error(mysql));
       sprintf (errmsg, "Query %s table failed: %s", config, mysql_error(mysql));
       pop_error_message (errmsg, sw_geometry.draw_area);
-      return -1;
+      return(-1);
     }
     else
-	{
+    {
       res = mysql_store_result (mysql);
       if (!res)
       {
@@ -1630,7 +1818,11 @@ retrieveConfigInfoFromDbase (char* config, ConfigInfo** cinfo, int* num)
         pop_error_message (errmsg, sw_geometry.draw_area);
         return(-1);
       }
-	}
+      else
+      {
+        printf ("Query get all from '%s' config table was successful\n", config);
+      }
+    }
   }
 
 
@@ -1638,25 +1830,31 @@ retrieveConfigInfoFromDbase (char* config, ConfigInfo** cinfo, int* num)
   while ((row = mysql_fetch_row (res)))
   {
     cinfo[i] = newConfigInfo();
-#ifdef _CODA_DEBUG
-    printf ("config info %s %s %s %s\n",row[0], row[1], row[2], row[3]);
-#endif
+    //#ifdef _CODA_DEBUG
+    printf ("   [%d] config info:\n",i);
+    for(j=0; j<ncol; j++) printf(" %s",row[j]);
+    printf("\n");
+    //#endif
     setConfigInfoName     (cinfo[i], row[0]);
     setConfigInfoCode     (cinfo[i], row[1]);
     setConfigInfoInputs   (cinfo[i], row[2]);
     setConfigInfoOutputs  (cinfo[i], row[3]);
+
+    /*sergey*/
+    if(ncol>8) setConfigInfoCmd      (cinfo[i], row[8]);
+    if(ncol>9) setConfigInfoType     (cinfo[i], row[9]);
+    /*sergey*/
+    
     i++;
   }
   mysql_free_result (res);
   *num = i;
 
 
-
-
   /****************************/
   /* get position information */
 
-  sprintf (queryString, "select * from %s_pos", config);
+  sprintf (queryString, "SELECT * from %s_pos", config);
   if (mysql_query (mysql, queryString) != 0)
   {
 #ifdef _CODA_DEBUG
@@ -1745,13 +1943,13 @@ getDefaultCodeFromDbase (char* class, char *rols[3])
 
   if (!databaseSelected ()) return(-1);
   
-  sprintf (queryString, "show tables like '%s'", DEFAULTS_TABLE_NAME);
+  sprintf (queryString, "SHOW TABLES LIKE '%s'", DEFAULTS_TABLE_NAME);
   if (mysql_query (mysql, queryString) != 0)
   {
 #ifdef _CODA_DEBUG
     printf ("show tables like '%s' error: %s\n", DEFAULTS_TABLE_NAME, mysql_error(mysql));
 #endif
-    sprintf (errmsg, "show tables like %s error: %s\n", DEFAULTS_TABLE_NAME, mysql_error(mysql));
+    sprintf (errmsg, "SHOW TABLES LIKE %s error: %s\n", DEFAULTS_TABLE_NAME, mysql_error(mysql));
     pop_error_message (errmsg, sw_geometry.draw_area);
     return -1;
   }
@@ -1774,7 +1972,7 @@ getDefaultCodeFromDbase (char* class, char *rols[3])
   }
 
 
-  sprintf (queryString, "select * from %s where class = '%s'", DEFAULTS_TABLE_NAME, class);
+  sprintf (queryString, "SELECT * from %s where `class` = '%s'", DEFAULTS_TABLE_NAME, class);
   if (mysql_query (mysql, queryString) != 0)
   {
 #ifdef _CODA_DEBUG
@@ -1813,20 +2011,13 @@ getDefaultCodeFromDbase (char* class, char *rols[3])
   printf ("getDefaultCodeFromDbase: class %s, code %s\n",row[0], row[1]);
 #endif
 
-
   codeParser(r, row[1]);
 
-#if 1
-  /*
-  for(i=0; i<3; i++) {rols[i] = r[i]};
-  */
   for(i=0; i<3; i++) rols[i] = strsave(r[i]);
 
 /*#ifdef _CODA_DEBUG*/
   printf ("getDefaultCodeFromDbase: rols >%s< >%s< >%s<\n",rols[0], rols[1], rols[2]);
 /*#endif*/
-#endif
-
 
   mysql_free_result (res);
 
@@ -1854,7 +2045,7 @@ getAllOptionInfos (char* config, char*** names, char*** values)
   /* get position information */
   printf("Editor_database::getAllOptionInfos query\n");
 
-  sprintf (queryString, "select * from %s_option", config);
+  sprintf (queryString, "SELECT * from %s_option", config);
   if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
     printf ("get all from %s option table error: %s\n", config, mysql_error(mysql));
@@ -1875,12 +2066,14 @@ getAllOptionInfos (char* config, char*** names, char*** values)
 
   i = mysql_num_rows(res);
   
-  if (i > 0) {
+  if (i > 0)
+  {
     tnames = (char **)malloc (i*sizeof (char *));
     tvalues = (char **)malloc (i*sizeof (char *));
     
     j = 0;
-    while ((row = mysql_fetch_row (res))) {
+    while ((row = mysql_fetch_row (res)))
+    {
       tnames[j] = (char *)malloc((strlen(row[0]) + 1)*sizeof (char));
       strcpy (tnames[j], row[0]);
       tvalues[j] = (char *)malloc((strlen(row[1]) + 1)*sizeof (char));
@@ -1922,7 +2115,7 @@ compInConfigTables (char* name)
 
   for (i = 0; i < num; i++)
   {
-    sprintf (queryString, "select * from %s where name = '%s'", configs[i], name);
+    sprintf (queryString, "SELECT * from %s where `name` = '%s'", configs[i], name);
     if (mysql_query (mysql, queryString) != 0) {
 #ifdef _CODA_DEBUG
       printf ("check comp in table error: %s\n", mysql_error(mysql));

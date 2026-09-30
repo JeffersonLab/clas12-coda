@@ -8,6 +8,7 @@ if ($1 == start) then
 
 else if ($1 == stop) then
 
+  echo "Terminating run_log_update for exp=$2 on $CLON_DAQ .."
   stop_ipc_proc -a $2 -i run_log_update -n $CLON_DAQ -p run_log_update >& /dev/null
 
 else 

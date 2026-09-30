@@ -1580,17 +1580,19 @@ codaCheckResponse(char *str, int len)
   {
     if(strstr(str, coda_response[coda_nresponses-1]) != NULL)
     {
-      printf("\nsubstring >%s< found in string >",coda_response[coda_nresponses-1]);
+      printf("\ncodaCheckResponse: substring >%s< found in string >",coda_response[coda_nresponses-1]);
       for(ii=0; ii<len; ii++) printf("%c",str[ii]);
       printf("<\n");
       coda_nresponses --;
     }
+    /*
     else
     {
-      printf("\nsubstring >%s< NOT found in string >",coda_response[coda_nresponses-1]);
+      printf("\ncodaCheckResponse: substring >%s< NOT found in string >",coda_response[coda_nresponses-1]);
       for(ii=0; ii<len; ii++) printf("%c",str[ii]);
       printf("<\n");
     }
+    */
   }
 }
 

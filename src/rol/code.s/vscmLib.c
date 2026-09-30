@@ -44,9 +44,9 @@ vmeWrite32(volatile uint32_t *addr, uint32_t val) {*addr = val;}
 #define SYNC()
 #define sysClkRateGet() CLOCKS_PER_SEC
 
-/*#ifdef CODA3DMA*/
+#include "codautil.h"
 #include "jvme.h"
-/*#endif*/
+#include "usrvme.h"
 
 /*
 Override jvme.h taskDelay to reduce the delay
@@ -1546,10 +1546,10 @@ vscmPrintFifo(unsigned int *buf, int n)
  *
  */
 int
-vscmReadBlock(int id, volatile uintptr_t *data, int nwrds, int rflag)
+vscmReadBlock(int id, unsigned int *data, int nwrds, int rflag)
 {
   int retVal;
-  volatile uintptr_t *laddr;
+  volatile unsigned int *laddr;
 #ifndef CODA3DMA
   unsigned int vmeAdr;
 #endif
@@ -2498,15 +2498,7 @@ vscmGSendScalers()
   unsigned int val, cnt;
   char host[100];
 
-  gethostname(host,sizeof(host));
-  for(i=0; i<strlen(host); i++)
-  {
-    if(host[i] == '.')
-    {
-      host[i] = '\0';
-      break;
-    }
-  }
+  get_hostname(host,sizeof(host));
 
   if(!strcmp(host, "svt1"))
     crate = 0;
@@ -3032,9 +3024,8 @@ vscmReadConfigFile(char *filename_in)
   char charval[10][STRLEN];
   unsigned int val[10];
 
-  gethostname(host,ROCLEN);  /* obtain our hostname */
+  get_hostname(host,ROCLEN);  /* obtain our hostname */
   clonparms = getenv("CLON_PARMS");
-
   if(expid==NULL)
   {
     expid = getenv("EXPID");

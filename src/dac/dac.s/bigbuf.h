@@ -22,7 +22,7 @@ typedef struct bigbuf
 
   /* locks and conditions */
   pthread_mutex_t bb_lock;   /* lock the structure */
-  /*pthread_cond_t bb_cond;*/    /* full <-> not full condition */
+  pthread_cond_t bb_cond;    /* full <-> not full condition */
 
   int cleanup;
 

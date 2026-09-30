@@ -196,6 +196,23 @@ int mynev; /*defined in tttrans.c */
 #define MAXBLOCK 22  /* 22-max# of blocks=boards of certain type */
 #define MAXEVENT 256 /* max number of events in one block */
 
+/* fadc250 boards data type defs */
+#define FADC_TYPE_BLKHDR      0x10
+#define FADC_TYPE_BLKTLR      0x11
+#define FADC_TYPE_EVTHDR      0x12
+#define FADC_TYPE_TRGTIME     0x13
+#define FADC_TYPE_RAWD        0x14
+#define FADC_TYPE_COMPRESS    0x15
+#define FADC_TYPE_PULSE       0x16
+#define FADC_TYPE_INTEGRAL    0x17
+#define FADC_TYPE_PULSETIME   0x18
+#define FADC_TYPE_PULSEPARAM  0x19
+#define FADC_TYPE_VMVP        0x1A
+#define FADC_TYPE_EVTTLR      0x1D
+#define FADC_TYPE_DNV         0x1E
+#define FADC_TYPE_FILLER      0x1F
+
+
 
 /* vscm boards data type defs */
 #define VSCM_TYPE_BLKHDR    0x10
@@ -473,7 +490,7 @@ rol2trig(int a, int b)
   int banknum = 0;
   int have_time_stamp, a_nevents2, a_event_type;
   int a_event_number, a_event_number_l, a_timestamp_l, a_event_number_h, a_timestamp_h, a_bitpattern;
-  int a_clusterN, a_clusterE, a_clusterY, a_clusterX, a_clusterT, a_type, a_data, a_time, a_top_nbot;
+  int a_clusterN, a_clusterE, a_clusterY, a_clusterX, a_clusterID, a_clusterT, a_type, a_data, a_time, a_top_nbot;
   int a_instance, a_view, a_coord, a_energy, a_coordU, a_coordV, a_coordW, a_lane;
   int a_hitmask0, a_hitmask1,a_hitmask2;
   int a_h1tag, a_h2tag, a_nhits, a_coordX, a_coordY;
@@ -557,30 +574,14 @@ rol2trig(int a, int b)
     lenin = banknw[jj];
 
 
-
-
-#ifndef VXWORKS
-#ifndef NIOS
-#ifndef Linux_armv7l
-#ifndef Linux_x86_64
-    /* swap input buffer (assume that data from VME is big-endian, and we are on little-endian Intel) */
-    if(banktyp[jj] != 3) for(ii=0; ii<lenin; ii++) datain[ii] = LSWAP(datain[ii]);
-#endif
-#endif
-#endif
-#endif
-
-
-#ifdef Linux_x86_64_vme
-    /* swap input buffer (assume that data from VME is big-endian, and we are on little-endian Intel) */
+/* for Linux on VME, swap input buffer (assume that data from VME is big-endian, and we are on little-endian Intel) */
+#ifdef Linux_vme
     if(banktyp[jj] != 3) for(ii=0; ii<lenin; ii++) datain[ii] = LSWAP(datain[ii]);
 #endif
 
 
-
-
-    if(banktag[jj] == 0xe109) /* FADC250 hardware format */
-	{
+    if(banktag[jj] == 0xe109 || banktag[jj] == 0xe141) /* FADC250 or FAV3 hardware format */
+    {
       banknum = rol->pid;
 
       /**************/
@@ -618,7 +619,7 @@ lenE[jj][nB][nE[nB]] - event length in words
           a_blocknumber = ((datain[ii]>>8)&0x3FF);
           a_nevents = (datain[ii]&0xFF);
 #ifdef DEBUG
-	      printf("[%3d] BLOCK HEADER: slot %d, nevents %d, block number %d module id %d\n",ii,
+	  printf("[%3d] BLOCK HEADER: slot %d, nevents %d, block number %d module id %d\n",ii,
 				 a_slot,a_nevents,a_blocknumber,a_module_id);
           printf(">>> update iB and nB\n");
 #endif
@@ -627,30 +628,29 @@ lenE[jj][nB][nE[nB]] - event length in words
           sB[jj][nB[jj]-1] = a_slot; /*remember slot number*/
           nE[jj][nB[jj]-1] = 0;      /*cleanup event counter in current block*/
 #ifdef DEBUG
-		  printf("0xe109: jj=%d nB[jj]=%d\n",jj,nB[jj]);
+	  printf("0xe109/0xe141: jj=%d nB[jj]=%d iB[jj][nB[jj]-1]=%d\n",jj,nB[jj],iB[jj][nB[jj]-1]);
 #endif
-	      ii++;
+	  ii++;
         }
         else if( ((datain[ii]>>27)&0x1F) == 0x11) /*block trailer*/
         {
           a_slot2 = ((datain[ii]>>22)&0x1F);
           a_nwords = (datain[ii]&0x3FFFFF);
 #ifdef DEBUG
-	      printf("[%3d] BLOCK TRAILER: slot %d, nwords %d\n",ii,
-				   a_slot2,a_nwords);
+	  printf("[%3d] BLOCK TRAILER: slot %d, nwords %d\n",ii,a_slot2,a_nwords);
           printf(">>> data check\n");
 #endif
 
           /*"close" previous event if any*/
           k = nB[jj]-1; /*current block index*/
           if(nE[jj][k] > 0)
-	      {
+	  {
             m = nE[jj][k]-1; /*current event number*/
             lenE[jj][k][m] = ii-iE[jj][k][m]; /*#words in current event*/
-	      }
+	  }
 
           if(a_slot2 != a_slot)
-	      {
+	  {
             error ++;
             if(printing)
             {
@@ -659,8 +659,8 @@ lenE[jj][nB][nE[nB]] - event length in words
               sprintf(errmsg,"[%3d][%3d] ERROR1 in FADC data: blockheader slot %d != blocktrailer slot %d\n",mynev,
 				 ii,a_slot,a_slot2);
               printing=0;
-	        }
-	      }
+	    }
+	  }
           if(a_nwords != (ii-iB[jj][nB[jj]-1]+1))
           {
             error ++;
@@ -671,14 +671,14 @@ lenE[jj][nB][nE[nB]] - event length in words
               sprintf(errmsg,"[%3d[%3d]] ERROR2 in FADC data: trailer #words %d != actual #words %d\n",mynev,
 				 ii,a_nwords,ii-iB[jj][nB[jj]-1]+1);
               printing=0;
-	        }
+	    }
           }
-	      ii++;
+	  ii++;
         }
         else if( ((datain[ii]>>27)&0x1F) == 0x12) /*event header*/
         {
           a_slot3 = ((datain[ii]>>22)&0x1F);
-          a_triggernumber = (datain[ii]&0x3FFFFF);
+	  a_triggernumber = (datain[ii]&0xFFF); //fadc v2 has mask 0x3FFFFF, we will use v3 mask for both
 #ifdef DEBUG
 	      printf("[%3d] EVENT HEADER: slot number %d, trigger number %d\n",ii,
 				 a_slot3, a_triggernumber);
@@ -909,9 +909,13 @@ lenE[jj][nB][nE[nB]] - event length in words
         else if( ((datain[ii]>>27)&0x1F) == 0x19)
         {
 #ifdef DEBUG
-	      printf("[%3d] STREAMING RAW DATA: \n",ii);
+	  printf("[%3d] PULSE PARAMETERS: \n",ii);
 #endif
-	      ii++;
+	  ii++;
+          while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin ) /*loop over all words*/
+	  {
+            ii++;
+	  }
         }
 
 
@@ -1006,7 +1010,7 @@ lenE[jj][nB][nE[nB]] - event length in words
       for(k=1; k<nB[jj]; k++)
       {
         if(nE[jj][k]!=nnE)
-	    {
+	{
           error ++;
           if(printing)
           {
@@ -1015,8 +1019,8 @@ lenE[jj][nB][nE[nB]] - event length in words
             sprintf(errmsg,"[%3d] SEVERE ERROR: different event number in different blocks (nnE=%d != nE[%d]=%d)\n",mynev,
               nnE,k,nE[jj][k]);
             printing=0;
-	      }      
-	    }
+	  }      
+	}
       }
 
 
@@ -1026,7 +1030,7 @@ lenE[jj][nB][nE[nB]] - event length in words
       {
         printf("Block %2d, block index %2d\n",k,iB[jj][k]);
         for(m=0; m<nnE; m++)
-	    {
+	{
           printf("Event %2d, event index %2d, event lenght %2d\n",m,iE[jj][k][m],lenE[jj][k][m]);
           sprintf(errmsg,"Event %2d, event index %2d, event lenght %2d\n",m,iE[jj][k][m],lenE[jj][k][m]);
         }
@@ -1081,7 +1085,15 @@ lenE[jj][nB][nE[nB]] - event length in words
       /***********************************************************/
       /***********************************************************/
 
-    } /* if(0xe109) */
+    } /* if(0xe109/0xe141) */
+
+
+
+
+
+
+
+
 
 
 
@@ -1091,7 +1103,7 @@ lenE[jj][nB][nE[nB]] - event length in words
 
 
     else if(banktag[jj] == 0xe10A) /* TI/TS hardware format */
-	{
+    {
       banknum = rol->pid;
 
 #ifdef DEBUG1
@@ -1576,17 +1588,11 @@ printf("tmpgood=0x%08x tmpbad=0x%08x\n",tmpgood,tmpbad);
 	      {
             m = nE[jj][k]-1; /*current event number*/
             lenE[jj][k][m] = ii-iE[jj][k][m]; /*#words in current event*/
-	      }
+	  }
 
 #ifdef DEBUG2
-		  printf("0xe10B: close event jj=%d event# %d length %d\n",jj,m,lenE[jj][k][m]);
+	  printf("0xe10B: close event jj=%d event# %d length %d\n",jj,m,lenE[jj][k][m]);
 #endif
-
-
-
-
-
-
 
 
         }
@@ -1671,7 +1677,7 @@ Error flags:
 
 
     else if(banktag[jj] == 0xe10C) /* SSP hardware format */
-	{
+    {
       banknum = rol->pid;
 
 #ifdef DEBUG3
@@ -1842,7 +1848,17 @@ Error flags:
 	      printf("[%3d] TYPE %d, DATA %d, TIME %d\n",ii,a_type,a_data,a_time);
 #endif
 	      ii++;
-		}
+	}
+
+       else if( ((datain[ii]>>27)&0x1F) == 0x1D) /*trigger*/
+        {
+          a_time = ((datain[ii]>>16)&0x7FF);
+          a_data = ((datain[ii])&0xFFFF);
+#ifdef DEBUG3
+	      printf("[%3d] TIME %d, DATA %d\n",ii,a_time,a_data);
+#endif
+	      ii++;
+	}
 
         else if( ((datain[ii]>>27)&0x1F) == 0x1F)
         {
@@ -2538,6 +2554,25 @@ Error flags:
           }
 
 
+          else if( ((datain[ii]>>23)&0xF) == 0xc) /* PRAD CLUSTER */
+          {
+            a_clusterE = ((datain[ii]>>0)&0x3FFF);
+            ii++;
+
+            a_clusterID = ((datain[ii]>>15)&0xFFF);
+            a_clusterN = ((datain[ii]>>11)&0xF);
+            a_clusterT = ((datain[ii]>>0)&0x7FF);
+            ii++;
+
+#ifdef DEBUG7
+        printf("[%3d] PRAD_CLUSTER_(T,N,ID,E) %d %d %d %d\n",ii,a_clusterT,a_clusterN,a_clusterID,a_clusterE);
+#endif
+            while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin )
+            {
+              printf("ERROR2 in VTP:PRAD_CLUSTER pass1 = 0x%08X\n",datain[ii]); 
+              ii++;
+            }
+          }
 
 
 
@@ -4498,8 +4533,8 @@ Error flags:
 
 
 
-      if(banktag[jj] == 0xe109) /* FADC250 hardware format */
-	  {
+      if(banktag[jj] == 0xe109 || banktag[jj] == 0xe141) /* FADC250 or FAV3 hardware format */
+      {
 #ifdef DEBUG
         printf("SECOND PASS FADC250\n");
 #endif
@@ -4511,7 +4546,7 @@ Error flags:
 run_fadc_again:
 
 #ifdef DEBUG
-		printf("fadc_raw_bank_needed=%d fadc_pack_bank_needed=%d fadc_pass_number=%d\n",fadc_raw_bank_needed,fadc_pack_bank_needed,fadc_pass_number);
+	printf("fadc_raw_bank_needed=%d fadc_pack_bank_needed=%d fadc_pass_number=%d\n",fadc_raw_bank_needed,fadc_pack_bank_needed,fadc_pass_number);
 #endif
 
         datain = datain_save;
@@ -4522,7 +4557,7 @@ run_fadc_again:
           a_channel_old = -1;
 
 #ifdef DEBUG
-          printf("0xe109: Block %d, Event %2d, event index %2d, event lenght %2d\n",
+          printf("0xe109/0xe141: Block %d, Event %2d, event index %2d, event lenght %2d\n",
             ibl,iev,iE[jj][ibl][iev],lenE[jj][ibl][iev]);
 #endif
           a_slot = sB[jj][ibl];
@@ -4533,14 +4568,15 @@ run_fadc_again:
             if( ((datain[ii]>>27)&0x1F) == 0x12) /*event header: remember trigger#*/
             {
               a_slot3 = ((datain[ii]>>22)&0x1F);
-              a_triggernumber = (datain[ii]&0x3FFFFF);
+              a_triggernumber = (datain[ii]&0xFFF); //fadc v2 has mask 0x3FFFFF, we will use v3 mask for both
 #ifdef DEBUG
-	          printf("[%3d] EVENT HEADER: slot number %d, trigger number %d\n",ii,
+	      printf("[%3d] EVENT HEADER: slot number %d, trigger number %d\n",ii,
 				 a_slot3, a_triggernumber);
               printf(">>> remember trigger %d\n",a_triggernumber);
 #endif
-	          ii++;
+	      ii++;
             }
+	    
             else if( ((datain[ii]>>27)&0x1F) == 0x13) /*trigger time: remember timestamp*/
             {
               a_trigtime[0] = (datain[ii]&0xFFFFFF);
@@ -4563,10 +4599,6 @@ run_fadc_again:
 		      timestamp = (((unsigned long long)a_trigtime[0])<<24) | (a_trigtime[1]);
               timestamps[a_slot] = a_trigtime[1];
             }
-
-
-
-
 
 
 
@@ -4728,13 +4760,13 @@ run_fadc_again:
                   fclose(fc);
                   printf("ttfa: pedestal-cnf file >%s< is closed\n",fname);
                   fc = NULL;
-	            }
+	        }
 #endif
 
 
 
 
-	            Nchan[0] ++; /* increment channel counter */
+	        Nchan[0] ++; /* increment channel counter */
 #ifdef DEBUG
                 printf("0x%08x: increment Nchan[0]=%d\n",b08,Nchan[0]);
 #endif
@@ -4840,18 +4872,18 @@ run_fadc_again:
                 *b32 = datain[ii];
                 b08 += 4;
 #ifdef DEBUG
-	            printf("[%3d] COMPRESSED: header=0x%08x, a_len=%d, a_short1=0x%04x\n",ii,datain[ii],a_len,a_short1);
+	        printf("[%3d] COMPRESSED: header=0x%08x, a_len=%d, a_short1=0x%04x\n",ii,datain[ii],a_len,a_short1);
 #endif
-	            ii++;
+	        ii++;
 
                 a_word1 = datain[ii];
                 b32 = (unsigned int *)b08;
                 *b32 = a_word1;
                 b08 += 4;
 #ifdef DEBUG
-	            printf("[%3d] COMPRESSED: a_word1 = 0x%08x\n",ii,datain[ii]);
+	        printf("[%3d] COMPRESSED: a_word1 = 0x%08x\n",ii,datain[ii]);
 #endif
-	            ii++;
+	        ii++;
 
                 a_word2 = datain[ii];
                 b32 = (unsigned int *)b08;
@@ -4860,22 +4892,19 @@ run_fadc_again:
 #ifdef DEBUG
 	            printf("[%3d] COMPRESSED: a_word2 = 0x%08x\n",ii,datain[ii]);
 #endif
-	            ii++;
+	        ii++;
 
                 for(i=0; i<a_len; i++)
-		        {
+		{
                   b32 = (unsigned int *)b08;
                   *b32 = datain[ii];
                   b08 += 4;
 #ifdef DEBUG
-	              printf("[%3d] COMPRESSED: data[%d] = 0x%08x\n",ii,i,datain[ii]);
+	          printf("[%3d] COMPRESSED: data[%d] = 0x%08x\n",ii,i,datain[ii]);
 #endif
                   ii++; 
-		        }
-			  }
-
-
-
+		}
+	      }
             }
 
 
@@ -5081,13 +5110,23 @@ if(a_pulsenumber == 0)
 	          ii++;
             }
 
+
+
             else if( ((datain[ii]>>27)&0x1F) == 0x19)
             {
 #ifdef DEBUG
-	          printf("[%3d] STREAMING RAW DATA: \n",ii);
+	      printf("[%3d] PULSE PARAMETERS: \n",ii);
 #endif
-	          ii++;
+	      ii++;
+              while( ((datain[ii]>>31)&0x1) == 0 && ii<lenin ) /*loop over all words*/
+	      {
+                ii++;
+	      }
             }
+
+
+
+
 
             else if( ((datain[ii]>>27)&0x1F) == 0x1a) /* Vm Vp */
             {
@@ -5108,23 +5147,23 @@ if(a_pulsenumber == 0)
             else if( ((datain[ii]>>27)&0x1F) == 0x1D)
             {
 #ifdef DEBUG
-	          printf("[%3d] EVENT TRAILER: \n",ii);
+	      printf("[%3d] EVENT TRAILER: \n",ii);
 #endif
-	          ii++;
+	      ii++;
             }
             else if( ((datain[ii]>>27)&0x1F) == 0x1E)
             {
-	          printf("[%3d] : DATA NOT VALID\n",ii);
+	      printf("[%3d] : DATA NOT VALID\n",ii);
               exit(0);
-	          ii++;
+	      ii++;
             }
             else if( ((datain[ii]>>27)&0x1F) == 0x1F)
             {
 #ifdef DEBUG
-	          printf("[%3d] FILLER WORD: \n",ii);
+	      printf("[%3d] FILLER WORD: \n",ii);
               printf(">>> do nothing\n");
 #endif
-	          ii++;
+	      ii++;
             }
             else
             {
@@ -5133,7 +5172,7 @@ if(a_pulsenumber == 0)
                 printf("[%3d] pass2 ERROR: in FADC data format 0x%08x (bits31-27=0x%02x)\n",
 			      ii,(int)datain[ii],(datain[ii]>>27)&0x1F);
                 printing=0;
-	          }
+	      }
               ii++;
             }
 
@@ -5158,11 +5197,11 @@ if(a_pulsenumber == 0)
 		  /* we need to run again if both raw and pack banks are needed, and we ended first fadc pass */
 		  
           if(fadc_raw_bank_needed && fadc_pack_bank_needed && (fadc_pass_number==0))
-		  {
+	  {
             datain = datain_save;
             fadc_pass_number = 1;
             goto run_fadc_again;
-		  }
+	  }
 #endif
 
 
@@ -5682,15 +5721,28 @@ if(a_pulsenumber == 0)
             {
               a_type = ((datain[ii]>>23)&0xF);
               a_data = ((datain[ii]>>16)&0x7F);
-		      a_time = (datain[ii]&0x3FF);
+	      a_time = (datain[ii]&0x3FF);
               *dataout ++ = datain[ii];
               b08 += 4;
-	          ii++;
+	      ii++;
 #ifdef DEBUG3
 	          printf("[%3d] HPS TRIGGER: TYPE %d, DATA %d, TIME %d\n",ii,a_type,a_data,a_time);
 #endif
-		    }
+	    }
 
+            else if( ((datain[ii]>>27)&0x1F) == 0x1D) /*trigger*/
+            {
+              a_time = ((datain[ii]>>16)&0x7FF);
+              a_data = ((datain[ii])&0xFFFF);
+              *dataout ++ = datain[ii];
+              b08 += 4;
+	      ii++;
+#ifdef DEBUG3
+	      printf("[%3d] TRIGGER: TIME %d, DATA %d\n",ii,a_time,a_data);
+#endif
+	   }
+
+	    
             else if( ((datain[ii]>>27)&0x1F) == 0x1F)
             {
 #ifdef DEBUG3
@@ -6200,6 +6252,16 @@ if(a_pulsenumber == 0)
                 ii++;
               }
 
+              else if(((datain[ii]>>23)&0xF) == 0xc) /* PRAD CLUSTER */
+              {
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+
+                *dataout ++ = datain[ii];
+                b08 += 4;
+                ii++;
+              }
 
 
 
@@ -6214,26 +6276,26 @@ if(a_pulsenumber == 0)
 
             else if( ((datain[ii]>>27)&0x1F) == 0x1D) /* GT trigger */
             {
-			  /*
-			  a_h2tag = ((datain[ii]>>15)&0x1);
+	      /*
+	      a_h2tag = ((datain[ii]>>15)&0x1);
               a_h1tag =     ((datain[ii]>>14)&0x1);
-		      a_nhits =   ((datain[ii]>>10)&0xF);
-		      a_coordY = ((datain[ii]>>5)&0x1F);
-		      a_coordX = ((datain[ii]>>0)&0x1F);
-			  */
+	      a_nhits =   ((datain[ii]>>10)&0xF);
+	      a_coordY = ((datain[ii]>>5)&0x1F);
+	      a_coordX = ((datain[ii]>>0)&0x1F);
+	      */
 
               *dataout ++ = datain[ii];
               b08 += 4;
-	          ii++;
+	      ii++;
 
-			  /*
-		      a_energy = ((datain[ii]>>16)&0x3FFF);
-		      a_time = ((datain[ii]>>0)&0x7FF);
-			  */
+	      /*
+	      a_energy = ((datain[ii]>>16)&0x3FFF);
+	      a_time = ((datain[ii]>>0)&0x7FF);
+	      */
 
               *dataout ++ = datain[ii];
               b08 += 4;
-	          ii++;
+	      ii++;
 			  /*
 #ifdef DEBUG7
               printf("   [%3d] FT CLUSTER_(COORDX,COORDY,NHITS,ENERGY,TIME): %d %d %d %d %d %d\n",ii,
@@ -6438,13 +6500,13 @@ if(a_pulsenumber == 0)
 #endif
 			
             if( ((datain[ii]>>27)&0x1F) == 0x12) /*event header*/
-			{
+	    {
               a_triggernumber = (datain[ii]&0x7FFFFFF);
 #ifdef DEBUG5
-		      printf("[%3d] EVENT HEADER, a_triggernumber = %d\n",ii,a_triggernumber);
+	      printf("[%3d] EVENT HEADER, a_triggernumber = %d\n",ii,a_triggernumber);
 #endif
-		      ii++;
-			}
+	      ii++;
+	    }
 
             else if( ((datain[ii]>>27)&0x1F) == 0x14) /*head bank data*/
             {

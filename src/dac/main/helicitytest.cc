@@ -58,8 +58,8 @@ main(int argc, char **argv)
 
 
   printf("Connecting to IPC server ..\n");
-  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ");*/
-  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ");
+  /*epics_json_msg_sender_init(getenv("EXPID"), getenv("SESSION"), "daq", "HallB_DAQ", NULL, NULL);*/
+  epics_json_msg_sender_init("clasrun", "clasprod", "daq", "HallB_DAQ", NULL, NULL);
   printf(".. done connecting to IPC server.\n");
 
 
