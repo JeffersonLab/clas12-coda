@@ -1,0 +1,40 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/usr/clas12/release/2.0.0/coda/src/jvme-release-3.0/src/vme_display.c
+stdlib.h
+-
+stdio.h
+-
+string.h
+-
+ctype.h
+-
+jvme.h
+/usr/clas12/release/2.0.0/coda/src/jvme-release-3.0/src/jvme.h
+
+dmaPList.h
+stdarg.h
+-
+pthread.h
+-
+stdint.h
+-
+
+jvme.h
+stdio.h
+-
+stdlib.h
+-
+stdint.h
+-
+byteswap.h
+-
+dmaPList.h
+dmaPList.h
+

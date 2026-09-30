@@ -1,6 +1,13 @@
 **/Linux_x86_64*
+**/Linux_armv7l*
+**/Linux_i686*
 **/*.c_*
 **/*.cc_*
 bosio/*
 *_save
 **/*_save
+vtp_mpd/
+vtp_regular/
+vtp_streaming/
+TIpcieUS*
+misc/

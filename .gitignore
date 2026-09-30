@@ -9,6 +9,12 @@ SunOS_sun4u/
 VXWORKS_ppc/
 Linux_armv7l/
 Linux_nios2/
+Linux_armv7l_Arch/
+Linux_armv7l_RHEL7/
+Linux_i686_RHEL5_vme/
+Linux_x86_64_RHEL7/
+Linux_x86_64_RHEL7_vme/
+Linux_x86_64_RHEL9/
 common/
 *.o
 *.so

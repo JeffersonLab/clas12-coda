@@ -1,0 +1,8 @@
+#!/bin/bash
+
+export LINUXVME=${CODA}/src/jvme-release-3.0/linuxvme
+export LINUXVME_INC=${LINUXVME}/include
+export LINUXVME_LIB=${LINUXVME}/Linux_`uname -m`_vme/lib
+export LINUXVME_BIN=${LINUXVME}/Linux_`uname -m`_vme/bin
+export LD_LIBRARY_PATH=${LINUXVME_LIB}:${LD_LIBRARY_PATH}
+export KERNELRELEASE=3.10.0-1062.9.1.el7.x86_64

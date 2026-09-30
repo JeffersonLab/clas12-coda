@@ -1,0 +1,7 @@
+#!/bin/csh 
+
+#
+# show all ipc-controlled processes managed by 'start_process_management'
+#
+
+ipc_check -a clasrun -d "*" -u ipc_procman -w 4

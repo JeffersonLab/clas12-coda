@@ -1,0 +1,10 @@
+#!/bin/csh
+#
+# TIpcieUS driver reload
+#
+set temp = `lspci | awk -F' ' '/9038/{print $1}'`
+echo $temp
+set dest = "/sys/bus/pci/devices/0000:$temp"
+echo $dest
+echo "Enter root password"
+su - root -c "cp -f /root/config $dest"

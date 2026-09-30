@@ -1,0 +1,10 @@
+#!/bin/csh
+#
+# save TIpcieUS driver config file into /root
+#
+set temp = `lspci | awk -F' ' '/9038/{print $1}'`
+echo $temp
+set dest = "/sys/bus/pci/devices/0000:$temp"
+echo $dest/config
+echo "Enter root password"
+su - root -c "cp $dest/config /root/config"

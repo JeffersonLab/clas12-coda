@@ -1,0 +1,14 @@
+*.a
+*.so
+*.o
+*~
+\#*
+/build/
+doc/doxygen/C/*
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old

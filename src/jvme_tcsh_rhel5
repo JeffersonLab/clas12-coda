@@ -1,0 +1,8 @@
+#!/bin/tcsh
+
+setenv LINUXVME ${CODA}/src/jvme-release-3.0/linuxvme
+setenv LINUXVME_INC ${LINUXVME}/include
+setenv LINUXVME_LIB ${LINUXVME}/Linux_`uname -m`_vme/lib
+setenv LINUXVME_BIN ${LINUXVME}/Linux_`uname -m`_vme/bin
+setenv LD_LIBRARY_PATH ${LINUXVME_LIB}:${LD_LIBRARY_PATH}
+setenv KERNELRELEASE 2.6.18-348.3.1.el5PAE

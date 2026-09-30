@@ -1,0 +1,5 @@
+control_ipc_process_manager -> ipc_process_manager (controlled by '$CLON_PARMS/processes/ipc_process_manager.cfg' ) -> control_ipcbank2et     -> ipcbank2et
+                                                                                                                    -> control_dbrouter       -> dbrouter
+                                                                                                                    -> control_epics_monitor  -> epics_monitor
+                                                                                                                    -> control_run_log_update -> run_log_update
+														    

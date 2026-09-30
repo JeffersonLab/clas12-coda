@@ -1,0 +1,201 @@
+#+title: JVME: JLab VMEbus library
+#+author: Bryan Moffit <moffit@jlab.org>
+
+* Quick Start
+
+** Setup Environment Variables
+- bash example
+#+begin_src shell
+export LINUXVME=${HOME}/linuxvme
+export LINUXVME_INC=${LINUXVME}/include
+export LINUXVME_LIB=${LINUXVME}/Linux-$(uname -m)/lib
+export LINUXVME_BIN=${LINUXVME}/Linux-$(uname -m)/bin
+export LD_LIBRARY_PATH=${LINUXVME_LIB}:${LD_LIBRARY_PATH}
+#+end_src
+- tcsh example
+#+begin_src shell
+setenv LINUXVME ${HOME}/linuxvme
+setenv LINUXVME_INC ${LINUXVME}/include
+setenv LINUXVME_LIB ${LINUXVME}/Linux-`uname -m`/lib
+setenv LINUXVME_BIN ${LINUXVME}/Linux-`uname -m`/bin
+setenv LD_LIBRARY_PATH ${LINUXVME_LIB}:${LD_LIBRARY_PATH}
+#+end_src
+
+** Compile and install userspace driver
+- make build directory, and generate Makefiles with cmake for installation into =$LINUXVME=
+  #+begin_src shell
+  mkdir build
+  cmake -S . -B build -D CMAKE_INSTALL_PREFIX=$LINUXVME
+  #+end_src
+  
+- build and install
+  #+begin_src shell
+  cmake3 --build build
+  cmake3 --install build
+  #+end_src
+  + driver, headers, and stand-alone programs are installed:
+    #+begin_example
+    ${LINUXVME}/include/jvme.h
+    ${LINUXVME}/include/dmaPList.h
+    ${LINUXVME}/Linux-$ARCH/lib/libjvme.so
+    ${LINUXVME}/Linux-$ARCH/lib/libjvme.a
+    ${LINUXVME}/Linux-$ARCH/bin/vme_display
+    ${LINUXVME}/Linux-$ARCH/bin/vme_modmem
+    ${LINUXVME}/Linux-$ARCH/bin/vme_sysreset
+    #+end_example
+- uninstall accomplished with
+  #+begin_example
+  xargs rm -v < build/install_manifest.txt
+  #+end_example
+    
+** Compile and install kernel driver
+- change to kernel driver directory, build and install (sudo privileges required)
+  #+begin_src shell
+  cd kernel_driver
+  sudo make
+  sudo make install
+  #+end_src
+
+** Kernel Drivers
+
+*** JVME
+
+**** VME Master Windows
+- Virtual Memory mapped to VME Address spaces
+- These are the default windows used at JLab
+| Address Space | Modifier | Size  |       Base | Device File |
+|---------------+----------+-------+------------+-------------|
+| A16           |     0x29 | 64kB  |        0x0 | m_a16       |
+| A24           |     0x39 | 16MB  |        0x0 | m_a24       |
+| A32           |     0x09 | 256MB | 0x08000000 | m_a32       |
+| CRCSR         |     0x2F | 16MB  |        0x0 | m_crcsr     |
+
+**** VME Slave Window
+| Address Space | Modifier | Size |       Base | Device File |
+|---------------+----------+------+------------+-------------|
+| A32           |     0x09 | 4MB  | 0x18000000 | s_a32       |
+
+
+*** CMEM
+- kernel driver for allocation of contiguous memory (data buffers) for DMA operations.
+
+**** kernel arguments
+
+| debug          | 1 = enable debugging, 0 = disable debugging                      |
+| errorlog       | 1 = enable error logging, 0 = disable error logging              |
+| gfpbpa_size    | The amount of RAM in MB that will be pre-allocated               |
+| gfpbpa_quantum | The size (in MB) of a page used for the pre-allocation           |
+| gfpbpa_zone    | 0: Anywhere in the RAM,  1: In the 32 bit address range          |
+| numa_zones     | The number of NUMA IDs for which buffers are to be pre-allocated |
+
+**** =proc= files
+- =/proc/cmem_rcc=
+#+begin_example
+CMEM RCC driver (JLab Release)
+
+The driver was loaded with these parameters:
+gfpbpa_size    = 512
+gfpbpa_quantum = 4
+gfpbpa_zone    = 1
+numa_zones     = 1
+
+alloc_pages and alloc_pages_node
+   PID | Handle |         Phys. address |               Size | Locked | Order | Type | Name
+
+GFPBPA (NUMA = 0, size = 512 MB, base = 0x000000006c400000)
+   PID | Handle |         Phys. address |               Size | Locked | Type | Name
+ 
+The command 'echo <action> > /proc/cmem_rcc', executed as root,
+allows you to interact with the driver. Possible actions are:
+debug    -> enable debugging
+nodebug  -> disable debugging
+elog     -> Log errors to /var/log/messages
+noelog   -> Do not log errors to /var/log/messages
+freelock -> release all locked segments
+#+end_example
+
+*** vme, vme_ca91cx42, vme_tsi148, vme_vivo
+- kernel drivers to support the PCI-X to VME Bridge chips used at Jefferson Lab
+
+** Software Library - Basic Usage
+
+*** Open and close access to VME resources
+#+begin_src C
+int32_t  vmeOpen();
+int32_t  vmeClose();
+#+end_src
+
+*** Single Cycle Read / Write
+#+begin_src C
+uint8_t  vmeBusRead8(int32_t amcode, uint32_t vmeaddr);
+uint16_t vmeBusRead16(int32_t amcode, uint32_t vmeaddr);
+uint32_t vmeBusRead32(int32_t amcode, uint32_t vmeaddr);
+void vmeBusWrite8(int32_t amcode, uint32_t vmeaddr, uint8_t val);
+void vmeBusWrite16(int32_t amcode, uint32_t vmeaddr, uint16_t val);
+void vmeBusWrite32(int32_t amcode, uint32_t vmeaddr, uint32_t val);
+#+end_src
+
+*** DMA
+#+begin_src C
+int32_t  vmeDmaConfig(uint32_t addrType, uint32_t dataType, uint32_t sstMode);
+int32_t  vmeDmaSendPhys(u_long physAdrs, uint32_t vmeAdrs, int32_t size);
+int32_t  vmeDmaDone();
+#+end_src
+
+*** Shared Mutex
+#+begin_src C
+int32_t  vmeBusLock();
+int32_t  vmeBusUnlock();
+int32_t  vmeCheckMutexHealth(int32_t time_seconds);
+#+end_src
+
+*** Mapping local pointers to VME Windows
+#+begin_src C
+int32_t  vmeBusToLocalAdrs(int32_t vmeAdrsSpace, char *vmeBusAdrs, char **pLocalAdrs);
+int32_t  vmeLocalToVmeAdrs(u_long localAdrs, uint32_t *vmeAdrs, uint16_t *amCode);
+#+end_src
+
+**** Using local pointers for Single Cycle Read / Write
+#+begin_src C
+uint8_t vmeRead8(volatile uint8_t *addr);
+uint16_t vmeRead16(volatile uint16_t *addr);
+uint32_t vmeRead32(volatile uint32_t *addr);
+void vmeWrite8(volatile uint8_t *addr, uint8_t val);
+void vmeWrite16(volatile uint16_t *addr, uint16_t val);
+void vmeWrite32(volatile uint32_t *addr, uint32_t val);
+#+end_src
+
+**** Using local pointers for DMA
+#+begin_src C
+int32_t  vmeDmaSend(u_long locAdrs, uint32_t vmeAdrs, int32_t size);
+#+end_src
+
+*** DMA capable event Buffer allocation with =dmaPList=
+#+begin_src C
+void       dmaPartInit();
+DMA_MEM_ID dmaPCreate (char *name, int size, int c, int incr);
+int        dmaPReInitAll();
+void       dmaPFreeAll();
+
+int        dmaPStatsAll();
+
+DMANODE *the_event;
+uint32_t *dma_dabufp;
+
+GETEVENT(DMA_MEM_ID part, int num);
+PUTEVENT(DMA_MEM_ID part);
+#+end_src
+
+** VME Controllers tested/used at Jefferson Lab
+
+*** tsi148
+- GEFANUC V7865 / V7875
+- GE XVB601 / XVB602
+- GE XVR14 / XVR15 / XVR16
+- Concurrent Technologies VX 71x / VX81x / VX91x
+
+*** ca91cx42
+- Concurrent Technologies VP E2x
+
+*** VIVO
+- Abaco XVB603

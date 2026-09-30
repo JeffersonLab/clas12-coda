@@ -1,0 +1,5 @@
+#!/usr/bin/tcsh
+#
+# William's menu
+#
+~jgu/PCIeTI/TIpcieUS/tools/TIcontrol /dev/xdma0_user
